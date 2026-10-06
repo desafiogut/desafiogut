@@ -124,6 +124,56 @@ test("UTAC106c/SEG1 · a Carteira delega a compra ao hook (sem I/O inline) — U
     "a Carteira passou a ESCREVER no saldo local (o saldo só se lê aqui)");
 });
 
+// ═══ SEG1b — UTAC107b: contraste, ordem, Regra 1, e-mail PIX ═══════════════════════
+test("UTAC107b/SEG4 · o botão «Comprar Passe» usa texto NAVY sobre dourado SÓLIDO (≥4,5:1)", () => {
+  // Antes: branco sobre o gradiente dourado = 2,03:1 (reprova o AA). Decisão 5 do operador:
+  // texto navy. Guarda-se a INVARIANTE do par de cores + o contraste WCAG calculado.
+  assert.match(CART, /const ON_GOLD = "#0a0f1a";/, "a constante ON_GOLD desapareceu");
+  const i = CART.indexOf("Comprar Passe Desafio ${PRECO_PASSE_DESAFIO}");
+  assert.ok(i > -1, "o rótulo do botão do Passe desapareceu");
+  const bloco = CART.slice(CART.lastIndexOf("<button", i), i);
+  assert.match(bloco, /background:\s*COR\.gold/, "o botão do Passe não usa dourado sólido");
+  assert.match(bloco, /color:\s*ON_GOLD/, "o botão do Passe não usa o texto navy (contraste)");
+  assert.doesNotMatch(bloco, /color:\s*"#fff"/, "o botão do Passe voltou ao texto branco (2,03:1)");
+  // WCAG 2.x — luminância relativa + razão de contraste
+  const lum = (hex) => {
+    const c = [1, 3, 5].map((k) => parseInt(hex.slice(k, k + 2), 16) / 255)
+      .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  };
+  const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+  const r = ratio("#0a0f1a", "#f5a623");
+  assert.ok(r >= 4.5, `contraste do botão do Passe = ${r.toFixed(2)}:1 (< 4,5:1)`);
+});
+
+test("UTAC107b/SEG3 · a ordem dos botões é Depositar PIX → Comprar Passe → MLC → Ofertas Programadas", () => {
+  const i = (s) => CART.indexOf(s);
+  const iPix = i("💰 Depositar PIX");
+  const iPasse = i("Comprar Passe Desafio ${PRECO_PASSE_DESAFIO}");
+  const iMlc = i("⚡ Menor Lance Único");
+  const iOp = i("🎫 Ofertas Programadas");
+  assert.ok(iPix > -1 && iPasse > -1 && iMlc > -1 && iOp > -1, "faltam botões na Carteira");
+  assert.ok(iPix < iPasse && iPasse < iMlc && iMlc < iOp,
+    `a ordem dos botões mudou: PIX=${iPix} Passe=${iPasse} MLC=${iMlc} OP=${iOp}`);
+});
+
+test("UTAC107b/SEG5 · o aviso 402 está DENTRO do vidro de saldo (Regra 1)", () => {
+  const iTitulo = CART.search(/>\s*Carteira\s*</);
+  const iAviso = CART.indexOf("passeSemSaldo &&");
+  const iFechaSaldo = CART.indexOf("</GlassCard>", iTitulo);
+  assert.ok(iTitulo > -1 && iFechaSaldo > -1, "não encontrei o vidro de saldo");
+  assert.ok(iAviso > -1, "o aviso 402 (Saldo insuficiente / Carregar agora) desapareceu");
+  assert.ok(iAviso > iTitulo && iAviso < iFechaSaldo,
+    "o aviso 402 voltou a ficar FORA do vidro (violação da Regra 1)");
+  assert.match(CART, /Carregar agora \(PIX\)/, "o atalho de depósito do 402 desapareceu");
+});
+
+test("UTAC107b/SEG0 · o e-mail PIX continua na Carteira (o depósito NÃO o mostra)", () => {
+  // SEG0 mediu: `ComprarFichasModal.jsx` mostra o CÓDIGO PIX, não o destinatário. RESSALVA 5:
+  // se o depósito não mostra, a nota NÃO se remove. Este guarda trava a remoção por engano.
+  assert.match(CART, /desafiogut@gmail\.com/, "o e-mail de pagamento desapareceu da Carteira");
+});
+
 // ═══ SEG2 — pendência #1: /ofertas-programadas no rotasProibidas ════════════════════
 test("UTAC106c/SEG2 · /ofertas-programadas está no rotasProibidas (expulsão do lojista)", () => {
   const ac = codigo(ler("context/AppContext.jsx"));

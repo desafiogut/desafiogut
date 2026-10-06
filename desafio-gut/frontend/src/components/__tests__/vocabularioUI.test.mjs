@@ -138,7 +138,11 @@ test("(b) o vocabulário correcto está presente nos ficheiros tocados", () => {
   // sobre texto que o utilizador nunca lê. É a definição de guarda vácuo.
   const cartSemComentarios = semComentarios(ler("src/pages/MinhaCarteira.jsx"))
     .replace(/\{\/\*[\s\S]*?\*\/\}/g, "");   // comentários JSX (multi-linha)
-  assert.match(cartSemComentarios, /Lance Relâmpago[\s\S]{0,200}Lance Programado/,
+  // UTAC107b — o par de modalidades antigo («Lance Relâmpago»/«Lance Programado») saiu do ecrã
+  // com o botão «Trocar R$ 2,00 → 1 Senha» e a frase de apoio do saldo (R18-E). A INVARIANTE
+  // NÃO muda: a Carteira tem de mostrar o VOCABULÁRIO APROVADO das modalidades actuais (106b) —
+  // senão bastava apagar o ecrã para este guarda passar (o defeito que ele existe para travar).
+  assert.match(cartSemComentarios, /Menor Lance Único[\s\S]{0,600}Ofertas Programadas/,
     "Carteira: falta o par de modalidades EM CÓDIGO (vocabulário aprovado)");
   assert.match(ler("src/utils/edicao.js"), /rotuloLongo: "Edição encerrada"/, "edicao.js: falta o rótulo");
 });

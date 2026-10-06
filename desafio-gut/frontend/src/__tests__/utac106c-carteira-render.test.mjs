@@ -157,14 +157,33 @@ test("UTAC106c/RENDER · sem login: pedido de login E sem botão do Passe (A/B d
 });
 
 // ═══ SEG1 — os botões e o BALÃO (por clique) ════════════════════════════════════════
-test("UTAC106c/RENDER · os 4 botões existem e «Lance Relâmpago» já não é rótulo", async () => {
-  const { botoes } = await montarCarteira(CONECTADO);
+// UTAC107b — a grelha de botões mudou (decisão 1/4 do operador): saiu «Trocar R$ 2,00 → 1 Senha»
+// (Via A, sem caminho visível) e entrou «Ofertas Programadas»; a ordem passou a
+// Depositar PIX → Comprar Passe Desafio → Menor Lance Único → Ofertas Programadas.
+test("UTAC106c/RENDER · UTAC107b · os 4 botões (nova ordem) e «Trocar R$» já não existe", async () => {
+  const { botoes, html } = await montarCarteira(CONECTADO);
   const rotulos = botoes().map(texto);
   assert.ok(rotulos.some((t) => t.includes("Depositar PIX")), `faltou Depositar PIX: ${JSON.stringify(rotulos)}`);
-  assert.ok(rotulos.some((t) => t.includes("Trocar R$")), "faltou Trocar");
-  assert.ok(rotulos.some((t) => t.includes("Menor Lance Único")), "faltou Menor Lance Único");
   assert.ok(rotulos.some((t) => t.includes("Comprar Passe Desafio R$ 2,00")), "faltou Comprar Passe");
+  assert.ok(rotulos.some((t) => t.includes("Menor Lance Único")), "faltou Menor Lance Único");
+  assert.ok(rotulos.some((t) => t.includes("Ofertas Programadas")), "faltou Ofertas Programadas");
+  assert.ok(!rotulos.some((t) => t.includes("Trocar R$")), "«Trocar R$ 2,00 → 1 Senha» ainda existe (decisão 1)");
   assert.ok(!rotulos.some((t) => t.includes("Lance Relâmpago")), "«Lance Relâmpago» continua a ser rótulo");
+  // ordem decidida (decisão 4): PIX antes do Passe antes do MLC antes das OP
+  const t = rotulos.join("|");
+  const i = (s) => t.indexOf(s);
+  assert.ok(i("Depositar PIX") < i("Comprar Passe Desafio") &&
+            i("Comprar Passe Desafio") < i("Menor Lance Único") &&
+            i("Menor Lance Único") < i("Ofertas Programadas"),
+    `a ordem dos botões não é a decidida: ${JSON.stringify(rotulos)}`);
+});
+
+test("UTAC107b/RENDER · CLICAR «Ofertas Programadas» NAVEGA para /ofertas-programadas", async () => {
+  const c = await montarCarteira(CONECTADO);
+  globalThis.__NAVEGADAS.length = 0;
+  await c.clicar("Ofertas Programadas");
+  assert.deepEqual(globalThis.__NAVEGADAS, ["/ofertas-programadas"],
+    `o clique não navegou para /ofertas-programadas: ${JSON.stringify(globalThis.__NAVEGADAS)}`);
 });
 
 test("UTAC106c/RENDER · CLICAR «Menor Lance Único» NAVEGA para /mercado", async () => {

@@ -3,12 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { GlassCard } from "@/components/ui";
-import { useTrocarPorSenhas } from "../hooks/useTrocarPorSenhas.js";
 import { useComprarPasse } from "../hooks/useComprarPasse.js";
 import ComprarPasseModal from "../components/ComprarPasseModal.jsx";
 import Toast from "../widgets/toast/Toast.jsx";
 import ComprarFichasModal from "../components/ComprarFichasModal.jsx";
-import CreditoStatus from "../components/CreditoStatus.jsx"; // MC59.6 — feedback do 202 assíncrono
 import PainelIndicacao from "../components/PainelIndicacao.jsx";
 import BotaoLoginPrincipal from "../components/BotaoLoginPrincipal.jsx";
 
@@ -23,33 +21,43 @@ const COR = {
   primary: "#f5a623", primaryDim: "rgba(245,166,35,0.15)",
   gold: "#f5a623", text: "#e8f0fe", muted: "#6b7db8",
   success: "#10b981", danger: "#ef4444", blue300: "#fbbf24", purple: "#a78bfa",
+  pix: "#00d4ff",
 };
+// UTAC107b — texto sobre o DOURADO. Branco sobre `#f5a623` dá 2,03:1 e falha o AA
+// (mockup 107a-front, §SEG4); navy `#0a0f1a` dá 9,45:1. É o único par usado no CTA dourado.
+const ON_GOLD = "#0a0f1a";
 
 // MC99 (HARD GATE 4) — o card "🏦 Dados para Pagamento (Art. 21)", que consumia esta
 // lista, foi REMOVIDO. Medido: a informação não se perdeu —
-//   · "R$ 2,00 por senha" está no próprio cartão de saldo (botão "Trocar R$ 2,00 → 1
-//     Senha") e em Configurações → Segurança e Transparência ("Art. 20 — Senha:
-//     R$ 2,00 por edição");
+//   · "R$ 2,00 por senha" está no próprio cartão de saldo e em Configurações → Segurança e
+//     Transparência ("Art. 20 — Senha: R$ 2,00 por edição");
 //   · os dados bancários/PIX do Art. 21 estão no regulamento (gate de consentimento,
 //     Art. 21: chave PIX, agência e conta);
 //   · o fluxo de pagamento em si é o modal "💰 Depositar PIX", que gera o código.
 // Ou seja: o cartão repetia no ecrã o que o utilizador já lê no regulamento e no
 // próprio botão de depósito.
+//
+// ⚠️ UTAC107b — o e-mail do destinatário PIX (`desafiogut@gmail.com`) CONTINUA aqui, na
+// nota do rodapé do cartão. Medido no SEG0: o modal de depósito (`ComprarFichasModal.jsx`)
+// mostra o CÓDIGO PIX (copia-e-cola), o valor e o provider — mas NÃO mostra o destinatário
+// como texto. É por isso que esta nota fica (RESSALVA 5 do enunciado: «se o depósito NÃO
+// mostrar, NÃO remover da Carteira»). O MC99 repôs-a de propósito.
 
 export default function MinhaCarteira() {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   // MC99 — o destructure encolheu com os cartões: saíram `lances` (só servia o card
   // "Meus Lances") e `userLabel` (só o card "Carteira Conectada").
-  // `refetchSaldo` FICA: apesar de o card "Saldo de Senhas" ter saído, o saldo de
-  // senhas continua a ser mostrado no Sidebar (indicador "🔗 N"), e a compra de fichas
-  // tem de o refrescar também — senão o rail fica com um número antigo.
+  // `refetchSaldo` FICA: o saldo de senhas continua a ser mostrado no Sidebar (indicador
+  // "🔗 N"), e a compra de fichas tem de o refrescar também — senão o rail fica com um
+  // número antigo.
+  // UTAC107b — saiu `setModalidade` (só a modalidade do lance o usava; a navegação passa a
+  // apontar à rota canónica `/mercado`, como em §SEG1 do 106c).
   const {
     isConnected, abrirModal,
     address, user,
     refetchSaldo,
     saldoRsCentavos, saldoRsStatus, refetchSaldoRs,
-    setModalidade,
   } = useAppContext();
 
   // Email do pagador para o PIX (MC39.15.1): coletado automaticamente do login
@@ -57,15 +65,6 @@ export default function MinhaCarteira() {
   // resolvido no backend (env MP_PAYER_ID_NUMBER).
   const emailPagador =
     user?.email?.address || user?.google?.email || user?.apple?.email || null;
-
-  // MC17.1 ITEM 1 — lógica de compra de senhas extraída para hook reutilizável.
-  // Aliases preservam os nomes usados no JSX (zero alteração de comportamento — R2).
-  const {
-    trocarPorSenhas,
-    carregando: trocandoSenhas,
-    erro: trocaErro,
-    sucesso: trocaInfo,
-  } = useTrocarPorSenhas();
 
   const [comprarAberto, setComprarAberto] = useState(false);
   // UTAC106c — balão de confirmação do Passe Desafio. UTAC106e — o balão passou a COMPRAR
@@ -77,9 +76,6 @@ export default function MinhaCarteira() {
   // UTAC106e — feedback da compra: toast do repo + atalho «Carregar agora» no caso 402.
   const [toastPasse, setToastPasse] = useState(null);
   const [passeSemSaldo, setPasseSemSaldo] = useState(false);
-  // MC59.6 — txHash de uma compra assíncrona (202); alimenta <CreditoStatus>.
-  // Inerte enquanto CREDITO_ASSINCRONO=OFF (o caminho síncrono não retorna txHash).
-  const [creditoTxHash, setCreditoTxHash] = useState(null);
 
   const statusRsSuffix =
     saldoRsStatus === "loading" ? " ⏳" :
@@ -87,17 +83,20 @@ export default function MinhaCarteira() {
   const saldoRsPendente = saldoRsStatus === "stale";
 
   // Modelo dual (Frente B.9): Saldo Disponível = saldo-rs (off-chain).
-  // PIX aprovado credita aqui; "Trocar por Senhas" debita aqui e credita
-  // saldoSenhas on-chain; Lance Relâmpago debita aqui em centavos.
+  // PIX aprovado credita aqui; Lance Relâmpago debita aqui em centavos.
   const saldoReais = saldoRsCentavos == null ? null : saldoRsCentavos / 100;
 
   // UTAC106c — o botão «Lance Relâmpago» passou a «Menor Lance Único» (nome canónico da
-  // modalidade, alinhado com a aba do UTAC106b e com a NORTE Via B). O destino e a modalidade
-  // NÃO mudaram: `/mercado` é a rota canónica e `flash` é a modalidade do Menor Lance Único
-  // (GATE 4 — não se alterou lógica que funcionava; a rota indicação do enunciado é `/mercado`).
+  // modalidade, alinhado com a aba do UTAC106b e com a NORTE Via B). O destino NÃO mudou:
+  // `/mercado` é a rota canónica do Menor Lance Único (GATE 4 — não se alterou lógica que
+  // funcionava).
   function irParaMenorLanceUnico() {
-    try { setModalidade?.("flash"); } catch {}
     navigate("/mercado");
+  }
+  // UTAC107b — «Ofertas Programadas» (programa de fidelidade: Passe R$ 2,00 → pontos → cartão).
+  // Destino = a rota registada em `App.jsx` (`/ofertas-programadas`).
+  function irParaOfertasProgramadas() {
+    navigate("/ofertas-programadas");
   }
 
   const pad        = isMobile ? "1rem" : "2rem";
@@ -112,6 +111,7 @@ export default function MinhaCarteira() {
   };
   const botaoPrimario = {
     width: "100%",
+    minHeight: "48px",
     padding: isMobile ? "0.75rem 1rem" : "0.7rem 1.2rem",
     background: "linear-gradient(135deg,#f5a623,#e89400)",
     border: "none", borderRadius: "12px", color: "#fff",
@@ -125,10 +125,7 @@ export default function MinhaCarteira() {
           mesma dobra ("Minha Carteira" no cabeçalho e "Saldo Disponível" no cartão
           logo abaixo) era ruído: o nome da página já vem na navegação ("Carteira" na
           barra inferior, item activo). O nome foi INCORPORADO no cartão de saldo,
-          que passa a ser o primeiro — e único — título da página. O texto de apoio
-          ("Acompanhe seu saldo de senhas e seus lances") saiu porque descrevia
-          exactamente o que os cartões mostram; e os "lances" que ele prometia já não
-          estão aqui (ver remoção do card "Meus Lances"). */}
+          que passa a ser o primeiro — e único — título da página. */}
 
       {!isConnected ? (
         <GlassCard className={cardCls}>
@@ -142,35 +139,19 @@ export default function MinhaCarteira() {
           {/* Saldo Disponível (R$) — modelo dual Frente B.9.
               Fonte: blob saldo-rs:${address}. PIX → +R$. /comprar-senhas → -R$.
               /lance-relampago → -centavos. */}
-          {/* MC99 (HARD GATE 2) — SEM `background` nem `borderColor` inline. Este cartão
-              tinha um vidro PRÓPRIO (gradiente quase transparente, 0.6 → 0.06) no meio
-              de vidros standard (navy 0.88) — o texto do saldo assentava em
-              transparência, e era o único cartão da app fora do padrão. Passa a
-              .gut-glass-standard puro. O destaque do saldo fica a cargo do que sempre
-              devia: o TAMANHO do número e a cor do valor. */}
+          {/* MC99 (HARD GATE 2) — SEM `background` nem `borderColor` inline: .gut-glass-standard puro. */}
           <GlassCard className={`${cardCls} ${isMobile ? 'mb-5' : 'mb-6'}`}>
               <div style={{
                 display: "flex", justifyContent: "space-between", alignItems: "center",
                 marginBottom: "0.55rem", gap: "0.5rem",
               }}>
                 <h3 style={{ ...tituloStyle, margin: 0, color: COR.gold }}>Carteira</h3>
-                <span style={{
-                  fontSize: "0.62rem", fontWeight: 700,
-                  color: saldoRsStatus === "error" ? COR.danger : COR.muted,
-                  background: "rgba(13,18,53,0.25)",
-                  border: "1px solid rgba(245,166,35,0.18)",
-                  borderRadius: "999px",
-                  padding: "0.18rem 0.55rem",
-                  textTransform: "uppercase", letterSpacing: "0.06em",
-                }} title={`Saldo R$ off-chain (blob saldo-rs) · status ${saldoRsStatus}`}>
-                  R$ off-chain
-                </span>
                 {/* MC99 (correcção do HARD GATE 4 — refutação do validador) — o botão
                     "↻ Atualizar saldo" vivia no card "Saldo de Senhas" e foi removido com
-                    ele. Medido: NÃO tinha substituto nenhum — o Sidebar não o chama, os
-                    StatTile do Dashboard só navegam, e o auto-refresh é de 30 s
-                    (AppContext: setInterval(refetchSaldo, 30000)). Volta aqui, compacto,
-                    junto do saldo a que diz respeito. */}
+                    ele. Medido: NÃO tinha substituto nenhum — o auto-refresh é de 30 s
+                    (AppContext: setInterval(refetchSaldo, 30000)). Vem para aqui, junta do
+                    saldo a que diz respeito. A pílula «R$ OFF-CHAIN» saiu no UTAC107b (R18-E:
+                    texto técnico desnecessário). */}
                 <button
                   type="button"
                   onClick={() => { try { refetchSaldo?.(); } catch {} }}
@@ -179,7 +160,10 @@ export default function MinhaCarteira() {
                   style={{
                     background: "transparent", border: "1px solid rgba(245,166,35,0.18)",
                     borderRadius: "999px", color: COR.muted, cursor: "pointer",
-                    fontSize: "0.72rem", padding: "0.1rem 0.45rem", lineHeight: 1.4,
+                    fontSize: "0.72rem", lineHeight: 1.4,
+                    minWidth: "48px", minHeight: "48px",
+                    display: "inline-flex", alignItems: "center", justifyContent: "center",
+                    flex: "none",
                   }}
                 >
                   ↻
@@ -188,11 +172,9 @@ export default function MinhaCarteira() {
 
               {/* MC99 — a etiqueta veio do glass de cabeçalho removido: o número
                   grande precisa de dizer o que é. UTAC106c — o título passou a
-                  «Carteira» (o nome canónico da navegação) e a etiqueta a amarelo,
-                  a par do valor: os dois rótulos do topo passam a ser o mesmo par
-                  visual (COR.gold). */}
+                  «Carteira» e a etiqueta a amarelo, a par do valor. */}
               <div style={{
-                fontSize: "0.62rem", color: COR.gold, fontWeight: 700,
+                fontSize: "0.75rem", color: COR.gold, fontWeight: 700,
                 textTransform: "uppercase", letterSpacing: "0.06em",
                 marginBottom: "0.15rem",
               }}>Saldo Disponível</div>
@@ -201,7 +183,7 @@ export default function MinhaCarteira() {
                 style={{
                   fontSize: isMobile ? "2.4rem" : "3rem",
                   fontWeight: 900, color: COR.gold, lineHeight: 1.05,
-                  marginBottom: "0.35rem",
+                  marginBottom: "0.95rem",
                 }}
               >
                 {saldoReais == null
@@ -212,13 +194,10 @@ export default function MinhaCarteira() {
                 </span>
               </div>
 
-              <div style={{
-                fontSize: isMobile ? "0.78rem" : "0.82rem",
-                color: COR.muted, marginBottom: "0.95rem", lineHeight: 1.4,
-              }}>
-                Saldo em reais para Lance Relâmpago. Para Lance Programado, troque por Senhas (R$ {VALOR_POR_SENHA_BRL.toFixed(2)} cada).
-              </div>
-
+              {/* UTAC107b — ordem decidida pelo operador (decisão 4):
+                  Depositar PIX → Comprar Passe Desafio → Menor Lance Único → Ofertas Programadas.
+                  R18-E: a frase de apoio do saldo saiu (texto técnico) e o botão «Trocar R$ 2,00
+                  → 1 Senha» foi removido (decisão 1 — a Via A deixa de ter caminho visível aqui). */}
               <div style={{
                 display: "grid",
                 gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
@@ -231,7 +210,7 @@ export default function MinhaCarteira() {
                     ...botaoPrimario,
                     background: "rgba(0,212,255,0.14)",
                     border: "1px solid rgba(0,212,255,0.4)",
-                    color: "#00d4ff",
+                    color: COR.pix,
                     boxShadow: "none",
                   }}
                   title="Depósito PIX → +R$ (crédito automático após aprovação MP)"
@@ -239,25 +218,18 @@ export default function MinhaCarteira() {
                   💰 Depositar PIX
                 </button>
                 <button
-                  onClick={async () => {
-                    const r = await trocarPorSenhas(1);
-                    // MC59.6 — se a resposta foi 202 (assíncrono), acompanha via polling.
-                    if (r?.assincrono && r.txHash) setCreditoTxHash(r.txHash);
-                  }}
-                  disabled={trocandoSenhas || (saldoReais == null) || saldoReais < VALOR_POR_SENHA_BRL}
+                  type="button"
+                  onClick={() => setPasseAberto(true)}
                   style={{
                     ...botaoPrimario,
-                    background: (trocandoSenhas || (saldoReais == null) || saldoReais < VALOR_POR_SENHA_BRL)
-                      ? "rgba(167,139,250,0.25)"
-                      : "linear-gradient(135deg,#a78bfa,#7c3aed)",
-                    boxShadow: (trocandoSenhas || (saldoReais == null) || saldoReais < VALOR_POR_SENHA_BRL)
-                      ? "none" : "0 4px 14px rgba(167,139,250,0.35)",
-                    cursor: trocandoSenhas ? "wait" : ((saldoReais == null) || saldoReais < VALOR_POR_SENHA_BRL) ? "not-allowed" : "pointer",
-                    opacity: ((saldoReais == null) || saldoReais < VALOR_POR_SENHA_BRL) ? 0.5 : 1,
+                    // UTAC107b (decisão 5) — dourado SÓLIDO + texto navy `#0a0f1a` = 9,45:1
+                    // (era branco sobre o gradiente = 2,03:1, reprovava o AA).
+                    background: COR.gold,
+                    color: ON_GOLD,
                   }}
-                  title={`Trocar R$ ${VALOR_POR_SENHA_BRL.toFixed(2)} por 1 senha on-chain`}
+                  title={`Comprar o Passe Desafio por ${PRECO_PASSE_DESAFIO}`}
                 >
-                  {trocandoSenhas ? "Trocando…" : `🎫 Trocar R$ ${VALOR_POR_SENHA_BRL.toFixed(2)} → 1 Senha`}
+                  {`Comprar Passe Desafio ${PRECO_PASSE_DESAFIO}`}
                 </button>
                 <button
                   type="button"
@@ -268,7 +240,7 @@ export default function MinhaCarteira() {
                     ...botaoPrimario,
                     background: "rgba(245,166,35,0.14)",
                     border: "1px solid rgba(245,166,35,0.4)",
-                    color: "#f5a623",
+                    color: COR.gold,
                     boxShadow: "none",
                     cursor: !saldoReais ? "not-allowed" : "pointer",
                     opacity: !saldoReais ? 0.5 : 1,
@@ -277,44 +249,62 @@ export default function MinhaCarteira() {
                 >
                   ⚡ Menor Lance Único
                 </button>
-                {/* UTAC106c — Passe Desafio: abre o BALÃO de confirmação (não compra nada aqui;
-                    a compra é do UTAC106e). Confirmar leva às Ofertas Programadas, travadas por
-                    EM_BREVE_MODE (a página mostra «EM BREVE»). */}
                 <button
                   type="button"
-                  onClick={() => setPasseAberto(true)}
-                  style={{ ...botaoPrimario }}
-                  title={`Comprar o Passe Desafio por ${PRECO_PASSE_DESAFIO}`}
+                  onClick={irParaOfertasProgramadas}
+                  style={{
+                    // UTAC107b — «Ofertas Programadas» com o mesmo estilo do «Menor Lance Único».
+                    ...botaoPrimario,
+                    background: "rgba(245,166,35,0.14)",
+                    border: "1px solid rgba(245,166,35,0.4)",
+                    color: COR.gold,
+                    boxShadow: "none",
+                  }}
+                  title="Abre as Ofertas Programadas (programa de fidelidade)"
                 >
-                  {`Comprar Passe Desafio ${PRECO_PASSE_DESAFIO}`}
+                  🎫 Ofertas Programadas
                 </button>
               </div>
+
+              {/* UTAC107b (Regra 1, decisão 6) — o aviso 402 estava FORA do vidro (solto por
+                  baixo do «Indique e Ganhe»); passa para DENTRO do cartão de saldo, onde o
+                  utilizador está. Conteúdo: «⚠️ Saldo insuficiente.» + atalho «Carregar agora (PIX)». */}
+              {passeSemSaldo && (
+                <div role="status" style={{
+                  marginTop: "0.85rem", padding: "0.7rem 0.85rem", borderRadius: "10px",
+                  background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.3)",
+                }}>
+                  <p style={{ margin: 0, fontSize: "0.82rem", color: COR.danger, lineHeight: 1.4, fontWeight: 700 }}>
+                    ⚠️ Saldo insuficiente.{" "}
+                    <button
+                      type="button"
+                      onClick={() => { setPasseSemSaldo(false); setToastPasse(null); setPasseAberto(false); setComprarAberto(true); }}
+                      style={{
+                        background: "none", border: "none", padding: 0, fontSize: "0.82rem",
+                        color: COR.blue300, fontWeight: 800, textDecoration: "underline", cursor: "pointer",
+                      }}
+                    >
+                      Carregar agora (PIX)
+                    </button>
+                  </p>
+                </div>
+              )}
 
               {/* MC99 (correcção do HARD GATE 4) — o card "Dados para Pagamento (Art. 21)"
                   foi removido e levou consigo o ÚNICO sítio do frontend onde constava o
                   email de pagamento do Mercado Pago. Medido pelo validador:
                   `grep -rn "desafiogut@gmail.com" src/` → 0 resultados. O custo da senha
                   tinha substituto; o email não. Volta como nota de uma linha, no sítio onde
-                  o utilizador está quando vai pagar. */}
+                  o utilizador está quando vai pagar.
+                  ⚠️ UTAC107b: CONFIRMADO que o modal de depósito NÃO mostra o destinatário
+                  (só o código PIX) — por isso esta nota MANTÉM-SE (RESSALVA 5). */}
               <p style={{
-                margin: "0.6rem 0 0", fontSize: "0.68rem", color: COR.muted, lineHeight: 1.45,
+                margin: "0.75rem 0 0", fontSize: "0.68rem", color: COR.muted, lineHeight: 1.45,
               }}>
                 Depósito por PIX via Mercado Pago — <strong style={{ color: COR.blue300 }}>desafiogut@gmail.com</strong>{" "}
                 (crédito automático após a aprovação). Custo de cada senha: R$ {VALOR_POR_SENHA_BRL.toFixed(2)} por edição (Art. 20).
               </p>
 
-              {trocaInfo && (
-                <p style={{ margin: "0.6rem 0 0", fontSize: "0.78rem", color: COR.success, lineHeight: 1.4, fontWeight: 700 }}>
-                  {trocaInfo}
-                </p>
-              )}
-              {/* MC59.6 — feedback do crédito assíncrono (202); null com flag OFF. */}
-              <CreditoStatus txHash={creditoTxHash} qtd={1} />
-              {trocaErro && (
-                <p style={{ margin: "0.6rem 0 0", fontSize: "0.72rem", color: COR.danger, lineHeight: 1.4 }}>
-                  ⚠️ {trocaErro}
-                </p>
-              )}
               {saldoRsStatus === "error" && (
                 <p style={{ margin: "0.6rem 0 0", fontSize: "0.72rem", color: COR.danger, lineHeight: 1.4 }}>
                   ⚠️ Não foi possível ler o saldo R$ agora.
@@ -327,36 +317,15 @@ export default function MinhaCarteira() {
             <PainelIndicacao isMobile={isMobile} />
           </div>
 
-          {/* MC99 (HARD GATE 4) — card "🔗 Saldo de Senhas" REMOVIDO. A informação NÃO
-              se perdeu: o mesmo saldo on-chain está no Sidebar (indicador "🔗 N" com
-              status, visível em todos os ecrãs) e no KPI "Senhas" do Dashboard. Aqui
-              era um terceiro sítio a mostrar o mesmo número, com botões próprios
-              ("Usar no Mercado de Lances" / "Atualizar saldo") que duplicavam caminhos
-              que já existem na barra inferior e nos Lances. */}
-
-          {/* MC99 (HARD GATE 4) — card "🏦 Dados para Pagamento (Art. 21)" REMOVIDO.
-              Ver a nota no topo do ficheiro: o custo da senha está no botão de troca e
-              nas Configurações; os dados bancários estão no regulamento (Art. 21), que
-              o utilizador aceita antes de participar. */}
-
-          {/* MC99 (HARD GATE 4) — card "📋 Meus Lances" REMOVIDO. A informação existe e
-              está MELHOR noutro sítio: /ativos ("Meus Ativos") filtra os lances do
-              endereço e classifica-os (único/repetido/pontos) — este card mostrava uma
-              lista crua de txHash + valor, sem os pontos nem o estado do torneio. */}
-
-          {/* MC99 (HARD GATE 4) — card "Carteira Conectada" (endereço completo) REMOVIDO.
-              O endereço truncado e o nome do utilizador estão no Sidebar (cartão de
-              conta, no rodapé do rail) — visível em todos os ecrãs — e o endereço
-              completo está nas Configurações, onde faz sentido (é lá que se gere a
-              conta). */}
-
+          {/* MC99 (HARD GATE 4) — cards "🔗 Saldo de Senhas", "🏦 Dados para Pagamento" e
+              "📋 Meus Lances" REMOVIDOS. A informação não se perdeu: o saldo on-chain está no
+              Sidebar; os dados bancários no regulamento; os lances em /ativos. */}
         </>
       )}
 
       {/* UTAC106e — BALÃO de confirmação do Passe Desafio (componente próprio; o 106c tinha-o
           inline). «Confirmar» CHAMA o endpoint `comprar-passe-pontos` (débito de R$ 2,00 +
-          crédito de 1 ponto) e, em sucesso, o balão FECHA e o utilizador FICA na Carteira
-          (permite compras seguidas — decisão do operador no UTAC106e). */}
+          crédito de 1 ponto) e, em sucesso, o balão FECHA e o utilizador FICA na Carteira. */}
       <ComprarPasseModal
         aberto={passeAberto}
         loading={comprandoPasse}
@@ -377,8 +346,7 @@ export default function MinhaCarteira() {
         }}
       />
 
-      {/* UTAC106e — TOAST do repo (`widgets/toast/Toast.jsx`; posiciona-se sozinho, auto-dismiss
-          4 s). O toast não aceita conteúdo rico, por isso o atalho do depósito PIX vive abaixo. */}
+      {/* UTAC106e — TOAST do repo (`widgets/toast/Toast.jsx`; posiciona-se sozinho, auto-dismiss 4 s). */}
       {toastPasse && (
         <Toast
           id={1}
@@ -386,23 +354,6 @@ export default function MinhaCarteira() {
           message={toastPasse.message}
           onDismiss={() => setToastPasse(null)}
         />
-      )}
-
-      {/* UTAC106e — 402 «Saldo insuficiente. Carregar agora?» → abre o depósito PIX do ecrã. */}
-      {passeSemSaldo && (
-        <p style={{ margin: "0.6rem 0 0", fontSize: "0.78rem", color: COR.danger, lineHeight: 1.4, fontWeight: 700 }}>
-          ⚠️ Saldo insuficiente.{" "}
-          <button
-            type="button"
-            onClick={() => { setPasseSemSaldo(false); setToastPasse(null); setPasseAberto(false); setComprarAberto(true); }}
-            style={{
-              background: "none", border: "none", padding: 0, fontSize: "0.78rem",
-              color: COR.blue300, fontWeight: 800, textDecoration: "underline", cursor: "pointer",
-            }}
-          >
-            Carregar agora (PIX)
-          </button>
-        </p>
       )}
 
       <ComprarFichasModal
