@@ -49,7 +49,7 @@ const COMANDOS = [
 const COMANDOS_CRITICOS = [
   {
     acao: "panic", label: "Pausar sistema (kill switch)",
-    descricao: "Desativa o processamento de novas operações. O sistema continua a responder a leituras.",
+    descricao: "Desativa o processamento de novas operações. O sistema continua respondendo a leituras.",
     nivelMinimo: "super-admin",
   },
   {

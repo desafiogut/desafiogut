@@ -28,7 +28,7 @@ export function usePalpite(edicaoId, palpiteInicial = null) {
   // regista o palpite na edição do cartão tocado. Omitido → a edição do hook (comportamento de antes).
   const registar = useCallback(async (valor, edicaoIdArg = edicaoId) => {
     const alvo = edicaoIdArg;
-    if (!alvo) return { ok: false, code: "sem_edicao", message: "Sem edição a decorrer" };
+    if (!alvo) return { ok: false, code: "sem_edicao", message: "Sem edição em andamento" };
     if (!Number.isInteger(valor) || valor < 0) {
       return { ok: false, code: "valor_invalido", message: "Escreva um número inteiro de lances" };
     }

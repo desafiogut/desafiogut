@@ -83,8 +83,8 @@ const CARD_CORES = {
   panic:       { titulo: "Alerta do Sistema",    bg: "rgba(239,68,68,0.14)",  borda: "rgba(239,68,68,0.5)",  barra: "#ef4444" },
   // MC15.7 — cards do PARTICIPANTE.
   lance_unico:          { titulo: "🎯 Lance único!",         bg: "rgba(0,200,83,0.12)",   borda: "rgba(0,200,83,0.45)",  barra: "#00c853" },
-  perdeu_exclusividade: { titulo: "⚠️ Perdeste exclusividade", bg: "rgba(249,115,22,0.12)", borda: "rgba(249,115,22,0.45)", barra: "#f97316" },
-  voce_venceu:          { titulo: "🏆 Ganhaste!",            bg: "rgba(0,200,83,0.14)",   borda: "rgba(0,200,83,0.5)",   barra: "#00c853" },
+  perdeu_exclusividade: { titulo: "⚠️ Você perdeu a exclusividade", bg: "rgba(249,115,22,0.12)", borda: "rgba(249,115,22,0.45)", barra: "#f97316" },
+  voce_venceu:          { titulo: "🏆 Você ganhou!",         bg: "rgba(0,200,83,0.14)",   borda: "rgba(0,200,83,0.5)",   barra: "#00c853" },
   resumo_edicao:        { titulo: "🏁 Edição encerrada",     bg: "rgba(59,130,246,0.12)", borda: "rgba(59,130,246,0.45)", barra: "#60a5fa" },
   // MC15.8.1 — Indique e Ganhe (roxo). Indução de conversão + card on-demand.
   indicacao:            { titulo: "👥 Indique e Ganhe",      bg: "rgba(168,85,247,0.12)", borda: "rgba(168,85,247,0.45)", barra: "#a855f7" },

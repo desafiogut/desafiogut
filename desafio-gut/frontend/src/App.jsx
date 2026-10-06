@@ -352,8 +352,8 @@ function EntradaOAuth() {
         </h1>
         <p style={{ margin: "0 0 0.9rem", color: "#6b7db8", fontSize: "0.85rem", lineHeight: 1.45 }}>
           {desistir
-            ? "Está a demorar mais que o esperado. Pode continuar manualmente:"
-            : "Só um instante — estamos a restabelecer a sua sessão."}
+            ? "Está demorando mais que o esperado. Você pode continuar manualmente:"
+            : "Só um instante — estamos restabelecendo a sua sessão."}
         </p>
         {desistir && (
           // <a> e não navigate(): força um carregamento novo, que é onde o SDK do

@@ -156,7 +156,7 @@ test("RENDER · com 49 pontos NÃO há botão «Resgatar» (mostra a meta)", asy
   try {
     const t = c.texto();
     assert.doesNotMatch(t, /Resgatar cartão/, "o resgate não pode aparecer antes dos 50 pontos");
-    assert.match(t, /Chega a 50 pontos para resgatar/);
+    assert.match(t, /Chegue a 50 pontos para resgatar/);
   } finally { c.dup.restaurar(); }
 });
 

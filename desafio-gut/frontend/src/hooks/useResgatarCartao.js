@@ -24,7 +24,7 @@ import { gerarIdempotencyKey } from "../utils/idempotency.js";
 const MSG_POR_STATUS = {
   401: "Sessão expirada",
   402: "Você precisa de 50 pontos de compra para resgatar o cartão",
-  400: "Confere os dados de entrega",
+  400: "Confira os dados de entrega",
 };
 
 export function useResgatarCartao() {

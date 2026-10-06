@@ -286,7 +286,7 @@ export default function OfertasProgramadas() {
                 type="button" disabled aria-label="Resgatar cartão indisponível"
                 style={{ marginTop: "0.9rem", width: "100%", padding: "0.75rem 1rem", borderRadius: "12px", cursor: "not-allowed", border: "1px solid rgba(107,125,184,0.35)", background: "transparent", color: COR.muted, fontWeight: 700, fontSize: "0.88rem" }}
               >
-                Chega a {pontosParaCartao} pontos para resgatar
+                Chegue a {pontosParaCartao} pontos para resgatar
               </button>
             )}
           </GlassCard>

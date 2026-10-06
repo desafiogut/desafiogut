@@ -434,7 +434,7 @@ function MercadoConformidade({ isMobile }) {
           As edições do DesafioGUT acontecem na nossa versão Web. Abra{" "}
           <strong style={{ color: COR.gold }}>desafiogut.com</strong> no seu navegador
           para participar com saldo, lances e carteira — tudo o que você já usa.
-          Por aqui, continua a explorar a loja e os produtos.
+          Por aqui, continue explorando a loja e os produtos.
         </p>
         <a
           href={PWA_URL}

@@ -23,7 +23,7 @@ Varredura por marcadores pt-PT em `src/` (comentários removidos; ~223 linhas co
 | `pages/admin/PerfilUsuario.jsx` · `VisaoGeral.jsx` · `Comunicacao.jsx` | «A carregar…» · «A ler…» · «A enviar…» | «Carregando…» · «Lendo…» · «Enviando…» |
 
 **Decisões do operador (R18, 2026-10-06):** **R18-A** âmbito = «18 de consumo + admin»; **R18-B** convite «no seu 1º lance».
-⚠️ **Ultrapassagem declarada:** aprovei 21 frases; apliquei **25 substituições em 20 linhas** — «Abre» e «já usas» estão na MESMA
+⚠️ **Ultrapassagem declarada:** aprovei 21 frases; apliquei **25 substituições em 25 linhas** (corrigido: a 1.ª redacção dizia «20 linhas» — ℹ️L1 do validador) — «Abre» e «já usas» estão na MESMA
 frase do `MercadoLances`, «Acumula» na mesma constante das OP, e «Escreve» (`usePalpite.js:33`) só apareceu na 2.ª varredura. Mesma
 classe (2.ª pessoa), mesmos ficheiros já aprovados; não é estrutural (cópia espalhada, não ficheiro partilhado).
 
@@ -36,7 +36,7 @@ teste de consistência do 106h) e no admin («Nenhum utilizador», «Nenhum regi
 
 ## SEG1-SEG3 — Correcções
 Ver tabela. **Só copy**: 25 substituições de texto, nenhuma linha de lógica (diff = strings). Testes afectados actualizados:
-`utac106e-compra-passe` (4), `utac106f-ofertas` (1), `utac106g-resgate` (2); script de mutação antigo
+`utac106e-compra-passe` (3 assertions — a 1.ª redacção dizia 4, ℹ️L1 do validador), `utac106f-ofertas` (1), `utac106g-resgate` (2); script de mutação antigo
 `scripts/mc106f-prova-mutacao.mjs` (mutante R-G ancorado em «Teus pontos (total):» → «Seus pontos (total):» — extensão declarada:
 sem isto o R-G abortaria por âncora).
 
@@ -56,3 +56,29 @@ RED(2) · Q8 «Escreve» RED(1) · Q9 admin «A enviar» RED(1) · Q10 «no teu 
 ## SEG5 (parte 1) — Verificação
 Suíte **843/843** (+3) · **1095/1101** → **VERDE**; `vite build` ✓ (5,32 s, scratchpad); `package-lock.json` não sujado; `.bak-*` ×5 =
 baseline; `EM_BREVE_MODE = true`. DEBT-021 não tocada.
+
+## SEG4b — Validador adversarial (subagente, worktree `tmp-107g2-val` @ `c6652d2`; 115 002 tokens, 29 chamadas, 270 s)
+
+**Veredicto: PARCIAL** — «o que mudou está certo (só texto, suíte VERDE, R-G funciona, escopo respeitado), mas o objectivo não
+ficou cumprido»: **4 frases pt-PT ficaram no âmbito** e a guarda tinha uma **zona cega real**.
+- ⚠️ A1 `MercadoLances.jsx:437` «Por aqui, continua a explorar a loja…» (mesmo parágrafo que corrigi) → **«continue explorando»**.
+- ⚠️ A2 `useResgatarCartao.js:27` «Confere os dados de entrega» → **«Confira…»**.
+- ⚠️ A3 `OfertasProgramadas.jsx:289` «Chega a N pontos para resgatar» → **«Chegue a…»** (+ testes 106f/106g).
+- ⚠️ A4 `usePalpite.js:31` «Sem edição a decorrer» → **«Sem edição em andamento»**.
+- ℹ️ A5 admin `Operacoes.jsx:52` «continua a responder» → **«continua respondendo»** (mesma construção; extensão declarada).
+- ⚠️ **G-cega**: o `/*` de `"/.netlify/functions/*"` dentro de um comentário `//` em `main.jsx:3` abria um falso bloco até à
+  linha 101 e escondia copy visível (o fallback do ErrorBoundary) → **removedor de comentários reescrito**, carácter a carácter,
+  ciente de strings (' " `, template multi-linha, apóstrofo em texto JSX não abre string); `//` dentro de string já não corta.
+- Lacunas G2/G7/G8/G9/G13 → **marcadores acrescentados**: `Clica|Confere|Chega a|Toca em|Partilha o|Introduz|Vê o/a`,
+  `fizeste|ganhaste|perdeste|…`, `ganhas \d`, `(continua|está|estamos|…) a …r`, `a decorrer`. **FP1** «A confirmar» (pt-BR) retirado.
+- ℹ️ L1 contagens do log corrigidas (acima).
+
+**Achados MEUS na re-varredura com a guarda nova** (não estavam no veredicto): `App.jsx:355-356` (página de retorno do login)
+«Está a demorar…» / «estamos a restabelecer…» → **«Está demorando… Você pode continuar…» / «estamos restabelecendo…»**;
+`ChatbotWidget.jsx` cartões «🏆 Ganhaste!» → **«🏆 Você ganhou!»** e «⚠️ Perdeste exclusividade» → **«⚠️ Você perdeu a
+exclusividade»**. Ficheiros declarados (copy apenas). **Páginas legais** `Privacidade.jsx`/`RegrasOficiais.jsx` ficam numa
+**excepção explícita** da guarda (`EXCECOES_LEGAIS`, com a razão) — pendência, não silêncio.
+
+**Mutação final 18/18** (11 + 7 sobreviventes do validador: G6 main.jsx, G2 «Clica», A1-A4, «Ganhaste»), md5 idêntico.
+Suíte **843/843 · 1095/1101 VERDE**; `vite build` ✓. ⚠️ Correcções pós-veredicto **não re-validadas** por 2.ª ronda (provadas por
+mutação; HI5 apertado).
