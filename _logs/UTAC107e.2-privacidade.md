@@ -101,10 +101,12 @@ Nada é gravado nem exposto durante a edição. ⚠️ Limites: lances no mesmo 
 | `netlify deploy --prod` (foreground, 09:45 e 2 repetições, uma com `--debug`) | ⛔ **`JSONHTTPError: Forbidden`** em `api.createSiteDeploy` (antes de qualquer build/upload) |
 | Diagnóstico (só leitura) | CLI autenticado (desafiogut), site ligado; site `disabled:false`, `locked:null`, `stop_builds:false`; conta `credit-pro`, `configurable_limits_exceeded: []` ⇒ causa **não identificada** do lado do executor (credencial/permissão — R5, do operador) |
 | Deploy | **NÃO feito.** Não contornado. `package-lock.json` intacto (o build nem correu) |
-| Push | **NÃO feito** — 3 commits locais (`1798893` → `6a05324` → `e255003`) + registo; ⚠️ o push dispara o **deploy automático** (medido: 10:53Z) — decisão do operador |
+| Push | Decisão do operador (R18-E, «push agora»): `5c1886a..1674bd8` às 12:57Z |
+| Deploy automático do push | `6ac4f048…` **`error`** — «**Skipped due to account credit usage exceeded**» ⇒ **a causa do 403 do CLI é a conta SEM CRÉDITOS** (período 25/09→25/10; `plan_credits 3000`). O campo `configurable_limits_exceeded:[]` não o mostrava |
+| Produção | **inalterada** (`5c1886a`, `index-CjvvGF-9.js`) — nada deste UTAC está no ar |
 
 **Duração:** ≈ 08:55 → 09:55 (≈ 1 h; HI5 2 h — dentro).
 **Custo (¢/1M tokens, Opus 5.5: 400 in · 2000 out · 20 cache):** validador 1.ª ronda **187 599** tokens + 2.ª ronda **212 091** (reportados pelo harness) = **399 690** ⇒
 entre **8,0 ¢** (tudo cache) e **799 ¢** (tudo output); **160 ¢** se tudo input fresco. Sessão principal **não medida** (Claude Code não expõe os tokens da própria sessão — `/cost`).
 
-**Veredicto: UTAC107e.2 — CÓDIGO FECHADO E VALIDADO; DEPLOY BLOQUEADO (403 do Netlify) — aguarda o operador.**
+**Veredicto: UTAC107e.2 — CÓDIGO FECHADO, VALIDADO E EMPURRADO; DEPLOY BLOQUEADO POR FALTA DE CRÉDITOS NETLIFY** — com créditos (recarga ou 25/10) basta `netlify deploy --prod` (ou novo push) e a verificação em produção (ler-palpites 401, verificar 403, chunks com a etiqueta).
