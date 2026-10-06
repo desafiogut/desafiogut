@@ -215,6 +215,8 @@ describe("UTAC107g · Meus Ativos — secção «Senhas antigas»", () => {
     assert.match(texto(s), /Tens 3 senhas antigas\s?\./ /* o `texto()` troca </strong> por espaço */);
     assert.match(texto(s), /Lance Programado do Menor Lance Único/);
     assert.doesNotMatch(s, /<button|<a\b/, "a secção ganhou um botão/link (R18-D: só texto)");
+    // ℹ️ do validador (V12): a contagem em ROXO, a cor semântica de senhas (`COR.senhas`).
+    assert.match(s, /<strong[^>]*color:\s*#a78bfa[^>]*>3 senhas antigas<\/strong>/i, "a contagem não está em roxo #a78bfa");
   });
 
   test("singular: 1 → «1 senha antiga»", () => {

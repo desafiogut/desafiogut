@@ -211,3 +211,79 @@ sítios de chamada em `src/`, literal de invocação, comentários excluídos). 
 **Destaque de segurança:** nenhum dos 25 é um endpoint de auth/admin **aberto**. Os que exigem atenção são o `debug-pedido`
 (diagnóstico em produção, protegido por token), os 2 `mc302-*` (já 410) e o `exportar-dados` (direito LGPD sem botão).
 **Nada removido** (NÃO AUTORIZA) — registado como pendência para UTAC futuro.
+
+---
+
+## SEG5 — Testes + mutação
+
+**Testes novos/actualizados (+18 no frontend):**
+
+| Ficheiro | O que prova | Nº |
+|---|---|---|
+| `src/__tests__/utac107g-navegacao.test.mjs` (**novo**) | router real (`matchRoutes`) sobre a árvore do `App.jsx`: `/edicao/*` e `/corp` → catch-all; catch-all → `/`, último filho do AppLayout, não engole `/redirect`, `/menor-lance-unico`, `/excluir-conta`; controlo positivo de 8 rotas vivas; BottomNav e Sidebar sem destinos repetidos e com o mesmo mapa; cada rota de navegação tem caminho no telemóvel | 6 |
+| `src/pages/__tests__/Dashboard.test.mjs` | render: ficam exactamente os 4 atalhos; os 3 removidos não aparecem; destinos únicos e `/carteira`+`/mercado` continuam no ecrã (KPI Saldo, CTA) | +3 |
+| `src/pages/__tests__/utac105c-meus-ativos.test.mjs` | render da secção: N>0 (sem botão), singular, 0, sem-sessão/carregando/erro sem número; tabela da função pura sem coerção | +5 |
+| `src/__tests__/utac106c-carteira-render.test.mjs` | render+clique: texto exacto, muted, sem fundo, ≥44 px, dentro do vidro do saldo; singular; clique → `/ativos`; ausente com 0/null/2.5/«7»/erro | +4 |
+| `src/__tests__/mc991-rotas.test.mjs` | `ORFAS_CONHECIDAS` vazio; `corp` fora de `POR_PROVIDER`; catch-all justificado | (actualizado) |
+| `netlify/functions/_tests/mc8843-estado-edicao.test.mjs` | `pages/EdicaoDetalhe.jsx` saiu da lista `CONSUMIDORES` (ficheiro apagado) — mesmo precedente do MC98 | (actualizado) |
+
+**Suíte:** frontend **836/836** (818 + 18) · backend **1095/1101** → **VERDE**. `npx vite build` → **✓ built in 13.70s**
+(para o scratchpad, não para o `dist/` do APK); `package-lock.json` **não sujado**.
+
+**Mutação (GATE 7) — `scripts/utac107g-prova-mutacao.mjs` → 15/15 PROVADOS**, restauro da cópia em memória com md5 idêntico
+(e md5 dos 5 alvos conferido antes/depois por fora do script):
+
+| Mutante | Resultado |
+|---|---|
+| M1 repor «Converter Ficha» · M2 repor «Dar Lance» (botões duplicados) | RED (3) · RED (3) |
+| M3 tirar o indicador · M4 indicador com 0 (guarda do render) · M5 coerção «7» · M6 ignora erro · M7 leva à Carteira | RED (3/1/1/1/1) |
+| M8 secção de Meus Ativos some · M9 contagem coage · M10 secção ganha botão | RED (4/2/1) |
+| M11 repor `/corp` · M12 repor `/edicao/:id` · M13 tirar catch-all · M14 catch-all → `/carteira` | RED (2/1/2/1) |
+| M15 destino duplicado no «Mais» | RED (1) |
+
+⚠️ **Mutante equivalente declarado:** a 1.ª versão do M4 mutava `saldoSenhas > 0` → `>= 0` no CÁLCULO de `senhasAntigas` e
+sobreviveu — é equivalente por construção (com 0 o valor é 0 e a guarda do render esconde na mesma). Substituído pelo mutante
+da guarda do render, que morde.
+
+**Erros dos MEUS instrumentos (declarados):**
+1. A busca por importadores de `EdicaoDetalhe` no SEG-1 cobriu só `src/` — **não** viu `netlify/functions/_tests/mc8843-*`,
+   que listava o ficheiro. A suíte apanhou-o (backend **2 falhas**, ENOENT) antes de qualquer commit; corrigido no teste.
+2. O 1.º parser de rotas do teste novo partia por tags com regex e confundia o `/>` de `element={<X />}` com o fecho da
+   `<Route>`; e a 2.ª versão contava o próprio `<Routes>` como grupo. O **controlo interno** do parser («grupos por fechar»)
+   disparou nas duas — reescrito por linha com `/^<Route\b/`.
+3. O `texto()` do arnês de Meus Ativos troca cada tag por espaço (`</strong>.` → ` .`); a 1.ª regex do teste exigia `antigas.`
+   colado. Ajustada a regex (o código estava certo).
+4. A ferramenta de shell consumiu `\b`/`\n` num heredoc ao inserir código de teste (ficheiro com `bloco.split("<newline>")`):
+   detectado por `node --check`; corrigido por Edit.
+
+---
+
+## SEG6 — Verificação ad-hoc
+
+Script único no scratchpad (`verifica-107g-adhoc.mjs`, corrido 1×, não fica no repo):
+
+```
+OK  .bak intacto ×5 (md5 = baseline)
+OK  EM_BREVE_MODE = true
+OK  escopo: 13 ficheiros, fora do permitido = []
+OK  backend de produção intacto (só _tests)
+OK  package*.json intactos
+OK  EdicaoDetalhe.jsx apagado
+OK  anti-bot MC28.1 intocado (lances-flash.mjs / lance-relampago.mjs)
+CONTROLO POSITIVO: estado errado gerou 4 FALHA(s) — o verificador vê
+VEREDITO AD-HOC: VERDE
+```
+
+Verificação funcional: duplicações reduzidas (3 atalhos fora, testado por render) · cada destino tem caminho (testado) · senhas
+em Meus Ativos + indicador na Carteira (render + clique) · caminhos mortos resolvidos (router real).
+
+Commit local `996c4c3` (12 ficheiros nomeados + o `git rm`; **não empurrado** antes do veredicto).
+
+---
+
+## SEG7 — Validador adversarial
+
+Veredicto **PARCIAL** (0 defeitos de produto; 2 lacunas de prova ⚠️ + 2 ℹ️ de teste) → **todas as 4 fechadas** com teste e
+mutante RED; ℹ️5/ℹ️7 (comentários e `?rc=1` sem produtor em ficheiros fora do AUTORIZA) registados como pendência.
+Verbatim e tratamento: `_logs/UTAC107g_SEG7_VALIDADOR.md`. Mutação final **21/21**; suíte **838/838 · 1095/1101 VERDE**.
+Correcções **não re-validadas** numa 2.ª ronda (declarado).

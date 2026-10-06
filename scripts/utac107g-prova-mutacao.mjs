@@ -61,6 +61,19 @@ const MUTANTES = [
   { id: "M15", o: "destino duplicado no «Mais» (segundo /ativos)", f: "src/widgets/layout/BottomNav.jsx",
     de: '{ path: "/configuracoes",       label: "Configurações",          Icon: IconSettings },',
     para: '{ path: "/configuracoes",       label: "Configurações",          Icon: IconSettings },\n  { path: "/ativos", label: "Senhas", Icon: IconTrending },', t: [T_NAV] },
+  // ── Sobreviventes do VALIDADOR ADVERSARIAL (SEG7), reproduzidos aqui depois da correcção ──
+  { id: "V1", o: "[validador] rota /vitrine/:slot perdida (o catch-all escondia-a)", f: "src/App.jsx",
+    de: '<Route path="/vitrine/:slot" element={<Vitrine />} />', para: "", t: [T_NAV] },
+  { id: "V2", o: "[validador] rota /seguranca perdida", f: "src/App.jsx",
+    de: '<Route path="/seguranca"  element={<CorporativoRoute><Seguranca /></CorporativoRoute>} />', para: "", t: [T_NAV] },
+  { id: "V4", o: "[validador] rota admin/pedidos perdida", f: "src/App.jsx",
+    de: '<Route path="pedidos"          element={<AdminPedidos />} />', para: "", t: [T_NAV] },
+  { id: "V7", o: "[validador] indicador fora do vidro (fecha o vidro e abre outro antes dele)", f: "src/pages/MinhaCarteira.jsx",
+    de: "{senhasAntigas > 0 && (", para: "</GlassCard><GlassCard>{senhasAntigas > 0 && (", t: [T_CART] },
+  { id: "V9", o: "[validador] status «stale» esconde o indicador", f: "src/pages/MinhaCarteira.jsx",
+    de: 'saldoSenhas > 0 && saldoSenhasStatus !== "error"', para: 'saldoSenhas > 0 && saldoSenhasStatus === "ok"', t: [T_CART] },
+  { id: "V12", o: "[validador] contagem de Meus Ativos deixa de ser roxa", f: "src/pages/MeusAtivos.jsx",
+    de: "color: COR_SECAO.senhas", para: 'color: "#fff"', t: [T_ATIV] },
 ];
 
 let falhas = 0;

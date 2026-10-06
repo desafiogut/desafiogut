@@ -120,6 +120,38 @@ test("Frente A · cada botão dos menus → destino ÚNICO (BottomNav e Sidebar 
   assert.ok(mobile.includes("/ativos") && desktop.includes("/ativos"));
 });
 
+// ⚠️ Achado do validador adversarial (⚠️2): com o catch-all, uma rota viva que DESAPAREÇA deixa de
+// dar ecrã em branco e passa a ir para o Início EM SILÊNCIO (mutantes V1 /vitrine/:slot, V2
+// /seguranca, V4 admin/pedidos sobreviviam). Por isso: TODO o destino de TODOS os menus (consumo,
+// lojista, admin) e TODO o literal/template de navegação em src/ tem de ter rota própria (≠ «*»).
+test("catch-all não esconde rotas perdidas: todo o destino de menu e de navegação tem rota própria", async () => {
+  const { readdirSync, statSync } = await import("node:fs");
+  const destinos = new Map(); // url de prova -> origem
+  const add = (url, onde) => { if (!destinos.has(url)) destinos.set(url, onde); };
+  // 1. menus (path:/href: em arrays) — consumo, lojista, admin
+  for (const rel of ["widgets/layout/BottomNav.jsx", "widgets/layout/Sidebar.jsx", "lib/adminNav.js"]) {
+    for (const m of semComentarios(ler(rel)).matchAll(/\b(?:path|href):\s*"(\/[^"]*)"/g)) add(m[1], rel);
+  }
+  // 2. literais e templates de navegação em todo o src/ (template → prefixo + segmento de prova)
+  (function walk(d) {
+    for (const e of readdirSync(d)) {
+      if (["node_modules", "__tests__", "_stubs"].includes(e)) continue;
+      const p = join(d, e);
+      if (statSync(p).isDirectory()) { walk(p); continue; }
+      if (!/\.(jsx?|mjs)$/.test(e) || /\.bak-/.test(e)) continue;
+      const txt = semComentarios(readFileSync(p, "utf8"));
+      for (const m of txt.matchAll(/(?:navigate\(\s*|\bto=\{?\s*|\bto:\s*)["'](\/[^"'?#]*)/g)) add(m[1], p);
+      for (const m of txt.matchAll(/(?:navigate\(\s*|\bto=\{[^}`]*?)`(\/[^`$]*)\$\{/g)) add(`${m[1]}prova-1`, p);
+    }
+  })(SRC);
+  assert.ok(destinos.size >= 30, `controlo: só ${destinos.size} destinos recolhidos — o extractor está cego`);
+  for (const sonda of ["/vitrine/prova-1", "/seguranca", "/admin/pedidos", "/corporativo/cupons"]) {
+    assert.ok(destinos.has(sonda), `controlo: o extractor não viu ${sonda}`);
+  }
+  const perdidos = [...destinos].filter(([u]) => destino(u) === "*" || destino(u) === null);
+  assert.deepEqual(perdidos, [], `destinos que caem no catch-all (rota perdida):\n${perdidos.join("\n")}`);
+});
+
 test("Frente A · nenhum destino ficou sem caminho: cada rota de navegação está num menu", () => {
   const bn = semComentarios(ler("widgets/layout/BottomNav.jsx"));
   for (const p of ["/carteira", "/mercado", "/ofertas-programadas", "/vitrine", "/programacao",

@@ -273,8 +273,20 @@ test("UTAC107g/RENDER · com senhas > 0: «Tens 7 senhas antigas → ver em Meus
   // GlassCard fechar — o fecho mais próximo do indicador tem de ser o desse cartão.
   const iPix = h.indexOf("Depósito por PIX via Mercado Pago");
   assert.ok(iPix >= 0 && iPix < iInd, "o indicador saiu do cartão de saldo (antes da nota do PIX ou fora)");
-  const vidro = h.slice(h.lastIndexOf("gut-glass-standard", iInd), iInd);
-  assert.ok(vidro.includes("Saldo Disponível"), "o indicador não está dentro do vidro do saldo (Regra 1)");
+  // ⚠️ Achado do validador (⚠️1, mutante V7): a 1.ª versão só procurava a ÚLTIMA abertura do vidro
+  // antes do indicador — mover o indicador para DEPOIS do </GlassCard> passava verde. Agora mede-se
+  // a PROFUNDIDADE: entre a abertura do vidro do saldo e o indicador, o <div> do vidro tem de
+  // continuar ABERTO (aberturas − fechos ≥ 1).
+  const iVidro = h.lastIndexOf("<div", h.lastIndexOf("gut-glass-standard", h.indexOf("Saldo Disponível")));
+  assert.ok(iVidro >= 0 && iVidro < iInd, "controlo: não encontrei a abertura do vidro do saldo");
+  // Profundidade CORRIDA: se o <div> do vidro fechar em algum ponto antes do indicador (mesmo que
+  // outro vidro abra a seguir), o indicador já não está NESTE vidro.
+  let prof = 0, minimo = Infinity;
+  for (const m of h.slice(iVidro, iInd).matchAll(/<div\b|<\/div>/g)) {
+    prof += m[0] === "</div>" ? -1 : 1;
+    minimo = Math.min(minimo, prof);
+  }
+  assert.ok(minimo >= 1 && prof >= 1, `o indicador está FORA do vidro do saldo (prof. mínima ${minimo}) — Regra 1`);
 });
 
 test("UTAC107g/RENDER · singular: 1 senha → «Tens 1 senha antiga → …»", async () => {
@@ -301,4 +313,11 @@ test("UTAC107g/RENDER · NÃO aparece com 0, null, não-inteiro, «7» (string) 
     const { html } = await montarCarteira({ ...CONECTADO, ...extra });
     assert.ok(!html().includes("ver em Meus Ativos"), `o indicador aparece com ${JSON.stringify(extra)}`);
   }
+});
+
+// ℹ️ do validador (V9): com status «stale» (valor antigo mas conhecido) o indicador APARECE —
+// a mesma regra de Meus Ativos (`estadoSenhasAntigas`: stale → «dados»). Fixado aqui.
+test("UTAC107g/RENDER · status «stale» com senhas > 0: o indicador aparece (valor conhecido)", async () => {
+  const { html } = await montarCarteira({ ...CONECTADO, saldoSenhasStatus: "stale" });
+  assert.ok(html().includes("Tens 7 senhas antigas → ver em Meus Ativos"), "com «stale» o indicador sumiu");
 });
