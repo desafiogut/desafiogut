@@ -4630,3 +4630,35 @@ backend 1061/1067). `vite build` OK. Validador adversarial: **APROVADO COM RESSA
 (user-session -> 402/200/404/400; lance-auth -> 401 `token_invalido` nos 4). Commits `4933629` (fix) ->
 `7dc291f` (correccao pos-veredicto) -> registo. Registo: `_logs/UTAC106j-fix-401.md` e
 `Desktop/RELATORIO-UTAC106j-fix-401.txt`.
+
+
+## R14 (append) -- UTAC107a-back -- MAPEAMENTO de contratos + navegacao (hermes)
+
+**Tipo:** mapeamento (ZERO alteracao de codigo). **HEAD:** `f498fde` (= origin/main). **Commits:**
+`f498fde` (baseline) -> `6e06f0c` (mapa + veredicto) -> registo (R14). **Suite:** frontend VERDE
+774/774 · backend VERDE 1061/1067. **Deploy:** live (site 200). Skill: `mc-driven-projects`.
+
+**Frente A (contratos):** 83 endpoints em `desafio-gut/frontend/netlify/functions/` (o dir da RAIZ
+esta vazio) -- Via A 15 · Via B 6 · Core 14 · Pagto 6 · Corp 5 · Admin 23 · Infra/Cron 14. **25 orfaos**
+de frontend (0 sitio de chamada em `src/`); legado Via A orfao: `comprar-passe`, `voucher`,
+`consolidar-lances`, `renovacao-adesao`, `pontuacao`. 4 contratos-chave detalhados (`ler-pontos`,
+`comprar-passe-pontos`, `registar-palpite`, `resgatar-cartao`). 18 migracoes Supabase (1:1).
+
+**Frente B (navegacao):** rotas `App.jsx:444-522`; BottomNav = 4 tabs (Carteira · Menor Lance Unico ·
+Inicio · Ofertas Programadas) + Mais; Sidebar = 10 itens (4 em sincronia). Unico alias:
+`/menor-lance-unico` -> redirect `/mercado`. **Caminhos mortos:** `/edicao/:id` (`EdicaoDetalhe` sem
+caminho de UI -- o banner passou a modal; `EdicaoCard.jsx:8` contradiz o codigo), `/corp`, `/redirect`.
+**Indicador «novo»:** NAO existe badge «NOVO»; o deposito de R$2 NAO cria notificacao; aparecem o
+bloco «PIX aprovado» no modal, o saldo a dourado, os botoes `Trocar`/`MLU` a ativar e a barra de pontos.
+
+**Validador adversarial (worktree f498fde, A13):** **PARCIAL · 4 bloqueantes**, TODOS corrigidos no
+documento -- B1 contagem de orfaos (26->25, definicao por sitio de chamada), B2 `pontuacao` orfa,
+B3 `comprar-passe` sem consumidor, B4 subcontagem de `/privacidade`/`/excluir-conta` (extractor
+alargado a `<a href>`/`href:`); mais notas i-5..i-11. **Erros dos meus instrumentos:** contagem de
+consumidores por substring crua (contava comentarios), extractor sem `<a href>`, strip de comentarios
+que deslocava linhas, e o cabecalho «26» sem varredura. Correcções pos-veredicto NAO re-validadas.
+
+**Registo:** `_logs/UTAC107a-back-mapeamento.md` · `_logs/UTAC107a-back_SEG3_VALIDADOR.md` ·
+`Desktop/RELATORIO-UTAC107a-back-MAPEAMENTO.txt`. **Custo:** ~US$ 0,103 (executor ~0,071 + validador
+~0,033); saldo API 3,22 -> 3,08 (delta ~0,14); duracao ~22 min. **Handoff:** o UTAC107a-front (Opus 5.5)
+usa este mapa para os mockups HTML/CSS e so arranca apos confirmacao do ambiente.

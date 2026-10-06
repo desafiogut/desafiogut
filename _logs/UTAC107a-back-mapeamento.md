@@ -526,4 +526,47 @@ sustentasse (B1).
 
 ## §Registos e custo (SEG4)
 
-%%REGISTOS%%
+### Registo em 3 lugares (R18)
+
+1. `_logs/UTAC107a-back-mapeamento.md` (este documento) + `_logs/UTAC107a-back_SEG3_VALIDADOR.md` (veredicto verbatim + resposta do executor).
+2. `CLAUDE.md` — bloco **R14** resumido (apêndice no EOF; 2×`0x00` + 2×`0x1F` intactos).
+3. `Desktop/RELATORIO-UTAC107a-back-MAPEAMENTO.txt` (relatório ao operador).
+
+### Ficheiros criados (só docs/logs — zero código)
+
+`_logs/UTAC107a-back-mapeamento.md` · `_logs/UTAC107a-back_SEG3_VALIDADOR.md` · bloco R14 no `CLAUDE.md`.
+**Verificável:** `git status --porcelain | grep -v '^??'` = vazio; nenhum ficheiro de `src/`, `netlify/`,
+`_lib/`, `supabase/` tocado; `package*.json` intactos; nenhum `.bak-*` tocado; `EM_BREVE_MODE = true`.
+
+### Commits (foreground, ficheiros individuais — NUNCA `git add -A`)
+
+| SHA | O que fez |
+|---|---|
+| `f498fde` | baseline (heredado do UTAC106j-fix) |
+| `6e06f0c` | mapa de contratos + navegação + veredicto do validador |
+| *(este registo)* | bloco R14 do `CLAUDE.md` + §Registos |
+
+### Dívida / ressalvas declaradas (não registadas em `DEBT.md` — RESSALVA 7)
+
+- **`/edicao/:id`** (`EdicaoDetalhe`) é **rota registada sem caminho de UI** (o banner passou a abrir modal);
+  `EdicaoCard.jsx:8` contradiz o código. **Candidata a UTAC** (decidir: remover rota ou repor o link).
+- **25 endpoints órfãos de frontend** (lista §A.3.1) — dos quais os `*-scheduled`/`webhook-*`/`health` são
+  esperados (agendador/terceiros). Os **legado Via A** (`comprar-passe`, `voucher`, `consolidar-lances`,
+  `renovacao-adesao`, `pontuacao`) ficam **registados, não decididos**.
+- **Indicador «novo»**: o 107a-back **não localizou** um badge «NOVO»; registou o que existe (§B.7) e
+  deixou a decisão ao operador (RESSALVA 3).
+
+### Custo (medido ao fecho)
+
+| Sessão | `source` | msgs | chamadas | custo estimado (`state.db`) |
+|---|---|---|---|---|
+| `20261005_221738_6265f4` (executor, esta ronda) | `cli` | 154 | 88 | **≈ US$ 0,071** |
+| `20261005_222746_c4f5f0` (validador adversarial) | `subagent` | 85 | 52 | **≈ US$ 0,033** |
+| **Total estimado do UTAC** | | | | **≈ US$ 0,103** |
+
+- **Duração:** arranque **22:18** → fecho **22:40** = **≈ 22 min** (dentro de HI5 = 2 h).
+- **Saldo da API (medido):** arranque **US$ 3,22** → fecho **US$ 3,08** ⇒ **Δ ≈ US$ 0,14** (real, inclui a
+  delegação). As duas leituras são reportadas **separadas** (a de `state.db` é estimativa; a do saldo é real —
+  e aqui **não** reconciliam, a base é instável).
+- **Sessão por UTAC:** a plataforma abriu sessão própria (`20261005_221738_6265f4`, `source='cli'`,
+  arranque 22:17:38) — o custo é separável, como o operador pediu. O validador tem sessão própria.
