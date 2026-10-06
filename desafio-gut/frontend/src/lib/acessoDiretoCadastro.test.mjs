@@ -1,42 +1,60 @@
-// UTAC107g.3 (DEBT-021) — `?rc=1` passa de substring a match exato.
-// Bidirecional (GATE 8): cada URL de ataque ABRIA com o predicado antigo e
-// deixa de abrir com o novo; `?rc=1` abre nos dois (comportamento preservado).
+// UTAC107g.4 — a exceção `?rc=1` foi FECHADA: `temAcessoDiretoCadastro` devolve `false` SEMPRE.
+//
+// HISTÓRIA: o UTAC107g.3 passou o match de substring para EXATO (`URLSearchParams(...).get("rc") === "1"`),
+// o que fechou os ataques por substring (`?src=1`, `?arc=10`, `?rc=10`, `?xrc=1`) mas manteve a porta
+// aberta para o `?rc=1` exato — por decisão do operador desse UTAC. O UTAC107g.4 fecha-a de vez: já
+// ninguém no app gera esse endereço.
+//
+// BIDIRECIONAL (GATE 8): o predicado do 107g.3 ABRIA com `?rc=1` e a função de agora NÃO abre — o
+// caso é discriminante (não é um teste vacuoso).
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { temAcessoDiretoCadastro } from "./acessoDiretoCadastro.js";
 
-const antigo = (search) => search.includes("rc=1"); // App.jsx:148 até ceb5ab8
+// O predicado exato do UTAC107g.3 (o que este UTAC veio fechar).
+const exatoDo107g3 = (search) => new URLSearchParams(search).get("rc") === "1";
 
-const ATAQUES = ["?src=1", "?arc=10", "?rc=10", "?xrc=1", "?foo=1&src=1", "?rc=1x", "?arc=1"];
-const LEGITIMOS = ["?rc=1", "?foo=bar&rc=1", "?rc=1&utm=x", "?rc=%31"];
-const FECHADOS = ["", "?", "?rc=", "?rc=0", "?rc=2", "?RC=1", "?rc= 1", "?rc", "?rc=true"];
+// Corpus: os ataques por substring do 107g.3, os que o match exato deixava passar, e variantes.
+const NAO_DEVE_ABRIR = [
+  // (i) os que o SUBSTRING antigo abria por engano
+  "?src=1", "?arc=10", "?rc=10", "?xrc=1", "?foo=1&src=1", "?rc=1x", "?arc=1",
+  // (ii) os que o MATCH EXATO do 107g.3 ainda abria — o objeto deste UTAC
+  "?rc=1", "?foo=bar&rc=1", "?rc=1&utm=x", "?rc=%31",
+  // (iii) variantes de forma (hash, prefixo, maiúsculas, zero à esquerda, espaços)
+  "#rc=1", "&rc=1", "?RC=1", "?rc=01", "?rc=true", "?rc= 1", "https://x.test/?rc=1",
+  // (iv) sem parâmetro nenhum
+  "", "?", "?rc=", "?rc=0", "?rc=2", "?rc", "?foo=bar",
+];
 
-test("cada ataque ABRIA com o substring antigo (o caso é discriminante)", () => {
-  for (const s of ATAQUES) assert.equal(antigo(s), true, s);
+test("BIDIRECIONAL: o predicado do 107g.3 ABRIA com `?rc=1` (o caso é discriminante)", () => {
+  assert.equal(exatoDo107g3("?rc=1"), true, "controlo: o predicado antigo tinha de abrir");
+  assert.equal(exatoDo107g3("?foo=bar&rc=1"), true, "controlo: o predicado antigo tinha de abrir");
 });
 
-test("nenhum ataque abre com o match exato", () => {
-  for (const s of ATAQUES) assert.equal(temAcessoDiretoCadastro(s), false, s);
-});
-
-test("?rc=1 continua a abrir (MC17 preservado)", () => {
-  for (const s of LEGITIMOS) assert.equal(temAcessoDiretoCadastro(s), true, s);
-});
-
-test("sem rc=1 exato não abre; entrada não-texto não abre", () => {
-  for (const s of FECHADOS) assert.equal(temAcessoDiretoCadastro(s), false, JSON.stringify(s));
-  for (const v of [undefined, null, 1, {}, ["?rc=1"]]) {
-    assert.equal(temAcessoDiretoCadastro(v), false, String(v));
+test("nenhum URL abre a UI do lojista (a função devolve SEMPRE false)", () => {
+  for (const s of NAO_DEVE_ABRIR) {
+    assert.equal(temAcessoDiretoCadastro(s), false, `ABRIU com ${JSON.stringify(s)} — porta aberta!`);
   }
 });
 
-// Cablagem: o helper certo não prova nada se a guarda não o usar.
+test("entrada não-texto também não abre", () => {
+  for (const v of [undefined, null, 1, 0, true, {}, ["?rc=1"], new URLSearchParams("?rc=1")]) {
+    assert.equal(temAcessoDiretoCadastro(v), false, `ABRIU com ${String(v)} — porta aberta!`);
+  }
+});
+
+test("a assinatura foi preservada (1 parâmetro) — o App.jsx não muda", () => {
+  assert.equal(temAcessoDiretoCadastro.length, 1,
+    "a função perdeu o parâmetro: o App.jsx chama-a com window.location.search");
+});
+
+// ─── Cablagem: o helper certo não prova nada se a guarda não o usar. ────────────────
 const semComentarios = (src) =>
   src.replace(/\/\*[\s\S]*?\*\//g, "").split(/\r?\n/).filter((l) => !/^\s*\/\//.test(l)).join("\n");
 const APP = semComentarios(readFileSync(new URL("../App.jsx", import.meta.url), "utf8"));
 
-test("a CorporativoRoute usa o match exato sobre window.location.search", () => {
+test("a CorporativoRoute continua a usar o helper (guarda intacta — não foi tocada)", () => {
   const i = APP.indexOf("function CorporativoRoute");
   assert.ok(i >= 0, "CorporativoRoute não encontrada");
   const corpo = APP.slice(i, APP.indexOf("\nfunction ", i + 1));
@@ -44,7 +62,7 @@ test("a CorporativoRoute usa o match exato sobre window.location.search", () => 
   assert.match(APP, /import \{ temAcessoDiretoCadastro \} from "\.\/lib\/acessoDiretoCadastro\.js";/);
 });
 
-test("o App.jsx não volta a testar a query string por substring", () => {
+test("o App.jsx não testa a query string por substring", () => {
   assert.doesNotMatch(APP, /\.includes\(\s*["'][^"']*rc=/);
   assert.doesNotMatch(APP, /location\.search\.(includes|indexOf|match)\(/);
 });
