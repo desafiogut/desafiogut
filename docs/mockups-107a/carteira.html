@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UTAC107a · Carteira</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  .saldo-linha { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .icone-btn { width: 48px; height: 48px; border-radius: 12px; border: 1px solid rgba(245,166,35,.30); background: transparent; color: var(--gut-muted-strong); font-size: 18px; cursor: pointer; flex: none; }
+  .tiles2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .tile-nav { min-height: 96px; border-radius: 14px; border: 1px solid rgba(245,166,35,.35); background: rgba(245,166,35,.08); color: var(--gut-gold); font: inherit; font-weight: 800; font-size: 15px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; padding: 12px; cursor: pointer; text-align: left; }
+  .tile-nav small { font-weight: 600; color: var(--gut-muted-strong); font-size: 12px; }
+  .cta-fixo { position: sticky; bottom: 0; padding-top: 6px; }
+  .saldo-inline { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .saldo-inline .btn { width: auto; }
+</style>
+</head>
+<body>
+<div class="prancha">
+  <header>
+    <h1>SEG1 · Carteira redesenhada</h1>
+    <p>Fonte do «antes»: <code>src/pages/MinhaCarteira.jsx</code> no HEAD <code>536c9cb</code>, reconstruído em HTML (não houve captura de ecrã: exigiria aceitar o gate LGPD em nome do operador). Ordem decidida (decisão 1): <b>Depositar PIX → Comprar Passe Desafio → Menor Lance Único → Ofertas Programadas</b>. Os dados mostrados são de exemplo.</p>
+  </header>
+  <nav class="navdocs" aria-label="Pranchas">
+    <a href="index.html">Índice</a><a href="tokens.html">Tokens</a><a href="regra-1-glass.html">Regra 1</a><a href="carteira.html" aria-current="page">Carteira</a><a href="inicio.html">Início</a><a href="menor-lance-unico.html">Menor Lance Único</a><a href="ofertas-programadas.html">Ofertas Programadas</a><a href="tabela-especial.html">Regra 2</a>
+  </nav>
+  <div class="controles">
+    <span class="rot">Variante</span>
+    <span data-grupo-v="cart-depois">
+      <button data-v="A" aria-pressed="true" data-desc="A · Fiel ao actual (RECOMENDADA, pedido do operador): o mesmo cartão único de hoje; só muda o que as decisões obrigam.">A · Fiel ao actual ★</button>
+      <button data-v="B" data-desc="B · Alternativa: saldo e ações separados; ações agrupadas por passo (carregar → comprar → jogar).">B · Saldo + ações</button>
+      <button data-v="C" data-desc="C · Divergente: PIX junto ao saldo, navegação em mosaicos e o Passe fixo no fundo (zona do polegar).">C · Divergente</button>
+    </span>
+    <span class="rot" style="margin-left:12px">Largura</span>
+    <span data-larguras><button data-largura="375" aria-pressed="true">375 mobile</button><button data-largura="768">768 tablet</button><button data-largura="1024">1024 desktop</button></span>
+  </div>
+  <p class="sub" data-legenda="cart-depois" style="margin:-8px 0 16px"></p>
+
+  <div class="lado">
+    <div class="coluna-mock">
+      <span class="etq antes">Antes (actual)</span>
+      <div class="fone antes" id="cart-antes">
+        <div class="barra-sis"><span>9:41</span><span>●●●</span></div>
+        <div class="tela">
+          <div class="glass" style="padding:16px">
+            <div class="saldo-linha">
+              <h3 style="margin:0;color:#f5a623;font-size:13.6px;font-weight:800">Carteira</h3>
+              <span style="font-size:9.9px;font-weight:700;color:#6b7db8;border:1px solid rgba(245,166,35,.18);border-radius:999px;padding:2px 8px">R$ OFF-CHAIN</span>
+              <button class="alvo" style="background:transparent;border:1px solid rgba(245,166,35,.18);border-radius:999px;color:#6b7db8;font-size:11.5px;padding:1px 7px"><span class="marca">1</span>↻</button>
+            </div>
+            <div style="font-size:9.9px;color:#f5a623;font-weight:700;letter-spacing:.06em">SALDO DISPONÍVEL</div>
+            <div style="font-size:38px;font-weight:900;color:#f5a623;line-height:1.05">R$ 12.50</div>
+            <div style="font-size:12.5px;color:#6b7db8;margin:6px 0 14px">Saldo em reais para Lance Relâmpago. Para Lance Programado, troque por Senhas (R$ 2.00 cada).</div>
+            <div style="display:grid;gap:9.6px">
+              <button class="btn-antigo" style="background:rgba(0,212,255,.14);border-color:rgba(0,212,255,.4);color:#00d4ff">💰 Depositar PIX</button>
+              <button class="btn-antigo alvo" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff"><span class="marca">2</span>🎫 Trocar R$ 2.00 → 1 Senha</button>
+              <button class="btn-antigo" style="background:rgba(245,166,35,.14);border-color:rgba(245,166,35,.4);color:#f5a623">⚡ Menor Lance Único</button>
+              <button class="btn-antigo alvo" style="background:linear-gradient(135deg,#f5a623,#e89400);color:#fff"><span class="marca">3</span>Comprar Passe Desafio R$ 2,00</button>
+            </div>
+            <p style="margin:10px 0 0;font-size:10.9px;color:#6b7db8">Depósito por PIX via Mercado Pago — <b style="color:#fbbf24">desafiogut@gmail.com</b> (crédito automático após a aprovação). Custo de cada senha: R$ 2.00 por edição (Art. 20).</p>
+          </div>
+          <div class="glass"><b style="color:#f5a623;font-size:13.6px">🎁 Indique e Ganhe</b><p class="cru" style="margin:6px 0 0">Partilha o teu código e ganha bónus.</p></div>
+          <p class="alvo" style="margin:0;font-size:12.5px;color:#ef4444;font-weight:700"><span class="marca">4</span>⚠️ Saldo insuficiente. <u style="color:#fbbf24">Carregar agora (PIX)</u></p>
+        </div>
+        <nav class="bottomnav"><a href="#" aria-current="page"><span class="ic">👛</span>Carteira</a><a href="#"><span class="ic">⚡</span>Menor Lance Único</a><a href="#"><span class="ic">🏠</span>Início</a><a href="#"><span class="ic">🎫</span>Ofertas Programadas</a><a href="#"><span class="ic">⋯</span>Mais</a></nav>
+      </div>
+      <div class="auditoria" data-relatorio="cart-antes"></div>
+    </div>
+
+    <div class="coluna-mock">
+      <span class="etq depois">Depois (proposta)</span>
+      <div class="fone depois" id="cart-depois">
+        <div class="barra-sis"><span>9:41</span><span>●●●</span></div>
+
+        <!-- ═══ VARIANTE A — FIEL AO ACTUAL (recomendada pelo operador) ═══ -->
+        <div class="tela coluna" data-painel="A">
+          <section class="glass alvo"><span class="marca">1</span>
+            <div class="saldo-linha">
+              <h1 class="h-sec" style="font-family:var(--font-body);font-size:15px">Carteira</h1>
+              <button class="icone-btn" aria-label="Atualizar o saldo">↻</button>
+            </div>
+            <div class="rotulo" style="color:var(--gut-gold)">Saldo disponível</div>
+            <div class="valor-xl">R$ 12,50</div>
+            <div style="height:12px"></div>
+            <div class="grupo-btn alvo" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))"><span class="marca">2</span>
+              <button class="btn btn-pix">💰 Depositar PIX</button>
+              <button class="btn btn-ouro alvo"><span class="marca">3</span>Comprar Passe Desafio R$ 2,00</button>
+              <button class="btn" style="background:rgba(245,166,35,.14);border-color:rgba(245,166,35,.4);color:var(--gut-gold)">⚡ Menor Lance Único</button>
+              <button class="btn" style="background:rgba(245,166,35,.14);border-color:rgba(245,166,35,.4);color:var(--gut-gold)">🎫 Ofertas Programadas</button>
+            </div>
+            <div role="status" class="alvo" style="margin-top:10px;padding:10px;border-radius:10px;background:rgba(255,90,95,.10);border:1px solid rgba(255,90,95,.35)"><span class="marca">4</span>
+              <p style="margin:0;color:var(--gut-danger);font-weight:700;font-size:14px">⚠️ Saldo insuficiente.</p>
+              <button class="btn btn-pix" style="margin-top:8px">Carregar agora (PIX)</button>
+            </div>
+          </section>
+          <section class="glass"><h2 class="h-sec">🎁 Indique e Ganhe</h2><p class="sub">Partilha o teu código e ganha bónus.</p></section>
+        </div>
+
+        <!-- ═══ VARIANTE B (recomendada) ═══ -->
+        <div class="tela coluna" data-painel="B" hidden>
+          <section class="glass titulo-aba"><div><h1 class="h-aba">Carteira</h1></div></section>
+          <section class="glass alvo"><span class="marca">1</span>
+            <div class="saldo-linha"><span class="rotulo">Saldo disponível</span><button class="icone-btn" aria-label="Atualizar saldo">↻</button></div>
+            <div class="valor-xl">R$ 12,50</div>
+            
+          </section>
+          <section class="glass alvo" aria-label="Ações da carteira"><span class="marca">2</span>
+            <div class="grupo-btn">
+              <span class="passo">1 · Carregar</span>
+              <button class="btn btn-pix">💰 Depositar PIX</button>
+              <span class="passo">2 · Comprar</span>
+              <button class="btn btn-ouro alvo"><span class="marca">3</span>🎟️ Comprar Passe Desafio · R$ 2,00</button>
+              <span class="passo">3 · Participar</span>
+              <button class="btn btn-nav">⚡ Menor Lance Único <span class="seta">→</span></button>
+              <button class="btn btn-nav">🎫 Ofertas Programadas <span class="seta">→</span></button>
+            </div>
+            
+            <div role="status" style="margin-top:10px;padding:10px;border-radius:10px;background:rgba(255,90,95,.10);border:1px solid rgba(255,90,95,.35)">
+              <p style="margin:0;color:var(--gut-danger);font-weight:700;font-size:14px">⚠️ Saldo insuficiente para o Passe.</p>
+              <button class="btn btn-pix" style="margin-top:8px">Carregar agora (PIX)</button>
+            </div>
+          </section>
+          <section class="glass"><h2 class="h-sec">🎁 Indique e Ganhe</h2><p class="sub">Partilha o teu código e ganha bónus.</p></section>
+        </div>
+
+        <!-- ═══ VARIANTE C ═══ -->
+        <div class="tela coluna" data-painel="C" hidden>
+          <section class="glass titulo-aba"><div><h1 class="h-aba">Carteira</h1></div><button class="icone-btn" aria-label="Atualizar saldo">↻</button></section>
+          <section class="glass">
+            <span class="rotulo">Saldo disponível</span>
+            <div class="saldo-inline"><div class="valor-xl">R$ 12,50</div><button class="btn btn-pix">💰 Depositar PIX</button></div>
+            
+          </section>
+          <section class="glass">
+            <h2 class="h-sec" style="margin-bottom:10px">Participar</h2>
+            <div class="tiles2">
+              <button class="tile-nav"><span>⚡</span>Menor Lance Único</button>
+              <button class="tile-nav"><span>🎫</span>Ofertas Programadas</button>
+            </div>
+          </section>
+          <section class="glass"><h2 class="h-sec">🎁 Indique e Ganhe</h2><p class="sub">Partilha o teu código e ganha bónus.</p></section>
+          <div class="cta-fixo"><button class="btn btn-ouro">🎟️ Comprar Passe Desafio · R$ 2,00</button></div>
+        </div>
+
+        <nav class="bottomnav"><a href="#" aria-current="page"><span class="ic">👛</span>Carteira</a><a href="#"><span class="ic">⚡</span>Menor Lance Único</a><a href="#"><span class="ic">🏠</span>Início</a><a href="#"><span class="ic">🎫</span>Ofertas Programadas</a><a href="#"><span class="ic">⋯</span>Mais</a></nav>
+      </div>
+      <div class="auditoria" data-relatorio="cart-depois"></div>
+    </div>
+
+    <aside class="notas">
+      <h2>Anotações (variante A · fiel ao actual)</h2>
+      <ol>
+        <li><span class="tag-mudou mod">mantém</span><b>O mesmo cartão único de hoje</b>, com título «Carteira», ↻, «Saldo disponível» a dourado e valor grande. <span class="tag-mudou rem">removido</span>a pílula «R$ OFF-CHAIN», a frase de apoio e a nota do e-mail PIX: são texto técnico ou que repete o botão (R18-E). Muda só o tamanho: o ↻ passa de ≈ 20 px a 48 × 48, os rótulos sobem de 9,9 px para 12 px e o valor passa a usar vírgula decimal.<span class="porque">Porquê: o operador prefere o layout actual (R18-D). Os ajustes são os mínimos para cumprir o toque de 48 dp e o tamanho mínimo de texto.</span></li>
+        <li><span class="tag-mudou mod">mudou</span><b>Ordem dos botões: Depositar PIX → Comprar Passe Desafio → Menor Lance Único → Ofertas Programadas</b> (decisão 1). A grelha é a mesma de hoje: 1 coluna no mobile e 2 no desktop. <span class="tag-mudou add">novo</span>«🎫 Ofertas Programadas», com o mesmo estilo do «⚡ Menor Lance Único». <span class="tag-mudou rem">removido</span>«🎫 Trocar R$ 2,00 → 1 Senha».<span class="porque">Depósito → compra → navegação. ⚠️ Sem o botão «Trocar», a UI deixa de ter um caminho visível para comprar senhas da Via A. O lance programado converte R$ → senha sozinho (<code>CardLance.jsx:416</code>). Fica para o 107b.</span></li>
+        <li><span class="tag-mudou mod">mudou</span><b>Contraste do Passe</b>: o texto branco sobre <code>#f5a623</code> dá 2,03:1 e falha o AA. Proposta: texto <code>#0a0f1a</code>, 9,45:1. O botão continua dourado e no mesmo sítio.<span class="porque">Altura de 48 px em todos os botões. Hoje medem ≈ 44 px.</span></li>
+        <li><span class="tag-mudou mod">mudou</span><b>O aviso 402 entra no cartão</b> (Regra 1). Hoje aparece solto, por baixo do «Indique e Ganhe». O atalho «Carregar agora (PIX)» passa a botão de 48 px.<span class="porque">⚠️ Antes de retirar a nota do e-mail PIX, o 107b tem de confirmar que o modal de depósito mostra o destinatário. O MC99 repôs essa nota de propósito, porque era o único sítio onde o e-mail aparecia.</span></li>
+      </ol>
+      <h2 style="margin-top:18px">Variantes</h2>
+      <ol>
+        <li><b>A · Fiel ao actual ★</b>: preferida pelo operador. É também a mais barata para o 107b.</li>
+        <li><b>B · Saldo + ações</b>: separa o saldo das ações e mostra os passos. Fica como alternativa.</li>
+        <li><b>C · Divergente</b>: CTA fixo na zona do polegar e mosaicos de 96 px. Ganha em toque mas perde a sequência visual da decisão 1. Serve para testar até onde o operador quer ir.</li>
+      </ol>
+      <h2 style="margin-top:18px">Responsivo</h2>
+      <ol><li>Em 768/1024 o conteúdo fica numa coluna de 640 px centrada (<code>--gut-coluna</code>), igual nas 4 abas, com margem de 24 px e padding de 20 px. Na variante C, os mosaicos mantêm-se 2 × 1.</li></ol>
+    </aside>
+  </div>
+</div>
+<script src="mockup.js"></script>
+</body>
+</html>

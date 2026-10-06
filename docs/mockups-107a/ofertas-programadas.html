@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UTAC107a · Ofertas Programadas</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  .cartao-quildo { border-radius: 14px; padding: 14px; text-align: center; background: linear-gradient(135deg, rgba(245,166,35,.18), rgba(255,107,53,.10)); border: 1px solid rgba(245,166,35,.45); }
+  .palpite { display: grid; gap: 8px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.08); }
+  .palpite .linha { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+  .stepper { display: grid; grid-template-columns: 48px 1fr 48px; gap: 6px; align-items: center; }
+  .stepper button { height: 48px; border-radius: 10px; border: 1px solid rgba(143,160,216,.45); background: transparent; color: var(--gut-text); font-size: 20px; cursor: pointer; }
+  .stepper output { text-align: center; font-size: 22px; font-weight: 900; color: var(--gut-gold); }
+  .res { margin: 0; font-weight: 700; font-size: 15px; }
+  .folha { margin-top: 10px; padding: 14px; border-radius: 16px 16px 0 0; background: #0d1235; border: 1px solid rgba(255,255,255,.12); }
+  details.hist summary { min-height: 48px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; list-style: none; font-weight: 800; color: var(--gut-text-body); }
+  details.hist summary::-webkit-details-marker { display: none; }
+  .hist ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 14px; color: var(--gut-text-body); }
+  .hist li { display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+<div class="prancha">
+  <header>
+    <h1>SEG4 · Ofertas Programadas</h1>
+    <p>Fonte do «antes»: <code>src/pages/OfertasProgramadas.jsx</code> (HEAD <code>536c9cb</code>). Decisões 7 (carrossel de edições), 8 (palpite dentro de cada cartão) e 9 (tabela no fim, Regra 2). <b>R18-C:</b> a tabela mostra os lances <b>da edição Programada</b> do palpite (ex.: PROG-1), não a R-1, para não duplicar a tabela do MLC. Texto do ecrã simplificado (R18-E).</p>
+  </header>
+  <nav class="navdocs" aria-label="Pranchas">
+    <a href="index.html">Índice</a><a href="tokens.html">Tokens</a><a href="regra-1-glass.html">Regra 1</a><a href="carteira.html">Carteira</a><a href="inicio.html">Início</a><a href="menor-lance-unico.html">Menor Lance Único</a><a href="ofertas-programadas.html" aria-current="page">Ofertas Programadas</a><a href="tabela-especial.html">Regra 2</a>
+  </nav>
+  <div class="controles">
+    <span class="rot">Variante</span>
+    <span data-grupo-v="op-depois">
+      <button data-v="A" aria-pressed="true" data-desc="A · Campo + botão (recomendada): o palpite é um campo numérico e um botão «Palpitar» na base de cada cartão; os 5 estados aparecem cartão a cartão no carrossel.">A · Campo + botão</button>
+      <button data-v="B" data-desc="B · Botões − / +: o número escolhe-se com dois botões de 48 px, sem teclado; bom para valores perto de uma sugestão.">B · − / +</button>
+      <button data-v="C" data-desc="C · Folha inferior: o cartão só tem «Palpitar»; o campo abre numa folha que sobe do fundo (padrão de modal móvel).">C · Folha inferior</button>
+    </span>
+    <span class="rot" style="margin-left:12px">Largura</span>
+    <span data-larguras><button data-largura="375" aria-pressed="true">375 mobile</button><button data-largura="768">768 tablet</button><button data-largura="1024">1024 desktop</button></span>
+  </div>
+  <p class="sub" data-legenda="op-depois" style="margin:-8px 0 16px"></p>
+
+  <div class="lado">
+    <div class="coluna-mock">
+      <span class="etq antes">Antes (actual)</span>
+      <div class="fone antes" id="op-antes">
+        <div class="barra-sis"><span>9:41</span><span>●●●</span></div>
+        <div class="tela">
+          <header class="alvo"><span class="marca">1</span><h2 style="margin:0;font-family:var(--font-display);color:#ff6b35;font-size:21px">Ofertas Programadas</h2><p class="cru" style="margin:4px 0 0;font-size:14px">Programa de fidelidade — acumula pontos e troca pelo cartão da Família Quildo</p></header>
+          <div class="glass"><b>12 / 50 pontos</b> <span class="cru">24%</span><div class="progresso"><i style="width:24%"></i></div><button class="btn-antigo" style="width:100%;margin-top:12px;border-color:rgba(107,125,184,.35);color:#6b7db8;background:transparent">Chega a 50 pontos para resgatar</button></div>
+          <div class="glass"><div class="cartao-quildo">🃏<br><b style="color:#f5a623">Cartão da Família Quildo</b><p class="cru" style="margin:4px 0 0">Cartão colecionável físico, com a arte da Família Quildo. Acumula 50 pontos para trocar por ele. O palpite dá pontos EXTRA, mas o cartão conquista-se só com os pontos das tuas compras.</p></div></div>
+          <div class="glass alvo"><span class="marca">2</span><b>Palpite — bónus de +2 pontos</b><p class="cru" style="margin:4px 0 8px">Quantos lances achas que a edição vai ter? O mais próximo leva +2 pontos. É bónus: não muda o cartão.</p><div style="display:flex;gap:8px"><input class="campo" style="min-height:42px" placeholder="Ex.: 120"><button class="btn-antigo" style="background:#f5a623;color:#12161f;min-height:42px">Palpitar</button></div></div>
+          <div class="glass"><b>Histórico</b><p class="cru" style="margin:6px 0 0">10/02 · Compra de Passe +1</p></div>
+          <p class="alvo" style="text-align:center;margin:0"><span class="marca">3</span><a href="#" style="color:#6b7db8;font-size:12.8px">📜 Regras Oficiais do programa</a></p>
+        </div>
+        <nav class="bottomnav"><a href="#"><span class="ic">👛</span>Carteira</a><a href="#"><span class="ic">⚡</span>Menor Lance Único</a><a href="#"><span class="ic">🏠</span>Início</a><a href="#" aria-current="page"><span class="ic">🎫</span>Ofertas Programadas</a><a href="#"><span class="ic">⋯</span>Mais</a></nav>
+      </div>
+      <div class="auditoria" data-relatorio="op-antes"></div>
+    </div>
+
+    <div class="coluna-mock">
+      <span class="etq depois">Depois (proposta)</span>
+      <div class="fone depois" id="op-depois">
+        <div class="barra-sis"><span>9:41</span><span>●●●</span></div>
+
+        <!-- ═══ A ═══ -->
+        <div class="tela coluna" data-painel="A">
+          <section class="glass titulo-aba alvo"><span class="marca">1</span><div><h1 class="h-aba">Ofertas Programadas</h1><p class="sub">Junta 50 pontos e troca pelo cartão da Família Quildo</p></div></section>
+          <section class="glass alvo"><span class="marca">2</span>
+            <div class="cab-carrossel"><span class="rotulo">Os teus pontos</span><span class="nota" style="margin:0">faltam 38</span></div>
+            <div class="valor-xl" style="font-size:30px">12 / 50</div>
+            <div class="progresso"><i style="width:24%"></i></div>
+            <details class="hist" style="margin-top:6px"><summary>Histórico <span>▾</span></summary><ul><li><span>10/02 · Passe</span><b style="color:#5ee0b4">+1</b></li><li><span>08/02 · Palpite certo</span><b style="color:#5ee0b4">+2</b></li></ul></details>
+          </section>
+          <section class="glass"><div class="cartao-quildo"><div style="font-size:30px">🃏</div><h2 class="h-sec">Cartão da Família Quildo</h2><p class="sub">Cartão colecionável físico, entregue em casa.</p></div><button class="btn btn-fant" style="margin-top:10px" disabled>Resgata aos 50 pontos</button></section>
+          <section class="glass alvo"><span class="marca">3</span><div class="cab-carrossel"><h2 class="h-sec">🎫 Edições programadas</h2></div><p class="nota" style="margin-top:4px">Palpita quantos lances a edição vai ter. Se acertares, ganhas +2 pontos.</p><div class="pontos-pag" style="margin-top:6px"><i class="on"></i><i></i><i></i><i></i><i></i></div></section>
+          <div class="carrossel">
+            <article class="glass edicao"><div class="topo"><span class="pilula">PROG-1</span><span class="estado aberto">SEM PALPITE</span></div><div class="premio"><div class="thumb">🍳</div><div><span class="rotulo">Prémio</span><div style="color:var(--gut-gold);font-weight:800">Air Fryer</div></div></div><div class="tempo">2d 04:10</div>
+              <div class="palpite"><label class="rotulo" for="p1">O teu palpite (nº de lances)</label><div class="linha"><input id="p1" class="campo" inputmode="numeric" placeholder="Ex.: 120"><button class="btn btn-ouro" style="width:auto;padding:0 18px">Palpitar</button></div></div></article>
+            <article class="glass edicao"><div class="topo"><span class="pilula">PROG-2</span><span class="estado breve">COM PALPITE</span></div><div class="premio"><div class="thumb">🎧</div><div><span class="rotulo">Prémio</span><div style="color:var(--gut-gold);font-weight:800">Fones</div></div></div><div class="tempo">5d 11:42</div>
+              <div class="palpite"><p class="res" style="color:var(--gut-text)">O teu palpite: 340 lances</p><p class="nota" style="margin:0">Resultado no fim da edição.</p></div></article>
+            <article class="glass edicao"><div class="topo"><span class="pilula">PROG-0</span><span class="estado apurado-ok">ACERTASTE</span></div><div class="premio"><div class="thumb">⌚</div><div><span class="rotulo">Prémio</span><div style="color:var(--gut-gold);font-weight:800">Relógio</div></div></div>
+              <div class="palpite"><p class="res" style="color:#5ee0b4">🎯 +2 pontos!</p><p class="nota" style="margin:0">Palpite 210 · foram 214 lances</p></div></article>
+            <article class="glass edicao"><div class="topo"><span class="pilula">PROG-9</span><span class="estado apurado-nao">NÃO FOI DESTA</span></div><div class="premio"><div class="thumb">🎒</div><div><span class="rotulo">Prémio</span><div style="color:var(--gut-gold);font-weight:800">Mochila</div></div></div>
+              <div class="palpite"><p class="res" style="color:#ff9a9d">Não acertaste</p><p class="nota" style="margin:0">Palpite 90 · foram 152 lances</p></div></article>
+            <article class="glass edicao"><div class="topo"><span class="pilula">PROG-8</span><span class="estado encerrado">ENCERRADA</span></div><div class="premio"><div class="thumb">📦</div><div><span class="rotulo">Prémio</span><div style="color:var(--gut-gold);font-weight:800">Kit</div></div></div>
+              <div class="palpite"><p class="res" style="color:var(--gut-muted-strong)">Sem palpite nesta edição</p></div></article>
+          </div>
+          <section class="glass"><a class="btn btn-fant" href="#">📜 Regras Oficiais</a></section>
+          <section class="glass tabela-especial alvo" aria-label="Lances — Edição PROG-1"><span class="marca">4</span>
+            <header><h2 class="h-sec">Lances — Edição PROG-1</h2><span class="estado breve" aria-label="valores ocultos">🔒</span></header>
+            <table><thead><tr><th>#</th><th>Participante</th><th>Valor</th><th>Estado</th></tr></thead>
+              <tbody><tr><td class="num">1</td><td>Ana P.</td><td>🔒</td><td>Blindado</td></tr><tr><td class="num">2</td><td>0x71c…9a2</td><td>🔒</td><td>Blindado</td></tr><tr><td class="num">3</td><td>Rui M.</td><td>🔒</td><td>Blindado</td></tr></tbody></table>
+            <p class="rodape-tab">Os valores aparecem no fim da edição.</p>
+          </section>
+          <p class="rodape-legal">DesafioGUT · Grupo União e Trabalho · CNPJ 23.040.066/0001-00</p>
+        </div>
+
+        <!-- ═══ B ═══ -->
+        <div class="tela coluna" data-painel="B" hidden>
+          <section class="glass titulo-aba"><div><h1 class="h-aba">Ofertas Programadas</h1><p class="sub">Junta 50 pontos e troca pelo cartão da Família Quildo</p></div></section>
+          <section class="glass"><span class="rotulo">Os teus pontos</span><div class="valor-xl" style="font-size:30px">12 / 50</div><div class="progresso"><i style="width:24%"></i></div></section>
+          <section class="glass"><div class="cartao-quildo"><div style="font-size:30px">🃏</div><h2 class="h-sec">Cartão da Família Quildo</h2><p class="sub">Cartão colecionável físico, entregue em casa.</p></div></section>
+          <section class="glass"><h2 class="h-sec">🎫 Edições programadas</h2><p class="nota" style="margin-top:4px">Palpita quantos lances a edição vai ter. Se acertares, ganhas +2 pontos.</p></section>
+          <div class="carrossel">
+            <article class="glass edicao"><div class="topo"><span class="pilula">PROG-1</span><span class="estado aberto">SEM PALPITE</span></div><div class="tempo">2d 04:10</div>
+              <div class="palpite"><span class="rotulo">O teu palpite (nº de lances)</span><div class="stepper"><button aria-label="Menos 10">−</button><output>120</output><button aria-label="Mais 10">+</button></div><button class="btn btn-ouro">Palpitar 120</button></div></article>
+            <article class="glass edicao"><div class="topo"><span class="pilula">PROG-2</span><span class="estado breve">COM PALPITE</span></div><div class="tempo">5d 11:42</div><div class="palpite"><p class="res">O teu palpite: 340 lances</p></div></article>
+          </div>
+          <section class="glass"><a class="btn btn-fant" href="#">📜 Regras Oficiais</a></section>
+          <section class="glass tabela-especial" aria-label="Lances — Edição PROG-1">
+            <header><h2 class="h-sec">Lances — Edição PROG-1</h2><span class="estado breve" aria-label="valores ocultos">🔒</span></header>
+            <table><thead><tr><th>#</th><th>Participante</th><th>Valor</th><th>Estado</th></tr></thead>
+              <tbody><tr><td class="num">1</td><td>Ana P.</td><td>🔒</td><td>Blindado</td></tr><tr><td class="num">2</td><td>0x71c…9a2</td><td>🔒</td><td>Blindado</td></tr><tr><td class="num">3</td><td>Rui M.</td><td>🔒</td><td>Blindado</td></tr></tbody></table>
+            <p class="rodape-tab">Os valores aparecem no fim da edição.</p>
+          </section>
+          <p class="rodape-legal">DesafioGUT · Grupo União e Trabalho · CNPJ 23.040.066/0001-00</p>
+        </div>
+
+        <!-- ═══ C ═══ -->
+        <div class="tela coluna" data-painel="C" hidden>
+          <section class="glass titulo-aba"><div><h1 class="h-aba">Ofertas Programadas</h1><p class="sub">Junta 50 pontos e troca pelo cartão da Família Quildo</p></div></section>
+          <section class="glass"><span class="rotulo">Os teus pontos</span><div class="valor-xl" style="font-size:30px">12 / 50</div><div class="progresso"><i style="width:24%"></i></div></section>
+          <section class="glass"><h2 class="h-sec">🎫 Edições programadas</h2></section>
+          <div class="carrossel">
+            <article class="glass edicao"><div class="topo"><span class="pilula">PROG-1</span><span class="estado aberto">SEM PALPITE</span></div><div class="premio"><div class="thumb">🍳</div><div><span class="rotulo">Prémio</span><div style="color:var(--gut-gold);font-weight:800">Air Fryer</div></div></div><div class="tempo">2d 04:10</div><button class="btn btn-ouro">🎯 Palpitar</button></article>
+            <article class="glass edicao"><div class="topo"><span class="pilula">PROG-2</span><span class="estado breve">COM PALPITE</span></div><div class="tempo">5d 11:42</div><p class="res">O teu palpite: 340</p></article>
+          </div>
+          <section class="glass"><a class="btn btn-fant" href="#">📜 Regras Oficiais</a></section>
+          <section class="glass tabela-especial" aria-label="Lances — Edição PROG-1">
+            <header><h2 class="h-sec">Lances — Edição PROG-1</h2><span class="estado breve" aria-label="valores ocultos">🔒</span></header>
+            <table><thead><tr><th>#</th><th>Participante</th><th>Valor</th><th>Estado</th></tr></thead>
+              <tbody><tr><td class="num">1</td><td>Ana P.</td><td>🔒</td><td>Blindado</td></tr><tr><td class="num">2</td><td>0x71c…9a2</td><td>🔒</td><td>Blindado</td></tr><tr><td class="num">3</td><td>Rui M.</td><td>🔒</td><td>Blindado</td></tr></tbody></table>
+            <p class="rodape-tab">Os valores aparecem no fim da edição.</p>
+          </section>
+          <p class="rodape-legal">DesafioGUT · Grupo União e Trabalho · CNPJ 23.040.066/0001-00</p>
+          <div class="modal folha" role="dialog" aria-label="Palpite PROG-1"><b>Palpite · PROG-1</b><p style="margin:6px 0 10px;font-size:14px;color:var(--gut-text-body)">Quantos lances vai ter esta edição?</p><input class="campo" inputmode="numeric" placeholder="Ex.: 120"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px"><button class="btn btn-fant">Cancelar</button><button class="btn btn-ouro">Palpitar</button></div></div>
+        </div>
+
+        <nav class="bottomnav"><a href="#"><span class="ic">👛</span>Carteira</a><a href="#"><span class="ic">⚡</span>Menor Lance Único</a><a href="#"><span class="ic">🏠</span>Início</a><a href="#" aria-current="page"><span class="ic">🎫</span>Ofertas Programadas</a><a href="#"><span class="ic">⋯</span>Mais</a></nav>
+      </div>
+      <div class="auditoria" data-relatorio="op-depois"></div>
+    </div>
+
+    <aside class="notas">
+      <h2>Anotações (variante A)</h2>
+      <ol>
+        <li><span class="tag-mudou mod">mudou</span><b>Título dentro de vidro</b> (hoje é um <code>&lt;header&gt;</code> solto) e subtítulo mais curto. <span class="tag-mudou rem">removido</span>A descrição longa do cartão («O palpite dá pontos EXTRA, mas o cartão conquista-se só…») fica só «entregue em casa». A regra de que o palpite não conta para o cartão continua no texto das edições e nas Regras Oficiais.<span class="porque">R18-E: menos texto técnico. A invariante R1 (o cartão conta só pontos de COMPRA) não muda: a barra continua a usar <code>pontosCartao</code>.</span></li>
+        <li><span class="tag-mudou mod">mantém</span><b>Pontos 12/50 com barra</b> e <b>cartão da Família Quildo</b> (pedido). O histórico passa a ser um <code>&lt;details&gt;</code> dentro do vidro dos pontos (não tinha lugar definido no pedido). O resgate continua a aparecer só aos 50 pontos.</li>
+        <li><span class="tag-mudou add">novo</span><b>Carrossel de edições Programadas, com o palpite dentro de cada cartão</b> (decisões 7 e 8). <span class="tag-mudou rem">removido</span>a secção «Palpite» separada. Os 5 estados, cartão a cartão: <b>sem palpite</b> (campo + Palpitar), <b>com palpite</b> (à espera), <b>acertaste</b> (+2), <b>não acertaste</b> e <b>encerrada</b> (sem palpite).<span class="porque">Porquê: 1 produto = 1 palpite. Hoje o palpite fica longe do produto e só serve a 1.ª edição aberta (<code>edicaoProgramadaDe</code>). Backend: <code>POST /registar-palpite {edicaoId, valor}</code> com Bearer user-session. O <code>409 edicao_nao_aberta|edicao_apurada|sem_passe</code> aparece no próprio cartão. Os estados «acertaste/não» vêm de <code>GET /ler-pontos → palpites[].apurado/resultado</code>. ⚠️ O nº real de lances do apuramento (ex.: «foram 214») não está no contrato actual do <code>ler-pontos</code>: o 107b decide se o acrescenta.</span></li>
+        <li><span class="tag-mudou add">novo</span><b>Tabela «Lances — Edição PROG-1» no fim</b> (decisão 9 + R18-C), com o mesmo componente <code>TabelaEspecial</code> do MLC. O link das Regras Oficiais passa a botão de 48 px dentro de vidro (hoje tem 13 px de altura e está fora de vidro).</li>
+      </ol>
+      <h2 style="margin-top:18px">Variantes (do cartão com palpite)</h2>
+      <ol><li><b>A · campo + botão</b>: o mais directo (recomendada). <b>B · − / +</b>: sem teclado, mas é lento para números grandes. <b>C · folha inferior</b>: o cartão fica mais limpo, à custa de mais um toque.</li></ol>
+    </aside>
+  </div>
+</div>
+<script src="mockup.js"></script>
+</body>
+</html>

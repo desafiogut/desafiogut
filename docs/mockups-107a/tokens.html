@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UTAC107a · Tokens</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  .grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+  .amostra { border-radius: 12px; border: 1px solid #1f2650; overflow: hidden; background: #0a0e24; }
+  .amostra .cor { height: 64px; }
+  .amostra .info { padding: 10px 12px; font-size: 13px; }
+  .amostra code { font-size: 12px; color: var(--gut-text-body); }
+  .sobre-vidro { margin-top: 6px; padding: 8px 10px; border-radius: 8px; background: var(--gut-glass-bg); border: 1px solid var(--gut-glass-border); font-size: 14px; }
+  table.t { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 8px; }
+  table.t th, table.t td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #1f2650; vertical-align: top; }
+  table.t th { color: var(--gut-muted-strong); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+  .passa { color: #5ee0b4; font-weight: 800; } .falha { color: #ff8a8e; font-weight: 800; } .limite { color: #ffcf6e; font-weight: 800; }
+  section.bloco { margin: 28px 0; }
+  section.bloco > h2 { font-family: var(--font-display); color: var(--gut-gold); font-size: 16px; margin: 0 0 6px; }
+  section.bloco > p { color: var(--gut-text-body); margin: 0 0 10px; max-width: 900px; }
+  .escala > div { display: flex; align-items: baseline; gap: 14px; padding: 6px 0; border-bottom: 1px solid #141a3d; }
+  .escala code { width: 210px; flex: none; color: var(--gut-muted-strong); font-size: 12px; }
+  .regua { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+  .regua div { background: rgba(255,107,53,.35); border: 1px solid var(--gut-primary); font-size: 11px; display: grid; place-items: center; color: #fff; }
+</style>
+</head>
+<body>
+<div class="prancha">
+  <header>
+    <h1>UTAC107a-front · Auditoria de tokens</h1>
+    <p>Valores medidos no HEAD <code>536c9cb</code> (<code>globals.css</code> @theme, <code>.gut-glass-standard</code>, <code>glassTokens.js</code> e os <code>COR</code> locais de cada página). O contraste é <b>calculado neste browser</b> (fórmula WCAG 2.x) sobre o vidro real composto: <code>rgba(13,18,53,0.88)</code> sobre o navy <code>#050818</code> e, como pior caso, sobre branco (a ilustração de fundo nunca é branca, mas o limite fica à vista).</p>
+  </header>
+  <nav class="navdocs" aria-label="Pranchas">
+    <a href="index.html">Índice</a><a href="tokens.html" aria-current="page">Tokens</a><a href="regra-1-glass.html">Regra 1</a><a href="carteira.html">Carteira</a><a href="inicio.html">Início</a><a href="menor-lance-unico.html">Menor Lance Único</a><a href="ofertas-programadas.html">Ofertas Programadas</a><a href="tabela-especial.html">Regra 2</a>
+  </nav>
+
+  <section class="bloco">
+    <h2>1 · Cor — texto sobre o vidro</h2>
+    <p>AA pede 4,5:1 para texto normal e 3:1 para texto grande (≥ 18,66 px negrito / 24 px). As linhas a amarelo passam no navy mas caem no pior caso. Por isso o <code>muted</code> actual só se usa em texto ≥ 14 px e entra um <code>muted-strong</code> para os rótulos pequenos.</p>
+    <div class="grade" id="grade-texto"></div>
+  </section>
+
+  <section class="bloco">
+    <h2>2 · Cor — pares de botão (texto sobre fundo sólido)</h2>
+    <table class="t" id="tab-botoes"><thead><tr><th>Par</th><th>Onde está hoje</th><th>Contraste</th><th>Veredicto</th><th>Proposta</th></tr></thead><tbody></tbody></table>
+  </section>
+
+  <section class="bloco">
+    <h2>3 · Deriva de tokens (o mesmo papel com valores diferentes)</h2>
+    <table class="t">
+      <thead><tr><th>Papel</th><th>Valores medidos no código</th><th>Proposta</th></tr></thead>
+      <tbody>
+        <tr><td>Dourado</td><td><code>#f5a623</code> (Carteira, Dashboard, OP, TabelaLances) · <code>#ff9500</code> (<code>globals.css --color-gut-gold</code>, <code>glassTokens.COR.gold</code>) · <code>#fbbf24</code> (valores/realce)</td><td><code>--gut-gold: #f5a623</code> como único dourado. É o mais usado em ecrã e dá 9,07:1. O 107b alinha o <code>@theme</code>.</td></tr>
+        <tr><td>Vermelho de erro</td><td><code>#ef4444</code> · <code>#ff3d71</code> · <code>#ff5a5f</code></td><td><code>--gut-danger: #ff5a5f</code> (6,02:1 no navy, o melhor dos três)</td></tr>
+        <tr><td>Vidro</td><td><code>.gut-glass-standard</code> (0,88 · r14 · sem blur) · <b>TabelaLances</b>: <code>rgba(10,16,42,0.6)</code> + <code>blur(20px)</code> · r12 · borda laranja</td><td>Um só vidro (<code>.glass</code>). O <code>backdrop-filter</code> fica de fora (MC82.1: custava ~7 fps por camada).</td></tr>
+        <tr><td>Padding do vidro</td><td>16 px (GlassCard p-4) · <b>24 px</b> (CardLance <code>p-6</code>) · 20 px desktop</td><td><code>--gut-pad</code> 16 px no mobile e 20 px a partir de 700 px de largura</td></tr>
+        <tr><td>Margem lateral (desktop)</td><td>Início 1,25rem · Carteira 2rem · MLC 2rem / 1,5rem 2rem · OP 2rem + coluna 640</td><td>Coluna única <code>--gut-coluna: 640px</code> centrada nas 4 abas. Margem de 16/24 px.</td></tr>
+        <tr><td>Altura de botão</td><td><code>Button md</code> = h-11 = <b>44 px</b> · botões inline ≈ 44 px · «↻» ≈ <b>20 px</b></td><td><code>--gut-touch: 48px</code> mínimo (Material 48 dp)</td></tr>
+        <tr><td>Menor texto</td><td>0,58rem (≈ 9,3 px) · 0,62rem (≈ 9,9 px) em rótulos</td><td><code>--gut-label: 12px</code></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="bloco">
+    <h2>4 · Tipografia</h2>
+    <div class="escala glass">
+      <div><code>display · Orbitron 18/800</code><span class="h-aba">Ofertas Programadas</span></div>
+      <div><code>secção · Orbitron 14/800 · gold</code><span class="h-sec">Lances — Edição R-1</span></div>
+      <div><code>valor-xl · Inter 38/900 · gold</code><span class="valor-xl">R$ 12,50</span></div>
+      <div><code>corpo · Inter 15/400</code><span>Texto corrido dentro do vidro.</span></div>
+      <div><code>sub · Inter 14 · text-body</code><span class="sub" style="margin:0">Programa de fidelidade</span></div>
+      <div><code>rótulo · Inter 12/700 caps</code><span class="rotulo">Saldo disponível</span></div>
+    </div>
+  </section>
+
+  <section class="bloco">
+    <h2>5 · Espaço, forma e toque</h2>
+    <div class="regua">
+      <div style="width:16px;height:16px">16</div><div style="width:12px;height:12px">12</div><div style="width:20px;height:20px">20</div><div style="width:24px;height:24px">24</div>
+      <div style="width:48px;height:48px">48 toque</div><div style="width:44px;height:44px;background:rgba(255,90,95,.3);border-color:#ff5a5f">44 hoje</div>
+    </div>
+    <table class="t">
+      <tbody>
+        <tr><td><code>--gut-radius</code></td><td>14 px (vidro) · 12 px (botão) · 999 px (pílula)</td></tr>
+        <tr><td><code>--gut-glass-shadow</code></td><td><code>0 8px 32px rgba(0,0,0,.40), inset 0 0 0 1px rgba(255,255,255,.05)</code> (igual ao <code>.gut-glass-standard</code>)</td></tr>
+        <tr><td>Espaço entre botões</td><td>10 px (≥ 8 px pedido pela <code>mobile-ux-design</code> contra toques ao lado)</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="bloco">
+    <h2>6 · Ficheiros</h2>
+    <p><code>tokens.css</code> tem o CSS com todos os tokens e componentes. <code>DESIGN.md</code> é a mesma informação no formato da skill <code>design-md</code> (spec Google, lint de contraste).</p>
+  </section>
+</div>
+<script src="mockup.js"></script>
+<script>
+(function () {
+  const { hex, razao, mistura } = window.GUT.contraste;
+  const vidro = mistura([13,18,53], 0.88, hex("#050818"));
+  const pior = mistura([13,18,53], 0.88, [255,255,255]);
+  const cores = [
+    ["--gut-text", "#e8f0fe", "texto principal"], ["--gut-text-body", "#c8d0f0", "corpo"],
+    ["--gut-muted (actual)", "#6b7db8", "secundário — hoje usado até a 9 px"], ["--gut-muted-strong (PROPOSTA)", "#8fa0d8", "rótulos pequenos"],
+    ["faint #3d4f8a (actual)", "#3d4f8a", "NÃO usar em texto"],
+    ["--gut-gold (PROPOSTA único)", "#f5a623", "valores, títulos de secção"], ["gold @theme #ff9500", "#ff9500", "a unificar"],
+    ["--gut-primary", "#ff6b35", "título de aba"], ["--gut-pix", "#00d4ff", "botão PIX"], ["--gut-senhas", "#a78bfa", "roxo semântico"],
+    ["--gut-success", "#10b981", "sucesso"], ["--gut-danger (PROPOSTA)", "#ff5a5f", "erro"], ["#ef4444 (actual)", "#ef4444", "erro hoje"],
+  ];
+  const v = (r, grande) => r >= 4.5 ? "passa" : (r >= 3 && grande ? "limite" : "falha");
+  document.getElementById("grade-texto").innerHTML = cores.map(([n, h, uso]) => {
+    const c = hex(h), a = razao(c, vidro), b = razao(c, pior);
+    const cls = a >= 4.5 && b >= 4.5 ? "passa" : a >= 4.5 ? "limite" : "falha";
+    return `<div class="amostra"><div class="cor" style="background:${h}"></div><div class="info"><b>${n}</b><br><code>${h}</code> · ${uso}
+      <div class="sobre-vidro" style="color:${h}">Texto de exemplo 14 px</div>
+      <div style="margin-top:6px">navy <span class="${a>=4.5?"passa":"falha"}">${a.toFixed(2)}:1</span> · pior caso <span class="${b>=4.5?"passa":"limite"}">${b.toFixed(2)}:1</span> → <span class="${cls}">${cls.toUpperCase()}</span></div></div></div>`;
+  }).join("");
+  const pares = [
+    ["#ffffff", "#f5a623", "«Comprar Passe Desafio» (Carteira)", "texto navy #0a0f1a → ver abaixo"],
+    ["#0a0f1a", "#f5a623", "PROPOSTA para o dourado", "—"],
+    ["#ffffff", "#a78bfa", "«Trocar R$ 2,00 → 1 Senha» (início do gradiente)", "sai na Carteira (decisão do operador)"],
+    ["#12161f", "#f5a623", "«Palpitar» / «Resgatar cartão» (OP)", "mantém"],
+    ["#12161f", "#ff6b35", "«Ir para a Carteira» (OP)", "mantém"],
+    ["#0a0f1a", "#f5a623", "«⚡ Ir para o Mercado» (Início)", "mantém"],
+  ];
+  document.querySelector("#tab-botoes tbody").innerHTML = pares.map(([t, f, onde, prop]) => {
+    const r = razao(hex(t), hex(f));
+    return `<tr><td><span style="display:inline-block;padding:6px 12px;border-radius:8px;background:${f};color:${t};font-weight:800">Aa ${t} / ${f}</span></td><td>${onde}</td><td>${r.toFixed(2)}:1</td><td class="${v(r,false)}">${v(r,false).toUpperCase()}</td><td>${prop}</td></tr>`;
+  }).join("");
+})();
+</script>
+</body>
+</html>

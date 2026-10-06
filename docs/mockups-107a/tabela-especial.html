@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UTAC107a · Regra 2 Tabela</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  table.t { width: 100%; border-collapse: collapse; font-size: 14px; }
+  table.t th, table.t td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #1f2650; }
+  table.t th { color: var(--gut-muted-strong); font-size: 12px; text-transform: uppercase; }
+  .ok { color: #5ee0b4; font-weight: 800; } .falha { color: #ff8a8e; font-weight: 800; }
+</style>
+</head>
+<body>
+<div class="prancha">
+  <header>
+    <h1>SEG5 · Regra 2 · TabelaEspecial</h1>
+    <p><b>Decisão 11:</b> as duas tabelas (MLC e OP) usam o mesmo padrão visual e têm o mesmo tamanho e a mesma posição: são o <b>último vidro</b> da aba, antes do rodapé. É um só componente, <code>.tabela-especial</code> em <code>tokens.css</code> (no 107b, um componente React com props <code>titulo</code>, <code>edicaoId</code>, <code>lances</code>, <code>encerrado</code>). A tabela de medidas abaixo é calculada neste browser a partir das duas instâncias.</p>
+  </header>
+  <nav class="navdocs" aria-label="Pranchas">
+    <a href="index.html">Índice</a><a href="tokens.html">Tokens</a><a href="regra-1-glass.html">Regra 1</a><a href="carteira.html">Carteira</a><a href="inicio.html">Início</a><a href="menor-lance-unico.html">Menor Lance Único</a><a href="ofertas-programadas.html">Ofertas Programadas</a><a href="tabela-especial.html" aria-current="page">Regra 2</a>
+  </nav>
+  <div class="controles"><span class="rot">Largura</span><span data-larguras><button data-largura="375" aria-pressed="true">375 mobile</button><button data-largura="768">768 tablet</button><button data-largura="1024">1024 desktop</button></span></div>
+
+  <div class="lado">
+    <div class="coluna-mock">
+      <span class="etq depois">Menor Lance Único · edição aberta (valores ocultos)</span>
+      <div class="fone depois" id="tab-mlc" style="min-height:0">
+        <div class="tela coluna">
+          <section class="glass tabela-especial" data-tabela="mlc" aria-label="Lances — Menor Lance Único">
+            <header><h2 class="h-sec">Lances — Edição R-1</h2><span class="estado breve" aria-label="valores ocultos">🔒</span></header>
+            <table><thead><tr><th>#</th><th>Participante</th><th>Valor</th><th>Estado</th></tr></thead>
+              <tbody><tr><td class="num">1</td><td>Ana P.</td><td>🔒</td><td>Blindado</td></tr><tr><td class="num">2</td><td>0x71c…9a2</td><td>🔒</td><td>Blindado</td></tr><tr><td class="num">3</td><td>Rui M.</td><td>🔒</td><td>Blindado</td></tr></tbody></table>
+            <p class="rodape-tab">Os valores aparecem no fim da edição.</p>
+          </section>
+        </div>
+      </div>
+      <span class="etq depois" style="margin-top:12px">Menor Lance Único · edição encerrada (valores revelados)</span>
+      <div class="fone depois" id="tab-mlc-fim" style="min-height:0">
+        <div class="tela coluna">
+          <section class="glass tabela-especial" aria-label="Lances — encerrada">
+            <header><h2 class="h-sec">Lances — Edição R-1</h2><span class="estado encerrado">Encerrada</span></header>
+            <table><thead><tr><th>#</th><th>Participante</th><th>Valor</th><th>Estado</th></tr></thead>
+              <tbody><tr style="background:rgba(245,166,35,.09)"><td class="num">🏆</td><td>Rui M.</td><td class="num" style="color:#fbbf24;font-weight:800">R$ 0,07</td><td>Menor e único</td></tr><tr><td class="num">2</td><td>Ana P.</td><td class="num">R$ 0,03</td><td>Repetido</td></tr><tr><td class="num">3</td><td>0x71c…9a2</td><td class="num">R$ 0,03</td><td>Repetido</td></tr></tbody></table>
+            <p class="rodape-tab">Vencedor: o menor valor que só uma pessoa deu.</p>
+          </section>
+        </div>
+      </div>
+    </div>
+    <div class="coluna-mock">
+      <span class="etq depois">Ofertas Programadas · edição do palpite (R18-C)</span>
+      <div class="fone depois" id="tab-op" style="min-height:0">
+        <div class="tela coluna">
+          <section class="glass tabela-especial" data-tabela="op" aria-label="Lances — Edição PROG-1">
+            <header><h2 class="h-sec">Lances — Edição PROG-1</h2><span class="estado breve" aria-label="valores ocultos">🔒</span></header>
+            <table><thead><tr><th>#</th><th>Participante</th><th>Valor</th><th>Estado</th></tr></thead>
+              <tbody><tr><td class="num">1</td><td>Ana P.</td><td>🔒</td><td>Blindado</td></tr><tr><td class="num">2</td><td>0x71c…9a2</td><td>🔒</td><td>Blindado</td></tr><tr><td class="num">3</td><td>Rui M.</td><td>🔒</td><td>Blindado</td></tr></tbody></table>
+            <p class="rodape-tab">Os valores aparecem no fim da edição.</p>
+          </section>
+        </div>
+      </div>
+      <div class="auditoria" style="max-width:520px">
+        <b>Medição Regra 2 (calculada agora)</b>
+        <table class="t" id="medidas"><thead><tr><th>Medida</th><th>MLC</th><th>OP</th><th></th></tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+    <aside class="notas">
+      <h2>Especificação</h2>
+      <ol>
+        <li><b>Vidro:</b> o mesmo <code>.glass</code> das abas (0,88 · r14 · sem blur), com <code>padding: 0</code> e <code>overflow: hidden</code> para a tabela ir de borda a borda. Substitui o vidro próprio da <code>TabelaLances</code> (0,6 + <code>blur(20px)</code> · r12).</li>
+        <li><b>Cabeçalho do cartão:</b> ≥ 56 px, com título <code>h-sec</code> (Orbitron 14, dourado) e um estado à direita (🔒 ocultos / Encerrada).</li>
+        <li><b>Cabeçalho da tabela: 48 px. Linhas: 48 px</b>, com alternância subtil (<code>rgba(255,255,255,.025)</code> nas pares), números tabulares e a última coluna alinhada à direita.</li>
+        <li><b>4 colunas:</b> #, Participante, Valor, Estado. <span class="tag-mudou rem">removido</span>«ID do Lance» (hash técnico) e o rótulo «Status (Art. 24)» (R18-E). O mobile deixa de usar cartões próprios (<code>MobileList</code>): a mesma tabela cabe em 343 px.</li>
+        <li><b>Divulgação inalterada:</b> 🔒 até ao fecho; 🏆 só com o resultado oficial (UTAC000.8/000.9: <code>useResultadoOficial</code>).</li>
+        <li><b>Posição:</b> último vidro antes do rodapé, nas duas abas. Medido nas pranchas MLC e OP: é o último <code>section</code> antes do <code>.rodape-legal</code>.</li>
+      </ol>
+    </aside>
+  </div>
+</div>
+<script src="mockup.js"></script>
+<script>
+function medir() {
+  const a = document.querySelector('[data-tabela="mlc"]'), b = document.querySelector('[data-tabela="op"]');
+  const m = (el) => ({
+    "largura (px)": Math.round(el.getBoundingClientRect().width),
+    "cabeçalho do cartão (px)": Math.round(el.querySelector("header").getBoundingClientRect().height),
+    "cabeçalho da tabela (px)": Math.round(el.querySelector("thead th").getBoundingClientRect().height),
+    "linha (px)": Math.round(el.querySelector("tbody td").getBoundingClientRect().height),
+    "raio": getComputedStyle(el).borderTopLeftRadius,
+    "fundo": getComputedStyle(el).backgroundColor,
+    "backdrop-filter": getComputedStyle(el).backdropFilter,
+    "fonte do corpo": getComputedStyle(el.querySelector("tbody td")).fontSize,
+  });
+  const x = m(a), y = m(b);
+  document.querySelector("#medidas tbody").innerHTML = Object.keys(x).map((k) =>
+    `<tr><td>${k}</td><td>${x[k]}</td><td>${y[k]}</td><td class="${x[k] === y[k] ? "ok" : "falha"}">${x[k] === y[k] ? "igual" : "DIFERENTE"}</td></tr>`).join("");
+  document.body.dataset.regra2 = Object.keys(x).every((k) => x[k] === y[k]) ? "igual" : "diferente";
+}
+window.addEventListener("load", medir);
+document.querySelectorAll("[data-largura]").forEach((b) => b.addEventListener("click", () => setTimeout(medir, 350)));
+</script>
+</body>
+</html>

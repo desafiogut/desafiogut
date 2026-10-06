@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UTAC107a · Regra 1</title>
+<link rel="stylesheet" href="tokens.css">
+</head>
+<body>
+<div class="prancha">
+  <header>
+    <h1>Regra 1 · Todo o texto do conteúdo dentro de vidro</h1>
+    <p><b>Decisão 10 do operador:</b> toda a informação textual do conteúdo principal vive dentro de um <code>.glass</code>. <b>Exceções:</b> barra inferior, modais, botões e rodapé. O auditor em baixo de cada telefone percorre os nós de texto e conta os que não têm um vidro (nem uma exceção) como antepassado. Os blocos fora de vidro ficam com contorno amarelo tracejado.</p>
+  </header>
+  <nav class="navdocs" aria-label="Pranchas">
+    <a href="index.html">Índice</a><a href="tokens.html">Tokens</a><a href="regra-1-glass.html" aria-current="page">Regra 1</a><a href="carteira.html">Carteira</a><a href="inicio.html">Início</a><a href="menor-lance-unico.html">Menor Lance Único</a><a href="ofertas-programadas.html">Ofertas Programadas</a><a href="tabela-especial.html">Regra 2</a>
+  </nav>
+
+  <div class="lado">
+    <div class="coluna-mock">
+      <span class="etq antes">Antes — violações medidas no código</span>
+      <div class="fone antes" id="r1-antes">
+        <div class="barra-sis"><span>9:41</span><span>●●●</span></div>
+        <div class="tela">
+          <p class="cru alvo" style="text-align:center;color:#f5a623;font-weight:800;font-size:14px;margin:0"><span class="marca">1</span>Quanto você oferta por esse item? O menor lance único leva!</p>
+          <header class="alvo"><span class="marca">2</span><h2 style="margin:0;font-family:var(--font-display);color:#ff6b35;font-size:20px">Ofertas Programadas</h2><p class="cru" style="margin:4px 0 0">Programa de fidelidade — acumula pontos e troca pelo cartão da Família Quildo</p></header>
+          <div class="glass"><span class="rotulo">Vidro</span><p style="margin:4px 0 0">Este texto está bem.</p></div>
+          <p class="alvo" style="text-align:center;margin:0"><span class="marca">3</span><a href="#" style="color:#6b7db8;font-size:13px">📜 Regras Oficiais do programa</a></p>
+          <p class="alvo" style="color:#ef4444;font-size:12.5px;font-weight:700;margin:0"><span class="marca">4</span>⚠️ Saldo insuficiente.</p>
+        </div>
+      </div>
+      <div class="auditoria" data-relatorio="r1-antes"></div>
+    </div>
+
+    <div class="coluna-mock">
+      <span class="etq depois">Depois — o mesmo conteúdo, dentro de vidro</span>
+      <div class="fone depois" id="r1-depois">
+        <div class="barra-sis"><span>9:41</span><span>●●●</span></div>
+        <div class="tela">
+          <section class="glass titulo-aba"><div><h1 class="h-aba">Ofertas Programadas</h1><p class="sub">Programa de fidelidade — acumula pontos e troca pelo cartão da Família Quildo</p></div></section>
+          <div class="glass"><span class="rotulo">Rótulo</span><p style="margin:4px 0 0">Corpo de texto.</p><p class="nota">Nota secundária (≥ 12 px, muted-strong).</p></div>
+          <div class="glass" role="status"><p style="margin:0;color:var(--gut-danger);font-weight:700">⚠️ Saldo insuficiente.</p><p class="nota" style="margin-top:4px">Os estados de erro e os avisos também entram no vidro, perto do botão que os causou.</p></div>
+          <div class="glass" style="text-align:center"><p class="sub" style="margin:0 0 8px">Estado vazio</p><p style="margin:0 0 10px">Ainda não tens pontos.</p><button class="btn btn-ouro">Ir para a Carteira</button></div>
+          <div class="glass"><a class="btn btn-fant" href="#">📜 Regras Oficiais do programa</a></div>
+          <p class="rodape-legal">DesafioGUT · Grupo União e Trabalho · CNPJ 23.040.066/0001-00</p>
+        </div>
+        <nav class="bottomnav" aria-label="Navegação principal (exceção)">
+          <a href="#"><span class="ic">👛</span>Carteira</a><a href="#"><span class="ic">⚡</span>Menor Lance Único</a><a href="#"><span class="ic">🏠</span>Início</a><a href="#" aria-current="page"><span class="ic">🎫</span>Ofertas Programadas</a><a href="#"><span class="ic">⋯</span>Mais</a>
+        </nav>
+      </div>
+      <div class="auditoria" data-relatorio="r1-depois"></div>
+    </div>
+
+    <aside class="notas">
+      <h2>O que a regra cobre</h2>
+      <ol>
+        <li><b>Frase de efeito do MLC</b>: hoje é um <code>&lt;p&gt;</code> solto acima do <code>GlassHeader</code> (<code>MercadoLances.jsx:305</code>). Sai (decisão 5).</li>
+        <li><b>Cabeçalho da OP</b>: <code>&lt;header&gt;</code> sem vidro (<code>OfertasProgramadas.jsx:111</code>). Passa a <code>.glass.titulo-aba</code>, o mesmo componente de título nas 4 abas.</li>
+        <li><b>Link das Regras Oficiais</b> (<code>OfertasProgramadas.jsx:276</code>): fora de vidro e com 13 px de altura de toque. Passa a botão dentro de vidro (48 px).</li>
+        <li><b>Aviso 402 da Carteira</b> (<code>MinhaCarteira.jsx:392</code>): renderizado <i>depois</i> do vidro, solto. Entra no vidro de ações.</li>
+        <li><b>Exceções</b> (não contam): <code>.bottomnav</code>, <code>.modal</code>, <code>.btn</code>, <code>.rodape-legal</code>. O auditor usa exactamente esta lista (<code>mockup.js</code>, constante <code>PERMITIDO</code>).</li>
+        <li><b>Componente único:</b> <code>.glass</code> = <code>.gut-glass-standard</code> (0,88 · r14 · sem blur) + padding fixo <code>--gut-pad</code>. No 107b corresponde ao <code>GlassCard</code> com padding próprio, para nenhuma página voltar a escolher o seu.</li>
+      </ol>
+    </aside>
+  </div>
+</div>
+<script src="mockup.js"></script>
+</body>
+</html>

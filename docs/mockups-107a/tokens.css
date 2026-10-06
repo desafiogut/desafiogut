@@ -1,0 +1,200 @@
+/* UTAC107a-front — tokens + componentes dos MOCKUPS (não é código de produção).
+ *
+ * Fonte dos valores (medidos no HEAD 536c9cb):
+ *   - desafio-gut/frontend/src/globals.css  (@theme, .gut-glass-standard)
+ *   - desafio-gut/frontend/src/components/glass/glassTokens.js (COR)
+ *   - COR locais das páginas (MinhaCarteira/Dashboard/OfertasProgramadas)
+ * Os valores PROPOSTOS (que mudam face ao actual) têm o comentário «PROPOSTA».
+ * Ver tokens.html para a auditoria completa e o contraste WCAG calculado ao vivo.
+ */
+
+/* fontes do próprio repo (auto-hospedadas) — caminho relativo a docs/mockups-107a/ */
+@font-face { font-family: "Inter"; font-weight: 300 900; font-display: swap;
+  src: url("../../desafio-gut/frontend/public/fonts/inter-400-latin.woff2") format("woff2"); }
+@font-face { font-family: "Orbitron"; font-weight: 400 900; font-display: swap;
+  src: url("../../desafio-gut/frontend/public/fonts/orbitron-600-latin.woff2") format("woff2"); }
+
+:root {
+  color-scheme: dark;
+  /* ── cor: fundo ───────────────────────────── (actual, globals.css) */
+  --gut-bg: #050818;
+  --gut-surface: #0d1235;
+  --gut-glass-bg: rgba(13,18,53,0.88);          /* .gut-glass-standard */
+  --gut-glass-border: rgba(255,255,255,0.10);
+  --gut-glass-shadow: 0 8px 32px rgba(0,0,0,0.40), inset 0 0 0 1px rgba(255,255,255,0.05);
+  /* ── cor: texto ───────────────────────────── */
+  --gut-text: #e8f0fe;                           /* 16,05:1 sobre o vidro */
+  --gut-text-body: #c8d0f0;                      /* 12,03:1 */
+  --gut-muted: #6b7db8;                          /* 4,60:1 — passa AA no limite: só ≥ 14 px */
+  --gut-muted-strong: #8fa0d8;                   /* PROPOSTA: texto secundário pequeno (< 14 px) */
+  /* ── cor: acento ──────────────────────────── */
+  --gut-primary: #ff6b35;                        /* laranja de marca */
+  --gut-gold: #f5a623;                           /* PROPOSTA: ÚNICO dourado (hoje coexistem #f5a623 e #ff9500) */
+  --gut-on-gold: #0a0f1a;                        /* PROPOSTA: texto sobre dourado (9,45:1; hoje branco = 2,03:1 ✗) */
+  --gut-pix: #00d4ff;
+  --gut-senhas: #a78bfa;                         /* roxo semântico de «senhas» */
+  --gut-success: #10b981;
+  --gut-danger: #ff5a5f;                         /* PROPOSTA: um só vermelho (hoje #ef4444/#ff3d71/#ff5a5f) */
+  /* ── espaço / forma ───────────────────────── */
+  --gut-gutter: 16px;                            /* margem lateral mobile (todas as abas) */
+  --gut-pad: 16px;                               /* padding interno de TODO o vidro (CardLance hoje: 24px) */
+  --gut-gap: 12px;                               /* entre vidros */
+  --gut-radius: 14px;                            /* .gut-glass-standard (TabelaLances hoje: 12px) */
+  --gut-radius-btn: 12px;
+  --gut-coluna: 640px;                           /* PROPOSTA: coluna única das 4 abas (só a OP a tem hoje) */
+  --gut-touch: 48px;                             /* PROPOSTA: mínimo de toque (Button md hoje: 44px) */
+  --gut-label: 12px;                             /* PROPOSTA: menor texto (hoje há rótulos a 0,58–0,62rem ≈ 9–10 px) */
+  --font-display: "Orbitron", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body {
+  background: #02040c; color: var(--gut-text); font-family: var(--font-body);
+  font-size: 15px; line-height: 1.5;
+}
+a { color: var(--gut-gold); }
+
+/* ═════════════ moldura da prancha (fora do mockup) ═════════════ */
+.prancha { max-width: 1440px; margin: 0 auto; padding: 24px 20px 64px; }
+.prancha > header h1 { font-family: var(--font-display); color: var(--gut-primary); font-size: 22px; margin: 0 0 4px; letter-spacing: .04em; }
+.prancha > header p { color: var(--gut-text-body); margin: 0 0 4px; max-width: 900px; }
+.navdocs { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 18px; }
+.navdocs a { font-size: 13px; padding: 6px 10px; border: 1px solid #222a55; border-radius: 8px; text-decoration: none; color: var(--gut-text-body); }
+.navdocs a[aria-current] { border-color: var(--gut-primary); color: #fff; }
+.controles { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0 18px; }
+.controles button { min-height: 40px; padding: 0 14px; border-radius: 8px; border: 1px solid #2b3466; background: #0b1030; color: var(--gut-text); font: inherit; font-size: 13px; cursor: pointer; }
+.controles button[aria-pressed="true"] { border-color: var(--gut-primary); background: #2a1608; }
+.controles .rot { font-size: 12px; color: var(--gut-muted-strong); text-transform: uppercase; letter-spacing: .06em; margin-right: 4px; }
+.lado { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start; }
+.coluna-mock { display: flex; flex-direction: column; gap: 10px; }
+.etq { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.etq.antes { color: #ff8a8e; } .etq.depois { color: #5ee0b4; }
+.auditoria { font-size: 12px; font-family: ui-monospace, monospace; padding: 8px 10px; border-radius: 8px; background: #0a0e24; border: 1px solid #222a55; max-width: 420px; }
+.auditoria .ok { color: #5ee0b4; } .auditoria .falha { color: #ff8a8e; }
+
+/* ═════════════ telefone ═════════════ */
+.fone {
+  width: 375px; max-width: 100%;
+  container-type: inline-size; container-name: tela;
+  background: var(--gut-bg) radial-gradient(120% 60% at 50% -10%, rgba(255,107,53,.18), transparent 60%);
+  border: 1px solid #1f2650; border-radius: 28px; overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,.6);
+  display: flex; flex-direction: column; min-height: 720px; position: relative;
+  transition: width .25s ease;
+}
+.fone[data-largura="768"] { width: 768px; border-radius: 18px; }
+.fone[data-largura="1024"] { width: 1024px; border-radius: 12px; }
+.barra-sis { height: 28px; display: flex; justify-content: space-between; align-items: center; padding: 0 18px; font-size: 12px; color: var(--gut-text-body); }
+.tela { flex: 1; padding: 8px var(--gut-gutter) 16px; display: flex; flex-direction: column; gap: var(--gut-gap); }
+.tela.coluna { width: 100%; max-width: var(--gut-coluna); margin: 0 auto; }
+@container tela (min-width: 700px) { .tela { --gut-gutter: 24px; --gut-pad: 20px; } }
+
+/* ═════════════ COMPONENTE Glass (Regra 1) ═════════════ */
+.glass {
+  background: var(--gut-glass-bg); border: 1px solid var(--gut-glass-border);
+  box-shadow: var(--gut-glass-shadow); border-radius: var(--gut-radius);
+  padding: var(--gut-pad);
+}
+.glass.titulo-aba { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.glass h1, .glass h2, .glass h3 { margin: 0; }
+.h-aba { font-family: var(--font-display); font-size: 18px; color: var(--gut-primary); letter-spacing: .04em; }
+.h-sec { font-family: var(--font-display); font-size: 14px; color: var(--gut-gold); letter-spacing: .04em; }
+.sub { margin: 4px 0 0; font-size: 14px; color: var(--gut-text-body); }
+.rotulo { font-size: var(--gut-label); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--gut-muted-strong); }
+.valor-xl { font-size: 38px; font-weight: 900; color: var(--gut-gold); line-height: 1.05; }
+.nota { font-size: 13px; color: var(--gut-muted-strong); margin: 8px 0 0; }
+.pilula { font-size: 12px; font-weight: 800; color: var(--gut-gold); border: 1px solid rgba(245,166,35,.35); background: rgba(245,166,35,.12); border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+
+/* ═════════════ botões (exceção da Regra 1: o botão É a superfície) ═════════════ */
+.btn {
+  min-height: var(--gut-touch); width: 100%; padding: 0 16px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  border-radius: var(--gut-radius-btn); font: inherit; font-size: 15px; font-weight: 800;
+  cursor: pointer; border: 1px solid transparent; text-align: center;
+}
+.btn:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+.btn-ouro { background: var(--gut-gold); color: var(--gut-on-gold); }
+.btn-pix { background: rgba(0,212,255,.14); border-color: rgba(0,212,255,.45); color: var(--gut-pix); }
+.btn-nav { background: rgba(245,166,35,.10); border-color: rgba(245,166,35,.40); color: var(--gut-gold); justify-content: space-between; }
+.btn-nav .seta { opacity: .8; }
+.btn-fant { background: transparent; border-color: rgba(143,160,216,.45); color: var(--gut-muted-strong); }
+.btn[disabled] { opacity: .5; cursor: not-allowed; }
+.grupo-btn { display: grid; gap: 10px; }
+.grupo-btn .passo { font-size: 12px; font-weight: 800; color: var(--gut-muted-strong); letter-spacing: .06em; text-transform: uppercase; margin: 6px 0 -4px; }
+.campo { min-height: var(--gut-touch); width: 100%; padding: 0 12px; border-radius: 10px; border: 1px solid rgba(143,160,216,.45); background: rgba(5,8,24,.6); color: var(--gut-text); font: inherit; font-size: 16px; }
+
+/* ═════════════ barra de progresso ═════════════ */
+.progresso { height: 10px; border-radius: 999px; background: rgba(107,125,184,.25); overflow: hidden; margin-top: 8px; }
+.progresso > i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--gut-gold), var(--gut-primary)); }
+
+/* ═════════════ carrossel lateral (padrão «Outras Edições», MC99) ═════════════ */
+.carrossel { display: flex; gap: var(--gut-gap); overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 6px; scrollbar-width: thin; }
+.carrossel > * { flex: 0 0 86%; scroll-snap-align: start; min-width: 0; }
+@container tela (min-width: 700px) { .carrossel > * { flex-basis: calc(50% - 6px); } }
+.cab-carrossel { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.pontos-pag { display: flex; gap: 6px; justify-content: center; margin-top: 2px; }
+.pontos-pag i { width: 6px; height: 6px; border-radius: 50%; background: #3d4f8a; }
+.pontos-pag i.on { background: var(--gut-gold); width: 16px; border-radius: 3px; }
+.edicao { display: flex; flex-direction: column; gap: 10px; }
+.edicao .topo { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.edicao .premio { display: flex; gap: 10px; align-items: center; padding: 10px; border-radius: 10px; background: rgba(245,166,35,.07); border: 1px solid rgba(245,166,35,.22); }
+.edicao .thumb { width: 52px; height: 52px; border-radius: 10px; flex: none; background: linear-gradient(135deg,#2a1d5e,#5b2b12); display: grid; place-items: center; font-size: 22px; }
+.edicao .tempo { font-family: var(--font-display); font-size: 20px; letter-spacing: .1em; color: var(--gut-gold); text-align: center; }
+.estado { font-size: 12px; font-weight: 800; padding: 3px 8px; border-radius: 6px; }
+.estado.aberto { background: rgba(16,185,129,.15); color: #5ee0b4; }
+.estado.apurado-ok { background: rgba(16,185,129,.15); color: #5ee0b4; }
+.estado.apurado-nao { background: rgba(255,90,95,.14); color: #ff9a9d; }
+.estado.encerrado { background: rgba(143,160,216,.15); color: var(--gut-muted-strong); }
+.estado.breve { background: rgba(245,166,35,.14); color: var(--gut-gold); }
+
+/* ═════════════ COMPONENTE TabelaEspecial (Regra 2) ═════════════
+ * Mesmo componente nas duas abas: mesma largura (100% da coluna), mesma altura de
+ * cabeçalho (48px) e de linha (48px), mesma tipografia, sempre o ÚLTIMO vidro da aba. */
+.tabela-especial { padding: 0; overflow: hidden; }
+.tabela-especial > header { height: 56px; padding: 12px var(--gut-pad); display: flex; justify-content: space-between; align-items: center; gap: 8px; border-bottom: 1px solid rgba(255,255,255,.08); }
+.tabela-especial > header h2 { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tabela-especial > header > :last-child { flex: none; }
+.tabela-especial table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.tabela-especial thead th { height: 48px; padding: 0 12px; text-align: left; font-size: var(--gut-label); font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--gut-muted-strong); background: rgba(5,8,24,.35); }
+.tabela-especial tbody td { height: 48px; padding: 0 12px; border-top: 1px solid rgba(255,255,255,.05); color: var(--gut-text-body); white-space: nowrap; }
+.tabela-especial tbody tr:nth-child(even) td { background: rgba(255,255,255,.025); }
+.tabela-especial td.num { font-variant-numeric: tabular-nums; }
+.tabela-especial .rodape-tab { padding: 10px var(--gut-pad); font-size: 13px; color: var(--gut-muted-strong); border-top: 1px solid rgba(255,255,255,.08); }
+.tabela-especial th:last-child, .tabela-especial td:last-child { text-align: right; }
+
+/* ═════════════ barra inferior (exceção da Regra 1) ═════════════ */
+.bottomnav { display: grid; grid-template-columns: repeat(5,1fr); margin: 0 10px 10px; border-radius: 18px; background: rgba(8,12,34,.96); border: 1px solid rgba(255,255,255,.08); }
+.bottomnav a { min-height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 11px; font-weight: 700; color: var(--gut-muted-strong); text-decoration: none; text-align: center; line-height: 1.15; padding: 4px 2px; }
+.bottomnav a .ic { font-size: 18px; line-height: 1; }
+.bottomnav a[aria-current] { color: var(--gut-primary); }
+@container tela (min-width: 700px) { .bottomnav { max-width: 640px; margin: 0 auto 12px; width: 100%; } }
+.rodape-legal { text-align: center; font-size: 12px; color: var(--gut-muted-strong); padding: 4px 0 8px; }
+
+/* ═════════════ mockup «ANTES» (reconstrução do actual) ═════════════ */
+.antes .tela { gap: 10px; }
+.cru { color: var(--gut-muted); font-size: 13px; }          /* texto solto, como está hoje */
+.vidro-antigo { background: rgba(10,16,42,.6); backdrop-filter: blur(20px); border: 1px solid rgba(245,166,35,.22); border-radius: 12px; padding: 16px; }
+.btn-antigo { min-height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13.6px; border: 1px solid transparent; padding: 0 12px; }
+
+/* ═════════════ anotações ═════════════ */
+.alvo { position: relative; }
+.marca { position: absolute; top: -8px; left: -8px; z-index: 3; width: 22px; height: 22px; border-radius: 50%; background: #ffd23f; color: #111; font-size: 12px; font-weight: 900; display: grid; place-items: center; box-shadow: 0 0 0 2px #050818; }
+.notas { max-width: 460px; flex: 1 1 340px; }
+.notas h2 { font-family: var(--font-display); font-size: 15px; color: var(--gut-gold); margin: 0 0 10px; }
+.notas ol { margin: 0; padding-left: 0; list-style: none; display: grid; gap: 10px; counter-reset: n; }
+.notas li { counter-increment: n; position: relative; padding: 10px 12px 10px 42px; background: #0a0e24; border: 1px solid #1f2650; border-radius: 10px; font-size: 14px; color: var(--gut-text-body); }
+.notas li::before { content: counter(n); position: absolute; left: 10px; top: 10px; width: 22px; height: 22px; border-radius: 50%; background: #ffd23f; color: #111; font-size: 12px; font-weight: 900; display: grid; place-items: center; }
+.notas li b { color: #fff; }
+.notas .porque { display: block; margin-top: 4px; color: var(--gut-muted-strong); font-size: 13px; }
+.tag-mudou { font-size: 11px; font-weight: 800; padding: 1px 6px; border-radius: 4px; margin-right: 4px; vertical-align: 1px; }
+.tag-mudou.add { background: #0f3b2c; color: #5ee0b4; } .tag-mudou.rem { background: #3b1416; color: #ff9a9d; } .tag-mudou.mod { background: #3a2a0a; color: #ffcf6e; }
+
+/* destaque do auditor */
+.falha-toque { outline: 2px dashed #ff5a5f !important; outline-offset: 1px; }
+.falha-glass { outline: 2px dashed #ffd23f !important; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+@media (max-width: 420px) { .prancha { padding: 16px 8px 48px; } .fone { border-radius: 16px; } }

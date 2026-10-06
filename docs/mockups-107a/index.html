@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UTAC107a · Mockups</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  .cartoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-top: 12px; }
+  .cartoes a { display: block; text-decoration: none; color: inherit; }
+  .cartoes .glass { height: 100%; }
+  .cartoes b { color: var(--gut-gold); font-family: var(--font-display); font-size: 14px; }
+  .cartoes p { margin: 6px 0 0; color: var(--gut-text-body); font-size: 14px; }
+  .dec { margin-top: 24px; max-width: 900px; }
+  .dec li { color: var(--gut-text-body); margin: 4px 0; }
+</style>
+</head>
+<body>
+<div class="prancha">
+  <header>
+    <h1>UTAC107a-front · Mockups UI/UX</h1>
+    <p>Mockups HTML/CSS das 4 abas, com as Regras 1 e 2. <b>Nenhum ficheiro de código de produção foi alterado.</b> Base medida: HEAD <code>536c9cb</code>. Cada prancha tem o antes (reconstruído do código), o depois com 2-3 variantes, larguras de 375/768/1024 e auditores que medem no browser a área de toque (≥ 48 px) e a Regra 1.</p>
+  </header>
+  <nav class="navdocs" aria-label="Pranchas">
+    <a href="index.html" aria-current="page">Índice</a><a href="tokens.html">Tokens</a><a href="regra-1-glass.html">Regra 1</a><a href="carteira.html">Carteira</a><a href="inicio.html">Início</a><a href="menor-lance-unico.html">Menor Lance Único</a><a href="ofertas-programadas.html">Ofertas Programadas</a><a href="tabela-especial.html">Regra 2</a>
+  </nav>
+  <div class="cartoes">
+    <a href="tokens.html"><div class="glass"><b>SEG0 · Tokens</b><p>Auditoria de cor, tipo, espaço e toque. Contraste WCAG calculado ao vivo. <code>DESIGN.md</code> com lint do design-md: 0 avisos.</p></div></a>
+    <a href="regra-1-glass.html"><div class="glass"><b>SEG0 · Regra 1</b><p>Componente <code>.glass</code> e as 4 exceções.</p></div></a>
+    <a href="carteira.html"><div class="glass"><b>SEG1 · Carteira</b><p>Fiel ao layout actual (R18-D). Ordem PIX → Passe → MLU → OP.</p></div></a>
+    <a href="inicio.html"><div class="glass"><b>SEG2 · Início</b><p>Passe Desafio 12/50, 2 carrosséis, sem blocos de lances.</p></div></a>
+    <a href="menor-lance-unico.html"><div class="glass"><b>SEG3 · Menor Lance Único</b><p>Vidro único, carrossel Relâmpago, tabela no fim.</p></div></a>
+    <a href="ofertas-programadas.html"><div class="glass"><b>SEG4 · Ofertas Programadas</b><p>Palpite dentro de cada cartão, 5 estados, tabela da edição programada.</p></div></a>
+    <a href="tabela-especial.html"><div class="glass"><b>SEG5 · Regra 2</b><p>TabelaEspecial: as 2 tabelas medidas iguais.</p></div></a>
+  </div>
+  <div class="dec glass">
+    <h2 class="h-sec">Decisões do operador tomadas neste UTAC (R18)</h2>
+    <ul>
+      <li><b>R18-A</b>: saem do Início todos os blocos de lances (KPIs «Lances Únicos» e «Total de Lances» e o cartão 🏆).</li>
+      <li><b>R18-B</b>: o «Passe Desafio» do Início mostra os pontos de cartão X/50.</li>
+      <li><b>R18-C</b>: a tabela da OP mostra a edição Programada do palpite, não a R-1.</li>
+      <li><b>R18-D</b>: a Carteira mantém o layout actual (variante A, «Fiel ao actual»).</li>
+      <li><b>R18-E</b>: menos texto pequeno e técnico; fica só o que ajuda a decidir.</li>
+    </ul>
+  </div>
+</div>
+<script src="mockup.js"></script>
+</body>
+</html>
