@@ -12,6 +12,19 @@
   .regras { font-size: 13px; color: var(--gut-muted-strong); margin: 0; }
   .duas { display: grid; gap: var(--gut-gap); }
   @container tela (min-width: 700px) { .duas.c2 { grid-template-columns: 1fr 1.2fr; align-items: start; } }
+  .cab-mlc { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .cab-mlc .sub { margin-top: 2px; }
+  .cab-mlc .pilula { flex: none; }
+  .edicao-unica { display: grid; gap: 12px; }
+  .slides { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; }
+  .slide { flex: 0 0 100%; scroll-snap-align: start; display: flex; gap: 14px; align-items: center; }
+  .slide .thumb { width: 72px; height: 72px; border-radius: 14px; flex: none; background: linear-gradient(135deg,#2a1d5e,#5b2b12); display: grid; place-items: center; font-size: 30px; }
+  .slide .nome { font-size: 17px; color: var(--gut-text); }
+  .tempo-s { font-family: var(--font-display); font-size: 22px; letter-spacing: .08em; color: var(--gut-gold); margin-top: 4px; }
+  .tempo-s.breve { font-size: 16px; color: var(--gut-muted-strong); }
+  .lance { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+  .lance .btn { width: auto; padding: 0 22px; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .guia-largura { position: absolute; top: 28px; bottom: 0; width: 0; border-left: 1px dashed rgba(94,224,180,.6); pointer-events: none; z-index: 4; }
 </style>
 </head>
@@ -27,9 +40,9 @@
   <div class="controles">
     <span class="rot">Variante</span>
     <span data-grupo-v="mlc-depois">
-      <button data-v="A" aria-pressed="true" data-desc="A · Coluna única (recomendada): todos os vidros com a mesma largura, o mesmo padding e o mesmo raio; o cartão de lance fica por baixo do carrossel.">A · Coluna única</button>
-      <button data-v="B" data-desc="B · Lance no cartão: o formulário vive dentro do cartão da edição escolhida no carrossel — menos um vidro, e o lance fica sempre amarrado à edição que se vê.">B · Lance no cartão</button>
-      <button data-v="C" data-desc="C · Duas colunas a partir de 700 px: lance à esquerda, edições à direita, tabela a toda a largura no fim. No mobile é igual à A.">C · 2 colunas (≥700)</button>
+      <button data-v="A" aria-pressed="true" data-desc="A · Limpa (recomendada): 3 vidros — título, edição + lance, tabela.">A · Limpa</button>
+      <button data-v="B" data-desc="B · 2 vidros: o título entra no vidro da edição.">B · 2 vidros</button>
+      <button data-v="C" data-desc="C · 2 colunas a partir de 700 px: título e edição lado a lado; tabela em baixo, 640 px.">C · 2 colunas (≥700)</button>
     </span>
     <span class="rot" style="margin-left:12px">Largura</span>
     <span data-larguras><button data-largura="375" aria-pressed="true">375 mobile</button><button data-largura="768">768 tablet</button><button data-largura="1024">1024 desktop</button></span>
@@ -67,67 +80,58 @@
 
         <!-- ═══ A ═══ -->
         <div class="tela coluna" data-painel="A">
-          <section class="glass titulo-aba alvo"><span class="marca">1</span><div><h1 class="h-aba">Menor Lance Único</h1><p class="sub">Vence o menor lance que mais ninguém deu</p></div></section>
-          <section class="glass"><div class="cab-carrossel"><h2 class="h-sec">⚡ Edições Relâmpago</h2></div><div class="pontos-pag" style="margin-top:6px"><i class="on"></i><i></i></div></section>
-          <div class="carrossel alvo"><span class="marca">2</span>
-            <article class="glass edicao"><div class="topo"><span class="pilula">R-1</span><span class="estado breve">EM BREVE</span></div><div class="premio"><div class="thumb">🎁</div><div><span class="rotulo">Prémio</span><div style="color:var(--gut-gold);font-weight:800">A anunciar</div></div></div><div class="tempo">EM BREVE</div></article>
-            <article class="glass edicao"><div class="topo"><span class="pilula">RELAMP-2</span><span class="estado aberto">ABERTA</span></div><div class="premio"><div class="thumb">🍳</div><div><span class="rotulo">Prémio</span><div style="color:var(--gut-gold);font-weight:800">Air Fryer</div></div></div><div class="tempo">24:31</div></article>
-          </div>
-          <section class="glass form-lance alvo" aria-label="Dar lance"><span class="marca">3</span>
-            <h2 class="h-sec">Dar lance · R-1</h2>
-            <div class="linha"><div><label for="v1">Valor (R$)</label><input id="v1" class="campo" inputmode="decimal" placeholder="0,01"></div><button class="btn btn-ouro" style="width:auto;padding:0 20px">Dar lance</button></div>
-            <p class="regras">Lance mínimo: R$ 0,01</p>
+          <section class="glass alvo"><span class="marca">1</span><h1 class="h-aba">Menor Lance Único</h1><p class="sub">Ganha o menor lance que ninguém repetir.</p></section>
+          <section class="glass edicao-unica alvo" aria-label="Edição e lance"><span class="marca">2</span>
+            <div class="slides">
+              <div class="slide"><div class="thumb">🍳</div><div><b class="nome">Air Fryer</b><div class="tempo-s">24:31</div></div></div>
+              <div class="slide"><div class="thumb">🎁</div><div><b class="nome">Prêmio a anunciar</b><div class="tempo-s breve">EM BREVE</div></div></div>
+            </div>
+            
+            <div class="lance"><label class="sr" for="v1">Valor do lance em reais</label><input id="v1" class="campo" inputmode="decimal" placeholder="R$ 0,01"><button class="btn btn-ouro">Dar lance</button></div>
           </section>
-          <section class="glass tabela-especial alvo" aria-label="Lances — Menor Lance Único"><span class="marca">4</span>
-            <header><h2 class="h-sec">Lances — Edição R-1</h2><span class="estado breve" aria-label="valores ocultos">🔒</span></header>
-            <table><thead><tr><th>#</th><th>Participante</th><th>Valor</th><th>Estado</th></tr></thead>
-              <tbody><tr><td class="num">1</td><td>Ana P.</td><td>🔒</td><td>Blindado</td></tr><tr><td class="num">2</td><td>0x71c…9a2</td><td>🔒</td><td>Blindado</td></tr><tr><td class="num">3</td><td>Rui M.</td><td>🔒</td><td>Blindado</td></tr></tbody></table>
-            <p class="rodape-tab">Os valores aparecem no fim da edição.</p>
+          <section class="glass tabela-especial alvo" aria-label="Lances — Menor Lance Único">
+            <span class="marca">3</span><header><h2 class="h-sec">Lances — Edição R-1</h2><span class="estado breve" aria-label="valores ocultos">🔒</span></header>
+            <table><thead><tr><th>#</th><th>Participante</th><th>Valor</th></tr></thead>
+              <tbody><tr><td class="num">1</td><td>Ana P.</td><td>🔒</td></tr><tr><td class="num">2</td><td>0x71c…9a2</td><td>🔒</td></tr><tr><td class="num">3</td><td>Rui M.</td><td>🔒</td></tr></tbody></table>
           </section>
           <p class="rodape-legal">DesafioGUT · Grupo União e Trabalho · CNPJ 23.040.066/0001-00</p>
         </div>
 
         <!-- ═══ B ═══ -->
         <div class="tela coluna" data-painel="B" hidden>
-          <section class="glass titulo-aba"><div><h1 class="h-aba">Menor Lance Único</h1><p class="sub">Vence o menor lance que mais ninguém deu</p></div></section>
-          <section class="glass"><h2 class="h-sec">⚡ Edições Relâmpago</h2><div class="pontos-pag" style="margin-top:6px"><i></i><i class="on"></i></div></section>
-          <div class="carrossel">
-            <article class="glass edicao"><div class="topo"><span class="pilula">RELAMP-2</span><span class="estado aberto">ABERTA</span></div><div class="premio"><div class="thumb">🍳</div><div><span class="rotulo">Prémio</span><div style="color:var(--gut-gold);font-weight:800">Air Fryer</div></div></div><div class="tempo">24:31</div>
-              <div class="form-lance"><div class="linha"><div><label for="v2">Valor (R$)</label><input id="v2" class="campo" inputmode="decimal" placeholder="0,01"></div><button class="btn btn-ouro" style="width:auto;padding:0 20px">Dar lance</button></div><p class="regras">Lance mínimo: R$ 0,01</p></div>
-            </article>
-            <article class="glass edicao"><div class="topo"><span class="pilula">R-1</span><span class="estado breve">EM BREVE</span></div><div class="premio"><div class="thumb">🎁</div><div><span class="rotulo">Prémio</span><div style="color:var(--gut-gold);font-weight:800">A anunciar</div></div></div><div class="tempo">EM BREVE</div><button class="btn btn-fant" disabled>Abre em breve</button></article>
-          </div>
+          <section class="glass edicao-unica" aria-label="Edição e lance">
+            <h1 class="h-aba">Menor Lance Único</h1><p class="sub" style="margin-bottom:12px">Ganha o menor lance que ninguém repetir.</p>
+            <div class="slides">
+              <div class="slide"><div class="thumb">🍳</div><div><b class="nome">Air Fryer</b><div class="tempo-s">24:31</div></div></div>
+              <div class="slide"><div class="thumb">🎁</div><div><b class="nome">Prêmio a anunciar</b><div class="tempo-s breve">EM BREVE</div></div></div>
+            </div>
+            
+            <div class="lance"><label class="sr" for="v2">Valor do lance em reais</label><input id="v2" class="campo" inputmode="decimal" placeholder="R$ 0,01"><button class="btn btn-ouro">Dar lance</button></div>
+          </section>
           <section class="glass tabela-especial" aria-label="Lances — Menor Lance Único">
-            <header><h2 class="h-sec">Lances — Edição RELAMP-2</h2><span class="estado breve" aria-label="valores ocultos">🔒</span></header>
-            <table><thead><tr><th>#</th><th>Participante</th><th>Valor</th><th>Estado</th></tr></thead>
-              <tbody><tr><td class="num">1</td><td>Ana P.</td><td>🔒</td><td>Blindado</td></tr><tr><td class="num">2</td><td>0x71c…9a2</td><td>🔒</td><td>Blindado</td></tr><tr><td class="num">3</td><td>Rui M.</td><td>🔒</td><td>Blindado</td></tr></tbody></table>
-            <p class="rodape-tab">Os valores aparecem no fim da edição.</p>
+            <header><h2 class="h-sec">Lances — Edição R-1</h2><span class="estado breve" aria-label="valores ocultos">🔒</span></header>
+            <table><thead><tr><th>#</th><th>Participante</th><th>Valor</th></tr></thead>
+              <tbody><tr><td class="num">1</td><td>Ana P.</td><td>🔒</td></tr><tr><td class="num">2</td><td>0x71c…9a2</td><td>🔒</td></tr><tr><td class="num">3</td><td>Rui M.</td><td>🔒</td></tr></tbody></table>
           </section>
           <p class="rodape-legal">DesafioGUT · Grupo União e Trabalho · CNPJ 23.040.066/0001-00</p>
         </div>
 
         <!-- ═══ C ═══ -->
-        <div class="tela coluna" data-painel="C" hidden style="--gut-coluna: 960px">
-          <section class="glass titulo-aba"><div><h1 class="h-aba">Menor Lance Único</h1><p class="sub">Vence o menor lance que mais ninguém deu</p></div></section>
+        <div class="tela coluna" data-painel="C" hidden>
           <div class="duas c2">
-            <section class="glass form-lance" aria-label="Dar lance">
-              <h2 class="h-sec">Dar lance · R-1</h2>
-              <div class="linha"><div><label for="v3">Valor (R$)</label><input id="v3" class="campo" inputmode="decimal" placeholder="0,01"></div><button class="btn btn-ouro" style="width:auto;padding:0 20px">Dar lance</button></div>
-              <p class="regras">Lance mínimo: R$ 0,01</p>
-            </section>
-            <div class="duas">
-              <section class="glass"><h2 class="h-sec">⚡ Edições Relâmpago</h2></section>
-              <div class="carrossel">
-                <article class="glass edicao"><div class="topo"><span class="pilula">R-1</span><span class="estado breve">EM BREVE</span></div><div class="tempo">EM BREVE</div></article>
-                <article class="glass edicao"><div class="topo"><span class="pilula">RELAMP-2</span><span class="estado aberto">ABERTA</span></div><div class="tempo">24:31</div></article>
+            <section class="glass"><h1 class="h-aba">Menor Lance Único</h1><p class="sub">Ganha o menor lance que ninguém repetir.</p></section>
+            <section class="glass edicao-unica" aria-label="Edição e lance">
+              <div class="slides">
+                <div class="slide"><div class="thumb">🍳</div><div><b class="nome">Air Fryer</b><div class="tempo-s">24:31</div></div></div>
+                <div class="slide"><div class="thumb">🎁</div><div><b class="nome">Prêmio a anunciar</b><div class="tempo-s breve">EM BREVE</div></div></div>
               </div>
-            </div>
+              <div class="lance"><label class="sr" for="v3">Valor do lance em reais</label><input id="v3" class="campo" inputmode="decimal" placeholder="R$ 0,01"><button class="btn btn-ouro">Dar lance</button></div>
+            </section>
           </div>
           <section class="glass tabela-especial" aria-label="Lances — Menor Lance Único">
             <header><h2 class="h-sec">Lances — Edição R-1</h2><span class="estado breve" aria-label="valores ocultos">🔒</span></header>
-            <table><thead><tr><th>#</th><th>Participante</th><th>Valor</th><th>Estado</th></tr></thead>
-              <tbody><tr><td class="num">1</td><td>Ana P.</td><td>🔒</td><td>Blindado</td></tr><tr><td class="num">2</td><td>0x71c…9a2</td><td>🔒</td><td>Blindado</td></tr><tr><td class="num">3</td><td>Rui M.</td><td>🔒</td><td>Blindado</td></tr></tbody></table>
-            <p class="rodape-tab">Os valores aparecem no fim da edição.</p>
+            <table><thead><tr><th>#</th><th>Participante</th><th>Valor</th></tr></thead>
+              <tbody><tr><td class="num">1</td><td>Ana P.</td><td>🔒</td></tr><tr><td class="num">2</td><td>0x71c…9a2</td><td>🔒</td></tr><tr><td class="num">3</td><td>Rui M.</td><td>🔒</td></tr></tbody></table>
           </section>
           <p class="rodape-legal">DesafioGUT · Grupo União e Trabalho · CNPJ 23.040.066/0001-00</p>
         </div>
@@ -138,20 +142,16 @@
     </div>
 
     <aside class="notas">
-      <h2>Onde estava o desalinhamento (medido)</h2>
+      <h2>Anotações (variante A · limpa)</h2>
       <ol>
-        <li><b>Três vidros diferentes no mesmo ecrã.</b> O <code>GlassHeader</code> é um GlassCard (0,88, r14, 16 px). O <code>CardLance</code> usa <code>Card glow="primary"</code> com <b>padding de 24 px</b> (<code>p-6</code>). A <code>TabelaLances</code> tem um vidro próprio: <code>rgba(10,16,42,.6)</code> + <b><code>blur(20px)</code></b>, <b>r12</b> e borda laranja (<code>TabelaLances.jsx:347</code>). É o único <code>backdrop-filter</code> do app, apesar da regra do MC82.1.</li>
-        <li><b>Margens:</b> a frase tem <code>0.85rem 1rem 0</code>, o <code>GlassHeader</code> tem um wrapper próprio <code>1rem 1rem 0</code>, o <code>main</code> tem <code>1rem</code>. No desktop: frase <code>1rem 2rem</code>, cabeçalho <code>1.5rem 2rem</code>, <code>main</code> <code>1.5rem 2rem</code> em 2 colunas (1fr 1.6fr). Na Carteira são 2rem e no Início 1,25rem: nenhum lado coincide.</li>
+        <li><span class="tag-mudou mod">mudou</span><b>Cabeçalho: só o título e uma frase.</b> Hoje o <code>GlassHeader</code> junta 9 elementos (frase de efeito, «🏆 DesafioGUT», Entrar, selo da edição, «EM BREVE» gigante, «Art. 8», «Modo:» + 2 botões, CNPJ).<span class="porque">A marca e o Entrar estão no Sidebar/«Mais»; o seletor de modo sai porque esta aba só tem Relâmpago; o CNPJ fica no rodapé.</span></li>
+        <li><span class="tag-mudou mod">mudou</span><b>Um só vidro para a edição e o lance.</b> As edições Relâmpago deslizam dentro dele (foto, nome, tempo) e o campo + «Dar lance» ficam por baixo, sempre para a edição visível. Antes eram 2 + N vidros (cabeçalho do carrossel, um vidro por edição, formulário).<span class="porque"><span class="tag-mudou rem">removidos</span>o estado repetido («EM BREVE» no selo e no tempo), o rótulo «Prémio», o selo do id da edição e a linha de regras. O mínimo de R$ 0,01 fica no placeholder do campo; os limites (5/min, 3 s) só aparecem como erro quando acontecem. ⚠️ Hoje o <code>/mercado</code> está fixo na R-1 (<code>EDICAO_ATIVA</code>); ligar o slide visível ao <code>POST /lance-relampago</code> é trabalho do 107b.</span></li>
+        <li><span class="tag-mudou mod">mudou</span><b>Tabela no fim, com 3 colunas</b> (#, Participante, Valor). <span class="tag-mudou rem">removidos</span>a coluna «Estado», o texto de rodapé, «ID do Lance» e «Status (Art. 24)». Valores 🔒 até ao fecho; 🏆 só com o resultado oficial. A mesma <code>TabelaEspecial</code> da OP (Regra 2).</li>
       </ol>
-      <h2 style="margin-top:18px">Anotações (variante A)</h2>
-      <ol>
-        <li><span class="tag-mudou rem">removido</span><b>Frase «Quanto você oferta por esse item? O menor lance único leva!»</b> (decisão 5; o texto real termina em «leva!», não em «passa»). O título passa a vidro (Regra 1) e a regra fica como subtítulo, em linguagem simples e sem «Art. 8». <span class="tag-mudou rem">removido</span>O bloco «🏆 DesafioGUT + Entrar» do <code>GlassHeader</code>: a marca e a sessão já estão no Sidebar/«Mais».<span class="porque">O «EM BREVE» passa a ser o estado de cada cartão de edição, deixando de ser um herói de 30 px.</span></li>
-        <li><span class="tag-mudou add">novo</span><b>Carrossel de edições Relâmpago</b> (o mesmo componente do Início). Escolher um cartão define a edição do formulário. ⚠️ Hoje o <code>/mercado</code> está fixo na R-1 (<code>EDICAO_ATIVA</code>): ligar o carrossel ao <code>CardLance</code> é trabalho do 107b.<span class="porque"><span class="tag-mudou rem">removido</span>O seletor «Modo: ⚡/🎫»: nesta aba só há Relâmpago (as Programadas vivem na OP).</span></li>
-        <li><span class="tag-mudou mod">mudou</span><b>Formulário de lance no vidro padrão</b>: 16 px de padding (era 24 px), botão de 48 px (era 28 px de raio e 44 px de altura). O campo usa 16 px de letra, para o iOS não fazer zoom. O valor entra em <b>R$</b>, não em centavos. <span class="tag-mudou rem">removido</span>a linha «Art. 26: Mín R$ 0,01 · Máx 5 lances/min · Cooldown 3s» fica só «Lance mínimo: R$ 0,01». O limite de 5/min e o intervalo de 3 s aparecem só quando são atingidos, como mensagem de erro (R18-E).<span class="porque">Contrato inalterado: <code>POST /lance-relampago</code> (o UI converte para centavos).</span></li>
-        <li><span class="tag-mudou mod">mudou</span><b>Tabela no fim</b>, com o componente <code>TabelaEspecial</code> (Regra 2): o mesmo vidro, 48 px de cabeçalho e de linha, último vidro antes do rodapé. A lógica de divulgação mantém-se: valores 🔒 até ao fecho (MC28.1). Saem as colunas «ID do Lance» e «Status (Art. 24)». O estado fica numa coluna curta.<span class="porque">Ver <a href="tabela-especial.html">tabela-especial.html</a>.</span></li>
-      </ol>
-      <h2 style="margin-top:18px">Variantes (do alinhamento)</h2>
-      <ol><li><b>A</b>: uma coluna, todos os vidros com a mesma largura (recomendada). <b>B</b>: menos um vidro; o lance vive no cartão da edição. <b>C</b>: 2 colunas a partir de 700 px, com a coluna alargada para 960 px. É a única que quebra a coluna de 640 px das outras abas, por isso não é recomendada.</li></ol>
+      <h2 style="margin-top:18px">Variantes</h2>
+      <ol><li><b>A · Limpa</b> (recomendada): 3 vidros. <b>B · 2 vidros</b>: o título entra no vidro da edição. <b>C · 2 colunas ≥ 700</b>: título e edição lado a lado; a tabela fica em baixo, com os mesmos 640 px (corrigido após o achado D-1 do validador: a 1.ª versão alargava a tabela a 912 px e quebrava a Regra 2).</li></ol>
+      <h2 style="margin-top:18px">Contagem</h2>
+      <ol><li>Antes: 5 superfícies + frase solta, ≈ 20 textos. Depois (A): 3 vidros, 9 textos (título, frase, nome, tempo, placeholder, botão, título da tabela, cabeçalhos).</li></ol>
     </aside>
   </div>
 </div>

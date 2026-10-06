@@ -12,6 +12,7 @@
   .amostra .info { padding: 10px 12px; font-size: 13px; }
   .amostra code { font-size: 12px; color: var(--gut-text-body); }
   .sobre-vidro { margin-top: 6px; padding: 8px 10px; border-radius: 8px; background: var(--gut-glass-bg); border: 1px solid var(--gut-glass-border); font-size: 14px; }
+  .rolar { overflow-x: auto; }
   table.t { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 8px; }
   table.t th, table.t td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #1f2650; vertical-align: top; }
   table.t th { color: var(--gut-muted-strong); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
@@ -19,8 +20,8 @@
   section.bloco { margin: 28px 0; }
   section.bloco > h2 { font-family: var(--font-display); color: var(--gut-gold); font-size: 16px; margin: 0 0 6px; }
   section.bloco > p { color: var(--gut-text-body); margin: 0 0 10px; max-width: 900px; }
-  .escala > div { display: flex; align-items: baseline; gap: 14px; padding: 6px 0; border-bottom: 1px solid #141a3d; }
-  .escala code { width: 210px; flex: none; color: var(--gut-muted-strong); font-size: 12px; }
+  .escala > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; padding: 6px 0; border-bottom: 1px solid #141a3d; }
+  .escala code { width: 210px; max-width: 100%; flex: none; color: var(--gut-muted-strong); font-size: 12px; }
   .regua { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
   .regua div { background: rgba(255,107,53,.35); border: 1px solid var(--gut-primary); font-size: 11px; display: grid; place-items: center; color: #fff; }
 </style>
@@ -43,12 +44,12 @@
 
   <section class="bloco">
     <h2>2 · Cor — pares de botão (texto sobre fundo sólido)</h2>
-    <table class="t" id="tab-botoes"><thead><tr><th>Par</th><th>Onde está hoje</th><th>Contraste</th><th>Veredicto</th><th>Proposta</th></tr></thead><tbody></tbody></table>
+    <div class="rolar"><table class="t" id="tab-botoes"><thead><tr><th>Par</th><th>Onde está hoje</th><th>Contraste</th><th>Veredicto</th><th>Proposta</th></tr></thead><tbody></tbody></table></div>
   </section>
 
   <section class="bloco">
     <h2>3 · Deriva de tokens (o mesmo papel com valores diferentes)</h2>
-    <table class="t">
+    <div class="rolar"><table class="t">
       <thead><tr><th>Papel</th><th>Valores medidos no código</th><th>Proposta</th></tr></thead>
       <tbody>
         <tr><td>Dourado</td><td><code>#f5a623</code> (Carteira, Dashboard, OP, TabelaLances) · <code>#ff9500</code> (<code>globals.css --color-gut-gold</code>, <code>glassTokens.COR.gold</code>) · <code>#fbbf24</code> (valores/realce)</td><td><code>--gut-gold: #f5a623</code> como único dourado. É o mais usado em ecrã e dá 9,07:1. O 107b alinha o <code>@theme</code>.</td></tr>
@@ -59,7 +60,7 @@
         <tr><td>Altura de botão</td><td><code>Button md</code> = h-11 = <b>44 px</b> · botões inline ≈ 44 px · «↻» ≈ <b>20 px</b></td><td><code>--gut-touch: 48px</code> mínimo (Material 48 dp)</td></tr>
         <tr><td>Menor texto</td><td>0,58rem (≈ 9,3 px) · 0,62rem (≈ 9,9 px) em rótulos</td><td><code>--gut-label: 12px</code></td></tr>
       </tbody>
-    </table>
+    </table></div>
   </section>
 
   <section class="bloco">
@@ -80,13 +81,13 @@
       <div style="width:16px;height:16px">16</div><div style="width:12px;height:12px">12</div><div style="width:20px;height:20px">20</div><div style="width:24px;height:24px">24</div>
       <div style="width:48px;height:48px">48 toque</div><div style="width:44px;height:44px;background:rgba(255,90,95,.3);border-color:#ff5a5f">44 hoje</div>
     </div>
-    <table class="t">
+    <div class="rolar"><table class="t">
       <tbody>
         <tr><td><code>--gut-radius</code></td><td>14 px (vidro) · 12 px (botão) · 999 px (pílula)</td></tr>
         <tr><td><code>--gut-glass-shadow</code></td><td><code>0 8px 32px rgba(0,0,0,.40), inset 0 0 0 1px rgba(255,255,255,.05)</code> (igual ao <code>.gut-glass-standard</code>)</td></tr>
         <tr><td>Espaço entre botões</td><td>10 px (≥ 8 px pedido pela <code>mobile-ux-design</code> contra toques ao lado)</td></tr>
       </tbody>
-    </table>
+    </table></div>
   </section>
 
   <section class="bloco">

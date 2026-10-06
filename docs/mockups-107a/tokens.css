@@ -124,20 +124,33 @@ a { color: var(--gut-gold); }
 .btn[disabled] { opacity: .5; cursor: not-allowed; }
 .grupo-btn { display: grid; gap: 10px; }
 .grupo-btn .passo { font-size: 12px; font-weight: 800; color: var(--gut-muted-strong); letter-spacing: .06em; text-transform: uppercase; margin: 6px 0 -4px; }
-.campo { min-height: var(--gut-touch); width: 100%; padding: 0 12px; border-radius: 10px; border: 1px solid rgba(143,160,216,.45); background: rgba(5,8,24,.6); color: var(--gut-text); font: inherit; font-size: 16px; }
+.campo::placeholder { color: var(--gut-muted-strong); opacity: 1; }
+.campo { min-height: var(--gut-touch); width: 100%; padding: 0 12px; border-radius: 10px; border: 1px solid var(--gut-muted); background: rgba(5,8,24,.6); color: var(--gut-text); font: inherit; font-size: 16px; }
 
 /* ═════════════ barra de progresso ═════════════ */
 .progresso { height: 10px; border-radius: 999px; background: rgba(107,125,184,.25); overflow: hidden; margin-top: 8px; }
 .progresso > i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--gut-gold), var(--gut-primary)); }
 
 /* ═════════════ carrossel lateral (padrão «Outras Edições», MC99) ═════════════ */
-.carrossel { display: flex; gap: var(--gut-gap); overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 6px; scrollbar-width: thin; }
-.carrossel > * { flex: 0 0 86%; scroll-snap-align: start; min-width: 0; }
-@container tela (min-width: 700px) { .carrossel > * { flex-basis: calc(50% - 6px); } }
+/* Igual ao Dashboard.jsx (MC99): display flex, overflowX auto, scroll-snap x mandatory,
+   cada edição flex 0 0 100% (UMA de cada vez), scrollSnapAlign start, gap = innerGap.
+   PRESERVADO por pedido do operador (R18-G) — não há «peek» nem pontos de paginação. */
+.carrossel { display: flex; gap: var(--gut-gap); overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+.carrossel > * { flex: 0 0 100%; scroll-snap-align: start; min-width: 0; }
 .cab-carrossel { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .pontos-pag { display: flex; gap: 6px; justify-content: center; margin-top: 2px; }
-.pontos-pag i { width: 6px; height: 6px; border-radius: 50%; background: #3d4f8a; }
+.pontos-pag i { width: 6px; height: 6px; border-radius: 50%; background: var(--gut-muted); }
 .pontos-pag i.on { background: var(--gut-gold); width: 16px; border-radius: 3px; }
+/* EdicaoCard.jsx: cabeçalho (tipo + id), caixa âmbar (banner 52px + «Edição X» + produto + rótulo),
+   GUTO 52px + cronómetro, botão a toda a largura */
+.ed-card { display: flex; flex-direction: column; gap: 10px; }
+.ed-card .cab { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.ed-card .caixa { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 10px; background: rgba(245,166,35,.07); border: 1px solid rgba(245,166,35,.22); }
+.ed-card .banner { width: 52px; height: 52px; border-radius: 10px; flex: none; background: linear-gradient(135deg,#2a1d5e,#5b2b12); display: grid; place-items: center; font-size: 22px; }
+.ed-card .relogio { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.ed-card .guto { width: 52px; height: 52px; border-radius: 14px; background: linear-gradient(135deg,#ff6b35,#7c3aed); display: grid; place-items: center; font-size: 24px; flex: none; }
+.ed-card .t { font-family: var(--font-display); font-size: 22px; letter-spacing: .1em; color: var(--gut-gold); line-height: 1; }
+.ed-card .t.breve { font-size: 18px; color: var(--gut-primary); }
 .edicao { display: flex; flex-direction: column; gap: 10px; }
 .edicao .topo { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .edicao .premio { display: flex; gap: 10px; align-items: center; padding: 10px; border-radius: 10px; background: rgba(245,166,35,.07); border: 1px solid rgba(245,166,35,.22); }
@@ -197,4 +210,4 @@ a { color: var(--gut-gold); }
 .falha-glass { outline: 2px dashed #ffd23f !important; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
-@media (max-width: 420px) { .prancha { padding: 16px 8px 48px; } .fone { border-radius: 16px; } }
+@media (max-width: 420px) { .prancha { padding: 16px 8px 48px; } .lado { display: block; } .coluna-mock { width: 100%; } .fone { width: 100% !important; border-radius: 16px; } .auditoria { max-width: 100%; } }

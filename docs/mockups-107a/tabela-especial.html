@@ -30,9 +30,8 @@
         <div class="tela coluna">
           <section class="glass tabela-especial" data-tabela="mlc" aria-label="Lances — Menor Lance Único">
             <header><h2 class="h-sec">Lances — Edição R-1</h2><span class="estado breve" aria-label="valores ocultos">🔒</span></header>
-            <table><thead><tr><th>#</th><th>Participante</th><th>Valor</th><th>Estado</th></tr></thead>
-              <tbody><tr><td class="num">1</td><td>Ana P.</td><td>🔒</td><td>Blindado</td></tr><tr><td class="num">2</td><td>0x71c…9a2</td><td>🔒</td><td>Blindado</td></tr><tr><td class="num">3</td><td>Rui M.</td><td>🔒</td><td>Blindado</td></tr></tbody></table>
-            <p class="rodape-tab">Os valores aparecem no fim da edição.</p>
+            <table><thead><tr><th>#</th><th>Participante</th><th>Valor</th></tr></thead>
+              <tbody><tr><td class="num">1</td><td>Ana P.</td><td>🔒</td></tr><tr><td class="num">2</td><td>0x71c…9a2</td><td>🔒</td></tr><tr><td class="num">3</td><td>Rui M.</td><td>🔒</td></tr></tbody></table>
           </section>
         </div>
       </div>
@@ -40,10 +39,9 @@
       <div class="fone depois" id="tab-mlc-fim" style="min-height:0">
         <div class="tela coluna">
           <section class="glass tabela-especial" aria-label="Lances — encerrada">
-            <header><h2 class="h-sec">Lances — Edição R-1</h2><span class="estado encerrado">Encerrada</span></header>
-            <table><thead><tr><th>#</th><th>Participante</th><th>Valor</th><th>Estado</th></tr></thead>
-              <tbody><tr style="background:rgba(245,166,35,.09)"><td class="num">🏆</td><td>Rui M.</td><td class="num" style="color:#fbbf24;font-weight:800">R$ 0,07</td><td>Menor e único</td></tr><tr><td class="num">2</td><td>Ana P.</td><td class="num">R$ 0,03</td><td>Repetido</td></tr><tr><td class="num">3</td><td>0x71c…9a2</td><td class="num">R$ 0,03</td><td>Repetido</td></tr></tbody></table>
-            <p class="rodape-tab">Vencedor: o menor valor que só uma pessoa deu.</p>
+            <header><h2 class="h-sec">Lances — Edição R-1</h2><span class="estado encerrado" aria-label="edição encerrada">🏁</span></header>
+            <table><thead><tr><th>#</th><th>Participante</th><th>Valor</th></tr></thead>
+              <tbody><tr style="background:rgba(245,166,35,.09)"><td class="num">🏆</td><td>Rui M.</td><td class="num" style="color:#fbbf24;font-weight:800">R$ 0,07</td></tr><tr><td class="num">2</td><td>Ana P.</td><td class="num">R$ 0,03</td></tr><tr><td class="num">3</td><td>0x71c…9a2</td><td class="num">R$ 0,03</td></tr></tbody></table>
           </section>
         </div>
       </div>
@@ -54,9 +52,8 @@
         <div class="tela coluna">
           <section class="glass tabela-especial" data-tabela="op" aria-label="Lances — Edição PROG-1">
             <header><h2 class="h-sec">Lances — Edição PROG-1</h2><span class="estado breve" aria-label="valores ocultos">🔒</span></header>
-            <table><thead><tr><th>#</th><th>Participante</th><th>Valor</th><th>Estado</th></tr></thead>
-              <tbody><tr><td class="num">1</td><td>Ana P.</td><td>🔒</td><td>Blindado</td></tr><tr><td class="num">2</td><td>0x71c…9a2</td><td>🔒</td><td>Blindado</td></tr><tr><td class="num">3</td><td>Rui M.</td><td>🔒</td><td>Blindado</td></tr></tbody></table>
-            <p class="rodape-tab">Os valores aparecem no fim da edição.</p>
+            <table><thead><tr><th>#</th><th>Participante</th><th>Valor</th></tr></thead>
+              <tbody><tr><td class="num">1</td><td>Ana P.</td><td>🔒</td></tr><tr><td class="num">2</td><td>0x71c…9a2</td><td>🔒</td></tr><tr><td class="num">3</td><td>Rui M.</td><td>🔒</td></tr></tbody></table>
           </section>
         </div>
       </div>
@@ -69,9 +66,9 @@
       <h2>Especificação</h2>
       <ol>
         <li><b>Vidro:</b> o mesmo <code>.glass</code> das abas (0,88 · r14 · sem blur), com <code>padding: 0</code> e <code>overflow: hidden</code> para a tabela ir de borda a borda. Substitui o vidro próprio da <code>TabelaLances</code> (0,6 + <code>blur(20px)</code> · r12).</li>
-        <li><b>Cabeçalho do cartão:</b> ≥ 56 px, com título <code>h-sec</code> (Orbitron 14, dourado) e um estado à direita (🔒 ocultos / Encerrada).</li>
+        <li><b>Cabeçalho do cartão:</b> ≥ 56 px, com título <code>h-sec</code> (Orbitron 14, dourado) e um estado à direita, só ícone com rótulo acessível (🔒 valores ocultos / 🏁 encerrada), para o título nunca ser cortado a 320 px.</li>
         <li><b>Cabeçalho da tabela: 48 px. Linhas: 48 px</b>, com alternância subtil (<code>rgba(255,255,255,.025)</code> nas pares), números tabulares e a última coluna alinhada à direita.</li>
-        <li><b>4 colunas:</b> #, Participante, Valor, Estado. <span class="tag-mudou rem">removido</span>«ID do Lance» (hash técnico) e o rótulo «Status (Art. 24)» (R18-E). O mobile deixa de usar cartões próprios (<code>MobileList</code>): a mesma tabela cabe em 343 px.</li>
+        <li><b>3 colunas:</b> #, Participante, Valor. <span class="tag-mudou rem">removidos</span>«Estado», o texto de rodapé, «ID do Lance» (hash técnico) e «Status (Art. 24)» (R18-E). O vencedor fica marcado com 🏆 na coluna # e a linha realçada. O mobile deixa de usar cartões próprios (<code>MobileList</code>): a mesma tabela cabe em 343 px.</li>
         <li><b>Divulgação inalterada:</b> 🔒 até ao fecho; 🏆 só com o resultado oficial (UTAC000.8/000.9: <code>useResultadoOficial</code>).</li>
         <li><b>Posição:</b> último vidro antes do rodapé, nas duas abas. Medido nas pranchas MLC e OP: é o último <code>section</code> antes do <code>.rodape-legal</code>.</li>
       </ol>

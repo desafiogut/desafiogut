@@ -16,6 +16,8 @@
   .seg button[aria-selected="true"] { background: rgba(245,166,35,.16); color: var(--gut-gold); }
   .saud { display: flex; align-items: center; gap: 12px; }
   .avatar { width: 56px; height: 56px; border-radius: 16px; background: linear-gradient(135deg,#ff6b35,#7c3aed); display: grid; place-items: center; font-size: 26px; flex: none; }
+  .logo-gut { font-weight: 900; color: var(--gut-text-body); font-size: 15px; line-height: 1.15; text-align: left; }
+  .sub-ed { padding: 12px; border-radius: 12px; background: rgba(5,8,24,.45); border: 1px solid rgba(255,255,255,.06); }
   .antigo-kpi { border-radius: 14px; background: var(--gut-glass-bg); border: 1px solid var(--gut-glass-border); padding: 10px 12px; min-height: 44px; }
 </style>
 </head>
@@ -31,8 +33,8 @@
   <div class="controles">
     <span class="rot">Variante</span>
     <span data-grupo-v="ini-depois">
-      <button data-v="A" data-desc="A · Conservadora: mantém o cabeçalho com GUTO e os KPIs em 2 colunas; os 2 carrosséis substituem a «Edição Ativa» e as «Outras Edições».">A · Conservadora</button>
-      <button data-v="B" aria-pressed="true" data-desc="B · Recomendada: o Passe Desafio é um cartão largo com barra de progresso; os dois carrosséis têm um título que diz para onde levam.">B · Recomendada</button>
+      <button data-v="A" aria-pressed="true" data-desc="A · Fiel ao actual (RECOMENDADA, pedido do operador): o Início de hoje — cabeçalho com GUTO, os 4 tiles, Edição Ativa, Acesso Rápido; só muda o que as decisões obrigam.">A · Fiel ao actual ★</button>
+      <button data-v="B" data-desc="B · Alternativa: o Passe Desafio é um cartão largo com barra de progresso; os dois carrosséis têm um título que diz para onde levam.">B · Recomendada</button>
       <button data-v="C" data-desc="C · Divergente: um só vidro de edições, com separador Relâmpago | Programadas e um único carrossel.">C · Divergente</button>
     </span>
     <span class="rot" style="margin-left:12px">Largura</span>
@@ -68,27 +70,40 @@
       <div class="fone depois" id="ini-depois">
         <div class="barra-sis"><span>9:41</span><span>●●●</span></div>
 
-        <!-- ═══ A ═══ -->
+        <!-- ═══ A — FIEL AO ACTUAL (recomendada pelo operador, R18-F) ═══ -->
         <div class="tela coluna" data-painel="A">
-          <section class="glass"><div class="saud"><div class="avatar">🐻</div><div><h1 class="h-aba">Início</h1><p class="sub">Olá, Ana!</p></div></div></section>
-          <div class="kpis">
-            <button class="glass kpi"><span class="rotulo">Saldo (R$)</span><span class="v" style="color:var(--gut-gold)">R$ 12,50</span></button>
-            <button class="glass kpi"><span class="rotulo">Passe Desafio</span><span class="v" style="color:var(--gut-gold)">12 / 50</span><span class="nota" style="margin:0">pontos</span></button>
+          <section class="glass alvo" style="text-align:center"><span class="marca">1</span>
+            <div class="saud" style="justify-content:center;gap:20px"><div class="avatar" style="width:96px;height:96px;font-size:44px;border-radius:24px">🐻</div><div class="logo-gut">Grupo União<br>e Trabalho</div></div>
+            <h1 style="margin:10px 0 2px;font-size:18px">Olá, Ana!</h1>
+            <p class="sub" style="margin:0">Acompanhe seus dados e suas edições.</p>
+          </section>
+          <div class="kpis alvo"><span class="marca">2</span>
+            <button class="glass kpi"><span>💰</span><span class="v" style="color:var(--gut-gold)">R$ 12,50</span><span class="rotulo">Saldo (R$)</span></button>
+            <button class="glass kpi"><span>🎟️</span><span class="v" style="color:var(--gut-gold)">12 / 50</span><span class="rotulo">Passe Desafio</span></button>
+            <button class="glass kpi"><span>✅</span><span class="v" style="color:var(--gut-success)">0</span><span class="rotulo">Lances Únicos</span></button>
+            <button class="glass kpi"><span>📊</span><span class="v" style="color:#fbbf24">0</span><span class="rotulo">Total de Lances</span></button>
           </div>
-          <section class="glass"><div class="cab-carrossel"><h2 class="h-sec">⚡ Relâmpago</h2></div></section>
+          <section class="glass edicao alvo"><span class="marca">3</span>
+            <div class="topo"><h2 class="h-sec">🎯 Edição Ativa</h2><span class="pilula">R-1</span></div>
+            <div class="premio"><div class="thumb">🎁</div><div><span class="rotulo">Prêmio em disputa</span><div style="color:var(--gut-gold);font-weight:800">Em breve</div></div></div>
+            <div class="tempo">EM BREVE</div>
+            <button class="btn btn-ouro">⚡ Ir para o Menor Lance Único</button>
+          </section>
+          <section class="glass alvo"><span class="marca">4</span><h2 class="h-sec">⚡ Relâmpago</h2></section>
           <div class="carrossel">
-            <article class="glass edicao"><div class="topo"><span class="pilula">R-1</span><span class="estado breve">EM BREVE</span></div><div class="premio"><div class="thumb">🎁</div><div><span class="rotulo">Prémio</span><div style="color:var(--gut-gold);font-weight:800">A anunciar</div></div></div><div class="tempo">EM BREVE</div><button class="btn btn-ouro">Dar lance</button></article>
-            <article class="glass edicao"><div class="topo"><span class="pilula">RELAMP-2</span><span class="estado aberto">ABERTA</span></div><div class="premio"><div class="thumb">🍳</div><div><span class="rotulo">Prémio</span><div style="color:var(--gut-gold);font-weight:800">Air Fryer</div></div></div><div class="tempo">24:31</div><button class="btn btn-ouro">Dar lance</button></article>
+            <article class="glass ed-card"><div class="cab"><h3 class="h-sec">⚡ Relâmpago</h3><span class="pilula">RELAMP-2</span></div><div class="caixa"><div class="banner">🎁</div><div><span class="rotulo">Edição RELAMP-2</span><div style="color:var(--gut-gold);font-weight:800">Air Fryer</div><div class="nota" style="margin:0">Aberta</div></div></div><div class="relogio"><div class="guto">🐻</div><div class="t">24:31</div></div><button class="btn btn-ouro">⚡ Ir para o Mercado</button></article>
+            <article class="glass ed-card"><div class="cab"><h3 class="h-sec">⚡ Relâmpago</h3><span class="pilula">RELAMP-3</span></div><div class="caixa"><div class="banner">🎁</div><div><span class="rotulo">Edição RELAMP-3</span><div style="color:var(--gut-gold);font-weight:800">Prêmio a anunciar</div><div class="nota" style="margin:0">Em breve</div></div></div><div class="relogio"><div class="guto">🐻</div><div class="t breve">EM BREVE</div></div><button class="btn btn-fant" disabled>Abre em breve</button></article>
           </div>
-          <section class="glass"><div class="cab-carrossel"><h2 class="h-sec">🎫 Programadas</h2></div></section>
+          <section class="glass"><h2 class="h-sec">🎫 Programadas</h2></section>
           <div class="carrossel">
-            <article class="glass edicao"><div class="topo"><span class="pilula">PROG-1</span><span class="estado aberto">ABERTA</span></div><div class="premio"><div class="thumb">🃏</div><div><span class="rotulo">Palpite</span><div style="color:var(--gut-gold);font-weight:800">Palpite aberto</div></div></div><div class="tempo">2d 04:10</div><button class="btn btn-nav">Ver na Ofertas Programadas <span class="seta">→</span></button></article>
-            <article class="glass edicao"><div class="topo"><span class="pilula">PROG-2</span><span class="estado breve">EM BREVE</span></div><div class="premio"><div class="thumb">🎁</div><div><span class="rotulo">Palpite</span><div style="color:var(--gut-gold);font-weight:800">Abre em breve</div></div></div><div class="tempo">EM BREVE</div><button class="btn btn-nav">Ver na Ofertas Programadas <span class="seta">→</span></button></article>
+            <article class="glass ed-card"><div class="cab"><h3 class="h-sec">🎫 Programado</h3><span class="pilula">PROG-1</span></div><div class="caixa"><div class="banner">🎁</div><div><span class="rotulo">Edição PROG-1</span><div style="color:var(--gut-gold);font-weight:800">Fones</div><div class="nota" style="margin:0">Aberta</div></div></div><div class="relogio"><div class="guto">🐻</div><div class="t">2d 04:10</div></div><button class="btn btn-ouro">🎫 Ir para Ofertas Programadas</button></article>
+            <article class="glass ed-card"><div class="cab"><h3 class="h-sec">🎫 Programado</h3><span class="pilula">PROG-2</span></div><div class="caixa"><div class="banner">🎁</div><div><span class="rotulo">Edição PROG-2</span><div style="color:var(--gut-gold);font-weight:800">Prêmio a anunciar</div><div class="nota" style="margin:0">Em breve</div></div></div><div class="relogio"><div class="guto">🐻</div><div class="t breve">EM BREVE</div></div><button class="btn btn-fant" disabled>Abre em breve</button></article>
           </div>
+          <section class="glass"><h2 class="h-sec" style="margin-bottom:10px">🚀 Acesso Rápido</h2><div class="kpis"><button class="btn btn-nav">💰 Depositar PIX</button><button class="btn btn-nav">🎫 Converter Ficha</button><button class="btn btn-nav">🎯 Dar Lance</button><button class="btn btn-nav">🪟 Vitrine</button><button class="btn btn-nav">📊 Meus Ativos</button><button class="btn btn-nav">🤝 Parceiro</button><button class="btn btn-nav">⚙️ Config.</button></div></section>
           <p class="rodape-legal">DesafioGUT · Grupo União e Trabalho · CNPJ 23.040.066/0001-00</p>
         </div>
 
-        <!-- ═══ B (recomendada) ═══ -->
+        <!-- ═══ B ═══ -->
         <div class="tela coluna" data-painel="B" hidden>
           <section class="glass alvo"><span class="marca">1</span><div class="saud"><div class="avatar">🐻</div><div><h1 class="h-aba">Início</h1><p class="sub">Olá, Ana!</p></div></div></section>
           <button class="glass passe-card alvo"><span class="marca">2</span>
@@ -97,17 +112,17 @@
             <span class="progresso" style="width:100%"><i style="width:24%"></i></span>
           </button>
           <button class="glass kpi" style="min-height:64px;width:100%"><span class="linha" style="display:flex;justify-content:space-between;width:100%;align-items:center"><span class="rotulo">💰 Saldo (R$)</span><span style="font-size:20px;font-weight:900;color:var(--gut-gold)">R$ 12,50</span></span></button>
-          <section class="glass alvo"><span class="marca">3</span><div class="cab-carrossel"><h2 class="h-sec">⚡ Relâmpago</h2><a href="#" class="btn btn-fant" style="width:auto;min-height:48px">Menor Lance Único →</a></div><div class="pontos-pag" style="margin-top:6px"><i class="on"></i><i></i></div></section>
+          <section class="glass alvo"><span class="marca">3</span><div class="cab-carrossel"><h2 class="h-sec">⚡ Relâmpago</h2><a href="#" class="btn btn-fant" style="width:auto;min-height:48px">Menor Lance Único →</a></div></section>
           <div class="carrossel">
-            <article class="glass edicao"><div class="topo"><span class="pilula">R-1</span><span class="estado breve">EM BREVE</span></div><div class="premio"><div class="thumb">🎁</div><div><span class="rotulo">Prémio</span><div style="color:var(--gut-gold);font-weight:800">A anunciar</div></div></div><div class="tempo">EM BREVE</div><button class="btn btn-ouro">Dar lance</button></article>
-            <article class="glass edicao"><div class="topo"><span class="pilula">RELAMP-2</span><span class="estado aberto">ABERTA</span></div><div class="premio"><div class="thumb">🍳</div><div><span class="rotulo">Prémio</span><div style="color:var(--gut-gold);font-weight:800">Air Fryer</div></div></div><div class="tempo">24:31</div><button class="btn btn-ouro">Dar lance</button></article>
+            <article class="glass edicao"><div class="topo"><span class="pilula">R-1</span><span class="estado breve">EM BREVE</span></div><div class="premio"><div class="thumb">🎁</div><div><span class="rotulo">Prêmio</span><div style="color:var(--gut-gold);font-weight:800">A anunciar</div></div></div><div class="tempo">EM BREVE</div><button class="btn btn-fant" disabled>Abre em breve</button></article>
+            <article class="glass edicao"><div class="topo"><span class="pilula">RELAMP-2</span><span class="estado aberto">ABERTA</span></div><div class="premio"><div class="thumb">🍳</div><div><span class="rotulo">Prêmio</span><div style="color:var(--gut-gold);font-weight:800">Air Fryer</div></div></div><div class="tempo">24:31</div><button class="btn btn-ouro">Dar lance</button></article>
           </div>
-          <section class="glass"><div class="cab-carrossel"><h2 class="h-sec">🎫 Programadas</h2><a href="#" class="btn btn-fant" style="width:auto;min-height:48px">Ofertas →</a></div><div class="pontos-pag" style="margin-top:6px"><i class="on"></i><i></i></div></section>
+          <section class="glass"><div class="cab-carrossel"><h2 class="h-sec">🎫 Programadas</h2><a href="#" class="btn btn-fant" style="width:auto;min-height:48px">Ofertas →</a></div></section>
           <div class="carrossel">
             <article class="glass edicao"><div class="topo"><span class="pilula">PROG-1</span><span class="estado aberto">ABERTA</span></div><div class="premio"><div class="thumb">🃏</div><div><span class="rotulo">Palpite</span><div style="color:var(--gut-gold);font-weight:800">Palpite aberto</div></div></div><div class="tempo">2d 04:10</div><button class="btn btn-nav">Palpitar na Ofertas <span class="seta">→</span></button></article>
             <article class="glass edicao"><div class="topo"><span class="pilula">PROG-2</span><span class="estado breve">EM BREVE</span></div><div class="premio"><div class="thumb">🎁</div><div><span class="rotulo">Palpite</span><div style="color:var(--gut-gold);font-weight:800">Abre em breve</div></div></div><div class="tempo">EM BREVE</div><button class="btn btn-nav">Ver na Ofertas <span class="seta">→</span></button></article>
           </div>
-          <section class="glass alvo"><span class="marca">4</span><h2 class="h-sec" style="margin-bottom:10px">🚀 Acesso Rápido</h2><div class="kpis"><button class="btn btn-nav">🪟 Vitrine</button><button class="btn btn-nav">📊 Meus Ativos</button><button class="btn btn-nav">🤝 Parceiro</button><button class="btn btn-nav">⚙️ Config.</button></div></section>
+          <section class="glass alvo"><span class="marca">4</span><h2 class="h-sec" style="margin-bottom:10px">🚀 Acesso Rápido</h2><div class="kpis"><button class="btn btn-nav">💰 Depositar PIX</button><button class="btn btn-nav">🎫 Converter Ficha</button><button class="btn btn-nav">🎯 Dar Lance</button><button class="btn btn-nav">🪟 Vitrine</button><button class="btn btn-nav">📊 Meus Ativos</button><button class="btn btn-nav">🤝 Parceiro</button><button class="btn btn-nav">⚙️ Config.</button></div></section>
           <p class="rodape-legal">DesafioGUT · Grupo União e Trabalho · CNPJ 23.040.066/0001-00</p>
         </div>
 
@@ -122,7 +137,7 @@
             <h2 class="h-sec">Edições</h2>
             <div class="seg" role="tablist"><button role="tab" aria-selected="true">⚡ Relâmpago (2)</button><button role="tab" aria-selected="false">🎫 Programadas (2)</button></div>
             <div class="carrossel">
-              <article class="edicao" style="padding:12px;border-radius:12px;background:rgba(5,8,24,.45)"><div class="topo"><span class="pilula">R-1</span><span class="estado breve">EM BREVE</span></div><div class="tempo">EM BREVE</div><button class="btn btn-ouro">Dar lance</button></article>
+              <article class="edicao" style="padding:12px;border-radius:12px;background:rgba(5,8,24,.45)"><div class="topo"><span class="pilula">R-1</span><span class="estado breve">EM BREVE</span></div><div class="tempo">EM BREVE</div><button class="btn btn-fant" disabled>Abre em breve</button></article>
               <article class="edicao" style="padding:12px;border-radius:12px;background:rgba(5,8,24,.45)"><div class="topo"><span class="pilula">RELAMP-2</span><span class="estado aberto">ABERTA</span></div><div class="tempo">24:31</div><button class="btn btn-ouro">Dar lance</button></article>
             </div>
           </section>
@@ -135,17 +150,17 @@
     </div>
 
     <aside class="notas">
-      <h2>Anotações (variante B)</h2>
+      <h2>Anotações (variante A · fiel ao actual)</h2>
       <ol>
-        <li><span class="tag-mudou mod">mudou</span><b>Cabeçalho = título «Início» dentro de vidro.</b> O GUTO passa a avatar de 56 px. Hoje o logotipo e o GUTO de 116 px ocupam quase meia dobra.<span class="porque">Porquê: Início = panorama. O que importa aparece na primeira dobra.</span></li>
-        <li><span class="tag-mudou mod">mudou</span><b>«Senhas» → «Passe Desafio»</b> (decisão 2). O cartão mostra os <b>pontos de cartão 12/50</b> com barra de progresso e leva a <code>/ofertas-programadas</code> (hoje leva a <code>/carteira</code>, <code>Dashboard.jsx:174</code>). Dados: <code>GET /ler-pontos → pontosCartao</code> (R18-B). ⚠️ O Dashboard ainda não chama o <code>usePontos</code>: o 107b terá de o acrescentar.<span class="porque">O saldo de senhas on-chain continua visível no Sidebar/indicador «🔗». Aqui só se troca a métrica do tile.</span></li>
-        <li><span class="tag-mudou add">novo</span><b>Dois carrosséis laterais</b>: Relâmpago e Programadas. É o padrão das «Outras Edições» (MC99: <code>overflowX</code> + <code>scroll-snap</code>), separado por tipo. A R-1 entra no carrossel Relâmpago em vez de ter o cartão «🎯 Edição Ativa» próprio. Cada título tem um atalho de 48 px para a aba correspondente.<span class="porque"><span class="tag-mudou rem">removido</span>KPIs «Lances Únicos» e «Total de Lances» e o cartão «🏆 Menor Lance Único» (R18-A). Os dados de lances passam a viver só no Menor Lance Único. O <code>FimEdicaoOverlay</code> não é afectado.</span></li>
-        <li><span class="tag-mudou mod">mudou</span><b>Acesso Rápido</b> mantém-se (não foi pedido retirá-lo), sem os 3 atalhos que duplicavam a barra inferior («Depositar PIX», «Converter Ficha», «Dar Lance»). Botões de 48 px (hoje ≈ 41 px).<span class="porque">«Converter Ficha» deixa de fazer sentido sem o botão de troca na Carteira (SEG1).</span></li>
+        <li><span class="tag-mudou mod">mantém</span><b>Cabeçalho de hoje</b>: GUTO, logotipo e «Olá, Ana!», dentro de vidro.<span class="porque">R18-F: o operador prefere o Início como está.</span></li>
+        <li><span class="tag-mudou mod">mudou</span><b>Os 4 tiles de sempre</b>, com uma troca: «🔗 Senhas» passa a <b>«🎟️ Passe Desafio» 12/50</b> (decisão 2 + R18-B) e leva a <code>/ofertas-programadas</code> (hoje leva a <code>/carteira</code>, <code>Dashboard.jsx:174</code>). «Lances Únicos» e «Total de Lances» <b>ficam</b> (pedido do operador: «os 4 botões que tínhamos» — substitui a parte da R18-A sobre estes 2 KPIs). Toque ≥ 48 px.<span class="porque">⚠️ <b>Lacuna para o 107b</b> (E-3): o Sidebar só existe no desktop; no mobile, este tile era o único sítio com as senhas on-chain. Dados do Passe: <code>GET /ler-pontos → pontosCartao</code>; o Dashboard ainda não chama o <code>usePontos</code>.</span></li>
+        <li><span class="tag-mudou mod">mantém</span><b>Cartão «🎯 Edição Ativa» (R-1)</b> como hoje, com o botão a apontar ao Menor Lance Único. <span class="tag-mudou rem">removido</span>o cartão «🏆 Menor Lance Único» (decisão 3: os dados de lances vão para o MLC).<span class="porque">Se o operador quiser também o 🏆 de volta, é 1 bloco.</span></li>
+        <li><span class="tag-mudou mod">mudou</span><b>«Outras Edições» dividida em ⚡ Relâmpago e 🎫 Programadas</b> (pedido do enunciado), com a <b>rolagem lateral de hoje preservada</b> (R18-G): uma edição de cada vez, a 100% da largura, encaixe no início, cada edição um cartão <code>EdicaoCard</code> completo (tipo + id, caixa âmbar com banner, GUTO + cronómetro, botão). O título passa para <b>dentro</b> do vidro (Regra 1: hoje «🗓️ Outras Edições» flutua fora). <b>Acesso Rápido</b> com os 7 atalhos de hoje.<span class="porque">⚠️ Para o 107b: «Converter Ficha» aponta para a troca R$ → senha, que sai da Carteira.</span></li>
       </ol>
       <h2 style="margin-top:18px">Variantes</h2>
       <ol>
-        <li><b>A</b>: 2 tiles iguais em grelha. Muda menos, mas o Passe não mostra progresso.</li>
-        <li><b>B</b>: o Passe ganha peso de cartão. É a que melhor explica «o que falta» (recomendada).</li>
+        <li><b>A · Fiel ao actual ★</b>: preferida pelo operador (R18-F). É também a mais barata para o 107b.</li>
+        <li><b>B</b>: o Passe ganha peso de cartão, com barra de progresso, e saem os 2 tiles de lances. Fica como alternativa.</li>
         <li><b>C</b>: um só carrossel com separador. É a mais compacta, mas esconde metade das edições atrás de um toque.</li>
       </ol>
       <h2 style="margin-top:18px">Responsivo</h2>
