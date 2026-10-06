@@ -4749,3 +4749,22 @@ e partilhado com OP, fora do escopo) + 5 testes de sequencia; ℹ️ NaN -> «�
 **Escopo:** backend, `_lib`, AppContext, App.jsx, Carteira/MLC/OP, package*, 5 `.bak-*` intactos; `EM_BREVE_MODE = true`.
 **Registo:** `_logs/UTAC107c-inicio.md` · `_logs/UTAC107c_SEG7_VALIDADOR.md` · `Desktop/RELATORIO-UTAC107c-INICIO.txt`.
 **Custo:** USD nao medido (sem `state.db`); validador ≈ 105 k tokens; duracao ≈ 1 h. **Proximo:** UTAC107d (MLC).
+
+## R14 (append) -- UTAC107d -- MENOR LANCE UNICO: frase, envelope, rotulo, tabela (Claude Code, Opus 5.5)
+
+**Tipo:** CODIGO (frontend + testes). **Baseline:** `cc77fd3`. **Commits:** `46e21b5` (codigo) -> `0f1b317` (ressalvas) -> registo.
+**Suite:** frontend VERDE **792/792** · backend VERDE 1061/1067. **Deploy:** live (entry `index-0Ua5yTN9.js`; chunk `MercadoLances-DNDUvu_w.js`).
+
+**SEG0 PAROU (Ressalva 3 + 3 conflitos):** o mockup mostra OUTRA frase; Carteira (2rem) e Inicio (1.25rem) divergem no desktop; o campo do lance esta em
+CENTAVOS (o rotulo «(R$)» + «0,01» faria licitar 100x menos); a `TabelaLances` ja existia. Decisoes do operador (R18, 2026-10-06):
+**R18-A** frase do mockup «Ganha o menor lance que ninguem repetir.» DENTRO do vidro; **R18-B** envelope = Carteira; **R18-C** campo continua em centavos,
+rotulo «Seu lance (em centavos)» (pt-BR) ligado por htmlFor; **R18-D** tabela «mockup completo»: no fim, `.gut-glass-standard` sem blur, 3 colunas.
+
+**Feito:** `GlassHeader.jsx` (so o MLC o usa) topo 2rem / interior 20 px + prop `frase`; MLC em coluna unica com a tabela como ultimo vidro; saem «Status
+(Art. 24)», «ID do Lance», txHash e o rodape «Dados sanitizados · Art. 25» (o Art. 25 continua citado em Configuracoes/Meus Ativos). Mutacao **9/9 RED**.
+**Validador: APROVADO COM RESSALVAS** -- ⚠️ V1 perda do estado «Repetido/Unico» por linha (decisao de produto R18-D); ⚠️ **V2 escalado**: o mockup diz
+«🏆 so com o resultado oficial», o codigo mantem o 🏆 local sem oficial (UTAC000.9); ℹ️ CSS morto e `px-3` mobile corrigidos (nao re-validados).
+**Residuo:** `LanceStatusBadge.jsx` com vidro proprio (blur) -- fora do AUTORIZA. O rotulo novo tambem aparece no slot da especial do Inicio (so o texto).
+**Escopo:** backend, `_lib`, AppContext, App.jsx, Carteira, Inicio, OP, BottomNav/Sidebar, package*, 5 `.bak-*` intactos; `EM_BREVE_MODE = true`.
+**Registo:** `_logs/UTAC107d-mlc.md` · `_logs/UTAC107d_SEG8_VALIDADOR.md` · `Desktop/RELATORIO-UTAC107d-MLC.txt`.
+**Custo:** USD nao medido; validador ≈ 115 k tokens; duracao ≈ 40 min. **Proximo:** UTAC107e (Ofertas Programadas).
