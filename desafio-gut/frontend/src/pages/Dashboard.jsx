@@ -10,6 +10,8 @@ import { useMinhasParticipacoes } from "../hooks/useMinhasParticipacoes.js";
 // UTAC000.9 (DEBT-008) — resultado OFICIAL da edição (UTAC000.8). O card «Menor Lance Único»
 // e o overlay de fim deixam de mostrar «o menor único que este browser viu».
 import { useResultadoOficial } from "../hooks/useResultadoOficial.js";
+// UTAC107c — pontos de CARTÃO do Passe Desafio (`GET /ler-pontos → pontosCartao`, Via B).
+import { usePontos } from "../hooks/usePontos.js";
 import GutoSpritePlayer from "../components/GutoSpritePlayer.jsx";
 import CarrosselGUTO from "../components/CarrosselGUTO.jsx";
 import StatTile from "../components/StatTile.jsx";
@@ -65,7 +67,6 @@ export default function Dashboard() {
   const isMobile = useIsMobile();
   const {
     lances, vencedor,
-    saldoSenhas, saldoSenhasStatus,
     saldoRsCentavos, saldoRsStatus,
     encerrado, modalidade, DURACAO,
     // MC88.38 — `pareceAutenticado` substitui `isConnected` APENAS no texto do
@@ -83,6 +84,12 @@ export default function Dashboard() {
   } = useAppContext();
   // UTAC000.17bc (17c/GATE 21) — em que EDIÇÕES o titular deu lance (filtrado pelo token, no servidor).
   const { participacoes } = useMinhasParticipacoes(authToken);
+  // UTAC107c — o tile «Passe Desafio» conta SÓ os pontos de CARTÃO (R1 do UTAC106f: o bónus
+  // do palpite não entra). NÃO é o `saldoSenhas` (Via A, senhas on-chain) nem o `pontos` total.
+  const {
+    pontosCartao, pontosParaCartao,
+    loading: pontosLoading, erro: pontosErro,
+  } = usePontos();
 
   // ── UTAC000.9 (DEBT-008) — O VENCEDOR MOSTRADO É O OFICIAL QUANDO EXISTE ──────────
   // O `vencedor` do contexto é derivado dos lances que ESTE browser viu (em mainnet: nada, ou
@@ -96,16 +103,10 @@ export default function Dashboard() {
   const vencedorExibido = resultadoOficial
     ? { endereco: resultadoOficial.vencedor, valor: resultadoOficial.menorUnicoCentavos }
     : vencedor;
-  // UTAC000.12 (DEBT-012) — GUARDA DO VALOR. A linha `R$ {(vencedorExibido.valor / 100).toFixed(2)}`
-  // (l. 416, o valor do card) nunca teve guarda: com valor ausente/absurdo mostrava «R$ NaN» ou
-  // «R$ -0.01» (achado do validador adversarial do UTAC000.11 — é o IRMÃO da DEBT-011, que já foi
-  // corrigido no `OverlayVencedor` e no `MercadoLances`). O endereço já tinha guarda (l. 410).
-  // Mesma regra do UTAC000.11: malformado = AUSENTE («—»); com valor VÁLIDO nada muda (GATE 18).
-  // ⚠️ Nota: `FimEdicaoOverlay.jsx` (l. 16) tem o mesmo defeito e NÃO é corrigido aqui (fora do
-  // escopo autorizado deste UTAC) — ficou registado como DEBT-013.
-  const valorVencedorFmt = Number.isFinite(vencedorExibido?.valor) && vencedorExibido.valor >= 0
-    ? `R$ ${(vencedorExibido.valor / 100).toFixed(2)}`
-    : "—";
+  // UTAC107c — o card «🏆 Menor Lance Único» saiu do Início (redundante com a aba do BottomNav;
+  // R18-A do UTAC107a-front). O `vencedorExibido` continua a alimentar o `FimEdicaoOverlay`, que
+  // tem a sua própria guarda do valor (UTAC000.14, DEBT-013). A guarda do valor do card
+  // (UTAC000.12, DEBT-012) saiu com o card.
   const { tempoRestante } = useAppTimer(); // MC44 P0 — timer isolado
   const t = useT();
 
@@ -141,9 +142,6 @@ export default function Dashboard() {
   // cortadas). Passa a ser sinalizado por opacidade — ver `.gut-valor-pendente`
   // em globals.css. "loading" e "error" mantêm os seus ícones: são estados
   // diferentes e ocupam um caractere.
-  const statusSuffix =
-    saldoSenhasStatus === "loading" ? " ⏳" :
-    saldoSenhasStatus === "error"   ? " ✗" : "";
   const statusRsSuffix =
     saldoRsStatus === "loading" ? " ⏳" :
     saldoRsStatus === "error"   ? " ✗" : "";
@@ -170,12 +168,34 @@ export default function Dashboard() {
     ? `R$ —${statusRsSuffix}`
     : `R$ ${saldoReais.toFixed(2)}${statusRsSuffix}`;
 
-  // MC88.40 — `pendente` marca o valor que ainda vem do cache (estado "stale").
-  const senhasStat = { label: "Senhas", value: `${saldoSenhas ?? "—"}${statusSuffix}`, color: "#a78bfa", icon: "🔗", to: "/carteira", pendente: saldoSenhasStatus === "stale" };
+  // UTAC107c — tile «Passe Desafio» (era «Senhas», Via A). Mostra os pontos de CARTÃO «X / 50»
+  // e leva às Ofertas Programadas (mockup `docs/mockups-107a/inicio.html`, variante A — R18-B
+  // do UTAC107c: sem barra de progresso). Estados (decisões 8 e 9 do operador):
+  //   • sem conta                    → «—» (não há pontos de ninguém a mostrar)
+  //   • a carregar / sessão a cunhar → skeleton (o `usePontos` devolve 0 enquanto o `authToken`
+  //                                    não chega — mostrar «0 / 50» nesse intervalo seria falso)
+  //   • erro                         → «—» (o número fica oculto)
+  //   • 0 pontos                     → «0 / 50» + convite para começar
+  const metaCartao = Number.isSafeInteger(pontosParaCartao) && pontosParaCartao > 0 ? pontosParaCartao : 50;
+  const passeEstado = !address ? "sem-sessao"
+    : (!authToken || pontosLoading) ? "carregando"
+    : pontosErro ? "erro"
+    : pontosCartao > 0 ? "dados" : "vazio";
+  const passeValor = passeEstado === "carregando"
+    // As classes são as do `Skeleton` (ui/Skeleton.jsx), num <span>: o valor vive dentro de um
+    // <button>, onde um <div> seria HTML inválido.
+    ? <span data-testid="passe-skeleton" aria-hidden="true" className="inline-block animate-pulse rounded-lg bg-white/[0.06] border border-white/5" style={{ width: "4.5rem", height: "1.2em" }} />
+    : (passeEstado === "dados" || passeEstado === "vazio")
+      ? `${pontosCartao} / ${metaCartao}`
+      : "—";
+  const passeStat = {
+    label: passeEstado === "vazio" ? "Passe Desafio · comece já" : "Passe Desafio",
+    value: passeValor, color: COR.gold, icon: "🎟️", to: "/ofertas-programadas",
+  };
 
   const stats = [
     { label: "Saldo (R$)",      value: saldoReaisStr,                    color: COR.gold,    icon: "💰", to: "/carteira", pendente: saldoRsStatus === "stale" },
-    senhasStat,
+    passeStat,
     { label: "Lances Únicos",   value: lancesUnicos,                     color: COR.success, icon: "✅", to: "/mercado"  },
     { label: "Total de Lances", value: totalLances,                      color: COR.amber,   icon: "📊", to: "/ativos"   },
   ];
@@ -282,10 +302,10 @@ export default function Dashboard() {
         ))}
       </section>
 
-      {/* ── Edição ativa ── */}
+      {/* ── Edição ativa ── (UTAC107c: coluna única — o card 🏆 que ocupava a 2.ª saiu) */}
       <section style={{
         display: "grid",
-        gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+        gridTemplateColumns: "1fr",
         gap: innerGap,
         marginBottom: sectionGap,
       }}>
@@ -415,37 +435,6 @@ export default function Dashboard() {
           </>
           )}
         </GlassCard>
-
-        {/* Vencedor atual */}
-        <GlassCard className={`${cardCls} flex flex-col ${isMobile ? 'min-h-[152px]' : ''}`}>
-          <h3 style={cardTitulo}>🏆 Menor Lance Único</h3>
-          {vencedorExibido ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-              <div style={{ fontFamily: "monospace", fontSize: "0.78rem", color: COR.blue300 }}>
-                {vencedorExibido.endereco ? `${vencedorExibido.endereco.slice(0, 10)}...${vencedorExibido.endereco.slice(-6)}` : "—"}
-              </div>
-              <div style={{
-                fontSize: isMobile ? "1.85rem" : "2rem",
-                fontWeight: "900", color: COR.gold, lineHeight: 1.1,
-              }}>
-                {valorVencedorFmt}
-              </div>
-              <div style={{ fontSize: "0.72rem", color: COR.muted }}>
-                {/* MC88.43 — "Vencedor final" é um encerramento; segue a fonte única. */}
-                {estAtiva.encerrada ? "🏆 Vencedor final" : "🔄 Liderando — pode ser superado"}
-              </div>
-            </div>
-          ) : (
-            <div style={{
-              flex: 1,
-              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-              color: COR.muted, fontSize: "0.85rem", textAlign: "center", gap: "0.35rem",
-            }}>
-              <div style={{ fontSize: "1.5rem", opacity: 0.5 }}>🎯</div>
-              <div>Nenhum lance único ainda.</div>
-            </div>
-          )}
-        </GlassCard>
       </section>
 
       {/* ── MC15.4 ITEM 7 — Outras edições com cronómetros independentes ── */}
@@ -455,7 +444,10 @@ export default function Dashboard() {
               não perguntava a fonte nenhuma. Sobrepunha-se a três cartões que
               diziam "Encerrada" (B3). O título passa a ser neutro: quem declara
               o estado é cada cartão, e só a fonte única lho dita. */}
-          <h3 style={{ ...cardTitulo, marginBottom: innerGap }}>🗓️ Outras Edições</h3>
+          {/* UTAC107c — Regra 1: o título flutuava fora de vidro; passa a ter o seu. */}
+          <GlassCard className={cardCls} style={{ marginBottom: innerGap }}>
+            <h3 style={{ ...cardTitulo, margin: 0 }}>🗓️ Outras Edições</h3>
+          </GlassCard>
           {/* MC99 — scroll LATERAL (era empilhado). No telemóvel o `grid` punha as
               edições numa coluna única, uma sobre a outra, e "Outras Edições" comia a
               dobra inteira. Passa a UMA edição visível de cada vez, as restantes por

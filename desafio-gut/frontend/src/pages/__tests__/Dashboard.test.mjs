@@ -43,6 +43,9 @@ let definirContexto = null;
 // UTAC000.9 (DEBT-008)
 let definirResultadoOficial = null;
 let edicoesPedidas = null;
+// UTAC107c
+let definirPontos = null;
+let chamadasPontos = null;
 
 before(async () => {
   vite = await createServer({
@@ -58,6 +61,8 @@ before(async () => {
         { find: /^\.\.\/components\/CardLance\.jsx$/,  replacement: `${STUBS}/CardLance.jsx` },
         // UTAC000.9 (DEBT-008) — o resultado OFICIAL é o que este ficheiro controla.
         { find: /^\.\.\/hooks\/useResultadoOficial\.js$/, replacement: `${STUBS}/useResultadoOficial.js` },
+        // UTAC107c — os pontos de CARTÃO do tile «Passe Desafio».
+        { find: /^\.\.\/hooks\/usePontos\.js$/, replacement: `${STUBS}/usePontos.js` },
       ],
     },
   });
@@ -67,6 +72,7 @@ before(async () => {
   // UTAC000.9 — duplo do resultado oficial (mesmo ficheiro usado pelos testes do MeusAtivos).
   ({ definirResultadoOficial, argumentos: edicoesPedidas } =
     await vite.ssrLoadModule(`${STUBS}/useResultadoOficial.js`));
+  ({ definirPontos, chamadasPontos } = await vite.ssrLoadModule(`${STUBS}/usePontos.js`));
   // react-router-dom é CJS: carregado pelo node, que é o que o Vite externaliza em SSR.
   ({ MemoryRouter } = await vite.ssrLoadModule("/src/__tests__/_ponte-ssr.mjs"));
   Pagina = (await vite.ssrLoadModule("/src/pages/Dashboard.jsx")).default;
@@ -86,6 +92,7 @@ function renderizar(contexto = {}) {
   definirContexto({
     lances: [], vencedor: null,
     saldoSenhas: null, saldoSenhasStatus: "idle", saldoRsCentavos: null, saldoRsStatus: "idle",
+    authToken: null, fecharOverlay: () => {},
     encerrado: false, modalidade: "flash", DURACAO: { flash: 1800, programado: 86400 },
     pareceAutenticado: false, address: null, userLabel: null, EDICAO_ATIVA: "R-1",
     showOverlay: false, showCountdown: false, handleNovaRodada: () => {}, setPrazoTimestamp: () => {},
@@ -104,9 +111,11 @@ const dentroDoSlot = (html) => /data-slot="edicao-especial"/.test(html);
 const ladoDoBanner = (html) => html.match(/width:\s*(\d+)px;\s*height:\s*\d+px;\s*flex-shrink:\s*0;\s*border-radius:\s*\d+px;\s*overflow:\s*hidden/)?.[1] ?? null;
 
 // ───────────────────────────────────────────────────────────────────────────
-// UTAC000.9 (DEBT-008) — o card «Menor Lance Único» do Dashboard mostra o VENCEDOR OFICIAL.
+// UTAC000.9 (DEBT-008) — o vencedor mostrado no Dashboard é o OFICIAL.
 // Antes: derivava dos lances locais (`vencedor` do contexto = «o menor único que este browser
 // viu»). Em mainnet o browser vê pouco ou nada da edição (medido no UTAC000.8 §-1.9).
+// ⚠️ UTAC107c — o card «🏆 Menor Lance Único» SAIU do Início. O vencedor só aparece agora no
+// OVERLAY de fim de edição (`FimEdicaoOverlay`), por isso as provas passaram do card para ele.
 describe("UTAC000.9 · Dashboard — o vencedor mostrado é o OFICIAL", () => {
   const EU    = "0xaaaa000000000000000000000000000000000001";
   const OUTRO = "0xbbbb000000000000000000000000000000000002";
@@ -116,33 +125,31 @@ describe("UTAC000.9 · Dashboard — o vencedor mostrado é o OFICIAL", () => {
   const OFICIAL = { consolidado: true, vencedor: EU, menorUnicoCentavos: 300 };
   const abrev = (e) => `${e.slice(0, 10)}...${e.slice(-6)}`;
 
-  test("com resultado oficial: o card mostra o ENDEREÇO e o VALOR oficiais", () => {
+  test("com resultado oficial: o overlay mostra o ENDEREÇO e o VALOR oficiais", () => {
     definirResultadoOficial(OFICIAL);
-    const html = renderizar({ vencedor: LOCAL, encerrado: true });
-    assert.ok(html.includes(abrev(EU)), "o card não mostra o endereço do vencedor OFICIAL");
-    assert.ok(html.includes("R$ 3.00"), "o card não mostra o valor do menor único OFICIAL");
-    assert.ok(!html.includes("R$ 1.00"), "o card continua a mostrar o vencedor LOCAL");
+    const html = renderizar({ vencedor: LOCAL, encerrado: true, showOverlay: true });
+    assert.ok(html.includes(abrev(EU)), "o overlay não mostra o endereço do vencedor OFICIAL");
+    assert.ok(html.includes("R$ 3.00"), "o overlay não mostra o valor do menor único OFICIAL");
+    assert.ok(!html.includes("R$ 1.00"), "o overlay continua a mostrar o vencedor LOCAL");
   });
 
-  test("SEM resultado oficial: mantém-se o apuramento local (zero regressões)", () => {
+  test("SEM resultado oficial: o overlay mantém o apuramento local (zero regressões)", () => {
     definirResultadoOficial(null);
-    const html = renderizar({ vencedor: LOCAL, encerrado: true });
-    assert.ok(html.includes(abrev(OUTRO)), "o card deixou de mostrar o vencedor local");
-    assert.ok(html.includes("R$ 1.00"), "o card deixou de mostrar o valor local");
+    const html = renderizar({ vencedor: LOCAL, encerrado: true, showOverlay: true });
+    assert.ok(html.includes(abrev(OUTRO)), "o overlay deixou de mostrar o vencedor local");
+    assert.ok(html.includes("R$ 1.00"), "o overlay deixou de mostrar o valor local");
   });
 
-  test("o overlay de FIM DE LEILÃO recebe o MESMO vencedor oficial", () => {
-    // ⚠️ Sem marcador no markup do overlay, assentar esta prova em `indexOf("FimEdicaoOverlay")`
-    // seria um teste VÁCUO (a string não existe no HTML — daria 0 e o `slice` media a página
-    // inteira). A prova é por CONTAGEM: com o overlay ligado, o endereço do vencedor oficial
-    // aparece DUAS vezes (card + overlay); sem ele, uma. O local não aparece nenhuma.
+  test("o vencedor SÓ aparece no overlay — o Início deixou de o mostrar (UTAC107c)", () => {
+    // Prova por CONTAGEM (sem marcador no markup do overlay): sem overlay, o endereço do
+    // vencedor oficial aparece ZERO vezes (o card 🏆 saiu); com ele, UMA. O local, nenhuma.
     const contar = (s, alvo) => s.split(alvo).length - 1;
     definirResultadoOficial(OFICIAL); // ⚠️ ANTES dos dois renders (é estado de módulo do duplo)
     const semOverlay = renderizar({ vencedor: LOCAL, encerrado: true, showOverlay: false });
     const comOverlay = renderizar({ vencedor: LOCAL, encerrado: true, showOverlay: true });
-    assert.equal(contar(semOverlay, abrev(EU)), 1, "controlo: o card devia mostrar o oficial uma vez");
-    assert.equal(contar(comOverlay, abrev(EU)), 2, "o overlay NÃO recebeu o vencedor oficial");
-    assert.equal(contar(comOverlay, abrev(OUTRO)), 0, "o overlay (ou o card) mostra o vencedor LOCAL");
+    assert.equal(contar(semOverlay, abrev(EU)), 0, "o Início continua a mostrar o vencedor (o card 🏆 voltou?)");
+    assert.equal(contar(comOverlay, abrev(EU)), 1, "o overlay NÃO recebeu o vencedor oficial");
+    assert.equal(contar(comOverlay, abrev(OUTRO)), 0, "o overlay mostra o vencedor LOCAL");
   });
 
   test("cablagem: o Dashboard pede o resultado da EDIÇÃO ACTIVA", () => {
@@ -165,19 +172,20 @@ describe("MC94.2/MC94.3.1 · Dashboard — a edição especial NO SLOT", () => {
     const html = renderizar({ agendadas: { "ESPECIAL-AIRFRYER": especial(Date.now() + 5 * H) } });
     assert.doesNotMatch(html, /data-secao="edicao-especial"/, "o antigo marcador de secção voltou");
     const t = texto(html);
-    // A R-1 continua na página (o card "Menor Lance Único" e os atalhos ficam),
-    // mas o CABEÇALHO do slot deixa de dizer "🎯 Edição Ativa": quem o preenche
-    // é a especial, e o cabeçalho tem de dizê-lo.
+    // O resto da página continua (os tiles e os atalhos ficam — UTAC107c: o card
+    // «Menor Lance Único» saiu), mas o CABEÇALHO do slot deixa de dizer "🎯 Edição
+    // Ativa": quem o preenche é a especial, e o cabeçalho tem de dizê-lo.
     assert.match(t, /Edição especial/, "o cabeçalho da especial");
     assert.doesNotMatch(t, /🎯 Edição Ativa/, "o slot continuava a dizer 'Edição Ativa' com a especial lá dentro");
-    assert.match(t, /Menor Lance Único/, "a R-1 desapareceu da página");
+    assert.match(t, /Passe Desafio/, "os tiles desapareceram da página");
+    assert.match(t, /Acesso Rápido/, "os atalhos desapareceram da página");
   });
 
-  test("a especial fica DENTRO do slot — antes do card 'Menor Lance Único'", () => {
+  test("a especial fica DENTRO do slot — depois dos tiles, antes do 'Acesso Rápido'", () => {
     const html = renderizar({ agendadas: { "ESPECIAL-AIRFRYER": especial(Date.now() + 5 * H) } });
     const iEsp = html.indexOf("data-slot=\"edicao-especial\"");
-    const iMenor = html.indexOf("Menor Lance Único");
-    assert.ok(iEsp >= 0 && iMenor > iEsp, `ordem errada: slot=${iEsp} menor=${iMenor}`);
+    const iPasse = html.indexOf("Passe Desafio");
+    assert.ok(iEsp >= 0 && iPasse >= 0 && iPasse < iEsp, `ordem errada: tiles=${iPasse} slot=${iEsp}`);
     // e ANTES de "Outras Edições"/"Acesso Rápido" (não é uma secção de topo)
     const iRapido = html.indexOf("Acesso Rápido");
     assert.ok(iRapido > iEsp, "a especial ficou depois do Acesso Rápido");
@@ -201,7 +209,7 @@ describe("MC94.2/MC94.3.1 · Dashboard — a edição especial NO SLOT", () => {
     const html = renderizar();
     assert.equal(dentroDoSlot(html), false, "apareceu um card especial sem haver especial");
     const t = texto(html);
-    for (const s of ["🎯 Edição Ativa", "Menor Lance Único", "Acesso Rápido"]) assert.match(t, new RegExp(s));
+    for (const s of ["🎯 Edição Ativa", "Passe Desafio", "Acesso Rápido"]) assert.match(t, new RegExp(s));
     assert.doesNotMatch(t, /🎁 Edição especial/);
   });
 
@@ -269,77 +277,117 @@ describe("MC94.2/MC94.3.1 · Dashboard — a edição especial NO SLOT", () => {
 });
 
 // ───────────────────────────────────────────────────────────────────────────
-// UTAC000.12 (DEBT-012) — O VALOR do card «🏆 Menor Lance Único» do Dashboard.
-// Achado do validador adversarial do UTAC000.11: a guarda nova do `OverlayVencedor` «espelhava a
-// do Dashboard (l. 410)» — verdade SÓ para o endereço. A linha do VALOR do card
-// (`Dashboard.jsx` l. 416) nunca teve guarda: `R$ {(vencedorExibido.valor / 100).toFixed(2)}` ⇒
-// com valor ausente/absurdo mostrava «R$ NaN» ou «R$ -0.01». Latente (o caminho oficial valida o
-// valor), mas é a mesma classe da DEBT-011 — e é o IRMÃO dela.
-// Regra (a mesma do UTAC000.11): malformado = AUSENTE («—»), campo a campo; com valor válido NADA
-// muda (GATE 18).
-describe("UTAC000.12 · Dashboard — o VALOR do card não mostra NaN nem absurdo (DEBT-012)", () => {
-  const EU = "0xaaaa000000000000000000000000000000000001";
-  const abrev = (e) => `${e.slice(0, 10)}...${e.slice(-6)}`;
+// UTAC107c — Início: tile «Passe Desafio» (era «Senhas») e o card 🏆 removido.
+// ⚠️ Substitui o bloco do UTAC000.12 (DEBT-012), que testava o VALOR do card «🏆 Menor Lance
+// Único»: o card saiu do Início (R18-A do UTAC107a-front), logo a guarda que ele protegia saiu
+// com ele. O valor do vencedor só se mostra agora no `FimEdicaoOverlay`, que tem a sua própria
+// guarda e o seu próprio teste (`utac00014-fim-edicao-overlay.test.mjs`, DEBT-013).
+describe("UTAC107c · Início — Passe Desafio, destino e remoções", () => {
+  const COM_SESSAO = { address: "0xaaaa000000000000000000000000000000000001", authToken: "tok-user-session" };
 
-  /** O bloco do card do vencedor: do título até ao fim do `<section>` dele.
-   *  ⚠️ Medido (sonda): o `</h3>` seguinte só aparece muito depois (a 2.ª secção usa outra
-   *  estrutura), e o texto de estado «🔄 Liderando — pode ser superado» TEM um travessão —
-   *  por isso os «—» dos CAMPOS contam-se como `>—<` (o div vazio), não como `/—/g`. */
-  function blocoDoCard(html) {
-    const i = html.indexOf("🏆 Menor Lance Único");
-    if (i < 0) return "";
-    const resto = html.slice(i);
-    const j = resto.indexOf("</section>");
-    return j > 0 ? resto.slice(0, j) : resto;
-  }
-  const camposVazios = (bloco) => (bloco.match(/>—</g) || []).length;
-
-  const CASOS = [
-    // [nome,                                vencedor (LOCAL, sem oficial),  endereço esperado, valor esperado]
-    ["objecto vazio",                        {},                             "—",              "—"],
-    ["endereço presente, valor ausente",     { endereco: EU },               abrev(EU),        "—"],
-    ["valor NaN",                            { endereco: EU, valor: NaN },   abrev(EU),        "—"],
-    ["valor string (não numérico)",          { endereco: EU, valor: "abc" }, abrev(EU),        "—"],
-    ["valor negativo",                       { endereco: EU, valor: -1 },    abrev(EU),        "—"],
-    ["valor Infinity",                       { endereco: EU, valor: Infinity }, abrev(EU),     "—"],
-    // ── Limites (acrescentados na 2.ª ronda, depois de medir a semântica da guarda):
-    //    `0` é VÁLIDO (não é malformado!) e tem de continuar a formatar; `-0` é zero;
-    //    BigInt e Symbol são os dois casos em que o código ANTIGO **LANÇAVA EXCEPÇÃO**
-    //    («Cannot mix BigInt and other types» / «Cannot convert a Symbol value to a number»)
-    //    — medido: `Number.isFinite(bigint|symbol)` devolve `false` SEM lançar.
-    ["valor 0 (válido! não é malformado)",   { endereco: EU, valor: 0 },     abrev(EU),        "R$ 0.00"],
-    ["valor -0 (zero negativo)",             { endereco: EU, valor: -0 },    abrev(EU),        "R$ 0.00"],
-    ["valor BigInt (o antigo lançava)",      { endereco: EU, valor: 300n },  abrev(EU),        "—"],
-    ["valor Symbol (o antigo lançava)",      { endereco: EU, valor: Symbol("x") }, abrev(EU), "—"],
-    //    `0.5` centavo e `MAX_SAFE_INTEGER`/`1e21` (limites do Number) — ressalva (i) do validador;
-    //    e `"300"` (string): ⚠️ ALTERAÇÃO DECLARADA — o código ANTIGO mostrava «R$ 3.00» e agora
-    //    mostra «—» (a regra é «malformado = ausente»); strings não chegam em produção (os dois
-    //    produtores numerificam), mas é uma mudança real e fica coberta por teste.
-    ["0.5 centavo (arredonda)",              { endereco: EU, valor: 0.5 },   abrev(EU),        "R$ 0.01"],
-    ["MAX_SAFE_INTEGER",                     { endereco: EU, valor: Number.MAX_SAFE_INTEGER }, abrev(EU), "R$ 90071992547409.91"],
-    ["1e21 (fora do intervalo seguro)",      { endereco: EU, valor: 1e21 },  abrev(EU),        "R$ 10000000000000000000.00"],
-    ["string \"300\" (mudou: era «R$ 3.00»)",{ endereco: EU, valor: "300" }, abrev(EU),        "—"],
-    ["VÁLIDO (o caso que não pode mudar)",   { endereco: EU, valor: 300 },   abrev(EU),        "R$ 3.00"],
-  ];
-
-  for (const [nome, vencedor, enderecoEsperado, valorEsperado] of CASOS) {
-    test(`${nome}: endereço «${enderecoEsperado}», valor «${valorEsperado}»`, () => {
-      definirResultadoOficial(null); // o card usa o vencedor LOCAL do contexto
-      const bloco = blocoDoCard(renderizar({ vencedor, encerrado: true }));
-      assert.ok(bloco.includes("Menor Lance Único"), "controlo: o card do vencedor não foi encontrado");
-      assert.ok(!/R\$ NaN/.test(bloco), "o card mostrou «R$ NaN»");
-      assert.ok(!/R\$ -/.test(bloco), "o card formatou um valor NEGATIVO");
-      assert.ok(bloco.includes(enderecoEsperado), `endereço: esperava «${enderecoEsperado}»`);
-      assert.ok(bloco.includes(valorEsperado), `valor: esperava «${valorEsperado}»`);
-      const tracos = (enderecoEsperado === "—" ? 1 : 0) + (valorEsperado === "—" ? 1 : 0);
-      assert.equal(camposVazios(bloco), tracos, `esperava ${tracos} campo(s) «—» no bloco`);
-    });
+  /** O <button> do tile cujo rótulo contém `rotulo` (o StatTile é um <button>). */
+  function tile(html, rotulo) {
+    const botoes = html.match(/<button[\s\S]*?<\/button>/g) || [];
+    return botoes.find((b) => texto(b).includes(rotulo)) ?? null;
   }
 
-  test("o card VÁLIDO não ganhou nenhum «—» (GATE 18)", () => {
+  test("o tile «Senhas» saiu e o «Passe Desafio» entrou no lugar dele (2.º tile)", () => {
     definirResultadoOficial(null);
-    const bloco = blocoDoCard(renderizar({ vencedor: { endereco: EU, valor: 300 }, encerrado: true }));
-    assert.equal(camposVazios(bloco), 0, "apareceu «—» num campo do caso válido");
-    assert.ok(bloco.includes("R$ 3.00"), "controlo: o valor válido devia estar no bloco");
+    definirPontos({ pontos: 14, pontosCartao: 12 });
+    const html = renderizar(COM_SESSAO);
+    const t = texto(html);
+    assert.doesNotMatch(t, /\bSenhas\b/, "o tile «Senhas» continua no Início");
+    assert.ok(tile(html, "Passe Desafio"), "o tile «Passe Desafio» não existe");
+    const ordem = ["Saldo (R$)", "Passe Desafio", "Lances Únicos", "Total de Lances"].map((r) => t.indexOf(r));
+    assert.ok(ordem.every((i) => i >= 0), `faltam tiles: ${ordem}`);
+    assert.deepEqual([...ordem].sort((a, b) => a - b), ordem, "a ordem dos 4 tiles mudou");
+  });
+
+  test("o número é `pontosCartao` «X / 50» — não o total, nem as senhas", () => {
+    definirPontos({ pontos: 14, pontosCartao: 12, pontosParaCartao: 50 });
+    const html = renderizar({ ...COM_SESSAO, saldoSenhas: 7, saldoSenhasStatus: "ok" });
+    const b = tile(html, "Passe Desafio");
+    assert.ok(texto(b).includes("12 / 50"), `esperava «12 / 50»; o tile diz: «${texto(b)}»`);
+    assert.ok(!texto(b).includes("14"), "o tile mostra o TOTAL (compras + bónus), não os pontos de cartão");
+    assert.ok(!/\b7\b/.test(texto(b)), "o tile mostra as SENHAS on-chain (Via A)");
+    assert.ok(chamadasPontos() > 0, "controlo: a página não chamou o `usePontos`");
+  });
+
+  test("clicar no Passe leva às Ofertas Programadas (não à Carteira)", async () => {
+    // O StatTile navega com `navigate(to)`; em SSR não há clique, por isso a prova é a rota que
+    // o tile recebe, lida da fonte: o objecto do tile tem de apontar para /ofertas-programadas.
+    const { readFileSync } = await import("node:fs");
+    const fonte = readFileSync(caminho(AQUI, "../Dashboard.jsx"), "utf8");
+    const bloco = fonte.match(/const passeStat = \{[\s\S]*?\};/)?.[0];
+    assert.ok(bloco, "o objecto do tile «Passe Desafio» (`passeStat`) desapareceu");
+    assert.match(bloco, /to:\s*"\/ofertas-programadas"/, "o Passe não leva às Ofertas Programadas");
+    assert.doesNotMatch(bloco, /"\/carteira"/, "o Passe ainda leva à Carteira");
+    assert.match(fonte, /\n\s*passeStat,\s*\r?\n/, "o tile não entra na lista `stats`");
+  });
+
+  test("a carregar: skeleton, nunca «0 / 50» prematuro", () => {
+    definirPontos({ loading: true });
+    const b = tile(renderizar(COM_SESSAO), "Passe Desafio");
+    assert.match(b, /data-testid="passe-skeleton"/, "sem skeleton durante o carregamento");
+    assert.doesNotMatch(texto(b), /\/ 50/, "mostrou um número enquanto carregava");
+  });
+
+  test("sessão ainda a cunhar o token: skeleton (o hook devolve 0 nesse intervalo)", () => {
+    definirPontos({ loading: false, pontosCartao: 0 });
+    const b = tile(renderizar({ ...COM_SESSAO, authToken: null }), "Passe Desafio");
+    assert.match(b, /data-testid="passe-skeleton"/, "mostrou «0 / 50» antes do token chegar");
+  });
+
+  test("erro: o número fica oculto («—»), sem «0 / 50» falso", () => {
+    definirPontos({ erro: "Não foi possível carregar os pontos", pontosCartao: 0 });
+    const b = tile(renderizar(COM_SESSAO), "Passe Desafio");
+    assert.doesNotMatch(texto(b), /\d+ \/ 50/, "mostrou um número com o pedido em erro");
+    assert.doesNotMatch(b, /passe-skeleton/, "o erro ficou preso no skeleton");
+    assert.match(texto(b), /—/, "o erro devia mostrar «—»");
+  });
+
+  test("vazio: «0 / 50» com convite para começar", () => {
+    definirPontos({ pontosCartao: 0 });
+    const b = tile(renderizar(COM_SESSAO), "Passe Desafio");
+    assert.match(texto(b), /0 \/ 50/);
+    assert.match(texto(b), /comece já/, "sem convite no estado vazio");
+  });
+
+  test("sem conta: «—» (não há pontos de ninguém a mostrar)", () => {
+    definirPontos({ pontosCartao: 0 });
+    const b = tile(renderizar({ address: null, authToken: null }), "Passe Desafio");
+    assert.doesNotMatch(texto(b), /\/ 50/);
+    assert.match(texto(b), /—/);
+  });
+
+  test("os KPIs «Lances Únicos» e «Total de Lances» FICAM (R18-A do UTAC107c)", () => {
+    definirPontos({});
+    const html = renderizar({ lances: [{ repetido: false }, { repetido: true }, { repetido: false }] });
+    assert.match(texto(tile(html, "Lances Únicos")), /\b2\b/);
+    assert.match(texto(tile(html, "Total de Lances")), /\b3\b/);
+  });
+
+  test("o card «🏆 Menor Lance Único» saiu do Início (com e sem vencedor)", () => {
+    definirPontos({});
+    definirResultadoOficial(null);
+    const EU = "0xaaaa000000000000000000000000000000000001";
+    for (const vencedor of [null, { endereco: EU, valor: 300 }]) {
+      const t = texto(renderizar({ vencedor, encerrado: true }));
+      assert.doesNotMatch(t, /🏆/, "o troféu continua no Início");
+      assert.doesNotMatch(t, /Menor Lance Único/, "o card «Menor Lance Único» continua no Início");
+      assert.doesNotMatch(t, /Nenhum lance único ainda/, "o estado vazio do card continua no Início");
+    }
+  });
+
+  test("Regra 1: o título «Outras Edições» fica DENTRO de vidro", () => {
+    definirPontos({});
+    const relamp = { id: "RELAMP-3", tipo: "relampago", produto: "Smart TV", termino_em: "2026-05-31T03:52:13.827Z", lances: 0, status: "encerrado" };
+    const html = renderizar({ edicoes: { "R-1": R1, "RELAMP-3": relamp } });
+    const i = html.indexOf("Outras Edições");
+    assert.ok(i > 0, "controlo: o título não foi renderizado");
+    const antes = html.slice(0, i);
+    const abre = antes.lastIndexOf("gut-glass-standard");
+    const fecha = antes.lastIndexOf("</div>");
+    assert.ok(abre > fecha, "o título «Outras Edições» está fora de um contentor de vidro");
   });
 });

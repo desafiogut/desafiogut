@@ -487,7 +487,7 @@ export default function ComprarFichasModal({ aberto, onFechar, address, email, o
         {etapa === "sucesso" && resultado && (
           <>
             {/* Modelo dual (Frente B.9): PIX aprovado credita R$ no blob saldo-rs.
-                Senhas só vêm depois via "Trocar R$ por Senhas" na carteira. */}
+                UTAC107c: para o Lance Programado o app converte R$ 2,00 em 1 senha sozinho (CardLance). */}
             <div style={{
               textAlign: "center", padding: "1rem 0 0.5rem",
             }}>
@@ -544,7 +544,7 @@ export default function ComprarFichasModal({ aberto, onFechar, address, email, o
               color: COR.gold, fontSize: "0.76rem", lineHeight: 1.45,
               marginBottom: "1rem",
             }}>
-              💡 Para participar de Lance Programado, use <strong>Trocar R$ por Senhas</strong> na carteira (R$ 2,00 = 1 senha on-chain).
+              💡 Para o Lance Programado, o app converte R$ 2,00 em 1 senha automaticamente.
             </div>
 
             <button onClick={fecharComSucesso} style={btnPrimario(false)}>
