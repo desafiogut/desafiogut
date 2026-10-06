@@ -4886,3 +4886,24 @@ sobreviventes do validador). Correcoes NAO re-validadas em 2.ª ronda. **Escopo:
 **Registo:** `_logs/UTAC107g.2-copy.md` · `Desktop/RELATORIO-UTAC107g.2-COPY.txt`.
 **Custo:** validador 115 002 tokens = 2,3–230 ¢ (46 ¢ se tudo input); sessao ≈ 87 000 tokens = 1,7–174 ¢ (35 ¢ se tudo input).
 **Proximo:** 107g.3 (DEBT-021) e/ou 106i (AAB).
+
+
+## R14 (append) -- UTAC107g.3 -- ?rc=1 POR MATCH EXATO (DEBT-021) (Claude Code, Opus 5.5)
+
+**Tipo:** segurança de interface (frontend). **Baseline:** `ceb5ab8`. **Commits:** `4ca743d` (código) -> registo.
+**Suite:** frontend VERDE **849/849** (+6) · backend VERDE 1095/1101. **Deploy:** live (entry `index-Dns58GNo.js`; chunk `PrivyRoot-D1hDRK22.js`).
+
+A `CorporativoRoute` (`App.jsx:148`) testava `window.location.search.includes("rc=1")` (substring): `?src=1`, `?arc=10`,
+`?rc=10`, `?xrc=1` abriam a UI das 8 rotas do lojista a um anónimo. Passa a **`temAcessoDiretoCadastro(search)`**
+(novo `src/lib/acessoDiretoCadastro.js`, puro: `URLSearchParams.get("rc") === "1"`; extensão de escopo declarada, para
+ser testável — o App.jsx não se importa em teste). `?rc=1` continua a abrir (MC17, decisão 2 do operador). O
+`CorporativoDashboard` já era exato (não tocado). Varredura: nenhum outro teste de query/URL por substring que controle
+acesso (só `pathname.startsWith` de estilo no BottomNav). Testes `src/lib/acessoDiretoCadastro.test.mjs` (6, bidirecionais:
+cada ataque ABRIA com o predicado antigo) · **mutação 6/6**.
+**Validador adversarial: APROVADO** (0 ⛔/⚠️; 35 URLs de ataque, 4 mutações próprias). ℹ️ I-1: `?rc=1` exato continua a abrir
+a UI a um anónimo e sem produtor — remover a porta é decisão do operador.
+**DEBT-021 FECHADA** (substring → exato), resíduo I-1 anotado. **Escopo:** backend, navegação, copy, package*, 5 `.bak-*`
+intactos; `EM_BREVE_MODE = true`. HI5: ~35 min (excedido ~5 min, declarado).
+**Registo:** `_logs/UTAC107g.3-rc1.md` · `_logs/UTAC107g.3_SEG4_VALIDADOR.md` · `Desktop/RELATORIO-UTAC107g.3-RC1.txt`.
+**Custo:** validador 96 984 tokens = 1,9–194 ¢ (38,8 ¢ se tudo input); sessão ≈ 120 k tokens = 2,4–240 ¢ (48 ¢ se tudo input), não medida.
+**Próximo:** 106i (AAB novo).
