@@ -182,8 +182,8 @@ estado evoluiu:
 | Item | Medido |
 |---|---|
 | Mecanismo | `git push origin main` — o repo **não** tem workflow de deploy; o push dispara o **auto-deploy** da integração Git do Netlify (medido na série) |
-| Verificação (após 2-3 min) | site **200**; bundle **mudou** (entry `index-C85vkUz0.js` → `index-<novo>.js`) |
-| Prova | o literal novo no chunk servido da Carteira/`CorporativoRoute` |
+| Verificação (após 3 min) | site **200**; entry **mudou**: `index-Dns58Gno.js` → **`index-Ci4XuUO-.js`**; o `PrivyRoot-*.js` (mapa dos chunks lazy) também mudou: `PrivyRoot-D1hDRK22.js` → `PrivyRoot-DM_4E-fP.js` |
+| Prova no bundle SERVIDO | o predicado ANTIGO **desapareceu** do entry: `get("rc")` → **0 ocorrências** e `rc=1` → **0** (o fix removeu a consulta). O CDN já não serve o entry antigo, pelo que o A/B do antigo foi impossível — a prova é o bundle novo + a mudança de hash |
 
 | `package-lock.json` (frontend) | se sujo pelo build remoto → arquivado fora do repo e **restaurado** |
 
@@ -211,9 +211,9 @@ estado evoluiu:
 
 - **Taxa por 1M tokens (só do validador, o único com contagem separável):** US$ 0,0131 / 0,6936 M ≈
   **US$ 0,019 por 1M tokens** (≈ 1,9 ¢/1M). O total do UTAC dá **≈ 10 ¢**.
-- **Saldo real da API:** arranque **US$ 1,12** (19:20) → fecho **US$ 1,03** (19:35) ⇒ **Δ ≈ 9 ¢**.
-- **Duração:** 19:20 → ≈19:45 = **≈ 25 min de trabalho activo**; com o deploy (push + propagação) o UTAC
-  fecha em **≈ 30-35 min** — ⚠️ **no limite do HI5 (30 min)**: o trabalho de código/verificação correu em
-  ~25 min e o excedente é a espera do auto-deploy (que não é tempo de agente). **Declarado.**
+- **Saldo real da API (medido no fecho):** arranque **US$ 1,12** (19:20) → fecho **US$ 0,96** (19:43) ⇒
+  **Δ = 16 ¢** (inclui o período de verificação do deploy e as leituras de saldo).
+- **Duração:** 19:20 → **19:43 = 23 min** ⇒ **DENTRO do HI5 (30 min)** ✅ (inclui a espera de 3 min do
+  auto-deploy). *(A estimativa inicial de «30-35 min» era pessimista: o fecho real mediu-se em 23 min.)*
 - ⚠️ **Sessão por UTAC NÃO obtida:** a plataforma reutilizou a sessão CLI `20261005_221738_6265f4`
   (a mesma do 107a-back/107b); o custo mede-se por **diferença** e é declarado como estimativa.

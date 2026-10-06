@@ -4942,7 +4942,9 @@ correccoes pos-veredicto.**
 diff 1/1). Residuos fora de escopo declarados (I-1/I-2) -> candidatos a UTAC de limpeza.
 
 **Registo:** `_logs/UTAC107g.4-porta-rc1.md` · `_logs/UTAC107g.4_SEG4_VALIDADOR.md` ·
-`Desktop/RELATORIO-UTAC107g.4-PORTA-RC1.txt`. **Custo:** ~US$ 0,100 = **10 centavos** (executor ~0,087 +
-validador ~0,013); validador ~US$ 0,019/1M tokens (693 610 tokens); saldo API 1,12 -> 1,03 (delta ~9c).
-Duracao ~25 min activos (com a propagacao do auto-deploy, ~30-35 min — no limite do HI5, declarado).
+`Desktop/RELATORIO-UTAC107g.4-PORTA-RC1.txt`. **Custo:** ~US$ 0,100 = **10 centavos** estimados (executor ~0,087 +
+validador ~0,013); validador ~US$ 0,019/1M tokens (693 610 tokens); **saldo real medido: 1,12 -> 0,96 =
+16 centavos**. **Duracao 19:20 -> 19:43 = 23 min — DENTRO do HI5 (30 min)**, incluindo a espera do
+auto-deploy. **Deploy verificado:** entry `index-Dns58Gno.js` -> `index-Ci4XuUO-.js`; `get("rc")` -> 0 no
+bundle servido.
 **Proximo:** 106i (AAB novo) -> Play Console (Ruan).
