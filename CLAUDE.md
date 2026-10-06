@@ -4788,3 +4788,24 @@ overlays dizem «Nenhum lance unico registrado.» antes do oficial (hoje fechado
 **Escopo:** backend, `_lib`, App.jsx, Carteira, Inicio, MLC, CardLance, BottomNav/Sidebar, package*, 5 `.bak-*` intactos; `EM_BREVE_MODE = true`.
 **Registo:** `_logs/UTAC107e-op.md` · `_logs/UTAC107e_SEG8_VALIDADOR.md` · `Desktop/RELATORIO-UTAC107e-OP.txt`.
 **Custo:** validador 113 338 tokens = 2,3–227 ¢ (45 ¢ se tudo input); sessao principal nao medida (`/cost`); duracao ≈ 52 min. **Proximo:** UTAC107e.2.
+
+## R14 (append) -- UTAC107e.2 -- REVELACAO POS-FECHO + ETIQUETA + LER-PALPITES + LARANJA RECONSTRUIDO (Claude Code, Opus 5.5)
+
+**Tipo:** CODIGO (backend + frontend + testes). **Baseline:** `5c1886a`. **Commits:** `1798893` -> `6a05324` (A1-A4) -> `e255003` (R1/V23) -> registo.
+**Suite:** frontend VERDE **818/818** · backend VERDE **1095/1101**. **Mutacao 25/25 RED.** **Deploy: BLOQUEADO** (`netlify deploy --prod` -> `JSONHTTPError: Forbidden`
+em `createSiteDeploy`, 3 tentativas; site/conta sem bloqueio visivel -> credencial/permissao, do operador). **Push NAO feito** (o push dispara o deploy automatico).
+
+**SEG0 PAROU (AU3):** em mainnet o `lances-flash` lia o blob legado (vazio) e nunca revelava; os lances vivem no Key-Per-Bid; o unico «encerrado» do backend e o
+marcador `bid:{id}:consolidado`; a lideranca nao era guardada. Decisoes do operador (R18, 2026-10-06): **R18-A** revelar apos consolidar; **R18-B** laranja
+**reconstruido no fecho** (replay por `processadoEm`, sem migracao, sem tocar no `lance-relampago`); **R18-C** estado do titular por `lances-flash?acao=meu-estado`
+(Bearer user-session, endereco so do token); **R18-D** sem etiqueta na OP (o cartao e de palpite).
+
+**Feito:** `lances-flash` revela os valores do KPB so com **marcador E edicao fechada** pelo criterio do `lance-relampago` (`verificarJanelaLance` =
+`edicao_encerrada`; sem metadata -> nunca, ex.: R-1 sintetizado), lista revelada em cache 60 s; `acao=verificar` (anti-bot MC28.1) **inalterado (403)**.
+`ler-palpites` (novo, Bearer): sem valor enquanto o `registar-palpite` aceita palpites (status aberto/agendado e nao apurada; o `termino_em` NAO revela).
+`passe-pontos`: +`listarPalpitesDaEdicao`. `EtiquetaEstadoLance.jsx`: «SEU LANCE» neutro + «(estado)» na cor (decisao 3 do operador; contraste >= 4,5:1 medido
+sobre a pilula), no MLC e no Inicio (`estAtiva.encerrada`); OP com a tabela ligada (`usePalpitesDaEdicao`, extensao declarada). `TabelaLances` intocada (🔒 = mockup).
+**Validador: 2 rondas PARCIAL** -- A1 (a minha revelacao abria uma fuga com edicao consolidada ainda aberta), A2 custo, A3/A4 testes, R1 LGPD (cache sem prazo
+apos exclusao de conta): **todos corrigidos**; R1/V23 nao re-validados em 3.ª ronda. Registados: lances no mesmo ms; lance tardio se a leitura da edicao falhar.
+**Registo:** `_logs/UTAC107e.2-privacidade.md` · `_logs/UTAC107e.2_SEG-1_MEDICAO.md` · `_logs/UTAC107e.2_SEG8_VALIDADOR.md` · `Desktop/RELATORIO-UTAC107e.2-PRIVACIDADE.txt`.
+**Custo:** validador 399 690 tokens = 8,0-799 ¢ (160 ¢ se tudo input); sessao principal nao medida (`/cost`); duracao ≈ 1 h. **Proximo:** desbloquear o deploy -> 107g.
