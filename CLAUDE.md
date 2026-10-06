@@ -4861,3 +4861,28 @@ via «tens» (4 mutantes sobreviviam) -> reforcada, **11/11 mutantes mortos**; c
 **Registo:** `_logs/UTAC107g.1-pendencias.md` · `Desktop/RELATORIO-UTAC107g.1-PENDENCIAS.txt`.
 **Custo:** validador 119 031 tokens = 2,4–238 ¢ (47,6 ¢ se tudo input); sessao ≈ 45 000 tokens = 0,9–90 ¢ (18 ¢ se tudo input).
 **Proximo:** 106i (AAB novo).
+
+
+## R14 (append) -- UTAC107g.2 -- COPY pt-BR RESTANTE (Claude Code, Opus 5.5)
+
+**Tipo:** so copy. **Baseline:** `7ab9bb6`. **Commits:** `c6652d2` -> `9b41ef9` (achados do validador) -> registo.
+**Suite:** frontend VERDE **843/843** (+3) · backend VERDE 1095/1101. **Deploy:** live `index-4MPVXBeU.js`. ~28 min (HI5 30).
+
+**Decisoes do operador (R18):** **R18-A** ambito = copy de consumo na 2.ª pessoa «tu» / «A + infinitivo» + admin («A carregar/ler/
+enviar»); **R18-B** convite «no seu 1º lance» («Te convido» fica). **Corrigido (pt-PT -> pt-BR, so texto):** OP («Você ainda não tem
+pontos. Compre o seu primeiro Passe…», «Carregando seus pontos…», «Você vai trocar…», «Chegue a…», «Acumule…»), balao do Passe
+(«Você vai comprar…», «Você ganha 1 ponto», «Seus pontos (total)», «Processando…»), resgate («Confirme/Confira os dados»), hooks
+(usePalpite/useResgatarCartao: «Você precisa…», «Escreva…», «Sem edição em andamento»), MLC («Abra … no seu navegador … você já usa»,
+«continue explorando»), toast da Carteira, convite, chatbot («🏆 Você ganhou!», «⚠️ Você perdeu a exclusividade»), retorno do login
+(«Está demorando…», «estamos restabelecendo…»), admin («Carregando/Lendo/Enviando…», «continua respondendo»).
+**Guarda GLOBAL** `src/__tests__/utac107g2-pt-br.test.mjs`: todo o `src/` (sem testes/comentarios), removedor de comentarios ciente
+de strings; paginas legais em excecao EXPLICITA (pendencia).
+
+**Validador adversarial: PARCIAL** -- 4 frases pt-PT residuais (A1-A4) + zona cega real da guarda (um `/*` dentro de `//` em
+`main.jsx` escondia 98 linhas) -> **tudo corrigido**; a re-varredura achou mais 3 (login, chatbot). **Mutacao 18/18** (inclui os 7
+sobreviventes do validador). Correcoes NAO re-validadas em 2.ª ronda. **Escopo:** so texto; backend, navegacao, DEBT-021, package*,
+5 `.bak-*` intactos; `EM_BREVE_MODE = true`.
+**Pendencias:** paginas legais (Privacidade/RegrasOficiais + docs/regras-oficiais.md) e vocabulario pt-PT do admin; DEBT-021 (107g.3).
+**Registo:** `_logs/UTAC107g.2-copy.md` · `Desktop/RELATORIO-UTAC107g.2-COPY.txt`.
+**Custo:** validador 115 002 tokens = 2,3–230 ¢ (46 ¢ se tudo input); sessao ≈ 87 000 tokens = 1,7–174 ¢ (35 ¢ se tudo input).
+**Proximo:** 107g.3 (DEBT-021) e/ou 106i (AAB).

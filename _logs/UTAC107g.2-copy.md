@@ -82,3 +82,19 @@ exclusividade»**. Ficheiros declarados (copy apenas). **Páginas legais** `Priv
 **Mutação final 18/18** (11 + 7 sobreviventes do validador: G6 main.jsx, G2 «Clica», A1-A4, «Ganhaste»), md5 idêntico.
 Suíte **843/843 · 1095/1101 VERDE**; `vite build` ✓. ⚠️ Correcções pós-veredicto **não re-validadas** por 2.ª ronda (provadas por
 mutação; HI5 apertado).
+
+## SEG5 — Deploy + registo
+- Push `7ab9bb6..9b41ef9` (foreground) → auto-deploy; ao vivo após ~150 s. Produção: site **200**, `/health` **200**, entry
+  **`index-4MPVXBeU.js`** (era `index-DDV4eNIE.js`). Nos chunks servidos: «Você ainda não tem pontos» 1 · «Você vai comprar» 1 ·
+  «Processando» 2 · «Ainda não tens» / «Vais comprar» / «A processar» / «Ganhaste» / «Chega a » / «Está a demorar» **0**.
+- `package-lock.json` não sujado · `.bak-*` ×5 intactos · `EM_BREVE_MODE = true` · DEBT-021 intocada · backend intacto.
+- Commits: `c6652d2` · `9b41ef9` · registo. Duração 17:55 → ~18:23 ≈ **28 min** (HI5 30 ✔).
+- **Custo (¢/1M tokens, Opus 5.5: 400 in · 2000 out · 20 cache):** validador **115 002 tokens** → 2,3 ¢ · **46 ¢** (tudo input) ·
+  230 ¢; sessão ≈ **87 000 tokens** de contexto (não medido com precisão) → 1,7 ¢ · **35 ¢** · 174 ¢.
+
+## Pendências
+1. **Páginas legais** (`Privacidade.jsx`, `RegrasOficiais.jsx` + `docs/regras-oficiais.md`): vocabulário/construções pt-PT
+   (utilizador, contacto, morada, bónus, registo, «continuar a utilizar», «Partilha») — revisão própria (excepção explícita na guarda).
+2. Vocabulário pt-PT não-2.ª-pessoa no admin («Nenhum utilizador», «Nenhum registo») e «Bónus de palpite» no histórico das OP.
+3. DEBT-021 (`?rc=1`) — UTAC107g.3 recomendado (segurança de interface).
+4. Correcções pós-veredicto não re-validadas por 2.ª ronda.
