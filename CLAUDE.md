@@ -4768,3 +4768,23 @@ rotulo «Seu lance (em centavos)» (pt-BR) ligado por htmlFor; **R18-D** tabela 
 **Escopo:** backend, `_lib`, AppContext, App.jsx, Carteira, Inicio, OP, BottomNav/Sidebar, package*, 5 `.bak-*` intactos; `EM_BREVE_MODE = true`.
 **Registo:** `_logs/UTAC107d-mlc.md` · `_logs/UTAC107d_SEG8_VALIDADOR.md` · `Desktop/RELATORIO-UTAC107d-MLC.txt`.
 **Custo:** USD nao medido; validador ≈ 115 k tokens; duracao ≈ 40 min. **Proximo:** UTAC107e (Ofertas Programadas).
+
+## R14 (append) -- UTAC107e.1 -- OFERTAS PROGRAMADAS + V2 (Claude Code, Opus 5.5)
+
+**Tipo:** CODIGO (frontend + testes). **Baseline:** `eab760d`. **Commits:** `6c0436c` -> `23a4bae` (ressalvas) -> registo.
+**Suite:** frontend VERDE **801/801** · backend VERDE 1061/1067. **Deploy:** live (entry `index-CFzvYOmT.js`; chunk `OfertasProgramadas-rXEPT1cw.js`).
+
+**SEG0 PAROU:** a etiqueta «SEU LANCE E O MENOR LANCE UNICO» em tempo real colide com o anti-bot MC28.1 (mainnet blinda a unicidade; `lances-flash?acao=verificar`
+-> 403); a producao JA esconde os valores durante a edicao (e tambem depois — falta a revelacao); nao ha endpoint de palpites/lances de uma edicao.
+Decisoes do operador (R18, 2026-10-06): **R18-A** etiqueta so DEPOIS do fecho; **R18-B** dividir: **107e.1 = OP + V2** (este) / **107e.2 = revelacao apos o
+fecho + etiqueta**; **R18-C** tabela da OP so estrutura; **R18-D** V2 nos 3 sitios (TabelaLances + MeusAtivos + AppContext, extensoes declaradas).
+
+**Feito:** OP com titulo em vidro, carrossel lateral (estrutura do Inicio) com o palpite DENTRO de cada cartao (sem/com palpite, mais proximo, nao foi dessa
+vez, encerrada, abre em breve — copy do mockup: «mais proximo», nunca «acertou»), seccao «Palpite» separada removida, Regras como botao 48 px em vidro, tabela
+«Palpites — Edicao <id>» no fim (vazia). `usePalpite.registar(valor, edicaoId)`. **V2:** sem resultado oficial ninguem leva 🏆 (muda o contrato do UTAC000.8/9/
+10/15 e 105c — testes actualizados). Mutacao **10/10 RED**. **Custo:** skill `mc-driven-projects` com a metrica ¢/1M (Opus 5.5: 400 in · 2000 out · 20 cache).
+**Validador: APROVADO COM RESSALVAS** -- V1 (agendado dito «encerrada») e V3 (teste do erro por cartao) corrigidos, nao re-validados; ⚠️ V2 escalado ao 107e.2:
+overlays dizem «Nenhum lance unico registrado.» antes do oficial (hoje fechados pelo EM_BREVE).
+**Escopo:** backend, `_lib`, App.jsx, Carteira, Inicio, MLC, CardLance, BottomNav/Sidebar, package*, 5 `.bak-*` intactos; `EM_BREVE_MODE = true`.
+**Registo:** `_logs/UTAC107e-op.md` · `_logs/UTAC107e_SEG8_VALIDADOR.md` · `Desktop/RELATORIO-UTAC107e-OP.txt`.
+**Custo:** validador 113 338 tokens = 2,3–227 ¢ (45 ¢ se tudo input); sessao principal nao medida (`/cost`); duracao ≈ 52 min. **Proximo:** UTAC107e.2.
