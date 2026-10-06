@@ -142,8 +142,18 @@ test("(b) o vocabulário correcto está presente nos ficheiros tocados", () => {
   // com o botão «Trocar R$ 2,00 → 1 Senha» e a frase de apoio do saldo (R18-E). A INVARIANTE
   // NÃO muda: a Carteira tem de mostrar o VOCABULÁRIO APROVADO das modalidades actuais (106b) —
   // senão bastava apagar o ecrã para este guarda passar (o defeito que ele existe para travar).
-  assert.match(cartSemComentarios, /Menor Lance Único[\s\S]{0,600}Ofertas Programadas/,
-    "Carteira: falta o par de modalidades EM CÓDIGO (vocabulário aprovado)");
+  //
+  // ⚠️ CORRECÇÃO N1 (achado do validador adversarial do UTAC107b, com causa medida): a 1.ª versão
+  // media `Menor Lance Único[\s\S]{0,600}Ofertas Programadas` sobre o ficheiro — e isso é satisfeito
+  // pelos `title=` (tooltips) a ~80 linhas de distância. Prova medida (mutação M3a): apagar os
+  // RÓTULOS visíveis e manter os `title=` deixava o guarda VERDE. O guarda media «a string existe
+  // no ficheiro», não «o ecrã mostra o vocabulário». Passa a exigir os dois nomes como TEXTO JSX
+  // VISÍVEL (entre `>` e `<`), onde os `title=`/strings de atributo NÃO contam.
+  const rotulosVisiveis = [...cartSemComentarios.matchAll(/>\s*([^<>{}]{4,}?)\s*</g)].map((m) => m[1]).join("|");
+  assert.match(rotulosVisiveis, /Menor Lance Único/,
+    "Carteira: falta o rótulo VISÍVEL «Menor Lance Único» (vocabulário aprovado)");
+  assert.match(rotulosVisiveis, /Ofertas Programadas/,
+    "Carteira: falta o rótulo VISÍVEL «Ofertas Programadas» (vocabulário aprovado)");
   assert.match(ler("src/utils/edicao.js"), /rotuloLongo: "Edição encerrada"/, "edicao.js: falta o rótulo");
 });
 

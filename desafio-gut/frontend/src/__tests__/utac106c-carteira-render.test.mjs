@@ -34,9 +34,9 @@ const STUB_CONTEXTO = resolve(AQUI, "..", "pages", "__tests__", "_stubs", "AppCo
 const ALIASES_106C = [
   { find: /^\.\.\/context\/AppContext\.jsx$/,       replacement: STUB_CONTEXTO },
   { find: /^\.\.\/\.\.\/context\/AppContext\.jsx$/, replacement: STUB_CONTEXTO },
-  { find: /^\.\.\/hooks\/useTrocarPorSenhas\.js$/,  replacement: `${STUBS}/useTrocarPorSenhas.js` },
+  // UTAC107b · N2 do validador — saíram os aliases mortos de `useTrocarPorSenhas` e `CreditoStatus`:
+  // a página deixou de os importar (o botão «Trocar R$ 2,00 → 1 Senha» foi removido na decisão 1).
   { find: /^\.\.\/components\/ComprarFichasModal\.jsx$/,  replacement: `${STUBS}/child.jsx` },
-  { find: /^\.\.\/components\/CreditoStatus\.jsx$/,       replacement: `${STUBS}/child.jsx` },
   { find: /^\.\.\/components\/PainelIndicacao\.jsx$/,     replacement: `${STUBS}/child.jsx` },
   { find: /^\.\.\/components\/BotaoLoginPrincipal\.jsx$/, replacement: `${STUBS}/child.jsx` },
   { find: /^\.\.\/\.\.\/hooks\/useAdmin\.js$/,      replacement: `${STUBS}/useAdmin.js` },
