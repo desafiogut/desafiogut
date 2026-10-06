@@ -258,3 +258,23 @@ test("A10 — a lista revelada é imutável: o 2.º pedido não volta a ler o Ke
   assert.equal(r.body.lances.length, 3);
   assert.equal(leiturasKpb, 1);
 });
+
+test("A11 — a cache EXPIRA (2.ª ronda R1): passado o TTL relê o Key-Per-Bid (ex.: lances anonimizados)", async () => {
+  marcador = { vencedor: C };
+  await chamar("edicaoId=R-1");
+  kpb = kpb.map((l) => (l.endereco === A ? { ...l, endereco: "anon:" + "0".repeat(64) } : l));
+  const real = Date.now;
+  Date.now = () => real() + mod.TTL_REVELADOS_MS + 1;
+  try {
+    const r = await chamar("edicaoId=R-1");
+    assert.equal(leiturasKpb, 2, "expirada ⇒ volta a ler");
+    assert.ok(!r.body.lances.some((l) => l.endereco === A), "o endereço anonimizado não volta a sair");
+  } finally { Date.now = real; }
+});
+
+test("A12 — consolidada com INÍCIO FUTURO (agendada) não revela (V23 da 2.ª ronda)", async () => {
+  marcador = { vencedor: C };
+  META["R-1"] = { id: "R-1", tipo: "programado", status: "aberto", inicio_em: "2099-01-01T00:00:00.000Z", termino_em: "2020-01-01T00:00:00.000Z" };
+  assert.equal((await chamar("edicaoId=R-1")).body.encerrado, false);
+  assert.equal(leiturasKpb, 0);
+});

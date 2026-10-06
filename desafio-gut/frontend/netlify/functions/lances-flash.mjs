@@ -47,6 +47,9 @@ async function edicaoFechada(edicaoId) {
 
 // UTAC107e.2 (achado A2) — a lista revelada é imutável (marcador + edição fechada ⇒ já não entram
 // lances): guarda-se por instância para não reler o Key-Per-Bid inteiro a cada poll anónimo.
+// ⚠️ 2.ª ronda (R1): com PRAZO — a exclusão de conta (MC104.3) anonimiza os lances das edições
+// consolidadas; uma cache sem fim continuaria a servir o endereço real numa instância quente.
+export const TTL_REVELADOS_MS = 60_000;
 const REVELADOS = new Map();
 export function _limparCacheRevelados() { REVELADOS.clear(); }
 const valorValido = (v) => Number.isSafeInteger(v) && v >= 1;
@@ -189,8 +192,9 @@ export default async (req) => {
     let marcador = null;
     try { marcador = await estaConsolidado(edicaoId); }
     catch (err) { console.warn("[lances-flash] marcador de consolidação ilegível:", err?.message); }
-    if (REVELADOS.has(edicaoId)) {
-      return jsonResponse({ edicaoId, encerrado: true, ocultoAteConsolidar: false, lances: REVELADOS.get(edicaoId) });
+    const guardada = REVELADOS.get(edicaoId);
+    if (guardada && Date.now() - guardada.em < TTL_REVELADOS_MS) {
+      return jsonResponse({ edicaoId, encerrado: true, ocultoAteConsolidar: false, lances: guardada.lances });
     }
     if (marcador && await edicaoFechada(edicaoId)) {
       let reais;
@@ -206,7 +210,7 @@ export default async (req) => {
         txHash:       l.lanceId,
         repetido:     (contagem[l.valorCentavos] || 0) > 1,
       }));
-      REVELADOS.set(edicaoId, lances);
+      REVELADOS.set(edicaoId, { lances, em: Date.now() });
       return jsonResponse({ edicaoId, encerrado: true, ocultoAteConsolidar: false, lances });
     }
   }
