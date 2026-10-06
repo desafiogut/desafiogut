@@ -4809,3 +4809,34 @@ sobre a pilula), no MLC e no Inicio (`estAtiva.encerrada`); OP com a tabela liga
 apos exclusao de conta): **todos corrigidos**; R1/V23 nao re-validados em 3.ª ronda. Registados: lances no mesmo ms; lance tardio se a leitura da edicao falhar.
 **Registo:** `_logs/UTAC107e.2-privacidade.md` · `_logs/UTAC107e.2_SEG-1_MEDICAO.md` · `_logs/UTAC107e.2_SEG8_VALIDADOR.md` · `Desktop/RELATORIO-UTAC107e.2-PRIVACIDADE.txt`.
 **Custo:** validador 399 690 tokens = 8,0-799 ¢ (160 ¢ se tudo input); sessao principal nao medida (`/cost`); duracao ≈ 1 h. **Proximo:** desbloquear o deploy -> 107g.
+
+
+## R14 (append) -- UTAC107g -- NAVEGACAO: duplicacoes, casa das senhas antigas, caminhos mortos (Claude Code, Opus 5.5)
+
+**Tipo:** CODIGO (frontend + testes). **Baseline:** `b88ca5c`. **Commits:** `996c4c3` -> `5086652` (achados do validador) -> registo.
+**Suite:** frontend VERDE **838/838** (+20) · backend VERDE 1095/1101. **Mutacao 21/21 RED.** **Deploy:** push = auto-deploy; live
+(entry `index-BYkHOleH.js`, rotas em `PrivyRoot-DFGj5s1z.js`). HI5: ~47 min.
+
+**SEG-1 AJUSTAR -> decisoes do operador (R18, 2026-10-06):** **R18-A** sairam 3 atalhos do «Acesso Rapido» do Inicio
+(«Depositar PIX», «Converter Ficha», «Dar Lance» — destino ja e aba da barra e ja ha no ecra outro caminho; «Converter Ficha»
+prometia a troca que o 107b removeu e ainda existia, ao contrario do que o enunciado dizia); **R18-B** catch-all
+`<Route path="*">` -> Inicio (antes: URL desconhecida = ecra em branco); **R18-C** `pages/EdicaoDetalhe.jsx` APAGADO com a rota
+`/edicao/:id`; **R18-D** seccao de senhas em Meus Ativos so texto (sem botao «usar»).
+
+**Feito:** Meus Ativos ganha «🎫 Senhas antigas» (`estadoSenhasAntigas`, 5 estados, sem coercao, contagem em roxo); Carteira ganha,
+dentro do vidro do saldo, «Tens X senhas antigas -> ver em Meus Ativos» (muted, 44 px, so com contagem conhecida > 0 e status
+!= error) -> `/ativos`. Sai `/corp` (painel do lojista SEM guarda; unico produtor substituido no MC99.1). `/redirect` mantida e
+documentada (retorno OAuth Privy + App Link). 25 endpoints orfaos re-medidos e registados (nada removido; nenhum auth/admin
+aberto). Contagens do 107a-back estavam desactualizadas (re-medidas). Teste novo `src/__tests__/utac107g-navegacao.test.mjs`
+prova o router com o `matchRoutes` REAL sobre a arvore do App.jsx.
+
+**Validador adversarial: PARCIAL** (0 defeitos de produto) -- ⚠️ o catch-all escondia rotas vivas perdidas (V1/V2/V4) e o teste
+do vidro era vacuo (V7); ℹ️ cor roxa e «stale» sem teste -> **todos fechados** (todo o destino de menu/navegacao tem de ter rota
+propria; profundidade corrida do vidro); correcoes NAO re-validadas em 2.ª ronda. Teste do backend `_tests/mc8843` actualizado
+(listava o ficheiro apagado — o meu grep do SEG-1 so cobriu `src/`).
+**Escopo:** backend de producao, anti-bot MC28.1, package*, BottomNav/Sidebar/navModel (nao foi preciso), 5 `.bak-*` intactos;
+`EM_BREVE_MODE = true`. **Pendencias:** comentarios para `/edicao/:id` (EdicaoCard/EdicaoBanner), `?rc=1` sem produtor, orfaos
+candidatos a desligar, APK sem estas mudancas (106i).
+**Registo:** `_logs/UTAC107g-navegacao.md` · `_logs/UTAC107g_SEG7_VALIDADOR.md` · `Desktop/RELATORIO-UTAC107g-NAVEGACAO.txt`.
+**Custo:** validador 142 205 tokens = 2,8–284 ¢ (56,9 ¢ se tudo input); sessao principal ≈ 525 600 tokens de contexto = 10,5–1051 ¢
+(210 ¢ se tudo input), nao medida com precisao. **Proximo:** 106i (AAB novo).

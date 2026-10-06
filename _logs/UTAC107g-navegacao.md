@@ -287,3 +287,43 @@ Veredicto **PARCIAL** (0 defeitos de produto; 2 lacunas de prova ⚠️ + 2 ℹ�
 mutante RED; ℹ️5/ℹ️7 (comentários e `?rc=1` sem produtor em ficheiros fora do AUTORIZA) registados como pendência.
 Verbatim e tratamento: `_logs/UTAC107g_SEG7_VALIDADOR.md`. Mutação final **21/21**; suíte **838/838 · 1095/1101 VERDE**.
 Correcções **não re-validadas** numa 2.ª ronda (declarado).
+
+---
+
+## SEG8 — Deploy + registo
+
+**Antes (produção):** entry `index-DG9jDuOP.js`; chunk de rotas `PrivyRoot-Bi7LrH4H.js` com `"Converter Ficha"` (1), `edicao/:id` (1),
+`path:"/corp"` (1), sem catch-all; chunks `EdicaoDetalhe-DPx5Txmg.js`, `MeusAtivos-2F-dnrMJ.js`, `MinhaCarteira-TMpBn3xY.js`.
+
+**Deploy:** `git push origin HEAD:main` (`b88ca5c..5086652`, foreground; o «Bypassed rule violations» é o conhecido) → auto-deploy
+Git. Novo bundle ao vivo após **~150 s**.
+
+**Depois (produção, medido):** site **200**, `/health` **200**; entry **`index-BYkHOleH.js`**; rotas em `PrivyRoot-DFGj5s1z.js`:
+`Converter Ficha` **0**, `Depositar PIX` **0**, `Vitrine 4 Slots` 1, `edicao/:id` **0**, `path:"/corp"` **0**, catch-all
+`{path:"*",element:<Navigate to:"/" replace>}` **presente**; **sem** chunk `EdicaoDetalhe-*`; `MinhaCarteira-BPns06Hi.js`
+(application/javascript) com «senhas antigas» e «ver em Meus Ativos»; `MeusAtivos-BBTlC2oM.js` com «senhas antigas».
+⚠️ Erro do meu instrumento (declarado): um grep por `App-…js` apanhou o sufixo de `useRecursosApp-BbZ-GTKG.js` e o pedido a
+`assets/App-BbZ-GTKG.js` deu **200 `text/html`** (fallback da SPA) — a lição de sempre: verificar asset pelo content-type.
+
+**`package-lock.json`:** não sujado (o `vite build` foi para o scratchpad; `git status` limpo).
+
+**Commits:** `996c4c3` (feat) · `5086652` (achados do validador) · registo (este).
+
+**Duração:** 16:05 → ~16:52 ≈ **47 min** (dentro do HI5 = 2 h; não foi preciso dividir em 107g.1/107g.2).
+
+**Custo (centavos/1M tokens, Opus 5.5: 400 in · 2000 out · 20 cache):**
+- Validador: **142 205 tokens** → 2,8 ¢ (tudo cache) · **56,9 ¢** (tudo input) · 284 ¢ (tudo output).
+- Sessão principal: **não medida com precisão** (sem `/cost` aqui). O contador de contexto da sessão desceu ≈ **525 600 tokens**
+  → 10,5 ¢ (tudo cache) · **210 ¢** (tudo input) · 1 051 ¢ (tudo output). A maior parte é releitura de contexto (cache).
+
+## Pendências (não executadas — declaradas)
+
+1. Comentários que apontam para a rota removida: `EdicaoCard.jsx:8`, `EdicaoBanner.jsx:6-7`; string de exemplo `"/edicao/R-1"` em
+   `_tests/mc894-rotas-trabalho.test.mjs:33` (função pura, inofensiva). Fora do AUTORIZA.
+2. `?rc=1` sem produtor: `App.jsx` (`CorporativoRoute`) e `CorporativoDashboard.jsx:30-35` — candidato a limpeza.
+3. Redundâncias menores fora do AUTORIZA: `Seguranca.jsx:27-28`, `Privacidade.jsx:213/309`, `RegrasOficiais.jsx:318`.
+4. Os 25 endpoints órfãos (SEG4) — candidatos a desligar: `comprar-passe`, `voucher`, `renovacao-adesao`, `info-pagamento`;
+   avaliar `debug-pedido` em produção; `exportar-dados` sem botão no app (LGPD art. 18).
+5. Mistura pt-PT/pt-BR na secção de senhas (frases do enunciado) — decisão de copy do operador.
+6. Correcções pós-veredicto não re-validadas por 2.ª ronda.
+7. O APK instalado não tem estas mudanças (frontend empacotado) — entram no **106i (AAB novo)**.
