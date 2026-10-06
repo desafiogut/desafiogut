@@ -2,9 +2,11 @@
 //
 // MC47 — comportamento UNIFICADO: clicar no banner ABRE a imagem num MODAL
 // (ImageModal) SOBRE a página, SEM navegar para outra rota/aba. Vale em TODOS os
-// contextos (Dashboard "Edição Ativa", EdicaoCard das "Outras Edições" e a própria
-// página /edicao/:id). O banner é sempre um <button> (nunca <Link>) — elimina a
-// "página/aba" desnecessária que o clique abria antes (navegava para /edicao/:id).
+// contextos (Dashboard "Edição Ativa" e EdicaoCard das "Outras Edições"). O banner é
+// sempre um <button> (nunca <Link>) — elimina a "página/aba" desnecessária que o
+// clique abria antes (antes do MC47 navegava para a página de detalhe da edição).
+// UTAC107g.1 — essa página (rota /edicao/:id, EdicaoDetalhe.jsx) foi REMOVIDA no UTAC107g:
+// já não tinha nenhum link de entrada. Uma URL antiga cai no catch-all → Início.
 //
 // Mostra edicao.imagem_url quando existir (object-fit:cover); senão, placeholder
 // quadrado (🎁). A11y: aria-label + aria-haspopup="dialog", foco visível

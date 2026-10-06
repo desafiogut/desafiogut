@@ -5,7 +5,9 @@
 // cronómetro por edição (cálculo absoluto via timeLeftEdicaoSegundos, re-render
 // por edicoesTick — preservado do antigo EdicaoTimerCard) e o CTA para o mercado.
 //
-// O banner (quadrado) é o elemento clicável → /edicao/:id (EdicaoBanner).
+// O banner (quadrado) é clicável e abre a imagem num MODAL (EdicaoBanner, MC47) — não navega.
+// UTAC107g.1 — a antiga página /edicao/:id foi REMOVIDA no UTAC107g (rota sem nenhum link de
+// entrada); o único destino de navegação deste card é o CTA → /mercado.
 // Usado para TODAS as edições não-ativas; a edição ativa reutiliza o mesmo
 // EdicaoBanner dentro do seu card rico (Dashboard.jsx).
 

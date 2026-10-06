@@ -212,7 +212,7 @@ describe("UTAC107g · Meus Ativos — secção «Senhas antigas»", () => {
   test("com senhas > 0: contagem + onde se usam, e NENHUM botão (não promove a Via A)", () => {
     const s = secao(renderizar({ contexto: { ...SESSAO, saldoSenhas: 3, saldoSenhasStatus: "ok" } }));
     assert.equal(estadoDe(s), "dados");
-    assert.match(texto(s), /Tens 3 senhas antigas\s?\./ /* o `texto()` troca </strong> por espaço */);
+    assert.match(texto(s), /Você tem 3 senhas antigas\s?\./ /* o `texto()` troca </strong> por espaço */);
     assert.match(texto(s), /Lance Programado do Menor Lance Único/);
     assert.doesNotMatch(s, /<button|<a\b/, "a secção ganhou um botão/link (R18-D: só texto)");
     // ℹ️ do validador (V12): a contagem em ROXO, a cor semântica de senhas (`COR.senhas`).
@@ -221,13 +221,13 @@ describe("UTAC107g · Meus Ativos — secção «Senhas antigas»", () => {
 
   test("singular: 1 → «1 senha antiga»", () => {
     const s = secao(renderizar({ contexto: { ...SESSAO, saldoSenhas: 1, saldoSenhasStatus: "ok" } }));
-    assert.match(texto(s), /Tens 1 senha antiga\s?\./);
+    assert.match(texto(s), /Você tem 1 senha antiga\s?\./);
   });
 
-  test("0 senhas → «Não tens senhas antigas» (sem número inventado)", () => {
+  test("0 senhas → «Você não tem senhas antigas» (sem número inventado)", () => {
     const s = secao(renderizar({ contexto: { ...SESSAO, saldoSenhas: 0, saldoSenhasStatus: "ok" } }));
     assert.equal(estadoDe(s), "vazio");
-    assert.match(texto(s), /Não tens senhas antigas\./);
+    assert.match(texto(s), /Você não tem senhas antigas\./);
   });
 
   test("sem sessão / a carregar / erro: não afirma nenhuma contagem", () => {
@@ -254,5 +254,18 @@ describe("UTAC107g · Meus Ativos — secção «Senhas antigas»", () => {
     assert.equal(e(null, "ok"), "erro");
     for (const v of ["3", 1.5, -1, NaN, undefined]) assert.equal(e(v), "erro", String(v));
     assert.equal(e(5, "ok", false), "sem-sessao");
+  });
+
+  // UTAC107g.1 — o app é pt-BR: nenhum estado da secção usa «tens/Tens» (pt-PT).
+  test("UTAC107g.1 · a secção está em pt-BR em TODOS os estados (sem «tens»)", () => {
+    for (const contexto of [
+      {}, { ...SESSAO, saldoSenhas: null, saldoSenhasStatus: "loading" },
+      { ...SESSAO, saldoSenhas: 9, saldoSenhasStatus: "error" },
+      { ...SESSAO, saldoSenhas: 0, saldoSenhasStatus: "ok" },
+      { ...SESSAO, saldoSenhas: 2, saldoSenhasStatus: "ok" },
+    ]) {
+      const t = texto(secao(renderizar({ contexto })));
+      assert.doesNotMatch(t, /\btens\b/i, `forma pt-PT: «${t}»`);
+    }
   });
 });

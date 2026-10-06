@@ -255,10 +255,10 @@ export default function MeusAtivos() {
           {senhas.estado === "sem-sessao" && "Entre na sua conta para ver as senhas antigas."}
           {senhas.estado === "carregando" && "Verificando as senhas…"}
           {senhas.estado === "erro" && "Não foi possível ler as senhas agora."}
-          {senhas.estado === "vazio" && "Não tens senhas antigas."}
+          {senhas.estado === "vazio" && "Você não tem senhas antigas."}
           {senhas.estado === "dados" && (
             <>
-              Tens <strong style={{ color: COR_SECAO.senhas }}>{senhas.n} {senhas.n === 1 ? "senha antiga" : "senhas antigas"}</strong>.
+              Você tem <strong style={{ color: COR_SECAO.senhas }}>{senhas.n} {senhas.n === 1 ? "senha antiga" : "senhas antigas"}</strong>.
               {" "}São usadas no Lance Programado do Menor Lance Único.
             </>
           )}

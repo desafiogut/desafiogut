@@ -334,7 +334,7 @@ export default function MinhaCarteira() {
                     color: COR.muted, fontSize: "0.72rem", textAlign: "left", cursor: "pointer",
                   }}
                 >
-                  Tens {senhasAntigas} {senhasAntigas === 1 ? "senha antiga" : "senhas antigas"} → ver em Meus Ativos
+                  Você tem {senhasAntigas} {senhasAntigas === 1 ? "senha antiga" : "senhas antigas"} → ver em Meus Ativos
                 </button>
               )}
             </GlassCard>
