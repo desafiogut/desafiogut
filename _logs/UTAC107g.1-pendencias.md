@@ -82,3 +82,25 @@ Leitores: `App.jsx:107,148` (`CorporativoRoute`) e `CorporativoDashboard.jsx:30-
 - **Mutação 4/4** (script ad-hoc no scratchpad — `scripts/` não está no AUTORIZA): P1 «Não tens» → RED(2) · P2 «Tens <strong>» →
   RED(3) · P3 Carteira «Tens» → RED(4) · P4 frase com «tens» sem a forma exacta → RED(2); md5 restaurado idêntico nos 4.
 - `.bak-*` ×5 md5 = baseline · `EM_BREVE_MODE = true`.
+
+---
+
+## SEG3b — Validador adversarial
+
+Subagente independente, worktree `C:/Users/Moltbot/tmp-107g1-val/wt` @ `f7171f6` (helper A13; removido no fim — `node_modules`
+498 intacto). 119 031 tokens, 31 chamadas, 345 s.
+
+**VEREDICTO: APROVADO** (0 achados graves), com 2 notas ℹ️:
+- (a) sem pt-PT nas superfícies do 107g · (b) só frases mudaram · (c) só comentários, sem afirmação falsa · (d) 0 produtores de
+  `?rc=1` · (f) código de `?rc=1` intacto · (h) suíte 840/840 · 1095/1101 VERDE · (i) escopo: 8 ficheiros, todos autorizados ·
+  (j) o log bate com o código. Não reproduziu o `vite build` nem o bundle Android (não versionado).
+- **ℹ️1** — a DEBT-021 descrevia mal o alcance: a guarda `includes("rc=1")` da `CorporativoRoute` abre **8 rotas** do lojista a
+  um anónimo (fica nas 7 que não limpam o parâmetro; em `/corporativo` só um relance) e é **substring** (`?src=1` também abre).
+  → **corrigido** o texto da DEBT-021 (o código continua por apagar, como decidido).
+- **ℹ️2** — a guarda de dialecto só procurava «tens»: A1 «Inicia sessão… tuas», A4 «Usas-as», A5 «A verificar as tuas», A6
+  «tuas» sobreviviam (frases que hoje estão em pt-BR — limitação do teste, não defeito). → guarda **reforçada** com marcadores
+  pt-PT (`tens|tu|teu(s)|tua(s)|usas|inicia|vê`, «a verificar/carregar», `-as`).
+- ℹ️ menor: o comentário do `EdicaoBanner` não lista o `CardEdicaoEspecial` como contexto (pré-existente; não toca em rotas).
+
+**Mutantes do validador re-corridos na árvore principal depois da correcção: 11/11 MORTOS** (A1-A7, B1-B4), md5 restaurado.
+Suíte final **840/840 · 1095/1101 VERDE**. Correcções pós-veredicto não re-validadas por 2.ª ronda (provadas por mutação).

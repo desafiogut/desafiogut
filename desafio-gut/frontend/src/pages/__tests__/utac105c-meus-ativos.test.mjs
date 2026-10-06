@@ -265,7 +265,9 @@ describe("UTAC107g · Meus Ativos — secção «Senhas antigas»", () => {
       { ...SESSAO, saldoSenhas: 2, saldoSenhasStatus: "ok" },
     ]) {
       const t = texto(secao(renderizar({ contexto })));
-      assert.doesNotMatch(t, /\btens\b/i, `forma pt-PT: «${t}»`);
+      // ℹ️2 do validador: só «tens» deixava passar «A verificar as tuas senhas…», «Inicia sessão…»,
+      // «Usas-as…». Marcadores pt-PT (2.ª pessoa / gerúndio europeu) que o pt-BR do app nunca usa.
+      assert.doesNotMatch(t, /\b(tens|tu|teus?|tuas?|usas|inicia|vê)\b|\ba (verificar|carregar)\b|-as\b/i, `forma pt-PT: «${t}»`);
     }
   });
 });
