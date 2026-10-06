@@ -61,7 +61,9 @@ function edicoesProgramadasDe(edicoes) {
 export function estadoPalpite(edicao, palpite) {
   if (palpite?.apurado === true) return palpite.resultado === "mais_proximo" ? "mais_proximo" : "perdeu";
   if (palpite) return "com_palpite";
-  return estaAberta(edicao) ? "sem_palpite" : "encerrada";
+  if (estaAberta(edicao)) return "sem_palpite";
+  // Achado do validador: `agendado` ainda não abriu — dizer «encerrada» seria falso.
+  return edicao?.status === "agendado" ? "abre_em_breve" : "encerrada";
 }
 const PILULA = {
   sem_palpite:  { texto: "SEM PALPITE",       cor: "#e8f0fe" },
@@ -69,6 +71,7 @@ const PILULA = {
   mais_proximo: { texto: "MAIS PRÓXIMO",      cor: "#3ddc84" },
   perdeu:       { texto: "NÃO FOI DESSA VEZ", cor: "#ff8a8d" },
   encerrada:    { texto: "ENCERRADA",         cor: "#6b7db8" },
+  abre_em_breve: { texto: "ABRE EM BREVE",    cor: "#f5a623" },
 };
 
 const dataCurta = (iso) => {
@@ -189,6 +192,9 @@ export default function OfertasProgramadas() {
               <p style={{ margin: 0, color: COR.text, fontWeight: 700, fontSize: "0.86rem" }}>Outro palpite ficou mais perto.</p>
               <p style={{ margin: "0.3rem 0 0", color: COR.muted, fontSize: "0.78rem" }}>Seu palpite: {palpite.valor} lances.</p>
             </div>
+          )}
+          {estado === "abre_em_breve" && (
+            <p style={{ margin: 0, color: COR.muted, fontSize: "0.84rem" }}>Os palpites abrem quando a edição abrir.</p>
           )}
           {estado === "encerrada" && (
             <p style={{ margin: 0, color: COR.muted, fontSize: "0.84rem" }}>Edição encerrada · sem palpite nesta edição.</p>

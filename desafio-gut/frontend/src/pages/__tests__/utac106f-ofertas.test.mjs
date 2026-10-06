@@ -402,3 +402,33 @@ test("UTAC107e.1 · Regra 1: cabeçalho e link das Regras DENTRO de vidro; link 
     assert.match(fonte, /<Link to="\/regras-oficiais" style=\{\{[^}]*minHeight: "48px"/, "o link das Regras não tem 48 px");
   } finally { c.dup.restaurar(); }
 });
+
+test("UTAC107e.1 (validador) · edição AGENDADA: «ABRE EM BREVE», sem campo e sem dizer «encerrada»", async () => {
+  const { estadoPalpite } = await vite.ssrLoadModule("/src/pages/OfertasProgramadas.jsx");
+  assert.equal(estadoPalpite({ status: "agendado" }, null), "abre_em_breve");
+  const c = await montarEcra(undefined, ctx({ edicoes: { "PROG-5": { id: "PROG-5", tipo: "programado", status: "agendado" } } }));
+  try {
+    assert.match(c.texto(), /ABRE EM BREVE/);
+    assert.match(c.texto(), /Os palpites abrem quando a edição abrir\./);
+    assert.doesNotMatch(c.texto(), /Edição encerrada|ENCERRADA/);
+    assert.equal(c.input(), undefined);
+  } finally { c.dup.restaurar(); }
+});
+
+test("UTAC107e.1 (validador) · o erro do palpite aparece SÓ no cartão que falhou", async () => {
+  const c = await montarEcra((url) => url.includes("registar-palpite")
+    ? { status: 409, json: { code: "sem_passe" } }
+    : { status: 200, json: LEITURA() }, ctx({ edicoes: DUAS }));
+  try {
+    const segundo = c.nos().find((n) => n.type === "input" && n.props.id === "palpite-PROG-8");
+    segundo.props.onChange({ target: { value: "3" } });
+    await c.ctrl.assentar();
+    await c.nos().filter((n) => n.type === "button" && texto(n).includes("Palpitar"))[1].props.onClick();
+    await c.ctrl.assentar();
+    const alertas = c.nos().filter((n) => n.props?.role === "alert");
+    assert.equal(alertas.length, 1, `esperava 1 alerta, vi ${alertas.length}`);
+    const h = c.html();
+    const i8 = h.indexOf('aria-label="Edição PROG-8"');
+    assert.ok(h.indexOf('role="alert"') > i8, "o alerta não está no cartão PROG-8");
+  } finally { c.dup.restaurar(); }
+});
