@@ -10,6 +10,7 @@ import { AppProvider, useAppContext } from "./context/AppContext.jsx";
 // defeito: a rota não existia e o utilizador ficava preso ali DEPOIS de o login
 // concluir. A regra vive fora do componente para ser testável.
 import { decidirSaidaDoRetorno, deveOferecerSaidaManual } from "./lib/retornoOAuth.js";
+import { temAcessoDiretoCadastro } from "./lib/acessoDiretoCadastro.js";
 import AppLayout from "./widgets/layout/AppLayout.jsx";
 import BackgroundCanvas from "./widgets/layout/BackgroundCanvas.jsx";
 import { AppEnvironmentProvider } from "./context/useAppContextEnvironment.jsx";
@@ -145,7 +146,7 @@ function CorporativoRoute({ children }) {
   // espera-se, em vez de expulsar.
   if (!isConnected) {
     if (pareceAutenticado) return children;
-    if (!window.location.search.includes("rc=1")) return <Navigate to="/" replace />;
+    if (!temAcessoDiretoCadastro(window.location.search)) return <Navigate to="/" replace />;
     return children;
   }
   if (tipoCarregando) return tipoProvavel === "corporativo" ? children : null;
