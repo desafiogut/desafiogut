@@ -104,9 +104,14 @@ Nada é gravado nem exposto durante a edição. ⚠️ Limites: lances no mesmo 
 | Push | Decisão do operador (R18-E, «push agora»): `5c1886a..1674bd8` às 12:57Z |
 | Deploy automático do push | `6ac4f048…` **`error`** — «**Skipped due to account credit usage exceeded**» ⇒ **a causa do 403 do CLI é a conta SEM CRÉDITOS** (período 25/09→25/10; `plan_credits 3000`). O campo `configurable_limits_exceeded:[]` não o mostrava |
 | Produção | **inalterada** (`5c1886a`, `index-CjvvGF-9.js`) — nada deste UTAC está no ar |
+| **Deploy (após recarga de créditos, R18-F)** | `npx netlify deploy --prod`, **foreground**, 11:24:47 → 11:29:00, `CDN requesting 47 files and 2 functions` · **`Deploy is live!`** · deploy `6ac504c24e32204be13af4f0` |
+| Produção depois | home 200 · health 200 · entry `index-CjvvGF-9.js` → **`index-3xsil5SO.js`** |
+| Endpoints | `ler-palpites` sem token → **401** `token_ausente` (JSON) · `acao=verificar` → **403** `verificacao_indisponivel` (anti-bot intacto) · `acao=meu-estado` sem token → **401** · lista R-1 → 200 `{encerrado:false, ocultoAteConsolidar:true, lances:[]}` |
+| Chunks | `EtiquetaEstadoLance-BzG6tbkB.js` (estados + `acao=meu-estado`) · `MercadoLances-DnW1_yze.js` e `PrivyRoot-D7CmN8UY.js` (Início) com a etiqueta · `OfertasProgramadas-CWrXSR5g.js` com `ler-palpites` e **sem** etiqueta (R18-D) |
+| `package-lock.json` | sujo pelo build (`d1f12aaf…`) → arquivado fora do repo e **restaurado** (`5b40f11c…`); suíte depois do deploy **VERDE 818/818 · 1095/1101** |
 
 **Duração:** ≈ 08:55 → 09:55 (≈ 1 h; HI5 2 h — dentro).
 **Custo (¢/1M tokens, Opus 5.5: 400 in · 2000 out · 20 cache):** validador 1.ª ronda **187 599** tokens + 2.ª ronda **212 091** (reportados pelo harness) = **399 690** ⇒
 entre **8,0 ¢** (tudo cache) e **799 ¢** (tudo output); **160 ¢** se tudo input fresco. Sessão principal **não medida** (Claude Code não expõe os tokens da própria sessão — `/cost`).
 
-**Veredicto: UTAC107e.2 — CÓDIGO FECHADO, VALIDADO E EMPURRADO; DEPLOY BLOQUEADO POR FALTA DE CRÉDITOS NETLIFY** — com créditos (recarga ou 25/10) basta `netlify deploy --prod` (ou novo push) e a verificação em produção (ler-palpites 401, verificar 403, chunks com a etiqueta).
+**Veredicto: UTAC107e.2 FECHADO — código validado, empurrado e EM PRODUÇÃO (11:29, após a recarga de créditos).** ~~Bloqueio anterior:~~ DEPLOY BLOQUEADO POR FALTA DE CRÉDITOS NETLIFY — com créditos (recarga ou 25/10) basta `netlify deploy --prod` (ou novo push) e a verificação em produção (ler-palpites 401, verificar 403, chunks com a etiqueta).

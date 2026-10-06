@@ -4793,7 +4793,7 @@ overlays dizem «Nenhum lance unico registrado.» antes do oficial (hoje fechado
 
 **Tipo:** CODIGO (backend + frontend + testes). **Baseline:** `5c1886a`. **Commits:** `1798893` -> `6a05324` (A1-A4) -> `e255003` (R1/V23) -> registo.
 **Suite:** frontend VERDE **818/818** · backend VERDE **1095/1101**. **Mutacao 25/25 RED.** **Deploy: BLOQUEADO** (`netlify deploy --prod` -> `JSONHTTPError: Forbidden`
-em `createSiteDeploy`, 3 tentativas; site/conta sem bloqueio visivel -> conta SEM CREDITOS: o deploy automatico do push `1674bd8` ficou «Skipped due to account credit usage exceeded»). **Push feito** (R18-E). Producao inalterada (`5c1886a`).
+em `createSiteDeploy`, 3 tentativas; site/conta sem bloqueio visivel -> conta SEM CREDITOS: o deploy automatico do push `1674bd8` ficou «Skipped due to account credit usage exceeded»). **Push feito** (R18-E). **Depois da recarga de creditos (R18-F): `netlify deploy --prod` foreground -> `Deploy is live!` (entry `index-3xsil5SO.js`); ler-palpites 401 sem token, verificar 403, chunks MLC/Inicio com a etiqueta e OP com ler-palpites; package-lock restaurado.**
 
 **SEG0 PAROU (AU3):** em mainnet o `lances-flash` lia o blob legado (vazio) e nunca revelava; os lances vivem no Key-Per-Bid; o unico «encerrado» do backend e o
 marcador `bid:{id}:consolidado`; a lideranca nao era guardada. Decisoes do operador (R18, 2026-10-06): **R18-A** revelar apos consolidar; **R18-B** laranja
