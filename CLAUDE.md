@@ -4662,3 +4662,30 @@ que deslocava linhas, e o cabecalho «26» sem varredura. Correcções pos-vered
 `Desktop/RELATORIO-UTAC107a-back-MAPEAMENTO.txt`. **Custo:** ~US$ 0,103 (executor ~0,071 + validador
 ~0,033); saldo API 3,22 -> 3,08 (delta ~0,14); duracao ~22 min. **Handoff:** o UTAC107a-front (Opus 5.5)
 usa este mapa para os mockups HTML/CSS e so arranca apos confirmacao do ambiente.
+
+
+## R14 (append) -- UTAC107a-front -- MOCKUPS HTML/CSS das 4 abas (Opus 5.5)
+
+**Tipo:** mockups, ZERO codigo de producao (`git diff 536c9cb..HEAD` so toca `docs/mockups-107a/*` e `_logs/*`). Suite
+de partida **774/774 + 1061/1067 VERDE**; `vite build` OK (para o scratchpad, nao para o `dist/` do APK). Entrega:
+`docs/mockups-107a/` -- `index.html` + 7 pranchas (tokens, Regra 1, Carteira, Inicio, Menor Lance Unico, Ofertas
+Programadas, Regra 2), `tokens.css`, `mockup.js` (auditores no browser: toque >= 48 px e Regra 1), `DESIGN.md` (lint
+oficial design-md: 0 erros, 0 avisos). As 4 skills de design estao no **Hermes** (`~/AppData/Local/hermes/skills/`), nao
+nos caminhos do enunciado -- lidas e aplicadas (desvio declarado).
+
+**Medido no codigo (o que o 107a-back nao mediu):** botao «Comprar Passe Desafio» branco s/ `#f5a623` = **2,03:1** (falha
+AA; proposta texto `#0a0f1a` = 9,45); `Button md` = 44 px; «↻» ≈ 20 px; MLC com 3 vidros diferentes (TabelaLances com
+`blur(20px)` + r12, unico backdrop-filter do app; CardLance `p-6` = 24 px); dourado em deriva `#f5a623`/`#ff9500`; 4 violacoes
+da Regra 1 (frase do MLC, header da OP, link das Regras, aviso 402).
+
+**Decisoes do operador (R18):** A -- sai do Inicio o cartao 🏆 (os KPIs de lances voltaram com F); B -- «Passe Desafio» =
+pontos de cartao X/50; C -- tabela da OP = edicao Programada do palpite; D -- Carteira fiel ao layout actual; E -- menos texto
+tecnico no ecra; F -- Inicio fiel ao actual com os 4 tiles (Saldo, Passe Desafio, Lances Unicos, Total de Lances); G -- rolagem
+lateral = Dashboard MC99 (100%, snap, sem peek); H -- MLC limpo com 3 vidros (o vidro edicao + lance foi aprovado).
+
+**Validador adversarial:** 1.a ronda **PARCIAL · 1 bloqueante** (coluna Estado cortada a 320-375 px) + 9 ⚠️ -- todos tratados;
+destaque E-2: a copy dizia «se acertares», o backend premeia o **mais proximo** (corrigido). 2.a ronda **APROVADO · 0
+bloqueantes**; N-1/N-4 corrigidos (nao re-validados), N-2/N-3 para o 107b. Verbatim: `_logs/UTAC107a-front_SEG6_VALIDADOR.md`
+e `_SEG6_VALIDADOR-R2.md`. Lacunas para o 107b: endpoint de lances de edicao Programada (E-1), senhas on-chain invisiveis no
+mobile (E-3), Dashboard sem `usePontos`, `/mercado` fixo na R-1. Custo em USD nao medido (sem `state.db`); subagente ≈ 470 k
+tokens. Log: `_logs/UTAC107a-front-mockups.md`; relatorio: `Desktop/RELATORIO-UTAC107a-front-MOCKUPS.txt`.

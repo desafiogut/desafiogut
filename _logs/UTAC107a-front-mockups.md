@@ -68,6 +68,16 @@ tabela), **sem copiar** — a paleta do produto manda.
    1 Senha» elimina o único caminho visível de compra de senhas Via A (para o 107b).
 
 Decisões tomadas pelo operador **durante** o trabalho (mensagens a meio do UTAC):
+- **R18-F:** «em início, eu gostava de como estava antes» + «os 4 botões que tínhamos» → Início variante **A · Fiel ao
+  actual** (recomendada): cabeçalho GUTO/logo/«Olá», **os 4 tiles** (Saldo, **Passe Desafio** 12/50, Lances Únicos, Total de
+  Lances — os 2 KPIs de lances **voltam**, o que substitui a parte da R18-A sobre eles), Edição Ativa, Acesso Rápido com os 7
+  atalhos. O cartão 🏆 continua fora (decisão 3).
+- **R18-G:** «preserve o estilo de rolagem lateral que já tínhamos» → todos os carrosséis passam ao padrão do
+  `Dashboard.jsx` (MC99): `flex: 0 0 100%`, `scroll-snap-type: x mandatory` + `start`, sem «peek» nem pontos; cartões no
+  desenho do `EdicaoCard`.
+- **R18-H:** MLC — «reformule de uma forma limpa o primeiro glass… muito feio e cheio de informação» + «deixe mais limpo,
+  tem muito glass muita informação» → MLC com **3 vidros** (título · edição + lance · tabela), ≈ 9 textos (eram ≈ 20 em 5
+  superfícies). «O segundo glass ficou bom» → **aprovado** pelo operador; não se mexe mais.
 - **R18-D:** «eu gostava do layout de carteira como tava antes» → a variante **A · Fiel ao actual** passou a
   recomendada (mesmo cartão único; só muda o que as decisões obrigam).
 - **R18-E:** «existem muitos textos pequenos que estão muito técnicos, e em alguns casos desnecessários» → retirados
@@ -129,8 +139,64 @@ auditoria refeita por navegação.
 
 ## §SEG6 — Validador adversarial
 
-*(a preencher com o veredicto verbatim)*
+**1.ª ronda** (subagente independente, worktree `C:/Users/Moltbot/tmp-107afront-val/wt` @ `dff04c7`, sem junctions;
+browser em contexto isolado; auditor próprio + parser HTML). **Veredicto: PARCIAL · 1 bloqueante.** Texto verbatim em
+`_logs/UTAC107a-front_SEG6_VALIDADOR.md`.
+
+| id | grav. | achado (resumo) | tratamento (commit `057f5e4`) |
+|---|---|---|---|
+| R2-1 | ⛔ | Coluna «Estado» cortada a 320–375 px no estado encerrado; nota «cabe em 343 px» falsa; medição do log só cobria o estado aberto | Tabela a **3 colunas** (#, Participante, Valor), sem rodapé, estado só em ícone com `aria-label`. **Medido:** 0 cortes a 320/360/375/768/1024, aberta e encerrada; cab 56 / th 48 / td 48 / largura 286·326·341·592·592 nas 3 instâncias |
+| E-1 | ⚠️ | Tabela da OP sem endpoint de leitura de lances de edição Programada | Lacuna anotada para o 107b |
+| E-2 | ⚠️ | Copy «se acertares / ACERTASTE» falsa: o backend premeia o **mais próximo** | Copy → «o palpite mais próximo ganha +2» · «MAIS PRÓXIMO» · «NÃO FOI DESSA VEZ» |
+| E-3 | ⚠️ | Sidebar é só desktop → no mobile o utilizador deixa de ver as senhas on-chain | Anotação corrigida + lacuna para o 107b |
+| D-1 | ⚠️ | MLC-C alargava a tabela a 718/912 px | Tabela a 640 px em baixo; medido 286/341/592/592 = às outras |
+| B-1 | ⚠️ | Contraste não-textual: borda do campo 2,41, pontos 2,35, placeholder 4,21 | Borda `#6b7db8` (4,60 / 4,83), placeholder `#8fa0d8` (7,54), pontos removidos (R18-G) |
+| G-1 | ⚠️ | Modal OP-C sem label, no fluxo, sem `aria-modal` | `label for`, `aria-labelledby`, `aria-modal`, sobreposto com véu |
+| H-1 | ⚠️ | Carteira-C fora da ordem; OP B/C com 2 de 5 estados; OP-C sem cartão Quildo | Notas explícitas; cartão Quildo acrescentado |
+| I-1 | ⚠️ | Scroll horizontal de 8 px a 375 px (tokens: 496) | Media query < 420 px + tabelas de tokens com scroll próprio + linhas de tipografia que quebram. **Medido com viewport mobile emulado de 375 px:** scrollWidth 375 nas 8 pranchas |
+| ℹ️ | ℹ️ | PT-PT no ecrã; «Dar lance» activo em EM BREVE; 3 atalhos retirados sem decisão; comentário desactualizado | Copy dos «depois» em PT-BR (os «antes» mantêm o texto real); «Abre em breve» desactivado; 7 atalhos repostos; comentário corrigido |
+
+**Erro meu durante as correcções (declarado):** a 1.ª correcção do I-1 (`width: min(375px, 100%)`) resolvia o 100% contra uma
+coluna flex que encolhe → o telefone ficava com 265 px a «375». Apanhado pela auditoria seguinte e revertido para larguras
+fixas + media query. E o script do D-1 inseriu a tabela **dentro** do vidro da edição — apanhado pela medição (tabela a 274 px)
+e reescrito à mão.
+
+**Medição final (executor, `057f5e4`):** 4 pranchas × 3 variantes × 320/375/768/1024 → toque < 48: **0** · fora de vidro: **0** ·
+overflow da tela: **0** · cortes (h1–h3, td/th, .btn): **0** · tabela = último vidro e com a mesma largura nas pranchas MLC e
+OP. «Antes»: Carteira 5/2 · Início 1/1 · MLC 5/1 · OP 4/3.
+
+**2.ª ronda** (o mesmo validador, worktree NOVO `C:/Users/Moltbot/tmp-107afront-val2/wt` @ `057f5e4`, browser num contexto
+isolado novo; 4 pranchas × 3 variantes × 320/360/375/768/1024 + viewport mobile real). **Veredicto: APROVADO · 0 bloqueantes.**
+Verbatim em `_logs/UTAC107a-front_SEG6_VALIDADOR-R2.md`. Todas as correcções da 1.ª ronda confirmadas por medição própria
+(tabela 284/324/339/590/590 nas 3 instâncias, 0 cortes; D-1 286/326/341/592/592 em MLC e OP; B-1 4,61/4,85/7,56; G-1; I-1);
+**0 regressões** em 60 combinações; o `.carrossel` corresponde ao `Dashboard.jsx:465-481`.
+
+| id | grav. | ressalva | tratamento |
+|---|---|---|---|
+| N-1 | ⚠️ | O `.slides` do MLC não seguia o MC99 (`overflow-y`, padding, gap) | **Corrigido** (commit final): `hidden`, 4 px, gap 12 → 16 px ≥ 700; medido 0/0 nas 3 variantes |
+| N-2 | ⚠️ | O rótulo do valor só existe para leitores de ecrã; «Dar lance» activo com o slide EM BREVE visível | **Para o 107b** (decisão do operador): um rótulo visível acrescenta texto ao vidro que ele aprovou (R18-H); o botão inactivo é comportamento do componente real |
+| N-3 | ⚠️ | O atalho «Converter Ficha» leva a uma Carteira sem botão de troca | **Para o 107b** (decisão do operador): retirar ou re-apontar; já anotado na prancha do Início |
+| N-4 | ℹ️ | Ícones de estado sem `role="img"`; vencedor só pelo 🏆 | **Corrigido**: `role="img"` + `aria-label="vencedor"` |
+
+*Correcções N-1/N-4 pós-veredicto da 2.ª ronda: medidas pelo executor, **não re-validadas** (sem 3.ª ronda — declarado).*
 
 ## §SEG7 — Registo e custo
 
-*(a preencher)*
+### Registo em 3 lugares (R18)
+1. `_logs/UTAC107a-front-mockups.md` (este) + `_logs/UTAC107a-front_SEG6_VALIDADOR.md` (1.ª ronda) + `_SEG6_VALIDADOR-R2.md` (2.ª).
+2. `CLAUDE.md` — bloco R14 (apêndice no EOF; bytes de controlo intactos, verificado por contagem antes/depois).
+3. `Desktop/RELATORIO-UTAC107a-front-MOCKUPS.txt`.
+
+### Commits (foreground, ficheiros individuais — nunca `git add -A`)
+`dff04c7` (mockups) → `057f5e4` (correcções da 1.ª ronda + R18-D..H) → commit de fecho (N-1/N-4 + registos).
+
+### Para o 107b (handoff)
+Lacunas: E-1 (endpoint de lances de edição Programada), E-3 (senhas on-chain invisíveis no mobile), Dashboard sem `usePontos`,
+`/mercado` fixo na R-1 (ligar o slide visível ao lance), nº real de lances no apuramento do palpite (`ler-pontos`), confirmar que
+o modal PIX mostra o e-mail antes de retirar a nota, N-2, N-3, «Trocar R$ 2 → 1 Senha» (caminho Via A). Propostas de token:
+dourado único, texto navy sobre dourado (2,03 → 9,45), `--gut-touch 48`, rótulos ≥ 12 px, vidro único sem `backdrop-filter`.
+
+### Custo
+Claude Code não tem `state.db` neste ambiente: **custo em USD não medido**. Medido: validador 1.ª ronda **217 553 tokens**
+(73 chamadas, 14,8 min); 2.ª ronda **252 906 tokens** (33 chamadas, 4,4 min) → **≈ 470 k tokens de subagente**. Os tokens da
+sessão principal não são expostos à sessão. Duração: 23:22 → ≈ 00:30.

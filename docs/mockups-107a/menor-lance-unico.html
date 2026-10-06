@@ -16,7 +16,8 @@
   .cab-mlc .sub { margin-top: 2px; }
   .cab-mlc .pilula { flex: none; }
   .edicao-unica { display: grid; gap: 12px; }
-  .slides { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; }
+  .slides { display: flex; gap: var(--gut-gap); overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; padding-bottom: 4px; } /* = Dashboard.jsx MC99 */
+  @container tela (min-width: 700px) { .slides { gap: 16px; } }
   .slide { flex: 0 0 100%; scroll-snap-align: start; display: flex; gap: 14px; align-items: center; }
   .slide .thumb { width: 72px; height: 72px; border-radius: 14px; flex: none; background: linear-gradient(135deg,#2a1d5e,#5b2b12); display: grid; place-items: center; font-size: 30px; }
   .slide .nome { font-size: 17px; color: var(--gut-text); }
@@ -90,7 +91,7 @@
             <div class="lance"><label class="sr" for="v1">Valor do lance em reais</label><input id="v1" class="campo" inputmode="decimal" placeholder="R$ 0,01"><button class="btn btn-ouro">Dar lance</button></div>
           </section>
           <section class="glass tabela-especial alvo" aria-label="Lances — Menor Lance Único">
-            <span class="marca">3</span><header><h2 class="h-sec">Lances — Edição R-1</h2><span class="estado breve" aria-label="valores ocultos">🔒</span></header>
+            <span class="marca">3</span><header><h2 class="h-sec">Lances — Edição R-1</h2><span class="estado breve" role="img" aria-label="valores ocultos">🔒</span></header>
             <table><thead><tr><th>#</th><th>Participante</th><th>Valor</th></tr></thead>
               <tbody><tr><td class="num">1</td><td>Ana P.</td><td>🔒</td></tr><tr><td class="num">2</td><td>0x71c…9a2</td><td>🔒</td></tr><tr><td class="num">3</td><td>Rui M.</td><td>🔒</td></tr></tbody></table>
           </section>
@@ -109,7 +110,7 @@
             <div class="lance"><label class="sr" for="v2">Valor do lance em reais</label><input id="v2" class="campo" inputmode="decimal" placeholder="R$ 0,01"><button class="btn btn-ouro">Dar lance</button></div>
           </section>
           <section class="glass tabela-especial" aria-label="Lances — Menor Lance Único">
-            <header><h2 class="h-sec">Lances — Edição R-1</h2><span class="estado breve" aria-label="valores ocultos">🔒</span></header>
+            <header><h2 class="h-sec">Lances — Edição R-1</h2><span class="estado breve" role="img" aria-label="valores ocultos">🔒</span></header>
             <table><thead><tr><th>#</th><th>Participante</th><th>Valor</th></tr></thead>
               <tbody><tr><td class="num">1</td><td>Ana P.</td><td>🔒</td></tr><tr><td class="num">2</td><td>0x71c…9a2</td><td>🔒</td></tr><tr><td class="num">3</td><td>Rui M.</td><td>🔒</td></tr></tbody></table>
           </section>
@@ -129,7 +130,7 @@
             </section>
           </div>
           <section class="glass tabela-especial" aria-label="Lances — Menor Lance Único">
-            <header><h2 class="h-sec">Lances — Edição R-1</h2><span class="estado breve" aria-label="valores ocultos">🔒</span></header>
+            <header><h2 class="h-sec">Lances — Edição R-1</h2><span class="estado breve" role="img" aria-label="valores ocultos">🔒</span></header>
             <table><thead><tr><th>#</th><th>Participante</th><th>Valor</th></tr></thead>
               <tbody><tr><td class="num">1</td><td>Ana P.</td><td>🔒</td></tr><tr><td class="num">2</td><td>0x71c…9a2</td><td>🔒</td></tr><tr><td class="num">3</td><td>Rui M.</td><td>🔒</td></tr></tbody></table>
           </section>
