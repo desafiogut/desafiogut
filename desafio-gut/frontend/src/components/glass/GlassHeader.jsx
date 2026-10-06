@@ -49,7 +49,7 @@ export default function GlassHeader({
         </div>
 
         {/* Secção 2 — HERO "EM BREVE" (foco) + seletor de modo */}
-        <div className={`flex flex-col items-center border-b border-white/10 ${isMobile ? 'gap-3 px-3 py-5' : 'gap-4 px-5 py-7'}`}>
+        <div className={`flex flex-col items-center border-b border-white/10 ${isMobile ? 'gap-3 px-4 py-5' : 'gap-4 px-5 py-7'}`}>
           {frase && (
             <p data-testid="frase-mlc" style={{
               margin: 0, textAlign: "center",

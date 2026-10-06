@@ -76,9 +76,6 @@ export default function TabelaLances({ lances = [], idEdicao, prazoTimestamp, en
       padding: isMobile ? "1rem" : "1.5rem",
     }}>
       <style>{`
-        @keyframes gut-blink { 0%,100% { opacity: 1 } 50% { opacity: 0.25 } }
-        .gut-vencedor { animation: gut-blink 1.1s ease-in-out infinite; }
-
         @keyframes gut-beam {
           0%   { background-position: -200% 0; }
           100% { background-position:  200% 0; }
