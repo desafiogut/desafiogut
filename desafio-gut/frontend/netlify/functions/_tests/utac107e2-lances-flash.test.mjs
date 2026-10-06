@@ -18,6 +18,7 @@ let legado;        // blob lances-relampago (só o ramo blindado/legado o lê)
 let marcador;      // estaConsolidado → objecto | null | Error
 let kpb;           // getLances → array | Error
 let leiturasKpb;   // quantas vezes o Key-Per-Bid foi lido
+let META;          // id → metadata da edição (buscarEdicao); a janela é a REAL (_lib/edicao-janela.mjs)
 
 mock.module("@netlify/blobs", {
   namedExports: { getStore: () => ({ get: async () => ({ lances: legado }) }) },
@@ -31,6 +32,10 @@ mock.module("../_lib/data-store.mjs", {
   namedExports: {
     getLances: async () => { leiturasKpb += 1; if (kpb instanceof Error) throw kpb; return kpb; },
   },
+});
+
+mock.module("../_lib/edicoes-core.mjs", {
+  namedExports: { buscarEdicao: async (id) => META[id] ?? null },
 });
 
 const { assinarUserSession, assinarLanceAuth } = await import("../_lib/jwt.mjs");
@@ -61,6 +66,8 @@ beforeEach(() => {
   marcador = null;
   kpb = [lance(A, 100, 1), lance(B, 100, 2), lance(C, 50, 3)];
   leiturasKpb = 0;
+  META = { "R-1": { id: "R-1", tipo: "relampago", status: "encerrado", termino_em: "2026-10-06T20:30:00.000Z" } };
+  mod._limparCacheRevelados();
 });
 
 // ── Frente A — revelação ────────────────────────────────────────────────────────────────────────
@@ -215,4 +222,39 @@ test("E7 — a resposta do estado não traz valores nem os lances de outros", as
   const r = await chamar("edicaoId=R-1&acao=meu-estado", TK_A);
   assert.deepEqual(Object.keys(r.body).sort(),
     ["eLiderFinal", "edicaoId", "encerrado", "estado", "foiLiderAlgumaVez", "temLance"]);
+});
+
+// ── Achado A1 do validador: «consolidado» não basta — a edição tem de estar FECHADA ─────────────
+test("A7 — consolidada mas AINDA ABERTA (status aberto, prazo futuro) ⇒ nada se revela, KPB não lido", async () => {
+  marcador = { vencedor: C };
+  META["R-1"] = { id: "R-1", tipo: "relampago", status: "aberto", termino_em: "2099-01-01T00:00:00.000Z" };
+  const r = await chamar("edicaoId=R-1");
+  assert.equal(r.body.encerrado, false);
+  for (const l of r.body.lances) assert.equal(l.valor, null);
+  const e = await chamar("edicaoId=R-1&acao=meu-estado", TK_A);
+  assert.deepEqual(e.body, { edicaoId: "R-1", encerrado: false, estado: null });
+  assert.equal(leiturasKpb, 0);
+});
+
+test("A8 — consolidada SEM metadata (R-1 sintetizado, sem janela) ⇒ nunca revela", async () => {
+  marcador = { vencedor: C };
+  META = {};
+  const r = await chamar("edicaoId=R-1");
+  assert.equal(r.body.encerrado, false);
+  assert.equal((await chamar("edicaoId=R-1&acao=meu-estado", TK_A)).body.estado, null);
+  assert.equal(leiturasKpb, 0);
+});
+
+test("A9 — aberta com prazo VENCIDO conta como fechada (o lance-relampago já recusa)", async () => {
+  marcador = { vencedor: C };
+  META["R-1"] = { id: "R-1", tipo: "relampago", status: "aberto", termino_em: "2020-01-01T00:00:00.000Z" };
+  assert.equal((await chamar("edicaoId=R-1")).body.encerrado, true);
+});
+
+test("A10 — a lista revelada é imutável: o 2.º pedido não volta a ler o Key-Per-Bid (achado A2)", async () => {
+  marcador = { vencedor: C };
+  await chamar("edicaoId=R-1");
+  const r = await chamar("edicaoId=R-1");
+  assert.equal(r.body.lances.length, 3);
+  assert.equal(leiturasKpb, 1);
 });

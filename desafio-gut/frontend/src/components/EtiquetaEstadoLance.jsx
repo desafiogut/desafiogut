@@ -50,7 +50,7 @@ export default function EtiquetaEstadoLance({ estado }) {
  * Etiqueta do lance do titular numa edição — pergunta ao servidor e só desenha depois do fecho.
  * Sem `encerrado`, sem `authToken` ou sem lance do titular ⇒ não desenha nada.
  */
-export function EtiquetaMeuLance({ edicaoId, encerrado, authToken, buscar = apiGet }) {
+export function EtiquetaMeuLance({ edicaoId, encerrado, authToken, buscar = apiGet, intervaloMs = 60_000 }) {
   const [estado, setEstado] = useState(null);
 
   useEffect(() => {
@@ -69,11 +69,11 @@ export function EtiquetaMeuLance({ edicaoId, encerrado, authToken, buscar = apiG
         }
       } catch { /* fail-soft: sem etiqueta */ }
       // Encerrada no ecrã mas ainda por consolidar no servidor ⇒ volta a perguntar daqui a 60 s.
-      if (!cancelado) id = setTimeout(ler, 60_000);
+      if (!cancelado) id = setTimeout(ler, intervaloMs);
     };
     ler();
     return () => { cancelado = true; if (id) clearTimeout(id); };
-  }, [edicaoId, encerrado, authToken, buscar]);
+  }, [edicaoId, encerrado, authToken, buscar, intervaloMs]);
 
   return <EtiquetaEstadoLance estado={estado} />;
 }

@@ -15,6 +15,7 @@ const B = "0xbbb0000000000000000000000000000000000002";
 let PALPITES;   // linhas de public.palpites
 let EDICOES;    // id → edição
 let falharDb;
+let pausado = false;
 
 const casa = (filtros) => (l) => filtros.every(([c, v]) => l[c] === v);
 mock.module("../_lib/supabase-client.mjs", {
@@ -52,7 +53,7 @@ mock.module("../_lib/supabase-client.mjs", {
 });
 mock.module("../_lib/system-state.mjs", {
   namedExports: {
-    sistemaPausado: () => false, lerEstadoSistema: async () => ({ status: "ativo" }),
+    sistemaPausado: () => pausado, lerEstadoSistema: async () => ({ status: "ativo" }),
     STORE_SYSTEM_STATE: "system-state", KEY_SYSTEM_STATE: "state", escreverEstadoSistema: async () => {},
   },
 });
@@ -79,6 +80,7 @@ async function chamar(query, token = TK) {
 
 beforeEach(() => {
   falharDb = false;
+  pausado = false;
   EDICOES = { "PROG-1": { id: "PROG-1", tipo: "programado", status: "aberto" } };
   PALPITES = [
     palpite(B, "PROG-1", 40, "2026-10-06T10:00:02.000Z"),
@@ -162,4 +164,12 @@ test("C10 — método diferente de GET ⇒ 405", async () => {
     method: "POST", headers: { authorization: `Bearer ${TK}` },
   }));
   assert.equal(res.status, 405);
+});
+
+test("C11 — sistema pausado ⇒ 503 sistema_pausado, sem ler palpites (achado A4)", async () => {
+  pausado = true;
+  falharDb = true; // se lesse, daria store_indisponivel
+  const r = await chamar("edicaoId=PROG-1");
+  assert.equal(r.status, 503);
+  assert.equal(r.body.error.code, "sistema_pausado");
 });

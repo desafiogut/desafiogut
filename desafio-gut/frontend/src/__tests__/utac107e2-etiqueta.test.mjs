@@ -137,6 +137,26 @@ test("B8 — encerrada no ecrã mas POR CONSOLIDAR no servidor ⇒ nada (e volta
   try { assert.equal(c.h(), ""); } finally { c.ctrl.desmontar(); c.dup.restaurar(); }
 });
 
+test("B8b — por consolidar ⇒ VOLTA A PERGUNTAR e desenha quando o servidor consolida (achado A3)", async () => {
+  let n = 0;
+  const c = await montarMeuLance({ edicaoId: "R-1", encerrado: true, authToken: "TK", intervaloMs: 15 }, () => {
+    n += 1;
+    return n === 1
+      ? { status: 200, json: { encerrado: false, estado: null } }
+      : { status: 200, json: { encerrado: true, temLance: true, eLiderFinal: true, foiLiderAlgumaVez: true } };
+  });
+  try {
+    // (o `assentar` já dá tempo à 2.ª pergunta; a 1.ª resposta foi «por consolidar»)
+    await new Promise((r) => setTimeout(r, 80));
+    await c.ctrl.assentar();
+    assert.ok(c.dup.chamadas.length >= 2, "tem de voltar a perguntar depois do «por consolidar»");
+    assert.match(c.h(), /data-etiqueta-lance="menor"/);
+    const feitas = c.dup.chamadas.length;
+    await new Promise((r) => setTimeout(r, 60));
+    assert.equal(c.dup.chamadas.length, feitas, "consolidado ⇒ pára de perguntar");
+  } finally { c.ctrl.desmontar(); c.dup.restaurar(); }
+});
+
 test("B9 — titular sem lance nessa edição, ou erro do servidor ⇒ nada", async () => {
   for (const r of [{ status: 200, json: { encerrado: true, temLance: false } }, { status: 503, json: {} }]) {
     const c = await montarMeuLance({ edicaoId: "R-1", encerrado: true, authToken: "TK" }, () => r);

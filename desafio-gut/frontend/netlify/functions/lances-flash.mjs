@@ -17,6 +17,8 @@ import { respostaPreflight } from "./_lib/cors.mjs";
 import { estaConsolidado } from "./_lib/bids-store.mjs";
 import { getLances } from "./_lib/data-store.mjs";
 import { verificarUserSession } from "./_lib/jwt.mjs";
+import { buscarEdicao } from "./_lib/edicoes-core.mjs";
+import { verificarJanelaLance } from "./_lib/edicao-janela.mjs";
 
 const BLOB_LANCES   = "lances-relampago";
 const EDICAO_PADRAO = "R-1";
@@ -30,6 +32,23 @@ function abrirStore(name) {
 }
 
 const minusculas = (e) => String(e ?? "").toLowerCase();
+
+/**
+ * UTAC107e.2 (achado A1 do validador) — «consolidado» NÃO garante «encerrado»: nada impede consolidar
+ * uma edição que ainda aceita lances, e o R-1 sintetizado não tem janela. Por isso só se revela com o
+ * marcador E com a edição FECHADA pelo MESMO critério que faz o `lance-relampago` recusar lances
+ * (`verificarJanelaLance` → `edicao_encerrada`). Sem metadata (ex.: R-1 sintetizado) ⇒ nunca revela.
+ */
+async function edicaoFechada(edicaoId) {
+  let meta = null;
+  try { meta = await buscarEdicao(edicaoId); } catch { meta = null; }
+  return Boolean(meta) && verificarJanelaLance(meta)?.code === "edicao_encerrada";
+}
+
+// UTAC107e.2 (achado A2) — a lista revelada é imutável (marcador + edição fechada ⇒ já não entram
+// lances): guarda-se por instância para não reler o Key-Per-Bid inteiro a cada poll anónimo.
+const REVELADOS = new Map();
+export function _limparCacheRevelados() { REVELADOS.clear(); }
 const valorValido = (v) => Number.isSafeInteger(v) && v >= 1;
 
 /**
@@ -147,8 +166,10 @@ export default async (req) => {
     let marcador;
     try { marcador = await estaConsolidado(edicaoId); }
     catch { return jsonError(503, "store_indisponivel", "não foi possível ler o estado da edição"); }
-    // Por consolidar ⇒ nada se calcula nem se revela (anti-bot MC28.1 intacto).
-    if (!marcador) return jsonResponse({ edicaoId, encerrado: false, estado: null });
+    // Por consolidar, ou consolidada mas ainda aberta ⇒ nada se calcula nem se revela (anti-bot MC28.1).
+    if (!marcador || !(await edicaoFechada(edicaoId))) {
+      return jsonResponse({ edicaoId, encerrado: false, estado: null });
+    }
 
     let lances;
     try { lances = await getLances(edicaoId); }
@@ -168,7 +189,10 @@ export default async (req) => {
     let marcador = null;
     try { marcador = await estaConsolidado(edicaoId); }
     catch (err) { console.warn("[lances-flash] marcador de consolidação ilegível:", err?.message); }
-    if (marcador) {
+    if (REVELADOS.has(edicaoId)) {
+      return jsonResponse({ edicaoId, encerrado: true, ocultoAteConsolidar: false, lances: REVELADOS.get(edicaoId) });
+    }
+    if (marcador && await edicaoFechada(edicaoId)) {
       let reais;
       try { reais = await getLances(edicaoId); }
       catch { return jsonError(503, "store_indisponivel", "não foi possível ler os lances"); }
@@ -182,6 +206,7 @@ export default async (req) => {
         txHash:       l.lanceId,
         repetido:     (contagem[l.valorCentavos] || 0) > 1,
       }));
+      REVELADOS.set(edicaoId, lances);
       return jsonResponse({ edicaoId, encerrado: true, ocultoAteConsolidar: false, lances });
     }
   }
