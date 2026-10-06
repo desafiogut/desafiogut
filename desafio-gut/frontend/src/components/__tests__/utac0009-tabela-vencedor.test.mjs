@@ -67,23 +67,23 @@ function renderizar({ lances, resultadoOficial = null, idEdicao = "R-1" }) {
   );
 }
 
-/** Quantos 🏆 a tabela desenha (o da posição/avatar e o do selo da linha vencedora). */
+/** Quantos 🏆 a tabela desenha. UTAC107d: só o da coluna «#» (o selo da coluna Estado saiu). */
 const trofeus = (html) => html.split("🏆").length - 1;
 
 /**
- * Endereços (abreviados) das linhas que levam o selo «🏆 Menor e Único» — diz A QUEM foi dado o
- * 🏆, não só quantos. (Achado do validador no UTAC000.8: contar 🏆 sem verificar a linha deixa
- * passar testes vácuos.)
+ * Endereços (abreviados) das LINHAS que levam o 🏆 — diz A QUEM foi dado, não só quantos.
+ * (Achado do validador no UTAC000.8: contar 🏆 sem verificar a linha deixa passar testes vácuos.)
+ * ⚠️ UTAC107d — a coluna «Status (Art. 24)» e o seu selo «🏆 Menor e Único» SAÍRAM (mockup, R18-D):
+ * a tabela tem 3 colunas e o 🏆 vive na coluna «#». O instrumento lê agora a LINHA (`<tr>…</tr>`)
+ * que contém o 🏆 e tira dela o endereço — mais estrito que a janela de 900 chars de antes.
  */
 function enderecosVencedores(html) {
   const out = [];
-  const alvo = "Menor e Único";
-  for (let i = html.indexOf(alvo); i >= 0; i = html.indexOf(alvo, i + 1)) {
-    const janela = html.slice(Math.max(0, i - 900), i);
-    // ⚠️ `A-F` incluídos: a lista pode trazer a caixa EIP-55 (checksum) e um regex só de
-    // minúsculas devolvia `null` — bug do INSTRUMENTO que fez o teste do EIP-55 falhar primeiro
-    // (o código de produção estava certo). Medido e corrigido.
-    const m = [...janela.matchAll(/0x[0-9a-fA-F]{4,8}\.\.\./g)].pop();
+  for (const linha of html.match(/<tr[\s\S]*?<\/tr>/g) || []) {
+    if (!linha.includes("🏆")) continue;
+    // ⚠️ `A-F` incluídos: a lista pode trazer a caixa EIP-55 (checksum) — bug do INSTRUMENTO
+    // medido no UTAC000.9 (um regex só de minúsculas devolvia `null`).
+    const m = linha.match(/0x[0-9a-fA-F]{4,8}\.\.\./);
     out.push(m ? m[0] : null);
   }
   return out;
@@ -101,7 +101,7 @@ describe("UTAC000.9 · TabelaLances — o 🏆 é o vencedor OFICIAL quando exis
   test("com resultado oficial: o 🏆 vai para a linha do VENCEDOR OFICIAL (não para o menor local)", () => {
     const html = renderizar({ lances, resultadoOficial: OFICIAL_EU_300 });
     const venc = enderecosVencedores(html);
-    assert.ok(venc.length >= 1, "não há selo «Menor e Único» nenhum na tabela");
+    assert.ok(venc.length >= 1, "não há 🏆 nenhum na tabela");
     assert.ok(venc.every((e) => e && e.startsWith(EU.slice(0, 6))),
       `o 🏆 foi para OUTRA pessoa: ${JSON.stringify(venc)} (esperado ${EU.slice(0, 6)}...)`);
   });
@@ -121,7 +121,7 @@ describe("UTAC000.9 · TabelaLances — o 🏆 é o vencedor OFICIAL quando exis
     const html = renderizar({ lances: lancesSimples });
     const venc = enderecosVencedores(html);
     assert.ok(venc.every((e) => e && e.startsWith(OUTRO.slice(0, 6))), "o menor local deixou de vencer");
-    assert.equal(trofeus(html), 2, "a linha vencedora tem o 🏆 do avatar e o do selo — e mais nenhuma");
+    assert.equal(trofeus(html), 1, "a linha vencedora tem UM 🏆 (coluna «#») — e mais nenhuma (UTAC107d: o selo saiu)");
   });
 
   test("o vencedor oficial AUSENTE da lista → nenhum 🏆 (não se assinala por aproximação)", () => {
@@ -136,7 +136,10 @@ describe("UTAC000.9 · TabelaLances — o 🏆 é o vencedor OFICIAL quando exis
     ];
     const html = renderizar({ lances: blindados, resultadoOficial: OFICIAL_EU_300 });
     assert.equal(enderecosVencedores(html).length, 0, "deu 🏆 a uma linha blindada");
-    assert.ok(html.includes("🔒 Blindado"), "controlo: as linhas deviam estar marcadas como blindadas");
+    // UTAC107d — o selo «🔒 Blindado» saiu com a coluna Estado; o controlo passa a ser que as DUAS
+    // linhas foram desenhadas (com o valor 🔒), para que «0 vencedores» não venha de 0 linhas.
+    assert.equal((html.match(/<tr[\s\S]*?<\/tr>/g) || []).filter((l) => l.includes("0x")).length, 2,
+      "controlo: as duas linhas blindadas deviam ter sido desenhadas");
   });
 
   test("cablagem: a tabela pede o resultado da EDIÇÃO recebida por prop", () => {
@@ -160,8 +163,7 @@ describe("UTAC000.9 · TabelaLances — o 🏆 é o vencedor OFICIAL quando exis
       resultadoOficial: { consolidado: true, vencedor: EU, menorUnicoCentavos: 300 },
     });
     const venc = enderecosVencedores(html);
-    // 1, não 2: este auxiliar conta o SELO «Menor e Único» (um por linha vencedora); o 🏆 da
-    // célula de posição é contado por `trofeus()`. (Expectativa minha errada na 1.ª versão.)
+    // 1: este auxiliar conta LINHAS com 🏆 (uma por linha vencedora).
     assert.equal(venc.length, 1, "o 🏆 desapareceu com a caixa EIP-55 na lista");
     assert.ok(venc.every((e) => e && e.toLowerCase().startsWith(EU_EIP55.slice(0, 6).toLowerCase())),
       `o 🏆 foi para OUTRA pessoa: ${JSON.stringify(venc)}`);

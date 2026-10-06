@@ -9,16 +9,20 @@ import ComingSoonHero from "./ComingSoonHero.jsx";
 import ModeSelector from "./ModeSelector.jsx";
 import AuctionStatusBar from "./AuctionStatusBar.jsx";
 
+// UTAC107d — envelope alinhado com a Carteira (R18-B): lado `1rem`/`2rem` e TOPO `1rem`/`2rem`
+// (era `1.5rem` no desktop), padding interno das secções 20 px no desktop (era `px-8` = 32 px).
+// `frase` (opcional): a frase da modalidade passa a viver DENTRO deste vidro (Regra 1) — antes
+// flutuava solta por cima dele, em `MercadoLances.jsx`.
 export default function GlassHeader({
   isMobile, isConnected, ready, address, userLabel, onLogin,
-  modalidade, setModalidade, encerrado, edicao,
+  modalidade, setModalidade, encerrado, edicao, frase,
 }) {
   return (
-    <div style={{ padding: isMobile ? "1rem 1rem 0" : "1.5rem 2rem 0" }}>
+    <div style={{ padding: isMobile ? "1rem 1rem 0" : "2rem 2rem 0" }}>
       <GlassCard as="header" className="overflow-hidden">
 
         {/* Secção 1 — identidade + auth */}
-        <div className={`flex flex-row justify-between items-center border-b border-white/10 ${isMobile ? 'gap-3 p-4' : 'gap-4 px-8 py-5'}`}>
+        <div className={`flex flex-row justify-between items-center border-b border-white/10 ${isMobile ? 'gap-3 p-4' : 'gap-4 px-5 py-5'}`}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", minWidth: 0 }}>
             <span style={{ fontSize: isMobile ? "1.4rem" : "1.8rem" }}>🏆</span>
             <div style={{ minWidth: 0 }}>
@@ -45,7 +49,15 @@ export default function GlassHeader({
         </div>
 
         {/* Secção 2 — HERO "EM BREVE" (foco) + seletor de modo */}
-        <div className={`flex flex-col items-center border-b border-white/10 ${isMobile ? 'gap-3 px-3 py-5' : 'gap-4 px-8 py-7'}`}>
+        <div className={`flex flex-col items-center border-b border-white/10 ${isMobile ? 'gap-3 px-3 py-5' : 'gap-4 px-5 py-7'}`}>
+          {frase && (
+            <p data-testid="frase-mlc" style={{
+              margin: 0, textAlign: "center",
+              fontSize: isMobile ? "0.9rem" : "1.05rem",
+              // `COR.gold` (glassTokens) = a MESMA cor que a frase tinha em `MercadoLances.jsx`.
+              fontWeight: 800, color: COR.gold, letterSpacing: "0.01em",
+            }}>{frase}</p>
+          )}
           <ComingSoonHero isMobile={isMobile} edicao={edicao} />
           <ModeSelector modalidade={modalidade} setModalidade={setModalidade} />
         </div>

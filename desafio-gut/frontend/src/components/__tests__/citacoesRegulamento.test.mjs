@@ -128,7 +128,10 @@ test("os outros ficheiros que citam o Regulamento continuam alinhados, ocorrênc
   const casos = [
     ["src/components/CardLance.jsx",
       [/Art\. 26: mín R\$ 0,01/, /\(Art\. 26\)/, /Art\. 26: Mín R\$ 0,01/], /Art\. 27/],
-    ["src/components/TabelaLances.jsx", [/Art\. 25: apuração automática/], /Art\. 26: apuração/],
+    // UTAC107d (R18-D, mockup completo) — o rodapé «🔒 Dados sanitizados · Art. 25: apuração
+    // automática» saiu da tabela. A citação continua nos outros ficheiros desta lista
+    // (Configurações, Meus Ativos); aqui fica só a guarda contra o artigo ERRADO.
+    ["src/components/TabelaLances.jsx", [], /Art\. 26: apuração/],
     ["src/pages/Configuracoes.jsx",
       [/\["Art\. 26",\s+"Lance mínimo/, /\["Art\. 25",\s+"Apuração automática/], /\["Art\. 27"/],
     ["src/pages/MeusAtivos.jsx",

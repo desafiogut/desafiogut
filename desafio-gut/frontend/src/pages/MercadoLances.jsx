@@ -231,7 +231,13 @@ function OverlayVencedor({
 // Razão: alinhamento com o Art. 7 do Regulamento («QUANTO VOCÊ OFERTA POR...»), que era a
 // divergência apontada pelo validador do 106b (achado ℹN2). A 2.ª metade não muda:
 // «O menor lance único leva!».
-const FRASE_MENOR_LANCE_UNICO = "Quanto você oferta por esse item? O menor lance único leva!";
+//
+// UTAC107d — a frase do 106b/106c SAIU (decisão do operador) e entra a do mockup aprovado
+// (`docs/mockups-107a/menor-lance-unico.html`, variante A, R18-H do 107a-front; R18-A do 107d).
+// Mantém as regras acima: descreve a regra INTEIRA (menor E único), verbo «ganha» (o do
+// Regulamento, Art. 7), zero vocabulário de álea. Passa a viver DENTRO do vidro do cabeçalho
+// (Regra 1) — antes flutuava solta por cima dele.
+const FRASE_MENOR_LANCE_UNICO = "Ganha o menor lance que ninguém repetir.";
 
 export default function MercadoLances() {
   const isMobile = useIsMobile();
@@ -295,23 +301,9 @@ export default function MercadoLances() {
 
       <div style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
 
-        {/* UTAC106b — frase de efeito da modalidade, no TOPO da página (acima do cabeçalho).
-            Escolha e justificação na constante FRASE_MENOR_LANCE_UNICO (topo do ficheiro).
-            ⚠️ LIMITE DECLARADO (achado ℹN3 do validador do UTAC106b): este bloco vive no
-            return PRINCIPAL, DEPOIS dos early-returns de `recursosCarregando`/`!isLeilaoAtivo`
-            — logo na build das LOJAS (APK, onde o leilão não está activo) a aba abre na vista
-            de conformidade e a frase NÃO aparece. É intencional: não há copy de lances num
-            ecrã que declara que as edições acontecem na versão Web. */}
-        <p style={{
-          margin: 0,
-          padding: isMobile ? "0.85rem 1rem 0" : "1rem 2rem 0",
-          textAlign: "center",
-          fontSize: isMobile ? "0.9rem" : "1.05rem",
-          fontWeight: 800, color: COR.gold, letterSpacing: "0.01em",
-        }}>
-          {FRASE_MENOR_LANCE_UNICO}
-        </p>
-
+        {/* UTAC107d — a frase da modalidade deixou de ser um <p> solto por cima do vidro: vai
+            DENTRO do GlassHeader (prop `frase`, Regra 1). ⚠️ Mantém-se o limite do UTAC106b
+            (ℹN3): na build das LOJAS a aba abre na vista de conformidade e a frase não aparece. */}
         {/* ── Cabeçalho (MC66 Direção C): GlassHeader compõe identidade+auth,
              HERO "EM BREVE" (foco) + seletor de modo, e o rodapé legal fino.
              Subcomponentes isolados em components/glass/. O cronômetro vivo foi
@@ -327,6 +319,7 @@ export default function MercadoLances() {
           setModalidade={setModalidade}
           encerrado={encerrado}
           edicao={EDICAO_ATIVA}
+          frase={FRASE_MENOR_LANCE_UNICO}
         />
 
         {/* MC99 — o banner do cliente (REQ-01) foi REMOVIDO desta tela: era um
@@ -336,10 +329,12 @@ export default function MercadoLances() {
             existir para o lojista em `/corporativo` (BannerUpload), que é quem o gere;
             aqui sai a superfície, não a funcionalidade. */}
 
-        {/* ── Grid principal ── */}
+        {/* ── Coluna única (UTAC107d — R18-D): lance primeiro, TABELA NO FIM, a largura total,
+             como último vidro antes do rodapé (Regra 2 do mockup). Era «1fr 1.6fr» no desktop,
+             com a tabela à direita. Lado `1rem`/`2rem` = Carteira (R18-B). ── */}
         <main style={{
           display: "grid",
-          gridTemplateColumns: isMobile ? "1fr" : "1fr 1.6fr",
+          gridTemplateColumns: "1fr",
           gap: isMobile ? "1rem" : "1.5rem",
           padding: isMobile ? "1rem" : "1.5rem 2rem",
           flex: 1,
@@ -364,7 +359,7 @@ export default function MercadoLances() {
             />
             {/* MC67 (item 8) — card "Segurança e Transparência" movido para Configurações. */}
           </section>
-          <section>
+          <section data-testid="tabela-fim">
             <TabelaLances lances={lances} idEdicao={EDICAO_ATIVA} prazoTimestamp={prazoTimestamp} encerrado={encerrado} />
           </section>
         </main>

@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { sanitizeAddress, sanitizeString, sanitizeLance } from "../utils/sanitize.js";
-import { Badge } from "@/components/ui/badge";
 import { THead, TH, TD } from "@/components/ui";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 // UTAC000.9 (DEBT-008) — resultado OFICIAL da edição (UTAC000.8): o 🏆 da tabela passa a ser o
@@ -20,11 +19,9 @@ function ordenarLances(lances) {
   return [...unicos, ...repetidos];
 }
 
-function statusFor(repetido, isVencedor) {
-  if (repetido)   return { label: "❌ Repetido",      variant: "warning" };
-  if (isVencedor) return { label: "🏆 Menor e Único", variant: "success" };
-  return                  { label: "✅ Único",         variant: "success" };
-}
+// UTAC107d (R18-D, mockup completo) — a coluna «Status (Art. 24)» / selo por linha SAIU, tal como
+// «ID do Lance» e o texto de rodapé: a tabela fica com 3 colunas (#, Participante, Valor). O 🏆
+// do vencedor continua na coluna «#» (desktop) e no círculo da posição (mobile).
 
 function nomeOuEndereco(lance, enderecoAbrev) {
   return lance.nomeExibicao || enderecoAbrev;
@@ -74,7 +71,7 @@ export default function TabelaLances({ lances = [], idEdicao, prazoTimestamp, en
   }, [lancesOrdenados, resultadoOficial]);
 
   return (
-    <div style={{
+    <div className="gut-glass-standard" style={{
       ...estilos.container,
       padding: isMobile ? "1rem" : "1.5rem",
     }}>
@@ -157,13 +154,6 @@ export default function TabelaLances({ lances = [], idEdicao, prazoTimestamp, en
         <DesktopTable lancesOrdenados={lancesOrdenados} idxVencedor={idxVencedor} encerrado={encerrado} />
       )}
 
-      <p style={{
-        marginTop: "1rem", fontSize: isMobile ? "0.68rem" : "0.72rem", color: "#6b7db8",
-        borderTop: "1px solid rgba(245,166,35,0.12)", paddingTop: "0.75rem",
-        textAlign: isMobile ? "center" : "left",
-      }}>
-        🔒 Dados sanitizados · Art. 25: apuração automática
-      </p>
     </div>
   );
 }
@@ -177,13 +167,10 @@ function MobileList({ lancesOrdenados, idxVencedor, encerrado }) {
           const oculto = lance.oculto === true;
           const enderecoSanitizado = sanitizeAddress(lance.endereco ?? "");
           const valorSanitizado = oculto ? null : sanitizeLance(lance.valor);
-          const txHash = sanitizeString(lance.txHash ?? "");
           if (!enderecoSanitizado || (!oculto && valorSanitizado === null)) return null;
 
-          const repetido   = !oculto && lance.repetido === true;
           const isVencedor = !oculto && i === idxVencedor;
           const itemKey    = oculto ? `${enderecoSanitizado}-${i}` : `${enderecoSanitizado}-${valorSanitizado}`;
-          const status     = oculto ? { label: "🔒 Blindado", variant: "success" } : statusFor(repetido, isVencedor);
           const enderecoAbrev = `${enderecoSanitizado.slice(0, 6)}...${enderecoSanitizado.slice(-4)}`;
           const nome       = nomeOuEndereco(lance, enderecoAbrev);
           const valorFormatado = oculto ? "🔒" : `R$ ${(valorSanitizado / 100).toFixed(2)}`;
@@ -211,7 +198,6 @@ function MobileList({ lancesOrdenados, idxVencedor, encerrado }) {
               }}
             >
               <div style={{
-                gridRow: "1 / span 2",
                 width: "32px", height: "32px", borderRadius: "50%",
                 background: isVencedor ? "rgba(245,166,35,0.18)" : "rgba(245,166,35,0.12)",
                 border: `1px solid ${isVencedor ? "rgba(245,166,35,0.4)" : "rgba(245,166,35,0.25)"}`,
@@ -227,13 +213,6 @@ function MobileList({ lancesOrdenados, idxVencedor, encerrado }) {
                   fontSize: "0.82rem", color: "#e8f0fe",
                   overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                 }}>{nome}</div>
-                {txHash && (
-                  <div style={{
-                    fontFamily: "monospace", fontSize: "0.66rem", color: "#6b7db8",
-                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                    marginTop: "1px",
-                  }}>{txHash.slice(0, 14)}...</div>
-                )}
               </div>
 
               <div className={encerrado ? "gut-valor-reveal" : undefined} style={{
@@ -248,13 +227,6 @@ function MobileList({ lancesOrdenados, idxVencedor, encerrado }) {
                 letterSpacing: encerrado ? "0.02em" : "0.05em",
               }}>
                 {encerrado ? valorFormatado : "🔒"}
-              </div>
-
-              <div style={{ gridColumn: "2 / span 2", display: "flex", justifyContent: "flex-end" }}>
-                <Badge
-                  variant={status.variant}
-                  className={isVencedor ? "gut-vencedor" : undefined}
-                >{status.label}</Badge>
               </div>
             </motion.div>
           );
@@ -273,8 +245,6 @@ function DesktopTable({ lancesOrdenados, idxVencedor, encerrado }) {
             <TH>#</TH>
             <TH>Participante</TH>
             <TH>{encerrado ? "Valor (R$)" : "Valor 🔒"}</TH>
-            <TH>Status (Art. 24)</TH>
-            <TH>ID do Lance</TH>
           </tr>
         </THead>
         <AnimatePresence initial={false}>
@@ -284,13 +254,10 @@ function DesktopTable({ lancesOrdenados, idxVencedor, encerrado }) {
               const oculto = lance.oculto === true;
               const enderecoSanitizado = sanitizeAddress(lance.endereco ?? "");
               const valorSanitizado = oculto ? null : sanitizeLance(lance.valor);
-              const txHash = sanitizeString(lance.txHash ?? "");
               if (!enderecoSanitizado || (!oculto && valorSanitizado === null)) return null;
 
-              const repetido   = !oculto && lance.repetido === true;
               const isVencedor = !oculto && i === idxVencedor;
               const itemKey    = oculto ? `${enderecoSanitizado}-${i}` : `${enderecoSanitizado}-${valorSanitizado}`;
-              const status     = oculto ? { label: "🔒 Blindado", variant: "success" } : statusFor(repetido, isVencedor);
               const enderecoAbrev = `${enderecoSanitizado.slice(0, 6)}...${enderecoSanitizado.slice(-4)}`;
               const nome       = nomeOuEndereco(lance, enderecoAbrev);
               const valorFormatado = oculto ? "🔒" : `R$ ${(valorSanitizado / 100).toFixed(2)}`;
@@ -325,14 +292,6 @@ function DesktopTable({ lancesOrdenados, idxVencedor, encerrado }) {
                   >
                     {encerrado ? valorFormatado : "🔒"}
                   </TD>
-                  <TD>
-                    <Badge variant={status.variant} className={isVencedor ? "gut-vencedor" : undefined}>
-                      {status.label}
-                    </Badge>
-                  </TD>
-                  <TD className="!font-mono !text-xs !text-[#6b7db8]">
-                    {txHash ? `${txHash.slice(0, 10)}...` : "—"}
-                  </TD>
                 </motion.tr>
               );
             })}
@@ -344,13 +303,10 @@ function DesktopTable({ lancesOrdenados, idxVencedor, encerrado }) {
 }
 
 const estilos = {
-  container: {
-    background: "rgba(10,16,42,0.6)",
-    backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
-    borderRadius: "12px", color: "#e8f0fe",
-    border: "1px solid rgba(245,166,35,0.22)",
-    boxShadow: "0 8px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(245,166,35,0.08)",
-  },
+  // UTAC107d (Regra 2) — o vidro passa a ser a classe `.gut-glass-standard` (fonte única: 0,88 · r14 ·
+  // sem blur). Era `rgba(10,16,42,.6)` + `backdrop-filter: blur(20px)` + r12 — o único blur do app
+  // (contra o MC82.1). Aqui fica só o que a classe não define.
+  container: { color: "#e8f0fe" },
   header: {
     display: "flex", justifyContent: "space-between",
     flexWrap: "wrap",

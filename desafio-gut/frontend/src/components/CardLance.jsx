@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useId } from "react";
 import { useWallets } from "@privy-io/react-auth";
 import { keccak256, toUtf8Bytes } from "ethers";
 import { motion, useReducedMotion } from "framer-motion";
@@ -73,6 +73,7 @@ export default function CardLance({
   const { trocarPorSenhas } = useTrocarPorSenhas();
 
   const [valor,             setValor]             = useState("");
+  const idCampoLance = useId(); // UTAC107d — liga o <label> ao <input>
   const [fase,              setFase]              = useState(FASES.IDLE);
   const [erro,              setErro]              = useState("");
   const [ultimoHash,        setUltimoHash]        = useState(null);
@@ -419,9 +420,15 @@ export default function CardLance({
       </div>
 
       <div style={estilos.inputGroup}>
-        <label style={estilos.labelInput}>Valor do lance (em centavos)</label>
+        {/* UTAC107d (R18-C) — rótulo visível LIGADO ao campo (`htmlFor`; antes era um <label>
+            solto, sem associação para leitores de ecrã). O valor CONTINUA em CENTAVOS: um
+            rótulo «(R$)» faria quem digita «1» licitar R$ 0,01 a pensar em R$ 1,00. `inputMode`
+            numérico: centavos são inteiros (o teclado decimal deixaria escrever vírgula). */}
+        <label htmlFor={idCampoLance} style={estilos.labelInput}>Seu lance (em centavos)</label>
         <div style={estilos.inputWrapper}>
           <input
+            id={idCampoLance}
+            inputMode="numeric"
             type="number"
             min="1"
             max="999999"

@@ -64,12 +64,20 @@ test("UTAC106b · EM_BREVE_MODE continua LIGADO (nada foi desligado por engano)"
 });
 
 // ── 2) Frase de efeito ─────────────────────────────────────────────────────────────
+// UTAC107d (R18-A) — a frase passou a «Ganha o menor lance que ninguém repetir.» (mockup aprovado).
+// A invariante mantém-se, dita por extenso: tem de nomear o MENOR lance e a UNICIDADE («único» ou
+// «ninguém repetir») — um lance único mas não menor não ganha (razão do descarte da opção C).
+const regraInteira = (f) => /menor lance/i.test(f) && /(único|ninguém repetir)/i.test(f);
 test("UTAC106b · a frase de efeito existe e é renderizada no topo de MercadoLances", () => {
   const frase = fraseEfeito();
   assert.ok(frase, "a constante FRASE_MENOR_LANCE_UNICO desapareceu de MercadoLances.jsx");
-  assert.match(frase, /menor lance único/i, `a frase perdeu o invariante da modalidade: «${frase}»`);
-  assert.ok(ler("pages/MercadoLances.jsx").includes("{FRASE_MENOR_LANCE_UNICO}"),
-    "a frase não chega ao ecrã (não é renderizada)");
+  assert.ok(regraInteira(frase), `a frase perdeu o invariante da modalidade: «${frase}»`);
+  // UTAC107d — renderizada DENTRO do vidro do cabeçalho: a página passa-a ao GlassHeader
+  // (`frase={FRASE_MENOR_LANCE_UNICO}`) e ele desenha-a (`{frase}`).
+  assert.ok(ler("pages/MercadoLances.jsx").includes("frase={FRASE_MENOR_LANCE_UNICO}"),
+    "a frase não chega ao ecrã (não é passada ao cabeçalho)");
+  assert.ok(ler("components/glass/GlassHeader.jsx").includes("{frase}"),
+    "o cabeçalho não desenha a frase");
 });
 
 test("UTAC106b · a frase NÃO sugere álea nem aposta (glossário oficial)", () => {
@@ -90,7 +98,9 @@ test("UTAC106b · a frase aplicada é LITERALMENTE uma das 3 opções autorizada
   // «paga» → «oferta», alinhada com o Art. 7 do Regulamento). A lista passa de 3 para 4 opções.
   // As 3 originais ficam (é o registo do enunciado do 106b, GATE 15); a copy CORRENTE é fixada
   // por um teste dedicado em `src/__tests__/utac106c-carteira.test.mjs`.
+  // UTAC107d — + a frase do mockup aprovado (`menor-lance-unico.html`), decidida pelo operador (R18-A).
   const AUTORIZADAS = [
+    "Ganha o menor lance que ninguém repetir.",
     "Quanto você oferta por esse item? O menor lance único leva!",
     "Quanto você paga por esse item? O menor lance único leva!",
     "Quanto você paga por esse item? O menor lance único compra!",
@@ -118,8 +128,8 @@ test("UTAC106b · a frase é consistente com o gate legal (Regulamento Art. 7)",
   assert.match(termos, /O MENOR LANCE ÚNICO GANHA/i,
     "o gate legal deixou de fixar «O MENOR LANCE ÚNICO GANHA» — a frase ficaria sem âncora");
   const frase = fraseEfeito() ?? "";
-  assert.match(frase, /menor lance único/i,
-    "a frase não partilha o invariante («menor lance único») com o Regulamento aceite");
+  assert.ok(regraInteira(frase),
+    "a frase não partilha o invariante (menor + único) com o Regulamento aceite");
 });
 
 // ── 3) Ícone novo ──────────────────────────────────────────────────────────────────

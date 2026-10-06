@@ -196,11 +196,14 @@ test("UTAC106c/SEG3 · a frase de efeito diz «oferta» (fecha a divergência co
   const m = ler("pages/MercadoLances.jsx").match(/const FRASE_MENOR_LANCE_UNICO = "([^"]+)";/);
   assert.ok(m, "a constante FRASE_MENOR_LANCE_UNICO desapareceu");
   const frase = m[1];
-  assert.equal(frase, "Quanto você oferta por esse item? O menor lance único leva!",
+  // UTAC107d (R18-A) — a frase do 106c («Quanto você oferta…») foi SUBSTITUÍDA pela do mockup
+  // aprovado. O que esta guarda protegia continua: nunca «paga» (pendência #2) e a regra inteira.
+  assert.equal(frase, "Ganha o menor lance que ninguém repetir.",
     `a copy corrente não é a decidida pelo operador: «${frase}»`);
-  assert.match(frase, /oferta/i, "a frase deixou de dizer «oferta»");
   assert.doesNotMatch(frase, /paga/i, "a frase voltou a dizer «paga» (pendência #2 reaberta)");
-  assert.match(frase, /menor lance único/i, "a frase perdeu o invariante da modalidade");
+  assert.match(frase, /\bganha\b/i, "a frase perdeu o verbo do Regulamento (Art. 7: «GANHA»)");
+  assert.match(frase, /menor lance/i, "a frase perdeu o invariante da modalidade");
+  assert.match(frase, /ninguém repetir/i, "a frase perdeu a condição de unicidade");
   // âncora no gate legal + trava de álea/aposta (mesmo padrão ALARGADO do glossário)
   assert.match(ler("components/TermosConsentimento.jsx"), /O MENOR LANCE ÚNICO GANHA/i,
     "o gate legal deixou de fixar «O MENOR LANCE ÚNICO GANHA»");
