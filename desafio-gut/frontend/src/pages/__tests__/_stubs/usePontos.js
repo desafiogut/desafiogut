@@ -4,9 +4,9 @@
 // e o tile «Passe Desafio» mostraria só o skeleton — os estados «dados», «vazio» e «erro»
 // nunca seriam exercitados.
 //
-// ⚠️ Devolve a MESMA forma do real (`src/hooks/usePontos.js`), com `pontos` (total) e
-// `pontosCartao` (só compras) DISTINTOS por omissão: um tile ligado ao campo errado tem de
-// mostrar outro número e o teste tem de o apanhar.
+// ⚠️ Devolve a MESMA forma do real (`src/hooks/usePontos.js`). Por omissão é a forma VAZIA (tudo a
+// 0); os testes que provam o campo certo definem `pontos` (total) e `pontosCartao` (só compras)
+// DISTINTOS de propósito — um tile ligado ao campo errado mostra outro número e o teste apanha-o.
 
 const BASE = Object.freeze({
   pontos: 0, pontosCartao: 0, bonusPalpite: 0,

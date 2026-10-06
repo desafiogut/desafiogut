@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense } from "react";
+import { useEffect, useState, useRef, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAppContext, useAppTimer } from "../context/AppContext.jsx";
@@ -61,6 +61,33 @@ const ATALHOS = [
   { label: "Seja Nosso Parceiro", icon: "🤝", to: "/seja-nosso-parceiro" },
   { label: "Configurações",     icon: "⚙️", to: "/configuracoes" },
 ];
+
+/**
+ * UTAC107c — estado do tile «Passe Desafio»: "sem-sessao" | "carregando" | "erro" | "vazio" | "dados".
+ *
+ * ⚠️ Achado do validador adversarial: sem `address`+`authToken` o `usePontos` devolve a forma
+ * VAZIA com `loading:false`. Quando o par fica completo (login; refresh com o token em cache e o
+ * `address` a chegar depois) ou muda (troca de conta), há UM commit em que o hook ainda não voltou
+ * a pedir — `loading:false`, `pontosCartao:0` — e o tile diria «0 / 50» antes de tempo (decisão 8).
+ * `memo` (um `useRef` da página) lembra o par: depois de um par incompleto ou de outro par, só se
+ * aceitam números quando o hook tiver mostrado `loading:true` para o par actual.
+ * Num mount com o par já completo o hook real começa em `loading:true`, logo não há espera a mais.
+ */
+export function estadoPasse(memo, { address, authToken, loading, erro, pontosCartao }) {
+  if (!address || !authToken) {
+    memo.chave = null;
+    memo.pendente = true;
+    return address ? "carregando" : "sem-sessao";
+  }
+  const chave = `${String(address).toLowerCase()}|${authToken}`;
+  if (memo.chave === null) memo.chave = chave;
+  else if (memo.chave !== chave) { memo.chave = chave; memo.pendente = true; }
+  if (loading) { memo.pendente = false; return "carregando"; }
+  if (memo.pendente) return "carregando";
+  if (erro) return "erro";
+  if (!Number.isSafeInteger(pontosCartao) || pontosCartao < 0) return "erro"; // nunca «NaN / 50»
+  return pontosCartao > 0 ? "dados" : "vazio";
+}
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -177,10 +204,10 @@ export default function Dashboard() {
   //   • erro                         → «—» (o número fica oculto)
   //   • 0 pontos                     → «0 / 50» + convite para começar
   const metaCartao = Number.isSafeInteger(pontosParaCartao) && pontosParaCartao > 0 ? pontosParaCartao : 50;
-  const passeEstado = !address ? "sem-sessao"
-    : (!authToken || pontosLoading) ? "carregando"
-    : pontosErro ? "erro"
-    : pontosCartao > 0 ? "dados" : "vazio";
+  const passeMemo = useRef({ chave: null, pendente: false });
+  const passeEstado = estadoPasse(passeMemo.current, {
+    address, authToken, loading: pontosLoading, erro: pontosErro, pontosCartao,
+  });
   const passeValor = passeEstado === "carregando"
     // As classes são as do `Skeleton` (ui/Skeleton.jsx), num <span>: o valor vive dentro de um
     // <button>, onde um <div> seria HTML inválido.

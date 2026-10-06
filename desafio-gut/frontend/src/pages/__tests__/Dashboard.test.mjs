@@ -46,6 +46,7 @@ let edicoesPedidas = null;
 // UTAC107c
 let definirPontos = null;
 let chamadasPontos = null;
+let estadoPasse = null;
 
 before(async () => {
   vite = await createServer({
@@ -75,7 +76,7 @@ before(async () => {
   ({ definirPontos, chamadasPontos } = await vite.ssrLoadModule(`${STUBS}/usePontos.js`));
   // react-router-dom é CJS: carregado pelo node, que é o que o Vite externaliza em SSR.
   ({ MemoryRouter } = await vite.ssrLoadModule("/src/__tests__/_ponte-ssr.mjs"));
-  Pagina = (await vite.ssrLoadModule("/src/pages/Dashboard.jsx")).default;
+  ({ default: Pagina, estadoPasse } = await vite.ssrLoadModule("/src/pages/Dashboard.jsx"));
 });
 after(async () => { if (vite) await vite.close(); });
 
@@ -389,5 +390,56 @@ describe("UTAC107c · Início — Passe Desafio, destino e remoções", () => {
     const abre = antes.lastIndexOf("gut-glass-standard");
     const fecha = antes.lastIndexOf("</div>");
     assert.ok(abre > fecha, "o título «Outras Edições» está fora de um contentor de vidro");
+  });
+
+  // ⚠️ Achado do validador adversarial (UTAC107c): na sequência REAL o par address+authToken fica
+  // completo (ou muda) UM commit antes de o `usePontos` voltar a pedir — com `loading:false` e
+  // `pontosCartao:0`. Em SSR não há 2.º commit, por isso a regra testa-se na função pura, em sequência.
+  describe("estadoPasse — sequências reais (sem «0 / 50» prematuro)", () => {
+    const A = "0xAAAA000000000000000000000000000000000001";
+    const B = "0xbbbb000000000000000000000000000000000002";
+    const VAZIO = { loading: false, erro: "", pontosCartao: 0 };
+    const correr = (passos) => { const memo = { chave: null, pendente: false }; return passos.map((p) => estadoPasse(memo, p)); };
+
+    test("login: address antes do token → nunca «vazio» antes de o hook pedir", () => {
+      assert.deepEqual(correr([
+        { address: null, authToken: null, ...VAZIO },
+        { address: A, authToken: null, ...VAZIO },
+        { address: A, authToken: "t1", ...VAZIO },              // o commit perigoso
+        { address: A, authToken: "t1", ...VAZIO, loading: true },
+        { address: A, authToken: "t1", ...VAZIO, pontosCartao: 12 },
+      ]), ["sem-sessao", "carregando", "carregando", "carregando", "dados"]);
+    });
+
+    test("refresh: token em cache, address chega depois → idem", () => {
+      assert.deepEqual(correr([
+        { address: null, authToken: "t1", ...VAZIO },
+        { address: A, authToken: "t1", ...VAZIO },
+        { address: A, authToken: "t1", ...VAZIO, loading: true },
+        { address: A, authToken: "t1", ...VAZIO },
+      ]), ["sem-sessao", "carregando", "carregando", "vazio"]);
+    });
+
+    test("troca de conta: os pontos de A não aparecem como sendo de B", () => {
+      assert.deepEqual(correr([
+        { address: A, authToken: "t1", ...VAZIO, pontosCartao: 12 },
+        { address: B, authToken: "t2", ...VAZIO, pontosCartao: 12 }, // dados ainda de A
+        { address: B, authToken: "t2", ...VAZIO, loading: true },
+        { address: B, authToken: "t2", ...VAZIO, pontosCartao: 3 },
+      ]), ["dados", "carregando", "carregando", "dados"]);
+    });
+
+    test("mount com o par completo: sem espera a mais; caixa do endereço não conta como troca", () => {
+      assert.deepEqual(correr([
+        { address: A, authToken: "t1", ...VAZIO, pontosCartao: 5 },
+        { address: A.toLowerCase(), authToken: "t1", ...VAZIO, pontosCartao: 5 },
+      ]), ["dados", "dados"]);
+    });
+
+    test("pontosCartao não numérico/negativo → «erro» (nunca «NaN / 50»)", () => {
+      for (const v of [NaN, "12", -1, 1.5, undefined]) {
+        assert.equal(correr([{ address: A, authToken: "t1", ...VAZIO, pontosCartao: v }])[0], "erro", String(v));
+      }
+    });
   });
 });
