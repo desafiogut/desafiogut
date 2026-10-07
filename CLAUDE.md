@@ -4948,3 +4948,73 @@ validador ~0,013); validador ~US$ 0,019/1M tokens (693 610 tokens); **saldo real
 auto-deploy. **Deploy verificado:** entry `index-Dns58Gno.js` -> `index-Ci4XuUO-.js`; `get("rc")` -> 0 no
 bundle servido.
 **Proximo:** 106i (AAB novo) -> Play Console (Ruan).
+
+
+## R14 (append) -- UTAC108a -- MANIFESTO de aprovacoes do operador (serie 107) (hermes)
+
+**Tipo:** documento unico. **READ-ONLY** -- ZERO alteracao de codigo. **Baseline:** `86ffe2c` (= origin/main).
+**Commits:** `86ffe2c` -> `e2e793a` (o manifesto; validado) -> registo (achados V1..V6 + log + R14 + Desktop).
+**Suite:** frontend VERDE 849/849 - backend VERDE 1095/1101 (= baseline, read-only).
+
+**Porque existe:** os logs registam o que foi FEITO, nao o que foi APROVADO (a aprovacao vive nas
+conversas). O operador identificou que nem tudo o que aprovou foi implementado (ex.: o botao «Menor
+Lance Unico» da Carteira) e ha uma decisao estrutural nova (o lojista sai do app). Este UTAC cria a
+**fonte de verdade** da auditoria.
+
+**Entregavel:** `docs/aprovacoes-operador.md` -- para cada item aprovado: aprovado + fonte + estado
+actual verificado no codigo (`ficheiro:linha`) + discrepancia. Cobre 11 UTACs (107a-back, 107a-front,
+107b-e.2, 107g-g.4).
+
+**Contagens:** **52 itens** (51 aprovados + 1 decisao estrutural) -> **49 implementados** - **2 com
+residuo** - **1 nao implementado**. Zero itens aprovados ignorados.
+
+**Os 2 residuos:**
+- **D-1** (`107b#2`): o botao «Menor Lance Unico» da Carteira existe e navega para `/mercado`
+  (`MinhaCarteira.jsx:101-103`, `:242-259`), mas tem `disabled={!saldoReais}` (`:245`) -- com saldo
+  R$ 0,00 (ou `null`, a carregar) o clique NAO faz nada. **Esta e a causa medida da queixa do
+  operador**; e um gate PRE-EXISTENTE (UTAC106c/MC48) que nunca esteve nas aprovacoes do 107b.
+  Decisao de produto em falta: navegar sempre (validar no destino) ou manter bloqueado.
+- **D-2** (`107g.3#2`): `?rc=1` exacto continuava a abrir (aprovado como TEMPORARIO no 107g.3); hoje
+  `temAcessoDiretoCadastro()` devolve `false` sempre -- **superado por decisao do proprio operador**
+  no 107g.4. Nao e incumprimento.
+
+**O nao implementado:** a decisao estrutural **remover o lojista do app** (Marinho trata
+pessoalmente) -- primeira vez escrita num artefacto do repo; destino **UTAC108f**. Confirmado nao
+implementado: `CorporativoDashboard.jsx`/`CorporativoCotas.jsx` existem; rotas `/corporativo/*` em
+`App.jsx:519-526`; `CorporativoRoute:118`; `BottomNav.CORP_TABS`; `Sidebar.CORPORATIVO_ITEMS`.
+
+**Outras discrepancias registadas:** D-3 (dois itens «adicionar» que ja existiam -- MLC da Carteira
+desde o 106c; a grelha da Carteira ja era a mesma); D-4 (palavras da lista != mockup: «Palpites» vs
+«Lances» na tabela da OP, R18-C; KPIs do Inicio mantidos por R18-A contra o enunciado; 21 frases
+aprovadas vs 25 aplicadas no 107g.2, ultrapassagem declarada); **D-5** (achado do validador:
+comentario obsoleto em `TabelaLances.jsx:52-58` -- «sem resultado oficial mantem-se o apuramento
+local» -- contradito pelo codigo `:70-73 return -1` do UTAC107e.1 V2).
+
+**5 pendencias declaradas:** vocabulario pt-PT nas paginas legais (excepcao explicita na guarda
+`utac107g2-pt-br.test.mjs:61`); I-1 codigo morto em `CorporativoDashboard.jsx:30-36`; I-2
+`pareceAutenticado` (`App.jsx:148`, gate pre-existente); 25 endpoints orfaos de frontend; `debug-pedido`
+ligado em producao. Mais: `LanceStatusBadge` com vidro proprio (Regra 1), redundancias menores de
+navegacao, `exportar-dados` sem botao (LGPD art. 18) e o APK sem as mudancas da serie (108i).
+
+**Validador adversarial (worktree `tmp-108a-val/wt` @ `e2e793a`, A13; 225,9 s):** **PARCIAL**. O
+**conteudo resistiu -- 51/51 itens verificados no codigo** (todos os `ficheiro:linha` abertos e
+confirmados; (f) so o manifesto no commit; (g) 5 `.bak-*` intactos; (h) suite verde reproduzida). O
+que caiu: **V1** o §18.5 declarava 4 entregaveis e so 1 existia (corrigido -- passam a ser produzidos
+no fecho, e foram); **V2 PROVA INVALIDA POR EMOJI** -- `grep '🏆' Dashboard.jsx -> 0` nao prova nada
+neste ambiente (controlo: `grep -c '🏆' GlassHeader.jsx` -> 0 mas o ficheiro tem 🏆; `python` conta 1);
+provado de novo pelo array `stats` (`Dashboard.jsx:226-231`, 4 tiles) + contagem por `python`
+(**erro do MEU instrumento, declarado no §18.6 do manifesto**); **V3** 13 logs e nao 12 (omitia o
+`UTAC107e.2_SEG-1_MEDICAO.md`); **V4** `/redirect` e `App.jsx:460` (nao `:455`) e a etiqueta
+`EtiquetaEstadoLance.jsx:19-21`; **V5** `e2e793a` por publicar; **V6** o comentario obsoleto (D-5).
+Correccoes pos-veredicto NAO re-validadas (declarado).
+
+**Erros dos meus instrumentos (declarados):** (1) o harness correu em background e devolveu `stdin is
+not a tty` com **exit 0 e sem numeros** -- falso-verde; repetido em foreground; (2) a prova por
+`grep` de emoji (V2).
+
+**Escopo:** backend, `_lib`, `src/`, `netlify/`, `scripts/`, package*, `.bak-*` (5), NORTE/ESCOPO-ALVO/
+FICHA-PLAY/MC100_MATRIZ, `EM_BREVE_MODE` -- tudo intacto. `git diff --name-only` vazio.
+
+**Registo:** `docs/aprovacoes-operador.md` - `_logs/UTAC108a-manifesto.md` -
+`Desktop/RELATORIO-UTAC108a-MANIFESTO.txt`. **Proximo:** 108b (auditoria de discrepancias contra
+producao) -> 108c+ (correccoes cirurgicas) -> 108f (remover lojista).
