@@ -11,7 +11,7 @@
 | Versão | 1.0 |
 | Objectivo | Manifesto de aprovações da série 107 (11 UTACs) — aprovado vs implementado vs discrepante |
 | Fonte primária | Lista `INPUT` do UTAC108a (extraída das conversas do chat) — é o ponto de partida, **verificada item a item no código** |
-| Fonte secundária | `_logs/UTAC107*.md` (12 logs + 11 veredictos de validador) · `docs/mockups-107a/*` · bloco **R14** do `CLAUDE.md` · `_logs/DEBT.md` |
+| Fonte secundária | `_logs/UTAC107*.md` (**13 logs** + 11 veredictos de validador) · `docs/mockups-107a/*` · bloco **R14** do `CLAUDE.md` · `_logs/DEBT.md` |
 | Baseline do repo | `HEAD` = `origin/main` = **`86ffe2c`** (`docs(UTAC107g.4): numeros FINAIS medidos`) |
 | Suíte canónica (medida neste UTAC) | **frontend VERDE 849/849 · backend VERDE 1095/1101** → `VEREDITO: VERDE` |
 | Âmbito | 51 itens aprovados (série 107) + 1 decisão estrutural nova + 5 pendências declaradas |
@@ -34,7 +34,7 @@ com `ficheiro:linha`; nenhuma discrepância é escondida; o que não está no lo
 | `.bak-*` versionados | **5** (capacitor.config.ts, App.jsx, PrivyRoot.jsx ×3) | `git ls-files \| grep '.bak-'` |
 | `CLAUDE.md` — bytes de controlo | **2×`0x00` · 2×`0x1F` · 2×`0x7F`** (tamanho 412 563 B) | `python` (bytes) |
 | `EM_BREVE_MODE` | `true` (`src/lib/leilaoLock.js:10`) | `grep` |
-| Logs da série 107 lidos | 12 logs (`UTAC107a-back-mapeamento.md` … `UTAC107g.4-porta-rc1.md`) + 11 `_SEG*_VALIDADOR.md` | `ls _logs/UTAC107*` |
+| Logs da série 107 lidos | **13 logs** (`UTAC107a-back-mapeamento.md` … `UTAC107g.4-porta-rc1.md` **+ `UTAC107e.2_SEG-1_MEDICAO.md`**) + 11 `_SEG*_VALIDADOR.md` | `ls _logs/UTAC107*` |
 | Mockups lidos | `docs/mockups-107a/` — `index.html`, `carteira.html`, `inicio.html`, `menor-lance-unico.html`, `ofertas-programadas.html` (+ `tokens.css`, `DESIGN.md`, `regra-1-glass.html`, `tabela-especial.html`, `tokens.html`) | `ls` |
 
 > **Nota de medição (A4/lição da série):** o `mc966-suite-harness.mjs` **não corre em background**
@@ -56,7 +56,7 @@ com `ficheiro:linha`; nenhuma discrepância é escondida; o que não está no lo
 | ❌ Aprovados e **NÃO** implementados | **0** |
 | Decisão estrutural nova (remover lojista) | **1 — ❌ NÃO implementada** (por desenho; é o 108f) |
 | Pendências declaradas | **5** |
-| Discrepâncias a levar à auditoria (108b) | **4** (§16) |
+| Discrepâncias a levar à auditoria (108b) | **5** (§16) |
 
 **Leitura curta:** a série 107 foi **implementada quase na totalidade**. Não há nenhum item
 aprovado que tenha sido simplesmente ignorado. As duas observações (`107b#2`, `107g.3#2`) não são
@@ -101,7 +101,7 @@ Cada UTAC tem: **Aprovado** (lista INPUT verbatim) · **Fonte** (conversa + mock
 | 1 | Card «Senhas» → «Passe Desafio 12/50» (`pontosCartao`) | ✅ **implementado** | `src/pages/Dashboard.jsx:201-224` (rótulo «Passe Desafio», valor `` `${pontosCartao} / ${metaCartao}` ``); dados via `usePontos` → `GET /ler-pontos` (`:117-120`) | Nenhuma |
 | 2 | Destino: Ofertas Programadas (não Carteira) | ✅ **implementado** | `Dashboard.jsx:223` (`to: "/ofertas-programadas"`) | Nenhuma (antes ia para `/carteira`) |
 | 3 | **Manter** os KPIs «Lances Únicos» + «Total de Lances» | ✅ **implementado** | `Dashboard.jsx:229-230` | Nenhuma. Nota: o **enunciado** mandava remover; a decisão do operador (R18-A) **revogou-o** e manda manter |
-| 4 | Remover card «🏆 Menor Lance Único» | ✅ **implementado** | `grep '🏆' src/pages/Dashboard.jsx` → **0 ocorrências**; comentário da remoção em `:136` | Nenhuma. O vencedor continua no `FimEdicaoOverlay` |
+| 4 | Remover card «🏆 Menor Lance Único» | ✅ **implementado** | Array `stats` de `Dashboard.jsx:226-231` tem **4 tiles** (Saldo, Passe Desafio, Lances Únicos, Total de Lances) — **sem** nenhum card de troféu; o 🏆 só sobrevive em **comentários** (`:136`, `:335`, ambos a descrever a remoção). **Contagem feita por `python`, não por `grep`** — ver §18.6 | Nenhuma. O vencedor continua no `FimEdicaoOverlay` |
 | 5 | Regra 1 (glass em tudo) no Início | ✅ **implementado** | `Dashboard.jsx:487` («🗓️ Outras Edições» agora dentro de `GlassCard`) | Nenhuma |
 | 6 | Corrigir texto obsoleto `ComprarFichasModal:547` | ✅ **implementado** | `src/components/ComprarFichasModal.jsx:547` → «Para o Lance Programado, o app converte R$ 2,00 em 1 senha automaticamente.»; comentário `:490` também actualizado (R18-D) | Nenhuma. Resolvido o resíduo escalado pelo 107b |
 
@@ -149,7 +149,7 @@ Cada UTAC tem: **Aprovado** (lista INPUT verbatim) · **Fonte** (conversa + mock
 | # | Aprovado | Estado | Ficheiro:linha (verificação) | Discrepância |
 |---|---|---|---|---|
 | 1 | Revelar valores pós-fecho (após consolidação) | ✅ **implementado** | `desafio-gut/frontend/netlify/functions/lances-flash.mjs` — revela do Key-Per-Bid só com marcador **E** janela fechada; cache `TTL_REVELADOS_MS = 60_000` (`:52`, `:196`) | Nenhuma. A 1.ª versão abria uma fuga (edição consolidada ainda aberta) — corrigida no 107e.2 (`6a05324`) |
-| 2 | Etiqueta 3 estados (verde/vermelho/laranja) só pós-fecho | ✅ **implementado** | `src/components/EtiquetaEstadoLance.jsx:19-20` — `menor` 🟢 `#3ddc84` · `nao_menor` 🔴 `#ff8a8d` · `deixou_de_ser` 🟠 `#f5a623` | Nenhuma. Só depois do fecho (R18-A: mantém o anti-bot MC28.1) |
+| 2 | Etiqueta 3 estados (verde/vermelho/laranja) só pós-fecho | ✅ **implementado** | `src/components/EtiquetaEstadoLance.jsx:19-21` — `menor` 🟢 `#3ddc84` · `nao_menor` 🔴 `#ff8a8d` · `deixou_de_ser` 🟠 `#f5a623` | Nenhuma. Só depois do fecho (R18-A: mantém o anti-bot MC28.1) |
 | 3 | Etiqueta estruturada em 2 partes: «SEU LANCE» (fixo) + «(estado)» (variável) | ✅ **implementado** | `EtiquetaEstadoLance.jsx:43` (`<span style={{color: COR_FIXA}}>SEU LANCE</span>` + estado na cor) | Nenhuma. Decisão 3 do operador (só o que muda tem cor) |
 | 4 | Etiqueta em MLC + Início (não OP) | ✅ **implementado** | `MercadoLances.jsx:363` e `Dashboard.jsx:451` (`<EtiquetaMeuLance …/>`); `grep -rn 'EtiquetaMeuLance' src/pages/` → **só 2 ficheiros** ⇒ **OP sem etiqueta** (R18-D) | Nenhuma |
 | 5 | Só o próprio vê a etiqueta | ✅ **implementado** | `lances-flash.mjs:165` (`?acao=meu-estado`, Bearer user-session; o `endereco` sai **do token**, nunca do query) | Nenhuma |
@@ -171,7 +171,7 @@ Cada UTAC tem: **Aprovado** (lista INPUT verbatim) · **Fonte** (conversa + mock
 | 4 | Catch-all → Início (URLs desconhecidas) | ✅ **implementado** | `src/App.jsx:530` — `<Route path="*" element={<Navigate to="/" replace />} />` (último filho do AppLayout) | Nenhuma |
 | 5 | Remover `/edicao/:id` + apagar `EdicaoDetalhe.jsx` | ✅ **implementado** | Rota removida do `App.jsx`; `ls src/pages/EdicaoDetalhe.jsx` → **APAGADO** (`git rm`, R18-C) | Nenhuma |
 | 6 | Remover `/corp` | ✅ **implementado** | `grep '"/corp"' src/App.jsx` → **0** | Nenhuma. A rota era também um `CorporativoDashboard` **sem guarda** |
-| 7 | Manter `/redirect` (OAuth) | ✅ **implementado** | `App.jsx:455` (rota mantida; é o `customOAuthRedirectUrl` do Privy + App Link Android) | Nenhuma. Documentado como técnica (não é caminho morto) |
+| 7 | Manter `/redirect` (OAuth) | ✅ **implementado** | `App.jsx:460` (rota mantida; é o `customOAuthRedirectUrl` do Privy + App Link Android) | Nenhuma. Documentado como técnica (não é caminho morto) |
 
 ---
 
@@ -327,6 +327,18 @@ logs** e nenhum contradiz a lista INPUT.
 | 107g.2#1 | «25 frases» | log: aprovadas 21, aplicadas 25 (ultrapassagem declarada) | 25 |
 | 107d#1 | «2rem desktop, 1rem mobile» | R18-B: lado 2rem/1rem **+ padding interno 20 px** | igual ✔ |
 
+### D-5 ℹ️ Comentário obsoleto em `TabelaLances.jsx` — o comentário contradiz o código
+
+- **Achado do validador adversarial do UTAC108a** (não é divergência face à lista INPUT; é uma
+  inconsistência interna pré-existente).
+- `src/components/TabelaLances.jsx:52-58` ainda afirma, no comentário do UTAC000.9, «**Sem resultado
+  oficial mantém-se o apuramento local: exactamente o comportamento anterior**».
+- O código, logo abaixo (`:70-73`), faz `return -1;` — o comportamento que o **UTAC107e.1 (V2, decisão
+  do operador)** introduziu: **sem oficial, ninguém leva 🏆**. O comentário do `107e.1` está em `:70-72`.
+- ⇒ Dois comentários contraditórios no mesmo bloco; o do 000.9 nunca foi actualizado quando o
+  comportamento mudou. Sem impacto em runtime; a **corrigir** no UTAC de limpeza (mesma família das
+  pendências §14.6/§14.7).
+
 ---
 
 ## 17. Resumo executivo
@@ -365,5 +377,17 @@ logs** e nenhum contradiz a lista INPUT.
    divergências estão em §16 (D-4) — nenhuma ficou por resolver.
 4. **Item não verificado = item não marcado.** Nada foi marcado «implementado» sem `ficheiro:linha`.
 5. **Este UTAC é READ-ONLY:** zero alterações em `src/`, `netlify/`, `scripts/`, `package*.json`,
-   `.bak-*`, NORTE/ESCOPO-ALVO/FICHA-PLAY/MC100_MATRIZ. Entregáveis: `docs/aprovacoes-operador.md`,
-   `_logs/UTAC108a-manifesto.md`, bloco R14 do `CLAUDE.md` e `Desktop/RELATORIO-UTAC108a-MANIFESTO.txt`.
+   `.bak-*`, NORTE/ESCOPO-ALVO/FICHA-PLAY/MC100_MATRIZ. **Entregáveis do UTAC108a — este documento
+   (`docs/aprovacoes-operador.md`) é o primeiro; os outros três são produzidos no fecho do UTAC
+   (SEG6), pelo que podem ainda não existir quando este ficheiro é lido a meio do UTAC:**
+   `docs/aprovacoes-operador.md` · `_logs/UTAC108a-manifesto.md` · bloco R14 do `CLAUDE.md` ·
+   `Desktop/RELATORIO-UTAC108a-MANIFESTO.txt`.
+6. **Erro do MEU instrumento, declarado (achado do validador):** a 1.ª versão deste manifesto provou a
+   remoção do card 🏆 do Início com `grep '🏆' src/pages/Dashboard.jsx` → «0 ocorrências». **Essa prova
+   é inválida:** neste ambiente o `grep` de emoji falha **em silêncio** (controlo: `grep -c '🏆'
+   src/components/glass/GlassHeader.jsx` → **0**, apesar de o ficheiro conter 🏆; `python` conta **1**).
+   A alegação era verdadeira (o card saiu), mas a evidência não provava nada — **corrigida** para o
+   array `stats` (`Dashboard.jsx:226-231`, 4 tiles) + contagem por `python`. Regra reforçada: **padrões
+   sem emoji, ou contagem por `python`, nunca `grep` de emoji como prova.**
+7. **Estado de publicação:** o manifesto foi validado no commit `e2e793a`, que **não** está em nenhum
+   ramo remoto (`git branch -r --contains e2e793a` → vazio) — é publicado no fecho do UTAC (SEG6).
