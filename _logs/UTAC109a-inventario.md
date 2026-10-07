@@ -29,7 +29,7 @@ Resposta: *«fonte = GUTO-Eletrodomesticos/GUTO estatico oficial (as 8 PNG 4K) �
 
 ## §SEG0 — Inventário (Frente A)
 
-### A.1 Conteúdo integral da pasta-fonte (19 ficheiros)
+### A.1 Conteúdo PRE-EXISTENTE da pasta-fonte (19 ficheiros; **20** após o fecho deste UTAC)
 
 | # | Caminho relativo a `GUTO-Eletrodomesticos/` | Tipo | Peso | Data |
 |---|---|---|---|---|
@@ -46,7 +46,16 @@ Resposta: *«fonte = GUTO-Eletrodomesticos/GUTO estatico oficial (as 8 PNG 4K) �
 | 18 | `README.txt` | documento | 2,47 kB | 2026-05-27 |
 | 19 | `REFERENCIA DE PROPORÇOES GUTO E LOGO.jpeg` | imagem | 45,3 kB | 2026-07-06 |
 
-`du -sh` = **212 MB**. `find -type f | wc -l` = **19**.
+`du -sh` = **212 MB**. `find -type f | wc -l` = **19** (pré-existentes).
+
+> ⚠️ **Correcção de contagem (achado do validador adversarial — §SEG3/V1).** A tabela acima lista os
+> **19 ficheiros que já existiam**. No momento em que o validador olhou para o disco havia **23**,
+> porque os **3 instrumentos auxiliares** da análise visual (`_contact-sheet-detalhe-1.png`,
+> `_contact-sheet-detalhe-2.png`, `_zoom-detalhes.png`) **ainda lá estavam** — a frase «removidos no
+> fecho» era, nesse instante, uma promessa e não um facto. **Foram removidos** (verificado:
+> `find -type f | wc -l` = **20**). **Estado final = 20 ficheiros:** os 19 pré-existentes +
+> `_contact-sheet.png` (o único artefacto autorizado). **Nenhum dos 19 originais foi tocado** —
+> md5 das 8 PNG reconferido após a limpeza e **idêntico** ao de §A.2.
 
 ### A.2 As 8 imagens — ficha técnica
 
@@ -122,8 +131,8 @@ miniatura de 700 px por imagem com o nome do ficheiro + «4096x4096» + índice 
 presentes (controlo: contagem programática = 8).
 
 > Instrumentos auxiliares de leitura (folhas ampliadas `_contact-sheet-detalhe-1|2.png` e
-> `_zoom-detalhes.png`) foram criados para a análise do §SEG1 e **removidos no fecho** — a autorização
-> cobria apenas `_contact-sheet.png`.
+> `_zoom-detalhes.png`) foram criados para a análise do §SEG1 e **efectivamente removidos no fecho**
+> (a autorização cobria apenas `_contact-sheet.png`). Contagem final da pasta-fonte: **20 ficheiros**.
 
 ---
 
@@ -162,7 +171,7 @@ presentes (controlo: contagem programática = 8).
 | 02 | **SIM** | **Na mão direita**, erguido à altura do ombro; madeira média com aros dourados |
 | 03 | **não** | Nenhum martelo; segura um letreiro |
 | 04 | **não** | Nenhum martelo; há um **púlpito/pedestal redondo de madeira** com placa |
-| 05 | **SIM** | **Pousado** num pequeno suporte/púlpito metálico, à esquerda, à altura da cintura |
+| 05 | **SIM** | **Pousado** num pequeno suporte/pedestal, à esquerda, à altura da cintura (material **não confirmado**: o validador lê pedra/madeira clara, **não** obviamente metal — a 1.ª redação dizia «metálico») |
 | 06 | **SIM** | **Pousado** sobre um **bloco de som de madeira** (som do martelo), à direita, à altura do joelho |
 | 07 | **SIM** | **Na mão direita**, erguido à altura do peito |
 | 08 | **não** | Nenhum martelo |
@@ -188,8 +197,11 @@ presentes (controlo: contagem programática = 8).
 - **Ângulo:** predominantemente **frontal, ao nível dos olhos, corpo inteiro**; variações ligeiras
   de 3/4.
 - **Composição:** o GUTO está **ao lado** do eletrodoméstico, a apresentá-lo. Os gestos variam:
-  palma aberta a apresentar (02, 04, 07), polegar para cima (03, 04), segurar com as duas mãos
-  (05, 06), celebrar com os braços no ar (08), braços ao lado do corpo (01).
+  palma aberta a apresentar (02, 04, 07), **apontar com o dedo indicador (03)** — ⚠️ **correcção do
+  validador**: na 03 o gesto é **apontar**, **não** polegar para cima (e o próprio prompt embutido da
+  03 diz «*pointing at 'Lance Único' label*» — §A.3 — pelo que a 1.ª redação se contradizia consigo
+  mesma); o **polegar para cima existe só na 04** —, segurar com as duas mãos (05, 06), celebrar com
+  os braços no ar (08), braços ao lado do corpo (01).
 
 ### B.4 Consistência
 
@@ -274,7 +286,7 @@ de personagem nomeado. Este UTAC **só regista**.
 | # | Onde | Texto transcrito | Nota |
 |---|---|---|---|
 | 01 | ecrã da TV | **«Menor Lance Único»** (dourado 3D) + martelo dourado gráfico | vocabulário do leilão |
-| 03 | letreiro (2 linhas, azul-marinho sobre branco) | **«LANÇE»** / **«ÚNICO»** | ⚠️ **erro de grafia**: tem **cedilha** («LANÇE»); o correcto é «LANCE». Ampliado 1:1 e confirmado: vê-se o `Ç` |
+| 03 | letreiro (2 linhas, azul-marinho sobre branco) | **«LANCE»** / **«ÚNICO»** — **grafia CORRECTA** | ~~⚠️ «tem cedilha, «LANÇE»»~~ → **⛔ REFUTADO** (ver abaixo) |
 | 04 | ecrã do ar-condicionado | «22°C» + ícones | — |
 | 04 | placa de latão no pedestal | **«AUCTION ITEM #10: PREMIUM AC UNIT»** | **em inglês** |
 | 05 | ecrã do portátil | **«DESAFIOGUT»** (logótipo dourado) | marca — a preservar |
@@ -283,6 +295,28 @@ de personagem nomeado. Este UTAC **só regista**.
 | 07 | ecrã do fogão | «400» / «350» | — |
 | 08 | fundo (topo) | **«Arremate Já!»** (dourado 3D) | vocabulário do leilão |
 | 08 | ecrã da TV | grelha de Smart TV com ícones **Netflix · Prime Video · YouTube · Google** | ⚠️ **marcas de terceiros** |
+
+### B.8.1 ⛔ CONCLUSÃO MINHA REFUTADA — o «LANÇE» com cedilha **não existe** (fica à vista, não apagada)
+
+**O que eu afirmei (1.ª versão deste log):** «o letreiro da imagem 03 está escrito “LANÇE”, com
+cedilha indevida — ampliado 1:1 e confirmado: vê-se o Ç».
+
+**Está FALSO.** Refutado pelo **validador adversarial** («*Confirmed: no cedilla under the C*», após
+apertar o recorte) e **confirmado depois por mim**, com a placa inteira num só recorte 1:1
+(`03-guto-maquina-lavar.png`, região x≈2300-4096 / y≈700-1700): as letras visíveis são **`A N C E`**
+com o **C rigorosamente limpo por baixo**, e na linha de baixo **`U N I C O`** com o **acento agudo
+sobre o U**. ⇒ **O letreiro diz «LANCE ÚNICO» — grafia CORRECTA.**
+
+**Erro do MEU instrumento:** na 1.ª ampliação (3×) o acento agudo do **`Ú`** da segunda linha cai
+**visualmente entre as duas linhas** — projecta-se por baixo da zona do `C` da primeira — e eu li-o
+como se fosse uma **cedilha** da letra de cima. Agrava: a 1.ª ampliação cortava a palavra a meio
+(mostrava `LA`+`N`+`C` incompleto), o que impedia ver a palavra inteira e comparar as duas linhas.
+**Regra reforçada:** para ler texto numa imagem, enquadrar **a palavra inteira** (ou o bloco todo) e
+comparar os diacríticos das linhas **entre si** antes de os atribuir a uma letra.
+
+**Consequência para o 109c:** **nenhuma** — a copy da imagem 03 já está correcta; o que muda é a lista
+de textos a corrigir (a 03 sai da lista de erros de grafia; continua a ser uma imagem com vocabulário
+de leilão a substituir).
 
 ### B.9 LGPD — rostos
 
@@ -298,7 +332,7 @@ questão de direitos de imagem a decidir **fora** deste UTAC (não medido aqui).
 | Verificação | Resultado |
 |---|---|
 | Pasta-fonte alterada? | **NÃO** — nenhum ficheiro movido/renomeado/editado; só leitura |
-| Ficheiros criados na pasta-fonte | **1** — `_contact-sheet.png` (autorizado). Os instrumentos auxiliares de zoom são removidos no fecho |
+| Ficheiros criados na pasta-fonte | **1** — `_contact-sheet.png` (autorizado). Os 3 instrumentos auxiliares de zoom foram criados e **removidos**; **contagem final = 20 ficheiros** (19 pré-existentes + a sheet) |
 | Contact sheet legível | **SIM** — 2890×1546, 4 colunas, nome + dimensões por célula |
 | As 8 imagens estão na sheet | **SIM** — contagem programática = 8 |
 | Cada afirmação tem referência | **SIM** — `ficheiro:linha` (README, SKILL.md, media-inputs.md), `md5`, `seed`, ou marcação **LACUNA** |
@@ -311,14 +345,119 @@ questão de direitos de imagem a decidir **fora** deste UTAC (não medido aqui).
 detalhe (fora do objectivo) · **L-5** o `REFERENCIA DE PROPORÇOES GUTO E LOGO.jpeg` não foi lido
 (fora do objectivo do 109a).
 
+### Erros do MEU instrumento (declarados)
+
+1. **⛔ «LANÇE» com cedilha — REFUTADO.** Leitura errada de um diacrítico por ampliação insuficiente e
+   com a palavra cortada a meio. A placa diz **«LANCE ÚNICO»**. Detalhe e correcção em §B.8.1.
+2. **Contagem de ficheiros da pasta-fonte (19 vs 23 vs 20).** Escrevi «os auxiliares foram removidos no
+   fecho» **antes** de os remover — a afirmação era uma intenção, não um facto, e o validador apanhou-a
+   com o disco à frente (23 ficheiros). Corrigido: **20** ficheiros no estado final.
+3. **Instrumentos de imagem ausentes.** `identify`, `montage` e `exiftool` **não existem** nesta
+   máquina; substituí-os por **PIL 12.3.0** e `magick`. Declarado para que nenhuma leitura pareça ter
+   vindo de uma ferramenta que não correu.
+4. **Recortes desalinhados (2 tentativas).** Os meus 2 primeiros recortes de zoom erraram as
+   coordenadas (letras maiores do que supus) — só à 3.ª se enquadrou a placa inteira. Foi essa
+   insistência que permitiu apanhar o erro n.º 1.
+
 ---
 
 ## §SEG3 — Validador adversarial
 
-> _(veredicto + tratamento — a preencher após o despacho)_
+**1.ª tentativa (`deleg_053742ac`, 393,7 s): SEM VEREDICTO.** O subagente esgotou o orçamento de
+iterações a meio da verificação visual e terminou com *«Request payload too large: max compression
+attempts (3) reached»* / `exit_reason=max_iterations`, **antes de gravar o veredicto** — o mesmo
+defeito já registado no UTAC107b (erro do MEU instrumento de delegação: brief com muitos pontos e
+pedido de análise visual de PNG de 4K, que estoura o contexto do subagente).
+**Lição aplicada:** re-despachado com brief curto, proibição de abrir PNG inteiros, teto de ~14
+ferramentas e **ordem explícita de gravar o veredicto mesmo com verificações por fechar**.
+⚠️ **Mas o que ele já tinha apanhado ANTES de morrer foi ouro** (ver V1/V2 abaixo) — minar o
+transcript valeu mais do que o veredicto que não veio.
+
+**Achados da 1.ª tentativa (minados do transcript, antes do colapso):**
+
+| # | Grav. | Achado | Tratamento |
+|---|---|---|---|
+| V1 | ⚠️ | **Contagem da pasta-fonte: 23 ficheiros, não 19** — os 3 instrumentos auxiliares de zoom que o log dava como «removidos no fecho» **ainda lá estavam** (o log prometia, não afirmava o facto) | **corrigido**: os 3 foram removidos; a contagem passou a ser explicitamente **19 pré-existentes + a sheet = 20**, com nota em §A.1 e §SEG2 |
+| V2 | ⛔ | **«LANÇE» com cedilha — REFUTADO.** «*Confirmed: no cedilla under the C*» | **corrigido e declarado**: a placa diz **«LANCE ÚNICO»**; conclusão errada marcada **REFUTADA à vista** em §B.8.1, com o erro do meu instrumento explicado |
+
+**2.ª tentativa (`deleg_898ea66e`, 78,3 s): VEREDICTO — APROVADO.**
+
+> «Tentei refutar os 6 pontos; **5 resistem integralmente, 1 cedeu num descritor trivial**. Nada na
+> pasta-fonte foi tocado.»
+
+| # | Ponto verificado | Resultado |
+|---|---|---|
+| 1 | Contagem/composição da pasta-fonte | **CONFIRMADO** — exactamente **20** ficheiros, nenhum escondido, nenhuma subpasta extra; composição confere com §A.1; **nada falta por inventariar** |
+| 2 | `md5` das 8 PNG (nenhum original alterado) | **CONFIRMADO** — as 8 hashes **byte-a-byte idênticas** às de §A.2 (ex. 07 `d35d988736a661ad78d3225f615ea229`, 03 `5bbc06bfc4b75a380d2e2e303ccb1cf2`); pesos também |
+| 3 | Prompt/seed embutido da 07 vs log | **CONFIRMADO** — modelo `gemini-3-pro-image-preview`, 4K, 1:1, seed `819513676604073`, prompt idêntico ao de §A.3 |
+| 4 | Martelo físico em 4 de 8 | **CONFIRMADO** — compósitos 2×2 a 450 px: 02 (mão, ombro) · 05 (pousado, cintura) · 06 (pousado em bloco, joelho) · 07 (mão, peito); 01 só **gráfico no ecrã**; **nenhum** em 03, 04, 08 ⇒ «4 físicos / 1 gráfico / 3 ausentes», exactamente §B.2 |
+| 5 | Consistência (§B.4) optimista? | **NÃO é optimista** — o GUTO é coerente nas 8 (fato, colete, laço, medalhão, cabelo, barba, olhos); a única variação é o tom do colete em 04/08, **cosmético**. A ressalva «8 < 20 imagens, sem perfil/close-up/expressões» é honesta. **§B.4 mantém-se** |
+| 6 | Citação da `higgsfield-soul-id/SKILL.md` | **CONFIRMADO** — `:5-6` («person's face»), `:44` («5–20 face photos»), `:79` («5+ unique faces»), `:13-14` («NOT for: … named-character / non-photo avatars»). A tese (Soul ID = rostos de pessoas) **é sustentada pela própria skill**. Única ressalva: o log **inverte a ordem** dos dois itens de «NOT for:» — cosmético, substância fiel |
+
+**⛔ Afirmação do log que CAIU (corrigida):**
+
+| # | Grav. | O que eu afirmei | Correção medida |
+|---|---|---|---|
+| V3 | ⚠️ | §B.3: «polegar para cima (**03, 04**)» | **FALSO**: na **03** o GUTO **aponta com o dedo indicador** (mão encostada ao colete/medalhão); o polegar para cima existe **só na 04**. Agrava: o **próprio prompt embutido da 03** diz «*pointing at 'Lance Único' label*» (§A.3) — a 1.ª redação **contradizia-se consigo mesma**. **Corrigido** em §B.3 |
+| V4 | ℹ️ | §B.2: martelo da 05 num suporte «**metálico**» | **NÃO MEDIDO com rigor** pelo validador, que lê **pedra/madeira clara**. Descritor **suavizado** para «material não confirmado». Declarado |
+
+**NÃO MEDI (declarado pelo validador, por orçamento):** L-1 (varredura sha256 da referência) ·
+L-2/L-4/L-5 (fora do objectivo) · metadados ComfyUI das **outras 7** imagens (verificou só a 07, por
+amostragem — a 1.ª tentativa tinha verificado as 8 e confirmado todas).
+
+**Integridade:** o validador criou 3 recortes temporários em `_logs/_refut/` e **removeu-os**;
+confirmado depois: `_logs/_refut` **não existe** e a pasta-fonte continua com **20** ficheiros, sem
+nenhum original alterado.
+
+**Correcções pós-veredicto: NÃO re-validadas** por 3.ª ronda (declarado — GATE 11; as correcções são
+de recontagem de ficheiros, de um descritor e de uma afirmação de gesto — todas com medição directa
+apresentada acima). **Boulder Loop: 2 iterações de 3.**
 
 ---
 
 ## §SEG4 — Fecho
 
-> _(a preencher)_
+### Entregáveis
+
+| # | Entregável | Estado |
+|---|---|---|
+| 1 | `_logs/UTAC109a-inventario.md` (este) | ✔ |
+| 2 | `GUTO-Eletrodomesticos/_contact-sheet.png` (2890×1546, 4,14 MB, 8/8) | ✔ |
+| 3 | Bloco **R14** no `CLAUDE.md` (apêndice no EOF; 2×`0x00` + 2×`0x1F` + 2×`0x7F` intactos; diff **1 hunk, 0 remoções**) | ✔ |
+| 4 | `Desktop/RELATORIO-109a.txt` | ✔ |
+
+### Verificação de integridade (fecho)
+
+- **Pasta-fonte:** **20 ficheiros** (19 pré-existentes + a sheet). **Nenhum dos 19 originais alterado** —
+  md5 das 8 PNG reconferidos e idênticos (§A.2). Os 3 instrumentos auxiliares de zoom **removidos**.
+- **Sem resíduos:** `_logs/_refut/` (criado pelo validador) **não existe**.
+- **Higgsfield:** só `account status`. **Nenhuma geração, nenhum upload, nenhum crédito gasto.**
+- **Código:** **zero alterações.** `git diff --name-only` = apenas `CLAUDE.md` e
+  `_logs/UTAC109a-inventario.md` (documentos). Nunca `git add -A`.
+- **Repo do projecto:** `HEAD` de partida `740eb7e`; commits deste UTAC: `44b92cc` (log) → registo.
+
+### Custo (medido, Hermes usa USD)
+
+Fonte: `state.db` → `sessions`. `cost_status = estimated`.
+
+| Sessão | `source` | chamadas | in | out | cache read | custo |
+|---|---|---|---|---|---|---|
+| `20261007_000624_7dfe52` (**sessão CLI partilhada**) | `cli` | 147 | 304 535 | 145 093 | 42 044 672 | **0,20099** total acumulado |
+| ↳ menos a leitura no fecho do **UTAC108a** | | | | | | − 0,08642 |
+| ↳ **diferença** (cobre o turno do Higgsfield **+** o UTAC109a) | | | | | | **= 0,11457** |
+| `20261007_022231_74d25a` (validador, 1.ª tentativa — morreu sem veredicto) | `subagent` | 27 | 142 492 | 29 707 | 1 345 280 | **0,03203** |
+| `20261007_023131_dde8be` (validador, 2.ª tentativa — APROVADO) | `subagent` | 9 | 32 361 | 10 676 | 308 864 | **0,00838** |
+| **TOTAL atribuível ao UTAC109a** | | | | | | **≈ US$ 0,155 = ≈ 15,5 centavos** |
+
+⚠️ **Declarado:** a sessão CLI é **partilhada** (a plataforma reutilizou-a) e a diferença de 0,11457
+**não separa** o UTAC109a do turno de configuração do Higgsfield que correu entre os dois UTACs ⇒ o
+total acima é um **teto**. Os subagentes são separáveis (sessões próprias) e estão medidos um a um.
+Nota de método: **a 1.ª tentativa do validador custou ~4× a 2.ª** e não produziu veredicto — lição de
+orçamento para os próximos briefs.
+
+**SALDO DA API: NÃO LIDO** (declarado). O Hermes não tem comando de saldo e ler a credencial violaria
+a R5 — mesma situação do UTAC108a.
+
+**Veredito final: FECHADO** — inventário das 8 imagens verificado, contact sheet gerada, análise
+estética e de dataset documentada, **LACUNA do Soul ID para cartoon registada**, prompt-base proposto,
+validador adversarial **APROVADO** (2 iterações do Boulder Loop), registo em 3 lugares, commit e push.
