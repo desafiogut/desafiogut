@@ -5018,3 +5018,103 @@ FICHA-PLAY/MC100_MATRIZ, `EM_BREVE_MODE` -- tudo intacto. `git diff --name-only`
 **Registo:** `docs/aprovacoes-operador.md` - `_logs/UTAC108a-manifesto.md` -
 `Desktop/RELATORIO-UTAC108a-MANIFESTO.txt`. **Proximo:** 108b (auditoria de discrepancias contra
 producao) -> 108c+ (correccoes cirurgicas) -> 108f (remover lojista).
+
+
+## R14 (append) -- UTAC109a -- INVENTARIO da pasta-fonte GUTO + dataset (serie 109) (hermes)
+
+**Tipo:** medicao/preparacao, READ-ONLY sobre a pasta-fonte. **Nao gera imagens, nao treina Soul ID,
+nao cria `GUTO-ecommerce/`.** **Baseline:** `740eb7e` (= origin/main). **Commit:** `44b92cc` (log) ->
+registo. **HI5:** 1 h.
+
+**Serie 109 = consistencia visual do GUTO**: substituir a vibe de leilao (martelo) por vibe de
+e-commerce (carrinho de supermercado), mantendo a identidade do personagem.
+
+### PARAGEM + 4 DESVIOS (a regra do enunciado accionou-se)
+O caminho do enunciado `GUTO/GUTO - eletrodomesticos/` **nao existe**. Medido e escalado ao operador,
+que confirmou a fonte: `GUTO-Eletrodomesticos/GUTO estatico oficial/` (as 8 PNG 4K).
+- **D-1** nome real: `GUTO-Eletrodomesticos` (unico directorio no Desktop; corroborado por atalho antigo
+  em `MC-HISTORICO/MC39.7.1-shots/`); pasta mexida hoje 01:57-01:58.
+- **D-2** as 8 imagens estao numa **SUBPASTA** (`GUTO estatico oficial/`).
+- **D-3** a pasta tem **19 ficheiros** (8 PNG + 8 MP4 + 1 ZIP com as mesmas 8 em baixa resolucao +
+  README.txt + 1 JPEG de proporcoes), `du -sh` 212 MB.
+- **D-4** a premissa «8 imagens COM martelo de leiloeiro» e **imprecisa**: martelo **fisico em 4 de 8**
+  (02, 05, 06, 07); em 01 e so **grafico no ecra da TV**; **ausente em 03, 04, 08**.
+
+### AS 8 IMAGENS
+`01-guto-tv` / `02-guto-geladeira` / `03-guto-maquina-lavar` / `04-guto-ar-condicionado` /
+`05-guto-notebook` / `06-guto-smartphone` / `07-guto-fogao` / `08-guto-conjunto-eletrodomesticos`.
+Todas **4096x4096, PNG, RGBA, 1:1**, 19,4-22,1 MB (total **168,3 MB**), mtime 2026-05-27. md5 das 8 no
+log. Tag EXIF vazia — **mas nao estao limpas**: ver abaixo.
+
+### ACHADO: METADADOS COMFYUI ESCONDIDOS EM TODOS OS PNG
+Chunks de texto PNG `prompt` + `workflow` (JSON do grafo). Medido nas 8:
+modelo **`gemini-3-pro-image-preview`** (= Nano Banana Pro), resolução `4K`, ratio `1:1`,
+`response_modalities=IMAGE`; nos `LoadImage #11/#12` -> `BatchImagesNode #36` -> `GeminiImage2Node #35`
+-> `SaveImage #30`; `system_prompt` identico nas 8. **8 seeds** e os **prompts exatos** por imagem
+transcritos no log (§A.3) — **diferem do `README.txt`**, que tem versoes curtas; o que vale e o do PNG.
+**As 8 usam a MESMA imagem de referencia de input** (`0539243f…915e.png`) — e essa referencia
+**nao existe no disco** (varredura por sha256 de `Desktop/GUTO`): **LACUNA L-1**.
+
+### O GUTO (por inspecao visual real, nao pelos prompts)
+Homem **adulto estilizado** (nao animal, nao robo), **render 3D CGI** tipo Pixar/DreamWorks; cabelo
+castanho-escuro curto repartido ao lado; olhos grandes castanhos; sorriso aberto; barba cuidada +
+barba por fazer; **fato azul-marinho, camisa branca, laco azul-marinho, colete laranja-tijolo brocado,
+lencinho de bolso, sapatos castanhos**; **medalhao dourado circular ao peito em corrente dourada**
+(presente nas 8; **LACUNA L-2**: o simbolo nao ficou legivel — a confirmar contra
+`Desktop/GUTO/LOGO DO MEDALHAO.jpeg`, fora do escopo). De pe nas 8.
+
+### ENQUADRAMENTO
+Estudio **branco/cinza-clarissimo** nas 8, mas **3 tem cena montada** (01: pulpito + corda de veludo +
+mesa com TV + microfone; 04: pedestal com placa «**AUCTION ITEM #10: PREMIUM AC UNIT**»; 05: plataforma
+dourada + 2 projetores + ecrãs «**BIDDING**»). Luz de estudio difusa, sombra de contacto. Angulo
+frontal ao nivel dos olhos, corpo inteiro. O GUTO esta **ao lado** do eletrodomestico a apresenta-lo.
+
+### CONSISTENCIA E DATASET
+**O GUTO e o mesmo personagem nas 8** (coerente em rosto/cabelo/barba/fato/medalhao) — explicado por
+mesmo modelo + **mesma imagem de referencia**. Muda: pose/gesto, expressao, eletrodomestico, aderecos
+de cena, escala. **DATASET: 8 imagens (<20) -> ALERTA para o 109b**; 0 perfil, 0 costas, 0 close-up de
+rosto, 0 ficha de expressoes: serve como **referencia estilistica**, **nao** como conjunto de treino
+multi-angulo.
+
+### LACUNA DO SOUL ID PARA CARTOON (registada, NAO resolvida — decisao do 109b)
+Medido na doc das skills instaladas: `higgsfield-soul-id/SKILL.md:5-6` «personalized model on a
+**person's face**»; `:44` «5-20 **face photos**»; `:79` «5+ unique faces»; `:13-14` «**NOT for: …
+named-character / non-photo avatars (use `higgsfield-generate` with prompt)**» e «one-shot face swaps
+(use `higgsfield-generate` with `--image`)». ⇒ **Soul ID e para ROSTOS de pessoas**; o GUTO e mascote
+cartoon 3D e o conjunto nao cumpre «5-20 face photos». Alternativa que a propria skill aponta:
+`higgsfield-generate` com **imagem de referencia** (`media-inputs.md:36` «1+ references, often up to
+8»; `nano_banana_2_lite` ate **14**) — **exactamente o que a pipeline original ja fez**.
+
+### COPY A TRATAR NO 109c (texto legivel medido)
+01 ecra da TV «**Menor Lance Unico**» + martelo grafico · 03 letreiro «**LANCE**»/«**UNICO**» (com
+acento agudo no U) — **grafia CORRECTA** · 04 «22°C» + placa «**AUCTION ITEM #10: PREMIUM AC UNIT**»
+(ingles) · 05 «**DESAFIOGUT**» (marca, a preservar) + ecrãs «**BIDDING**» com montantes (ingles) ·
+06 «**MENOR LANCE UNICO**» no telemovel · 07 «400»/«350» · 08 «**Arremate Ja!**» + grelha Smart TV com
+**Netflix/Prime Video/YouTube/Google** (marcas de terceiros).
+⇒ A serie 109 **nao e so trocar o martelo**: ha copy de leilao em 5 imagens e marcas de terceiros na 08.
+
+**⛔ CONCLUSAO MINHA REFUTADA (fica a vista, nao apagada):** a 1.ª versao deste registo afirmou que o
+letreiro da 03 dizia «**LANÇE**» com **cedilha indevida**. **É FALSO** — o **validador adversarial**
+refutou-o («no cedilla under the C») e confirmei-o depois com a placa inteira num recorte 1:1: as letras
+sao **A N C E** com o **C limpo**, e o sinal que eu li como cedilha e o **acento agudo do `Ú`** da linha
+de baixo, que cai visualmente entre as duas linhas. **Erro do MEU instrumento** (ampliacao insuficiente
++ palavra cortada a meio). Regra reforcada: para ler texto em imagem, enquadrar a **palavra inteira** e
+comparar os diacriticos das linhas entre si. Detalhe em `_logs/UTAC109a-inventario.md` §B.8.1.
+
+### LGPD
+**Nenhuma das 8 tem rosto de pessoa real** — as 8 mostram o mesmo personagem cartoon 3D. Nada a
+mascarar. (Se o GUTO for caricatura de pessoa real identificavel, e questao de direitos de imagem,
+fora do escopo.)
+
+### VERIFICACAO
+Pasta-fonte **intacta** (nenhum ficheiro movido/renomeado/editado); unico ficheiro criado:
+`_contact-sheet.png` (autorizado). Contact sheet 2890x1546, grelha 4x2, as 8 presentes. Higgsfield
+consultado **so** com `account status` (desafio-gut@gmail.com, plus, **1010 credits**) — **nenhuma
+geracao, nenhum credito gasto**. `identify`/`montage`/`exiftool` **ausentes**; usados **PIL 12.3.0** e
+`magick`. Zero alteracoes de codigo.
+
+**Lacunas:** L-1 referencia ComfyUI ausente · L-2 simbolo do medalhao por confirmar · L-3 Soul ID para
+cartoon (109b) · L-4 os 8 MP4 nao analisados ao detalhe · L-5 o JPEG de proporcoes nao lido.
+
+**Registo:** `_logs/UTAC109a-inventario.md` · `GUTO-Eletrodomesticos/_contact-sheet.png` ·
+`Desktop/RELATORIO-109a.txt`. **Proximo:** 109b (mecanismo de consistencia do GUTO) -> 109c (geracao).
