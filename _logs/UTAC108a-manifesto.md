@@ -237,8 +237,9 @@ veredicto é o que os apanha.
   `_lib/`, `package*.json` intactos; `EM_BREVE_MODE = true`.
 - **`.bak-*`:** 5, md5 = baseline (nenhum tocado).
 - **Suíte canónica no fecho:** frontend **849/849** · backend **1095/1101** — **VERDE**.
-- **Worktree do validador** (`tmp-108a-val/wt`) removido pela **ordem A13** (o helper faz `rmdir` das
-  4 junctions primeiro) — a confirmar no fecho.
+- **Worktree do validador** (`tmp-108a-val/wt`) **removido pela ordem A13** — o helper
+  `scripts/worktree-helper.mjs remover` fez `rmdir` das 4 junctions primeiro, depois
+  `git worktree remove` → exit 0. **`node_modules` intactos: 498 (frontend) · 414 (functions)**.
 
 ### Custo (medido ao fecho, 2026-10-06 — Hermes usa USD)
 
