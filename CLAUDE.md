@@ -5369,3 +5369,42 @@ ressalvas corrigidas). **Operador: «ficaram boas».** Recomendacao: MLC A + OP 
 **Validador: APROVADO** (0 ⛔; ⚠️ badge com outro texto e ramo `/seguranca` sem guarda -> fechados, nao re-validados; ℹ️ `robots.txt` e `scripts/test-mc12.mjs` -> 108h).
 **Registo:** `_logs/UTAC108g-limpar-referencias.md` · `_logs/UTAC108g_SEG7_VALIDADOR.md` · `Desktop/RELATORIO-UTAC108g-LIMPAR-REFERENCIAS.txt`.
 **Custo:** validador 133 551 tokens = 2,7–267 ¢ (53,4 ¢ se tudo input); sessao principal nao medida. **Proximo:** 108h (limpeza geral).
+
+## R14 (append) — UTAC108h.1 — DIAGNOSTICO: prateleira de Programadas no Inicio (2026-10-08)
+
+**Veredicto:** CAUSA RAIZ IDENTIFICADA — e **nao e um bug**: a divisao em duas prateleiras
+(⚡ Relampago + 🎫 Programada) **nunca foi implementada**, porque o proprio operador a excluiu do
+escopo em **R18-C do UTAC107c (2026-10-06)**: «a divisao Relampago/Programadas ... ficam fora do
+escopo; a Regra 1 aplica-se pondo o titulo «Outras Edicoes» dentro de vidro». Registo:
+`_logs/UTAC107c-inicio.md` (SEG0, tabela de conflitos + respostas R18).
+
+**Codigo (`53d0d06`):** UMA so prateleira, «🗓️ Outras Edicoes» (`Dashboard.jsx:485`), alimentada
+por `edicoesExtra` = `Object.values(edicoes).filter(e => e.id !== EDICAO_ATIVA && !ehEspecial(e.id))`
+(`Dashboard.jsx:151-153`) — **sem filtro por `tipo`**. O filtro `tipo === "programado"` existe no
+repo, mas **so** em `OfertasProgramadas.jsx:58`. O «⚡ Relampago» que o operador ve e o **rotulo do
+card da Edicao Ativa** (`Dashboard.jsx:434`), nao o titulo de uma prateleira.
+
+**Agravante (explica o «so vejo a Edicao Ativa»):** a prateleira so e desenhada com
+`edicoesExtra.length > 0` (`Dashboard.jsx:477`) — com `edicoesExtra` vazio, o ecra fica so com o
+card da Edicao Ativa. **Nao medi o Blob** (R5).
+
+**Hipoteses descartadas:** (2) o 108e.1 mexeu no `CartaoEdicao` e o Inicio perdeu o carrossel —
+**falso**: o log do 108e.1 tem 0 ocorrencias de «Dashboard»/«Inicio» e o Inicio usa `EdicaoCard`
+(`Dashboard.jsx:18`), nao `CartaoEdicao`; (3) o `EM_BREVE_MODE` esconde a prateleira — **falso**:
+nos dois ficheiros do Inicio aparece **so em comentario** (`Dashboard.jsx:23`, `EdicaoCard.jsx:20`),
+sem um unico condicional. (4) edicoes Programada no Blob: **nao medido** (R5).
+
+**Producao:** HTTP 200, 5 assets no `index.html`; varridos os 18 chunks citados — «Outras Edicoes»
+×2, «⚡ Relampago» ×3 (rotulos), «🎫 Programada» **×0**, «Passe Desafio» ×2. **Producao = codigo.**
+
+**Achado latente:** as pecas ja existem (`useEdicoes.js:83` normaliza `tipo`; `EdicaoCard.jsx:68`
+rotula; `OfertasProgramadas.jsx:58` filtra) — falta so **agrupar** no Dashboard, o que rebaixa o
+custo da P-1.
+
+**Erro do meu instrumento (declarado):** a ultima linha do meu script de producao imprimiu
+«existe prateleira titulada Relampago/Programada? SIM» somando um **rotulo** a um **titulo**. Errado:
+nao existe titulo de prateleira nenhum em producao.
+
+**Estado: PARADO.** READ-ONLY; nada alterado. Correccao = **P-1** (UTAC proprio), dependente da
+decisao de produto **P-2** (duas prateleiras vs filtro na prateleira unica; e o que fazer quando uma
+lista esta vazia). Suite VERDE 899/899 + 1095/1101. Duraçao 11:38→11:43.
