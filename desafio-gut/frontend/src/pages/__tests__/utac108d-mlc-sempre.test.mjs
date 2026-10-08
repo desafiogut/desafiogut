@@ -70,6 +70,18 @@ const texto = (h) => h.replace(/<style>[\s\S]*?<\/style>/g, "").replace(/<[^>]*>
 const VAZIO = "Nenhuma edição em andamento.";
 const SEM_SALDO = "Sem saldo. Carregar agora?";
 
+/** Atributos das tags abertas que envolvem a posição `i` (do mais exterior ao mais interior). */
+function ancestrais(html, i) {
+  const pilha = [];
+  for (const m of html.slice(0, i).matchAll(/<(\/?)([a-zA-Z0-9]+)([^>]*?)(\/?)>/g)) {
+    const [, fecha, tag, attrs, auto] = m;
+    if (auto || /^(img|input|br|hr|meta|link|source|path|circle|rect)$/i.test(tag)) continue;
+    if (fecha) { const k = pilha.map((p) => p.tag).lastIndexOf(tag); if (k >= 0) pilha.length = k; }
+    else pilha.push({ tag, attrs });
+  }
+  return pilha;
+}
+
 function dentroDeVidro(html, i) {
   const pilha = [];
   for (const m of html.slice(0, i).matchAll(/<(\/?)([a-zA-Z0-9]+)([^>]*?)(\/?)>/g)) {
@@ -82,9 +94,11 @@ function dentroDeVidro(html, i) {
 }
 
 describe("UTAC108d · sem edição a correr (EM_BREVE_MODE ligado)", () => {
-  test("(a) o herói «EM BREVE» saiu: o título em maiúsculas não aparece em lado nenhum da página", () => {
-    const t = texto(renderizar());
-    const i = t.search(/EM BREVE/);
+  test("(a) o herói «EM BREVE» saiu: «em breve» (qualquer caixa) só resta na pílula do prazo da tabela", () => {
+    // A1 do validador: sem distinguir maiúsculas (um «Em breve» com CSS uppercase passava); a ÚNICA ocorrência
+    // tolerada é a pílula conhecida do prazo da tabela (resíduo declarado), retirada antes de procurar.
+    const t = texto(renderizar()).replace("🕒 Em breve", "");
+    const i = t.search(/em breve/i);
     assert.equal(i, -1, `a página ainda mostra «EM BREVE»: …${t.slice(Math.max(0, i - 80), i + 40)}…`);
   });
 
@@ -101,6 +115,19 @@ describe("UTAC108d · sem edição a correr (EM_BREVE_MODE ligado)", () => {
     assert.equal(html.split(VAZIO).length - 1, 1, "o estado vazio aparece mais de uma vez");
     assert.match(html, /Volte quando houver\./);
     assert.ok(dentroDeVidro(html, i), "o estado vazio está FORA de vidro (Regra 1)");
+  });
+
+  test("(b) A1 do validador: o estado vazio está VISÍVEL (nem ele nem os pais com hidden/display:none/opacity:0) e anunciado (role=status)", () => {
+    const html = renderizar();
+    const pais = ancestrais(html, html.indexOf(VAZIO));
+    for (const { tag, attrs } of pais) {
+      assert.doesNotMatch(attrs, /\shidden(=|\s|$)/, `<${tag}> com hidden`);
+      assert.doesNotMatch(attrs, /display:\s*none/, `<${tag}> com display:none`);
+      assert.doesNotMatch(attrs, /opacity:\s*0(?![.\d])/, `<${tag}> com opacity:0`);
+      assert.doesNotMatch(attrs, /visibility:\s*hidden/, `<${tag}> com visibility:hidden`);
+    }
+    assert.ok(pais.some(({ attrs }) => /data-testid="sem-edicao"/.test(attrs) && /role="status"/.test(attrs)),
+      "o estado vazio perdeu o role=\"status\"");
   });
 
   test("(b) no topo do <main>, antes do formulário do lance", () => {

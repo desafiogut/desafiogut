@@ -311,10 +311,9 @@ export default function MercadoLances() {
         {/* UTAC107d — a frase da modalidade deixou de ser um <p> solto por cima do vidro: vai
             DENTRO do GlassHeader (prop `frase`, Regra 1). ⚠️ Mantém-se o limite do UTAC106b
             (ℹN3): na build das LOJAS a aba abre na vista de conformidade e a frase não aparece. */}
-        {/* ── Cabeçalho (MC66 Direção C): GlassHeader compõe identidade+auth,
-             HERO "EM BREVE" (foco) + seletor de modo, e o rodapé legal fino.
-             Subcomponentes isolados em components/glass/. O cronômetro vivo foi
-             removido (EM BREVE permanente). ── */}
+        {/* ── Cabeçalho (MC66 Direção C): GlassHeader compõe identidade+auth, a frase e o seletor de modo,
+             e o rodapé legal fino. UTAC108d — saiu o herói «EM BREVE»; o estado «sem edição» vive no
+             topo do <main>. ── */}
         <GlassHeader
           isMobile={isMobile}
           isConnected={isConnected}
@@ -325,7 +324,6 @@ export default function MercadoLances() {
           modalidade={modalidade}
           setModalidade={setModalidade}
           encerrado={encerrado}
-          edicao={EDICAO_ATIVA}
           frase={FRASE_MENOR_LANCE_UNICO}
         />
 

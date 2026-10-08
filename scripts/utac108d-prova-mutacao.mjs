@@ -30,6 +30,17 @@ const MUTANTES = [
     para: "  if (!isLeilaoAtivo)     return <MercadoConformidade isMobile={isMobile} />;\n  if (EM_BREVE_MODE)      return <MercadoConformidade isMobile={isMobile} />;\n" },
   { id: "D6", desc: "o sinal deixa de ser o EM_BREVE_MODE (estado vazio sempre)", f: MLC, t: T,
     de: "{EM_BREVE_MODE\n", para: "{true\n" },
+  // Sobreviventes do validador (A1), agora cobertos:
+  { id: "D7", desc: "(X1) estado vazio com display:none", f: VAZ, t: T,
+    de: 'padding: "1rem 1.1rem",', para: 'padding: "1rem 1.1rem", display: "none",' },
+  { id: "D8", desc: "(X2) estado vazio com hidden", f: VAZ, t: T,
+    de: '<GlassCard role="status"', para: '<GlassCard hidden role="status"' },
+  { id: "D9", desc: "(X6) estado vazio com opacity:0", f: VAZ, t: T,
+    de: 'padding: "1rem 1.1rem",', para: 'padding: "1rem 1.1rem", opacity: 0,' },
+  { id: "D10", desc: "(X3) estado vazio sem role=status", f: VAZ, t: T,
+    de: '<GlassCard role="status"', para: '<GlassCard' },
+  { id: "D11", desc: "(X4) herói de volta como «Em breve» com CSS uppercase", f: HDR, t: T,
+    de: "          <ModeSelector ", para: '          <h2 style={{ textTransform: "uppercase" }}>Em breve</h2>\n          <ModeSelector ' },
 ];
 
 let provados = 0;

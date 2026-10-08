@@ -1,6 +1,6 @@
 // MC66 — GlassHeader (Direção C): compositor do Glass superior da aba Lances.
-// Hierarquia clara: (1) barra de identidade+auth · (2) HERO "EM BREVE" (foco) +
-// seletor de modo · (3) rodapé legal fino. Substitui o header monolítico inline
+// Hierarquia clara: (1) barra de identidade+auth · (2) frase + seletor de modo (UTAC108d: saiu o
+// HERO "EM BREVE") · (3) rodapé legal fino. Substitui o header monolítico inline
 // de MercadoLances.jsx (remove o cronômetro vivo e o <div/> espaçador vazio).
 import { GlassCard } from "@/components/ui";
 import { COR } from "./glassTokens.js";
