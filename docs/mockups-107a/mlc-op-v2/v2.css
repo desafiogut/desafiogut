@@ -1,17 +1,30 @@
 /* UTAC108e — camada v2 dos mockups MLC + OP (mockup de design, NÃO é código de produção).
  *
- * Regra desta camada: NÃO redefine nada do tokens.css. Só acrescenta o que falta para
- * as duas abas passarem a falar a MESMA língua visual. O que era divergente:
- *   MLC antigo: .edicao-unica (CardLance, padding 24px, botão radius 28px, gradiente dourado)
- *   OP antiga:  .edicao       (EicaoCard, padding 16px, botão radius 12px, dourado sólido)
+ * ⚠️ HONESTIDADE SOBRE O tokens.css (correcção pós-validador): esta camada NÃO é uma adição pura.
+ * O `tokens.css` JÁ declarava um `.ed-card` (bloco «EdicaoCard.jsx», tokens.css:146-153) — era o
+ * card da OP. A v2 REUSA esse nome para as duas abas e SOBREPÕE 5 valores dele (ganha por ordem de
+ * carga: tokens.css primeiro, v2.css depois). O que muda, e porquê:
+ *   .ed-card ............ gap 10px -> 12px (o --gut-gap do tokens, para alinhar com as outras pilhas)
+ *   .cab ................ igual (id à esquerda, estado à direita)
+ *   .caixa .............. padding 10/12 -> 12px; raio 10px -> var(--gut-radius-btn) 12px
+ *   .thumb .............. RENOMEIA o `.banner` do tokens (mesmas 52px, mesma ideia) — a v2 não usa .banner
+ *   .relogio ............ align-items center -> baseline; gap 10px -> 8px
+ *   .relogio .t ......... 22px -> 24px (o cronômetro é informação de 1.ª ordem nas duas abas)
+ * O `.ed-card .guto` do tokens fica sem uso nestas páginas (o v2 usa `.pilula` + `.thumb`).
+ * NÃO é redefinição gratuita: é a aplicação da MESMA família às duas abas, com os valores medidos.
+ *
+ * O que era divergente antes:
+ *   MLC antigo: .edicao-unica (classe que NEM EXISTE no tokens.css; padding 24px, botão radius 28px,
+ *               gradiente dourado) — a roupa do MLC era literalmente fora do sistema.
+ *   OP antiga:  .edicao (EicaoCard, padding 16px, botão radius 12px, dourado sólido)
  * Aqui existe UM só componente de edição (.ed-card) usado pelas duas abas.
  * Um só raio, um só dourado, um só vermelho, uma só coluna — os valores vêm do tokens.css.
  */
 
 /* ══════════════════════════════════════════════════════════════════════════
    O COMPONENTE ÚNICO DE EDIÇÃO (usado pelo MLC e pela OP)
-   Mesmo casco nas duas abas: cabeça (id + estado) → caixa (prémio) →
-   cronómetro → slot de acção. Muda só o CONTEÚDO do slot:
+   Mesmo casco nas duas abas: cabeça (id + estado) → caixa (prêmio) →
+   cronômetro → slot de acção. Muda só o CONTEÚDO do slot:
      MLC → lance (centavos)      OP → palpite (quantos lances)
    ══════════════════════════════════════════════════════════════════════════ */
 .ed-card { display: flex; flex-direction: column; gap: 12px; }

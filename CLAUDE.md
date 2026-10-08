@@ -5218,3 +5218,81 @@ Mutacao **14/14** (M13 guarda · M14 call site). **Validador: APROVADO COM RESSA
 R$ 0 e 0 senhas fica so com o aviso do CardLance, sem atalho «Carregar PIX»). **N3 FECHADA.**
 **Registo:** `_logs/UTAC108c.1-n3-programado.md` · `_logs/UTAC108c.1_SEG5_VALIDADOR.md` · `Desktop/RELATORIO-UTAC108c.1-N3.txt`.
 **Custo:** validador 96 765 tokens = 1,9–194 ¢ (39 ¢ se tudo input); ≈ 20 min. **Proximo:** 108f.
+
+
+## R14 (append) — UTAC108e — MOCKUPS v2: MLC + OP COERENTES (design, sem codigo)
+
+**Fecho:** 2026-10-07 · **HEAD/origin/main:** `a68ec46` (pos-108d) · **Suite:** frontend **885/885** ·
+backend **1095/1101** -> VERDE. **Zero alteracoes de codigo** (`src/`, `netlify/`, `scripts/`,
+`package*` intocados; 0 `.bak-*` tocados; `EM_BREVE_MODE = true`).
+
+### Diagnostico
+O **conteudo** das duas abas ja era o mesmo; a **roupa** e que diferia — a sensacao de «duas apps»
+vinha daí. Divergencias medidas nos mockups aprovados: **componente de edicao** (`.edicao-unica` no
+MLC vs `.edicao` na OP), raio/padding (24px e botao pilula 28px vs 14/12px), dourado (gradiente
+`#f5a623→#e89400` vs `#f5a623`), **coluna** (sem limite vs 640px), cabeca (titulo solto vs
+`titulo-aba`), **estados** (nenhum vs `.estado`). O proprio `tokens.css` **ja anunciava** estas
+divergencias em comentario (`:40`, `:42`, `:44`, `:32`, `:37`, `:45-46`) — a familia visual unica ja
+estava desenhada na serie 107a, **nunca aplicada as duas abas ao mesmo tempo**. Achado por leitura: a
+tabela da OP dizia «Lances — Edicao PROG-1» quando a decisao **R18-C do 107e.1** escolheu «Palpites».
+
+### Entrega
+`docs/mockups-107a/mlc-op-v2/` — **`index.html`**, **`mlc.html`** (variantes A/B/C), **`op.html`**
+(A/B/C), **`inicio.html`** (referencia, as duas familias juntas) e **`v2.css`** (camada v2; **nao
+redefine nada do `tokens.css`**). **Um so componente de edicao, `.ed-card`, usado pelas DUAS abas** —
+muda so o conteudo do slot de acao (lance em centavos no MLC, palpite na OP) e a pilula da familia
+(`⚡ Relampago` / `🎫 Programada`). Ligacao directa a variante: `mlc.html#A|#B|#C` (`hashchange`
+tratado; o `mockup.js` partilhado **nao foi tocado**). Superficie comprometida: **Operate** (acao
+primeiro, placar no fim, sem heroi). Copia autonoma no Desktop: `MOCKUPS-108e-MLC-OP/` (com
+`tokens.css`, `mockup.js` e as fontes dentro, com o caminho das fontes corrigido).
+
+### Verificacao (browser real, nao por leitura) — 21 estados
+`mlc` A/B/C × 375/768/1024, `op` A/B/C × 375/768/1024, `inicio` × 375/768/1024:
+**0 alvos < 48px** e **0 blocos de texto fora de vidro** em TODOS; painel da variante **mesmo visivel**
+(medido). **Contraste AA**: texto 16,05:1 · corpo 12,03:1 · rotulo 12px 7,17:1 · muted 4,60:1 ·
+dourado 9,07:1 · laranja 6,49:1 · on-gold/gold 9,45:1 — **0 violacoes**. **Regra 2**: mesmo
+`.tabela-especial` nas duas abas, sempre o ultimo vidro (56px/48px); muda so o substantivo. **0 links
+quebrados**.
+
+### Defeito REAL achado e corrigido antes de entregar
+Variante **C do MLC a 768/1024px**: o campo do lance ficava com **28,5px de largura** (botao 168px
+fixos numa coluna de 246px) — inutilizavel. Corrigido empilhando campo+botao na coluna estreita.
+
+### Erros dos MEUS instrumentos (declarados, todos corrigidos)
+1. **Ponto cego no `mockup.js` partilhado:** `mockup.js:19` audita a Regra 1 so no **primeiro**
+   `.tela` => o «0 fora de vidro» das variantes **B e C nao tinha prova**. Corrigido com auditoria
+   **painel a painel** (e foi ela que apanhou o defeito de 28,5px). NAO corrigi o `mockup.js`
+   (partilhado, fora do AUTORIZA).
+2. Leitura da largura no **mesmo tick** da mutacao => stale (375 em tudo).
+3. O `.fone` tem `transition: width .25s` (`tokens.css:86`) => medi **a meio da animacao**
+   (593/748/870). Passou a esperar 400ms.
+4. Verificador de links **nao removia o `#fragmento`** => 6 falsos «quebrados».
+5. **Navegacao no mesmo documento nao recarrega** => o 1.o teste do `#B` foi invalido; corrigido no
+   codigo (`hashchange`) e re-testado.
+6. **18 excepcoes de consola** com mensagem vazia: reproduzem-se em `about:blank` => sao do ambiente
+   do browser, **nao** destes ficheiros. Nao posso afirmar «consola limpa», so que nada e atribuivel.
+
+### Pendente
+O **operador** escolhe uma variante de cada aba (A/B/C). A implementacao e um **UTAC proprio**
+(fluxo aprovado: mockups -> operador aprova -> implementacao). O **Inicio nao se escolhe** (esta
+aprovado no 107c; serve de prova de convivencia).
+
+**Validador adversarial (SEG6):** *APROVADO COM RESSALVAS — **1 bloqueante** (conformidade, nao design)*.
+0 bloqueantes de design: (a) Regra 1, (b) conversa entre abas, (c) Regra 2, (d) toque, (e) contraste,
+(g) codigo, (h) `.bak-*` — nenhum derrubado. O bloqueante foi a **decisao 9 (pt-BR)**: 31 ocorrencias de
+lexico pt-PT, **inclusive dentro dos ecras**. **Corrigido**: 32 substituicoes (0 pt-PT nos 5 ficheiros, recontado
+por Python) — inclui 2 palavras que a minha lista nao tinha (`ficheiro`->`arquivo`, `carregue em`->`clique em`),
+apanhadas pelo validador. Derrubou tambem **A7 2.a metade** (o `v2.css` **SOBREPOE** o `.ed-card` do
+`tokens.css` em 5 seletores — o cabecalho do ficheiro mente e foi reescrito para declarar o override) e **A4**
+(o «0 fora de vidro» das variantes B/C era **vacuamente verde**: o `mockup.js:19` le so o 1.o `.tela`, que ali
+esta `hidden` — os 21 estados vieram do auditor **painel-a-painel**, ja declarado na §5.3 do log). **A6
+defendido com prova** (`tokens.css:161-162`: e o APP que diz «apurada»; no MLC encerra-se, na OP apura-se).
+**Erros meus que a ronda expos:** a substituicao mecanica de lexico introduziu **4 erros de concordancia**
+(«no mesmo tela», «Este tela», «o tela real», «Ele existe») — corrigidos; e a minha lista de marcadores pt-PT
+estava **incompleta**. **Correccoes pos-veredicto NAO re-validadas** (declarado). Veredicto verbatim em
+`_logs/UTAC108e_SEG6_VALIDADOR.md`.
+
+Alvo final **re-medido**: 21/21 estados (9 MLC + 9 OP + 3 Inicio) sem alvos < 48 px e sem texto fora de vidro.
+
+**Entregaveis:** `docs/mockups-107a/mlc-op-v2/` · este bloco R14 ·
+`Desktop/RELATORIO-UTAC108e-MOCKUPS.txt` · `Desktop/MOCKUPS-108e-MLC-OP/` (copia autonoma).

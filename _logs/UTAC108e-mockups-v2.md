@@ -264,3 +264,36 @@ herdado do mockup aprovado e mantido de propósito.
 4. **Não implementei nada** — zero linhas em `src/`.
 5. **Não validei com leitor de ecrã.** A semântica (roles, `aria-label`, `label`↔`input` por `for`/`id`)
    foi escrita com cuidado, mas não foi lida por NVDA/VoiceOver.
+
+
+---
+
+## 8. SEG6 — Validador adversarial
+
+**Veredicto: APROVADO COM RESSALVAS — 1 bloqueante** (o bloqueante é de **conformidade**, não de design:
+a decisão 9 «pt-BR sempre»). **0 bloqueantes de design**: (a) Regra 1, (b) conversa entre abas,
+(c) Regra 2, (d) toque, (e) contraste, (g) código, (h) `.bak-*` — **nenhum foi derrubado**.
+Veredicto integral verbatim + a minha resposta: `_logs/UTAC108e_SEG6_VALIDADOR.md`.
+
+### 8.1 O que o validador derrubou — e o que fiz
+| Derrubou | Tratamento |
+|---|---|
+| **(i) decisão 9 violada** — 31 ocorrências de pt-PT, **inclusive dentro dos ecrãs** (`rodape-tab` e o rótulo do cronómetro) | **CORRIGIDO**: 32 substituições; recontado por Python → **0 pt-PT**. Inclui 2 palavras que a minha lista não tinha (`ficheiro`→`arquivo`, `carregue em`→`clique em`) e que o **validador** apanhou |
+| **A7, 2.ª metade** — «v2.css não redefine nada do tokens.css» é **falso** | **CORRIGIDO**: o cabeçalho do `v2.css` declara agora o **override** e lista os 5 seletores sobrepostos e o que muda |
+| **A4** — o «0 fora de vidro» de B/C era **vacuamente verde** no `mockup.js` (lê só o 1.º `.tela`) | **Já estava declarado na §5.3.** Esclarecido: os 21 estados vieram do **meu** auditor painel-a-painel |
+| **A6** — o rodapé da tabela muda mais que o substantivo | **DEFENDIDO com prova** (`tokens.css:161-162`: é o app que diz «apurada»; no MLC encerra-se, na OP apura-se) |
+
+### 8.2 ERRATA — o que mudou depois do veredicto (NÃO re-validado)
+1. **pt-BR em todo o entregável** (32 substituições). Isto muda texto **dentro dos ecrãs** ⇒ **re-medido**: 21/21 estados continuam sem alvos < 48 px e sem texto fora de vidro.
+2. **4 erros de concordância que a MINHA substituição introduziu** («no mesmo tela», «Este tela», «o tela real», «Ele existe») — corrigidos. *A substituição mecânica de uma palavra sem olhar à concordância é do mesmo tipo de defeito que apagar comentários sem preservar as linhas: mexe no que não devia.*
+3. **Rótulo do cronómetro unificado** em «restante» (era «restante» em A/C e «para o encerramento» em B).
+4. **Cabeçalho do `v2.css`** reescrito com a verdade sobre o override.
+As correcções **não passaram por 2.ª validação** — declarado (GATE 11).
+
+### 8.3 Notas do validador que ACEITO sem corrigir (declaradas)
+- **Alvos < 48 px na prancha** (`.controles button` 40 px, `.navdocs a` ~33 px): é a **ferramenta**, não o produto; o auditor do próprio repo também a exclui (`mockup.js:56`). Fica declarado.
+- **Início sem variantes e sem placar:** o **SEG3 deste UTAC** manda «1 variante» e lista os blocos sem tabela. Declarado no entregável.
+- **«conversam» marcado como pt-PT:** **falso positivo** — é forma legítima do pt-BR.
+
+### 8.4 Fecho
+**Hora do fecho:** 06:16 · duração dentro do HI5 de 2 h.
