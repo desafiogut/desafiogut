@@ -468,3 +468,45 @@ test("UTAC108e.1 · Regra 2: sem edição a tabela «Palpites» continua no fim 
     assert.ok(i > h.indexOf('data-testid="cartao-edicao"'), "a tabela tem de vir depois do cartão (último vidro)");
   } finally { c.dup.restaurar(); }
 });
+
+// T2/T3 do validador do UTAC108e.1 — visibilidade do cartão vazio e Regra 1 (vidro) na OP.
+function pilhaVidro(html, i) {
+  const pilha = [];
+  for (const m of html.slice(0, i).matchAll(/<(\/?)([a-zA-Z0-9]+)([^>]*?)(\/?)>/g)) {
+    const [, fecha, tag, attrs, auto] = m;
+    if (auto || /^(img|input|br|hr|meta|link|source|path|circle|rect)$/i.test(tag)) continue;
+    if (fecha) { const k = pilha.map((p) => p.tag).lastIndexOf(tag); if (k >= 0) pilha.length = k; }
+    else pilha.push({ tag, attrs });
+  }
+  return pilha;
+}
+
+test("UTAC108e.1 · T2: o cartão vazio da OP está VISÍVEL (nem ele nem os pais escondidos)", async () => {
+  const c = await montarEcra(undefined, ctx({ edicoes: {} }));
+  try {
+    const h = c.html();
+    const i = h.indexOf("Nenhuma edição em andamento<");
+    assert.ok(i > 0, "o cartão vazio não diz que não há edição");
+    for (const { tag, attrs } of pilhaVidro(h, i)) {
+      assert.doesNotMatch(attrs, /\shidden(=|\s|$)|display:\s*none|visibility:\s*hidden|opacity:\s*0(?![.\d])/, `<${tag}> escondido`);
+    }
+  } finally { c.dup.restaurar(); }
+});
+
+test("UTAC108e.1 · T3: Regra 1 na OP — nenhum texto fora de vidro (excepto botões)", async () => {
+  for (const edicoes of [{}, EDICAO_PROG]) {
+    const c = await montarEcra(undefined, ctx({ edicoes }));
+    try {
+      const h = c.html().replace(/<style>[\s\S]*?<\/style>/g, "");
+      const fora = [];
+      for (const m of h.matchAll(/>([^<>]*[A-Za-zÀ-ú0-9🔒][^<>]*)</g)) {
+        const t = m[1].trim(); if (!t) continue;
+        const i = m.index + 1;
+        const antes = h.slice(0, i);
+        const emBotao = antes.lastIndexOf("<button") > antes.lastIndexOf("</button>");
+        if (!emBotao && !pilhaVidro(h, i).some((p) => /gut-glass-standard/.test(p.attrs))) fora.push(t);
+      }
+      assert.deepEqual(fora, [], `textos fora de vidro: ${JSON.stringify(fora)}`);
+    } finally { c.dup.restaurar(); }
+  }
+});

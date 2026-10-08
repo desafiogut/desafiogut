@@ -513,7 +513,7 @@ function MercadoConformidade({ isMobile }) {
           style={{
             display: "inline-block",
             padding: "0.8rem 1.6rem", borderRadius: "28px",
-            background: "linear-gradient(135deg,#f5a623,#e89400)",
+            background: COR.gold, // UTAC108e.1 — dourado único (era gradiente #f5a623→#e89400)
             color: "#0a0f1a", fontWeight: 800, fontSize: "0.95rem",
             textDecoration: "none", letterSpacing: "0.02em",
             boxShadow: "0 4px 18px rgba(245,166,35,0.35)",

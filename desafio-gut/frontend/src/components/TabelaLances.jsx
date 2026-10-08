@@ -109,7 +109,7 @@ export default function TabelaLances({ lances = [], idEdicao, prazoTimestamp, en
       }}>
         <h3 style={{ ...estilos.titulo, fontSize: isMobile ? "0.95rem" : "1.05rem" }}>
           📋 Lances — Edição{" "}
-          <span style={{ color: "#fbbf24" }}>{edicaoSanitizada}</span>
+          <span style={{ color: "#f5a623" }}>{edicaoSanitizada}</span>{/* UTAC108e.1: dourado único (era #fbbf24) */}
         </h3>
         <div style={{
           display: "flex", gap: "0.6rem", alignItems: "center",
@@ -201,7 +201,7 @@ function MobileList({ lancesOrdenados, idxVencedor, encerrado }) {
                 width: "32px", height: "32px", borderRadius: "50%",
                 background: isVencedor ? "rgba(245,166,35,0.18)" : "rgba(245,166,35,0.12)",
                 border: `1px solid ${isVencedor ? "rgba(245,166,35,0.4)" : "rgba(245,166,35,0.25)"}`,
-                color: isVencedor ? "#fbbf24" : "#fbbf24",
+                color: isVencedor ? "#f5a623" : "#f5a623",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontWeight: "900", fontSize: "0.85rem", flexShrink: 0,
               }}>
@@ -219,7 +219,7 @@ function MobileList({ lancesOrdenados, idxVencedor, encerrado }) {
                 fontWeight: "900",
                 fontSize: encerrado ? "1.05rem" : "0.9rem",
                 color: encerrado
-                  ? (isVencedor ? "#fbbf24" : "#fbbf24")
+                  ? (isVencedor ? "#f5a623" : "#f5a623")
                   : "#6b7db8",
                 fontFamily: "monospace",
                 whiteSpace: "nowrap",
@@ -284,7 +284,7 @@ function DesktopTable({ lancesOrdenados, idxVencedor, encerrado }) {
                     style={{
                       fontWeight: "700",
                       color: encerrado
-                        ? (isVencedor ? "#fbbf24" : "#e8f0fe")
+                        ? (isVencedor ? "#f5a623" : "#e8f0fe")
                         : "#6b7db8",
                       fontFamily: encerrado ? "monospace" : undefined,
                       letterSpacing: encerrado ? "0.02em" : "0.05em",

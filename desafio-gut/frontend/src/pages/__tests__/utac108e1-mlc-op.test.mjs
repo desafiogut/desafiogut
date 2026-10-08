@@ -148,7 +148,9 @@ describe("UTAC108e.1 · SEG3 · sem edição → cartão vazio (não aviso solto
     assert.ok(!renderizar().includes('data-testid="sem-edicao"'));
     // a frase existe UMA vez como texto visível — dentro do cartão
     const html = renderizar();
-    assert.equal(html.split("Nenhuma edição em andamento<").length - 1, 1);
+    // T1 do validador: contar no TEXTO visível, com qualquer pontuação a seguir (um aviso «…andamento.» solto
+    // ao lado do cartão escapava à contagem por «…andamento<»).
+    assert.equal((texto(html).match(/Nenhuma edição em andamento/g) || []).length, 1, "a frase do estado vazio aparece fora do cartão");
   });
 
   test("com edição o cartão NÃO está vazio e o «Sem saldo» (108c) continua a aparecer com saldo 0", () => {
@@ -190,10 +192,20 @@ describe("UTAC108e.1 · SEG4 · pendência 1: dourado ÚNICO #f5a623", () => {
     assert.match(css, /--color-gut-gold:\s*#f5a623;/);
     assert.doesNotMatch(css, /--color-gut-gold:\s*#ff9500/i);
   });
-  test("no ecrã do MLC o dourado é um só: aparece #f5a623 / rgb(245,166,35), nunca #ff9500", () => {
-    const html = renderizar({ emBreve: false });
-    assert.doesNotMatch(html, /#ff9500|255,\s*149,\s*0/i);
-    assert.match(html, /#f5a623/i);
+  test("no ecrã do MLC o dourado é um só: aparece #f5a623 / rgb(245,166,35), nunca outro tom de dourado", () => {
+    // T4 do validador: a guarda só proibia #ff9500; um #fbbf24 novo no cartão passava. Lista dos dourados que
+    // já existiram no app (#ff9500 glassTokens · #fbbf24 overlays · #e89400 gradiente · #f59e0b amber).
+    const revelados = [{ endereco: EU, valor: 5, repetido: false }, { endereco: "0xbbbb000000000000000000000000000000000002", valor: 7, repetido: true }];
+    for (const [emBreve, extra] of [[true, {}], [false, {}], [false, { encerrado: true, lances: revelados }]]) {
+      const html = renderizar({ emBreve, ...extra });
+      assert.doesNotMatch(html, /#(ff9500|fbbf24|e89400|f59e0b)|255,\s*149,\s*0/i, `segundo dourado no MLC (emBreve=${emBreve})`);
+      assert.match(html, /#f5a623/i);
+    }
+  });
+  test("o cartão partilhado e a OP só usam o dourado único (fonte)", () => {
+    for (const p of ["components/CartaoEdicao.jsx", "pages/OfertasProgramadas.jsx", "components/glass/GlassHeader.jsx"]) {
+      assert.doesNotMatch(codigo(ler(p)), /#(ff9500|fbbf24|e89400|f59e0b)/i, `segundo dourado em ${p}`);
+    }
   });
 });
 
