@@ -15,6 +15,9 @@ import { useRecursosApp } from "../hooks/useRecursosApp.js";
 import { useMinhasParticipacoes } from "../hooks/useMinhasParticipacoes.js";
 // UTAC108c (D-1) — aviso «Sem saldo» no destino do botão da Carteira (que passou a navegar sempre).
 import SemSaldoBanner, { mostrarAvisoSemSaldo } from "../components/SemSaldoBanner.jsx";
+// UTAC108d — estado vazio «sem edição»; o sinal é o EM_BREVE_MODE, só LIDO (R18-B do 108d).
+import SemEdicaoAviso from "../components/SemEdicaoAviso.jsx";
+import { EM_BREVE_MODE } from "../lib/leilaoLock.js";
 
 // MC99 — `CATEGORIAS_POR_TIPO` + `buscarClienteDoLeilaoAtivo` viveram aqui para
 // alimentar o banner do cliente (REQ-01). Com o banner removido desta tela, o
@@ -347,7 +350,11 @@ export default function MercadoLances() {
               INFORMA e não esconde nada: a edição, a tabela e o formulário continuam visíveis; o lance
               em si continua bloqueado no CardLance. Só com saldo LIDO = R$ 0,00 (R18-A); nunca a
               contas corporativas (R18-B); nunca no modo «Programado», que usa senhas (UTAC108c.1). */}
-          {mostrarAvisoSemSaldo({ isConnected, saldoRsCentavos, saldoRsStatus, tipoProvavel, modalidade }) && <SemSaldoBanner />}
+          {/* UTAC108d — os dois avisos NUNCA juntos: sem edição a correr (EM_BREVE_MODE) mostra-se o estado
+              vazio; só com edição é que faz sentido falar de saldo. */}
+          {EM_BREVE_MODE
+            ? <SemEdicaoAviso />
+            : mostrarAvisoSemSaldo({ isConnected, saldoRsCentavos, saldoRsStatus, tipoProvavel, modalidade }) && <SemSaldoBanner />}
           <section style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             <CardLance
               idEdicao={EDICAO_ATIVA}

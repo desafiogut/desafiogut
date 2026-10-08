@@ -21,6 +21,7 @@ const RR = caminho(SRC, "__tests__", "_stubs-106c", "rr.jsx");
 
 let React = null, renderToStaticMarkup = null, vite = null, Pagina = null, definirContexto = null;
 let SemSaldoBanner = null, mostrarAvisoSemSaldo = null;
+let definirEmBreve = null;
 
 before(async () => {
   vite = await createServer({
@@ -34,6 +35,8 @@ before(async () => {
         { find: /^\.\.\/components\/CardLance\.jsx$/, replacement: `${STUBS}/CardLance.jsx` },
         { find: /^dompurify$/, replacement: `${STUBS_COMPONENTES}/dompurify.js` },
         { find: /^react-router-dom$/, replacement: RR },
+        // UTAC108d — o «Sem saldo» só existe com edição a correr (EM_BREVE_MODE desligado): duplo controlável.
+        { find: /^\.\.\/lib\/leilaoLock\.js$/, replacement: `${STUBS}/leilaoLock.js` },
       ],
     },
   });
@@ -41,11 +44,14 @@ before(async () => {
   ({ definirContexto } = await vite.ssrLoadModule(`${STUBS}/AppContext.jsx`));
   Pagina = (await vite.ssrLoadModule("/src/pages/MercadoLances.jsx")).default;
   ({ default: SemSaldoBanner, mostrarAvisoSemSaldo } = await vite.ssrLoadModule("/src/components/SemSaldoBanner.jsx"));
+  ({ definirEmBreve } = await vite.ssrLoadModule(`${STUBS}/leilaoLock.js`));
 });
 after(async () => { if (vite) await vite.close(); });
 
 const EU = "0xaaaa000000000000000000000000000000000001";
-function renderizar(extra = {}) {
+// UTAC108d: estes casos são do «Sem saldo», que só aparece COM edição a correr ⇒ EM_BREVE_MODE desligado.
+function renderizar(extra = {}, emBreve = false) {
+  definirEmBreve(emBreve);
   definirContexto({
     EDICAO_ATIVA: "R-1", modalidade: "flash", setModalidade: () => {},
     lances: [], prazoTimestamp: 0, encerrado: false, showOverlay: false,
@@ -160,6 +166,14 @@ describe("UTAC108c · o aviso na página REAL do Menor Lance Único", () => {
 
   test("UTAC108c.1: a mesma página no modo «Relâmpago» com saldo R$ 0 ⇒ com aviso (controlo do caso acima)", () => {
     assert.ok(temAviso(renderizar({ modalidade: "flash" })));
+  });
+});
+
+describe("UTAC108d · sem edição a correr (EM_BREVE_MODE ligado) o «Sem saldo» NÃO aparece", () => {
+  test("saldo LIDO = 0 mas sem edição ⇒ sem «Sem saldo» (os dois avisos nunca juntos)", () => {
+    const html = renderizar({}, true);
+    assert.ok(!temAviso(html), "o «Sem saldo» apareceu sem edição a correr");
+    assert.match(html, /Nenhuma edição em andamento\./, "faltou o estado vazio no lugar do aviso");
   });
 });
 

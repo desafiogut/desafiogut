@@ -5,7 +5,6 @@
 import { GlassCard } from "@/components/ui";
 import { COR } from "./glassTokens.js";
 import AuthArea from "./AuthArea.jsx";
-import ComingSoonHero from "./ComingSoonHero.jsx";
 import ModeSelector from "./ModeSelector.jsx";
 import AuctionStatusBar from "./AuctionStatusBar.jsx";
 
@@ -15,7 +14,7 @@ import AuctionStatusBar from "./AuctionStatusBar.jsx";
 // flutuava solta por cima dele, em `MercadoLances.jsx`.
 export default function GlassHeader({
   isMobile, isConnected, ready, address, userLabel, onLogin,
-  modalidade, setModalidade, encerrado, edicao, frase,
+  modalidade, setModalidade, encerrado, frase, // UTAC108d: `edicao` só servia ao herói removido
 }) {
   return (
     <div style={{ padding: isMobile ? "1rem 1rem 0" : "2rem 2rem 0" }}>
@@ -48,7 +47,9 @@ export default function GlassHeader({
           />
         </div>
 
-        {/* Secção 2 — HERO "EM BREVE" (foco) + seletor de modo */}
+        {/* Secção 2 — frase + seletor de modo. UTAC108d (R18-A): saiu o herói «EM BREVE» gigante
+            (`ComingSoonHero`, com o selo da edição e o «Art. 8») — o mockup aprovado do 107d tira-o
+            («só o título e uma frase»); o estado «sem edição» passa a viver no topo do <main> do MLC. */}
         <div className={`flex flex-col items-center border-b border-white/10 ${isMobile ? 'gap-3 px-4 py-5' : 'gap-4 px-5 py-7'}`}>
           {frase && (
             <p data-testid="frase-mlc" style={{
@@ -58,7 +59,6 @@ export default function GlassHeader({
               fontWeight: 800, color: COR.gold, letterSpacing: "0.01em",
             }}>{frase}</p>
           )}
-          <ComingSoonHero isMobile={isMobile} edicao={edicao} />
           <ModeSelector modalidade={modalidade} setModalidade={setModalidade} />
         </div>
 

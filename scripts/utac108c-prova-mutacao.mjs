@@ -43,7 +43,8 @@ const MUTANTES = [
   { id: "M11", desc: "(V11) aviso inteiro com display:none", f: BAN, t: T_MLC,
     de: 'display: "flex", alignItems', para: 'display: "none", alignItems' },
   { id: "M12", desc: "(V7) aviso fora do <main>", f: MLC, t: T_MLC,
-    de: "          {mostrarAvisoSemSaldo({ isConnected, saldoRsCentavos, saldoRsStatus, tipoProvavel, modalidade }) && <SemSaldoBanner />}\n", para: "",
+    // UTAC108d: o aviso vive no ramo «há edição» do condicional com o estado vazio.
+    de: "            : mostrarAvisoSemSaldo({ isConnected, saldoRsCentavos, saldoRsStatus, tipoProvavel, modalidade }) && <SemSaldoBanner />}\n", para: "            : null}\n",
     tambem: ["        <main style={{", "        {mostrarAvisoSemSaldo({ isConnected, saldoRsCentavos, saldoRsStatus, tipoProvavel, modalidade }) && <SemSaldoBanner />}\n        <main style={{"] },
   // UTAC108c.1 (N3):
   { id: "M13", desc: "remover a guarda do modo Programado", f: BAN, t: T_MLC,
