@@ -5330,3 +5330,17 @@ ressalvas corrigidas). **Operador: «ficaram boas».** Recomendacao: MLC A + OP 
 **Registo:** `_logs/UTAC108e-mockups-v2.md` (2.a tentativa no fim) · `_logs/UTAC108e_SEG6_VALIDADOR-OPUS.md` ·
 `Desktop/RELATORIO-UTAC108e-MOCKUPS.txt` · pasta `Desktop/MOCKUPS-APROVADOS-107a/mlc-op-v2/`.
 **Custo:** validador 120 437 tokens = 2,4–241 ¢ (48 ¢ se tudo input); sessao nao medida.
+
+
+## R14 (append) -- UTAC108e.1 -- MLC B + OP A com o mesmo cartao; correcao do 108d; 3 pendencias (Claude Code, Opus 5.5)
+
+**Tipo:** CODIGO (frontend + testes + arte). **Baseline:** `abfb476`. **Commits:** `46e536a` (feat) -> `546f0c2` (achados do validador) -> registo.
+**Suite:** frontend VERDE **909/909** · backend VERDE 1095/1101. **Deploy:** auto-deploy Git; entry `index-BwrYbmL7.js` -> `index-Dn0gx2pr.js`.
+
+**Decisoes do operador (R18, SEG0):** MLC **B** (produto em destaque) · OP **A** (familia) · dourado unico **#f5a623** · seletor de modo **removido** (MLC fixo em Relampago/"flash") · arte da Air Fryer **«PAGA» -> «OFERTA»**.
+**Feito:** novo `src/components/CartaoEdicao.jsx` (casco unico; so a accao muda: lance/palpite; `destaque` = MLC B com arte 1:1/16:9). MLC: GlassHeader com titulo + frase + selo «⚡ Relampago» (sai o `ModeSelector`); CardLance real dentro do cartao. **Correcao do 108d:** sem edicao o CARTAO fica vazio (GUTO + «Nenhuma edicao em andamento» + lance desligado; `SemEdicaoAviso` saiu); «Sem saldo» (108c) intacto. OP: mesmo cartao no carrossel, pontos+historico num vidro, resgate no vidro do cartao, cartao vazio com palpite desligado, tabela «Palpites» sempre no fim. Dourado: `glassTokens.js` + `globals.css` + `TabelaLances.jsx` (5x #fbbf24, so cor) + botao da conformidade. Arte: edicao PIL deterministica (so as componentes das letras «PAGA»).
+**Testes:** +20 (`utac108e1-mlc-op`) +4 (106f); contratos 108d/108c/107d/106f actualizados (aviso solto -> cartao vazio). **Mutacao 13/13.** Browser local 375/1024: 2 defeitos meus corrigidos (overflow lateral 27 px na OP; frase vazia cortada).
+**Validador: APROVADO (com ressalvas; 0 bloqueantes)** -- T1-T4 (4 mutantes sobreviventes) fechados; **declarados:** R1 com edicao a faixa diz «Ativa» em vez de contagem (MLC sem relogio vivo; tratar antes de desligar o EM_BREVE); R2 tabela sem edicao diz «Edicao R-1 · Em breve»; R3 CardLance = cartao dentro do cartao (proibido tocar); `#e89400` no CardLance e `#fbbf24` nos overlays; orfaos `ModeSelector.jsx`/`SemEdicaoAviso.jsx`.
+**Escopo:** backend, CardLance, SemSaldoBanner, package*, 5 `.bak-*` intactos; `EM_BREVE_MODE = true`.
+**Registo:** `_logs/UTAC108e.1-implementacao.md` · `_logs/UTAC108e.1_SEG7_VALIDADOR.md` · `Desktop/RELATORIO-UTAC108e.1-IMPLEMENTACAO.txt`.
+**Custo:** validador 577 331 tokens = 11,5-1155 ¢ (231 ¢ se tudo input); sessao principal nao medida. **Proximo:** 108f (remover lojista).
