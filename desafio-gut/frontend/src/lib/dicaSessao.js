@@ -174,8 +174,9 @@ export function limparDicaLojista(storage = storagePadrao()) {
  *   3. o endereço da dica é o MESMO de `privy:connections`.
  *
  * ⚠️ A condição 3 é a que impede que uma dica escrita à mão sirva de alguma
- * coisa. Desde o UTAC108f o palpite já não abre painel nenhum: só esconde o
- * aviso «Sem saldo» (R18-B do UTAC108c) até /cotas responder. Não há ganho de
+ * coisa. Desde o UTAC108f o palpite já não abre painel nenhum: esconde o aviso
+ * «Sem saldo» (R18-B do UTAC108c) e salta o estado neutro na raiz (degrau 2 de
+ * lib/encaminhamento.js), até /cotas responder. Não há ganho de
  * superfície de ataque: isto ENCAMINHA, não autoriza.
  *
  * ⚠️ E NÃO é dado pessoal: é a string "corporativo" associada a um endereço

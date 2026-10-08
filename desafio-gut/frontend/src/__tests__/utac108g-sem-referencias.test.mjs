@@ -61,6 +61,11 @@ test("SEG2 · o selo do lojista (U+25C8 + «Lojista») saiu do chat (e nenhum U+
   // O badge do admin e o «●» do comprador continuam.
   assert.match(ler("components/ChatbotWidget.jsx"), /txt: "⚡ Admin"/);
   assert.match(ler("components/ChatbotWidget.jsx"), /txt: "●"/);
+  // ⚠️1 do validador: um badge corporativo com OUTRO texto («Parceiro») passava. O badge não
+  // pode depender do tipo de conta — só admin, sessão ou visitante.
+  const badge = ler("components/ChatbotWidget.jsx").match(/const perfilBadge =[\s\S]*?: null;/);
+  assert.ok(badge, "não encontrei o perfilBadge");
+  assert.doesNotMatch(badge[0], /tipoUsuario|tipoProvavel|corporativo/);
 });
 
 test("SEG3 · a carteira corporativa saiu do contexto", () => {
@@ -80,6 +85,16 @@ test("R18-A · o ex-lojista vai para o Dashboard e o destino CORPORATIVO deixou 
   assert.equal(decidirDestino(base), DESTINO.DASHBOARD);
   // Controlo: o comprador no mesmo instante continua no estado neutro.
   assert.equal(decidirDestino({ ...base, tipoProvavel: "comum" }), DESTINO.ESTADO_NEUTRO);
+});
+
+test("SEG1 · tabFromPath e offsetFor sem ramos das rotas removidas (lojista e /seguranca)", () => {
+  // ⚠️2 do validador: reintroduzir o ramo /seguranca passava a suíte.
+  for (const [rel, fn] of [["context/useAppContextEnvironment.jsx", "tabFromPath"], ["widgets/layout/BackgroundCanvas.jsx", "offsetFor"]]) {
+    const corpo = ler(rel).match(new RegExp(`function ${fn}\\([\\s\\S]*?\\r?\\n}`));
+    assert.ok(corpo, `não encontrei ${fn}`);
+    assert.doesNotMatch(corpo[0], /"\/seguranca"|"\/corporativo/, `${fn} voltou a ter rota removida`);
+    assert.match(corpo[0], /"\/carteira"/); // controlo positivo
+  }
 });
 
 test("SEG1 · as rotas do lojista deixaram de ser «de trabalho» (o /admin continua)", async () => {
