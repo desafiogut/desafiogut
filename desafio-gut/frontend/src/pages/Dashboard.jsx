@@ -15,9 +15,11 @@ import { usePontos } from "../hooks/usePontos.js";
 import GutoSpritePlayer from "../components/GutoSpritePlayer.jsx";
 import CarrosselGUTO from "../components/CarrosselGUTO.jsx";
 import StatTile from "../components/StatTile.jsx";
-import EdicaoCard from "../components/EdicaoCard.jsx";
+// UTAC108h.3 — o vidro ÚNICO das duas famílias (o mesmo da aba OP) e a zona de palpite.
+import CartaoEdicao from "../components/CartaoEdicao.jsx";
+import { usePalpite } from "../hooks/usePalpite.js";
+import { edicoesProgramadasDe, estadoPalpite, PILULA } from "../lib/palpite.js";
 import { EtiquetaMeuLance } from "../components/EtiquetaEstadoLance.jsx";
-import EdicaoBanner, { TAMANHO_BANNER_PADRAO } from "../components/EdicaoBanner.jsx";
 import { GlassCard } from "@/components/ui";
 // MC88.43 — fonte única do estado da edição. Antes o cronómetro obedecia à trava
 // EM_BREVE_MODE e o resto do card obedecia ao `encerrado`, e o título da secção
@@ -62,30 +64,6 @@ const ATALHOS = [
   // UTAC108f (R18) — saiu o atalho «🤝 Seja Nosso Parceiro» (o lojista saiu do app).
   { label: "Configurações",     icon: "⚙️", to: "/configuracoes" },
 ];
-
-/**
- * UTAC108h.2 — separa as edições não-ativas nas DUAS famílias do Desafio (decisão P-2).
- *
- * Critérios de EXCLUSÃO inalterados desde o MC15.4/MC94.2: sai a edição ATIVA (que tem o
- * card próprio no topo do ecrã) e saem as ESPECIAIS (MC94.2 — às 20:00 a especial passa
- * para `edicoes` e seria desenhada duas vezes).
- *
- * O agrupamento usa `tipo`, que o `useEdicoes` normaliza para exactamente
- * "programado" | "relampago" (`useEdicoes.js:83`). Qualquer valor inesperado (ou ausente)
- * cai em `relampago` — a MESMA regra do normalizador — para que nenhuma edição
- * desapareça por trazer um `tipo` estranho.
- *
- * Função PURA, exportada para poder ser medida sem render (`Dashboard.test.mjs`).
- */
-export function prateleirasDeEdicoes(edicoes, edicaoAtiva, ehEspecialFn = ehEspecial) {
-  const extra = Object.values(edicoes || {}).filter(
-    (e) => e && e.id !== edicaoAtiva && !ehEspecialFn(e.id)
-  );
-  return {
-    relampago: extra.filter((e) => e.tipo !== "programado"),
-    programada: extra.filter((e) => e.tipo === "programado"),
-  };
-}
 
 /**
  * UTAC107c — estado do tile «Passe Desafio»: "sem-sessao" | "carregando" | "erro" | "vazio" | "dados".
@@ -139,9 +117,13 @@ export default function Dashboard() {
   // UTAC107c — o tile «Passe Desafio» conta SÓ os pontos de CARTÃO (R1 do UTAC106f: o bónus
   // do palpite não entra). NÃO é o `saldoSenhas` (Via A, senhas on-chain) nem o `pontos` total.
   const {
-    pontosCartao, pontosParaCartao,
+    pontosCartao, pontosParaCartao, palpites,
     loading: pontosLoading, erro: pontosErro,
   } = usePontos();
+  // UTAC108h.3 — a zona de PALPITE do vidro «🎫 Programada» do Início usa o MESMO hook e as MESMAS
+  // regras da aba Ofertas Programadas (uma só verdade sobre quando se pode palpitar).
+  const [valorPalpite, setValorPalpite] = useState("");
+  const { registar: registarPalpite, loading: aPalpitar, erro: erroPalpite } = usePalpite(null);
 
   // ── UTAC000.9 (DEBT-008) — O VENCEDOR MOSTRADO É O OFICIAL QUANDO EXISTE ──────────
   // O `vencedor` do contexto é derivado dos lances que ESTE browser viu (em mainnet: nada, ou
@@ -173,14 +155,18 @@ export default function Dashboard() {
   // MC94.2 — e menos as ESPECIAL-*: às 20:00 a especial passa para `edicoes` e
   // seria desenhada duas vezes (card especial + EdicaoCard com "EM BREVE").
   //
-  // UTAC108h.2 — AS DUAS PRATELEIRAS (decisão P-2 do operador). Até aqui havia UMA
-  // prateleira só («🗓️ Outras Edições») que MISTURAVA as duas famílias do Desafio: a
-  // divisão tinha ficado fora do escopo do UTAC107c (R18-C) e nunca foi implementada
-  // (diagnóstico UTAC108h.1). Agora separam-se por `tipo`, que o `useEdicoes` JÁ normaliza
-  // para "programado" | "relampago" (`useEdicoes.js:83`) — não há dado novo a inventar.
-  // Os critérios de EXCLUSÃO são os mesmos de antes (a edição ativa e as especiais).
-  const { relampago: edicoesRelampago, programada: edicoesProgramada } =
-    prateleirasDeEdicoes(edicoes, EDICAO_ATIVA);
+  // ⚠️ A ESPECIAL fica de fora: ela ocupa o vidro «⚡ Relâmpago» (slot da edição ativa, MC94.2).
+  // Sem esta exclusão apareceria duas vezes no ecrã — medido num teste que conta o produto.
+  const edicaoProgramada = edicoesProgramadasDe(edicoes).filter((e) => !ehEspecial(e.id))[0] ?? null;
+  /** Regista o palpite da edição programada mostrada (mesma regra da OP: inteiro >= 0). */
+  async function palpitar(edicaoId) {
+    const valor = Number.parseInt(String(valorPalpite ?? "").trim(), 10);
+    const r = await registarPalpite(valor, edicaoId);
+    if (r?.ok) setValorPalpite("");
+  }
+  const estProgramada = edicaoProgramada ? getEstadoEdicao(edicaoProgramada) : null;
+  const palpiteDoUsuario = edicaoProgramada ? (palpites?.[edicaoProgramada.id] ?? null) : null;
+  const estadoPal = edicaoProgramada ? estadoPalpite(edicaoProgramada, palpiteDoUsuario) : null;
 
   // MC45 — edição ativa (objeto) para o banner clicável. Fallback defensivo
   // garante sempre um id navegável mesmo antes de o mapa hidratar.
@@ -360,221 +346,141 @@ export default function Dashboard() {
         ))}
       </section>
 
-      {/* ── Edição ativa ── (UTAC107c: coluna única — o card 🏆 que ocupava a 2.ª saiu) */}
-      <section style={{
-        display: "grid",
-        gridTemplateColumns: "1fr",
-        gap: innerGap,
-        marginBottom: sectionGap,
-      }}>
-        {/* Status do leilão — MC94.3.1: é aqui o SLOT. Quando há uma edição
-            especial, é ELA que o preenche (adendo do operador, 2026-09-25: a
-            especial sai da secção própria do MC94.2 e entra no slot existente);
-            sem especial, o slot mostra a R-1 de sempre. O ícone de presente do
-            slot usa o TAMANHO PADRÃO do ícone, igual às outras edições (MC94.3.2). */}
-        <GlassCard className={cardCls}>
-          {edicaoEspecial ? (
-            <CardEdicaoEspecial
-              edicao={edicaoEspecial}
-              offsetMs={offsetRelogioMs}
-              isMobile={isMobile}
-              t={t}
-              renderLance={({ idEdicao, modalidade, encerrado: fechada }) => (
-                <Suspense fallback={<div aria-busy="true" style={{ minHeight: "12rem" }} />}>
-                  <CardLance
-                    idEdicao={idEdicao}
-                    modalidade={modalidade}
-                    encerrado={fechada}
-                    address={address}
-                    isConnected={isConnected}
-                    onConnect={abrirModal}
-                    onDisconnect={desconectar}
-                    ready={ready}
-                  />
-                </Suspense>
-              )}
-            />
-          ) : (
-          <>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: isMobile ? "0.5rem" : "0.75rem" }}>
-            <h3 style={{ ...cardTitulo, margin: 0 }}>🎯 Edição Ativa</h3>
-            <span style={{
-              fontSize: "0.7rem", fontWeight: "800",
-              color: COR.gold,
-              background: "rgba(245,166,35,0.12)",
-              border: "1px solid rgba(245,166,35,0.35)",
-              borderRadius: "999px",
-              padding: "0.2rem 0.6rem",
-              letterSpacing: "0.04em",
-            }}>{EDICAO_ATIVA}</span>
-          </div>
+      {/* ── UTAC108h.3 — APENAS AS DUAS EDIÇÕES (decisão do operador, 2026-10-08) ─────────────
+          O Início mostra só DOIS vidros, um por família: «⚡ Relâmpago» e «🎫 Programada».
+          Saíram: o vidro separado «🎯 Edição Ativa» (e o seu h3), os títulos soltos das
+          prateleiras, o carrossel de «Outras Edições» e o vidro de estado vazio.
+          O casco é o MESMO das duas abas (`CartaoEdicao`, UTAC108e.1): topo (id + estado) →
+          produto (arte + nome) → tempo → ACÇÃO. Entre os dois vidros só muda a acção — e ela vive
+          DENTRO do vidro: o lance no Relâmpago, o palpite na Programada. Sem edição, o vazio vive
+          DENTRO do vidro (Regra 1), nunca num vidro solto. */}
+      <section data-testid="vidros-inicio" style={{ display: "grid", gap: innerGap, marginBottom: sectionGap }}>
 
-          {/* Prêmio em Disputa — placeholder até integração com a grade
-              da Especificação Refatorada (slots Bronze/Prata/Ouro/Diamante).
-              Por enquanto exibe apenas o card vazio com mensagem genérica. */}
-          <div style={{
-            display: "flex", alignItems: "center", gap: "0.65rem",
-            padding: "0.6rem 0.75rem",
-            background: "rgba(245,166,35,0.07)",
-            border: "1px solid rgba(245,166,35,0.22)",
-            borderRadius: "10px",
-            marginBottom: isMobile ? "0.6rem" : "0.75rem",
-          }}>
-            {/* MC45 — banner QUADRADO clicável da edição ativa (antes: 🎁 estático). */}
-            <EdicaoBanner edicao={edicaoAtiva} size={TAMANHO_BANNER_PADRAO} />
-
-            <div>
-              <div style={{ fontSize: "0.58rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: "700", marginBottom: "0.15rem" }}>
-                Prêmio em Disputa
-              </div>
-              <div style={{ fontSize: isMobile ? "0.78rem" : "0.82rem", color: COR.gold, fontWeight: "800", lineHeight: 1.25 }}>
-                Em breve
-              </div>
-              <div style={{ fontSize: "0.68rem", color: COR.muted, lineHeight: 1.2 }}>
-                Aguardando catálogo
-              </div>
-            </div>
-          </div>
-
-          <div style={{
-            display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "center",
-            gap: isMobile ? "0.6rem" : "0.9rem",
-            padding: isMobile ? "0.5rem 0 0.85rem" : "0.25rem 0 0.85rem",
-          }}>
-            {/* MC22.1 SECÇÃO D — GUTO companion da Edição Ativa (celebra ao encerrar). */}
-            {/* MC39.4.1 (#guto) — GUTO do "início" maior (era 64/76) p/ legibilidade. */}
-            {/* MC88.43 — o GUTO não celebra um encerramento que o ecrã não anuncia. */}
-            <GutoSpritePlayer variant="inline" size={isMobile ? 88 : 104} mood={estAtiva.encerrada ? "celebrating" : undefined} />
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.15rem" }}>
-              <div style={{
-                fontSize: estAtiva.timer ? (isMobile ? "1.6rem" : "1.5rem") : (isMobile ? "2.5rem" : "2.25rem"),
-                fontWeight: "900",
-                fontFamily: estAtiva.timer ? "'Orbitron', sans-serif" : "'JetBrains Mono', monospace",
-                color: estAtiva.timer ? estAtiva.cor : (encerrado ? COR.danger : timerColor(tempoRestante, DURACAO?.[modalidade])),
-                letterSpacing: estAtiva.timer ? "0.12em" : "0.02em",
-                lineHeight: 1,
-                transition: "color 0.6s ease",
-              }}>{estAtiva.timer ?? timerDisplay}</div>
-              <div style={{
-                fontSize: "0.68rem", color: COR.muted,
-                textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: "700",
-              }}>
-                {/* Encerrado deixa de aparecer aqui quando a fonte única diz outra
-                    coisa; o tipo de leilão (Relâmpago/Programado) é factual e fica. */}
-                {estAtiva.encerrada ? "ENCERRADO" : modalidade === "flash" ? "⚡ Relâmpago" : "🎫 Programado"}
-              </div>
-              <div style={{
-                fontSize: "0.78rem", color: estAtiva.encerrada ? "#fca5a5" : COR.text,
-                marginTop: "0.4rem", textAlign: "center",
-              }}>
-                {estAtiva.encerrada ? "Aguardando nova rodada" : estAtiva.rotuloLongo}
-              </div>
-            </div>
-          </div>
-
-          {/* UTAC107e.2 (Frente B) — etiqueta do PRÓPRIO lance na Edição Ativa, só com a edição
-              encerrada no ecrã (fonte única MC88.43) E consolidada no servidor. */}
-          {estAtiva.encerrada && (
-            <div style={{ display: "flex", justifyContent: "center", margin: "0 0 0.75rem" }}>
-              <EtiquetaMeuLance edicaoId={EDICAO_ATIVA} encerrado authToken={authToken} />
-            </div>
-          )}
-
-          <button
-            onClick={() => navigate("/mercado")}
-            style={{
-              padding: "0.7rem 1rem",
-              background: estAtiva.encerrada
-                ? "rgba(245,166,35,0.18)"
-                : "linear-gradient(135deg,#f5a623,#e89400)",
-              border: "none", borderRadius: "10px",
-              color: estAtiva.encerrada ? COR.gold : "#0a0f1a",
-              fontWeight: "800", cursor: "pointer",
-              fontSize: "0.88rem", width: "100%",
-              fontFamily: "'Orbitron', sans-serif",
-              letterSpacing: "0.04em",
-              boxShadow: estAtiva.encerrada ? "none" : "0 4px 18px rgba(245,166,35,0.40)",
-            }}
-          >
-            ⚡ Ir para o Mercado de Lances
-          </button>
-          </>
-          )}
-        </GlassCard>
-      </section>
-
-      {/* ── UTAC108h.2 — DUAS prateleiras: «⚡ Relâmpago» e «🎫 Programada» (decisão P-2) ──
-          Cada título vive dentro de vidro (Regra 1) e fica SEMPRE visível (decisão P-2b):
-          com a lista vazia a prateleira NÃO desaparece — mostra o estado vazio dentro de
-          vidro. A ordem é Relâmpago → Programada, a do mockup aprovado.
-          O markup do carrossel é o do MC99 (scroll lateral, uma edição visível) e vive UMA
-          só vez, aqui, ao serviço das duas famílias. */}
-      {[
-        { chave: "relampago", titulo: "⚡ Relâmpago", lista: edicoesRelampago,
-          vazio: "Nenhuma edição Relâmpago em andamento." },
-        { chave: "programado", titulo: "🎫 Programada", lista: edicoesProgramada,
-          vazio: "Nenhuma edição Programada em andamento." },
-      ].map(({ chave, titulo, lista, vazio }) => (
-        <section key={chave} style={{ marginBottom: sectionGap }}>
-          {/* MC88.43 — "em Andamento" era uma afirmação FIXA, escrita à mão, que
-              não perguntava a fonte nenhuma. Sobrepunha-se a três cartões que
-              diziam "Encerrada" (B3). O título passa a ser neutro: quem declara
-              o estado é cada cartão, e só a fonte única lho dita. */}
-          {/* UTAC107c — Regra 1: o título flutuava fora de vidro; passa a ter o seu. */}
-          <GlassCard className={cardCls} style={{ marginBottom: innerGap }}>
-            <h3 style={{ ...cardTitulo, margin: 0 }}>{titulo}</h3>
-          </GlassCard>
-          {/* MC99 — scroll LATERAL (era empilhado). No telemóvel o `grid` punha as
-              edições numa coluna única, uma sobre a outra, e a prateleira comia a
-              dobra inteira. Passa a UMA edição visível de cada vez, as restantes por
-              swipe. `scroll-snap` prende cada cartão ao início — sem ele o swipe para a
-              meio. Toda a informação de cada edição é preservada: só o eixo de leitura
-              mudou (vertical → horizontal).
-              UTAC108h.2 — o testid passou de `outras-edicoes-scroll` a `prateleira-scroll`
-              (o nome antigo era do tempo da prateleira única). A guarda do MC99 e o seu
-              mutador foram actualizados no mesmo movimento. */}
-          {lista.length > 0 ? (
-          <div
-            data-testid="prateleira-scroll"
-            data-prateleira={chave}
-            style={{
-              display: "flex",
-              gap: innerGap,
-              overflowX: "auto",
-              overflowY: "hidden",
-              scrollSnapType: "x mandatory",
-              WebkitOverflowScrolling: "touch",
-              paddingBottom: "0.25rem",
-            }}
-          >
-            {lista.map((ed) => (
-              <div
-                key={ed.id}
-                data-testid="prateleira-item"
-                style={{ flex: "0 0 100%", minWidth: 0, scrollSnapAlign: "start" }}
-              >
-                <EdicaoCard
-                  edicao={ed}
-                  isMobile={isMobile}
-                  cardCls={cardCls}
-                  cardTituloStyle={cardTitulo}
+        {/* VIDRO 1 · ⚡ Relâmpago — mostra a edição VIVA (a ativa). Decisão declarada: encher este
+            vidro com as Relâmpago já ENCERRADAS tiraria do Início a porta de entrada do lance, o
+            que parte um caso legítimo. A edição ESPECIAL (MC94.2/94.3.1) continua a ocupar este
+            lugar, como sempre ocupou o slot da edição ativa. */}
+        {edicaoEspecial ? (
+          <CardEdicaoEspecial
+            edicao={edicaoEspecial}
+            offsetMs={offsetRelogioMs}
+            isMobile={isMobile}
+            t={t}
+            renderLance={({ idEdicao, modalidade, encerrado: fechada }) => (
+              <Suspense fallback={<div aria-busy="true" style={{ minHeight: "12rem" }} />}>
+                <CardLance
+                  idEdicao={idEdicao}
+                  modalidade={modalidade}
+                  encerrado={fechada}
+                  address={address}
+                  isConnected={isConnected}
+                  onConnect={abrirModal}
+                  onDisconnect={desconectar}
+                  ready={ready}
                 />
+              </Suspense>
+            )}
+          />
+        ) : (
+          <CartaoEdicao
+            id={edicaoAtiva.id}
+            titulo="⚡ Relâmpago"
+            estado={{ texto: estAtiva.rotulo, cor: estAtiva.cor }}
+            produto={edicaoAtiva.produto}
+            arteUrl={edicaoAtiva.imagem_url}
+            tempo={estAtiva.timer ?? timerDisplay}
+            tempoRotulo={estAtiva.encerrada ? "Encerrada" : "Termina em"}
+            destaque
+            isMobile={isMobile}
+          >
+            {/* UTAC107e.2 (Frente B) — etiqueta do PRÓPRIO lance na Edição Ativa, só com a edição
+                encerrada no ecrã (fonte única MC88.43) E consolidada no servidor. Veio do card
+                «Edição Ativa» que o UTAC108h.3 substituiu; fica no vidro da família Relâmpago,
+                que é o vidro da edição ativa. */}
+            {estAtiva.encerrada && (
+              <div style={{ display: "flex", justifyContent: "center", margin: "0 0 0.75rem" }}>
+                <EtiquetaMeuLance edicaoId={EDICAO_ATIVA} encerrado authToken={authToken} />
               </div>
-            ))}
-          </div>
-          ) : (
-            /* P-2b — lista vazia: o título FICA (acima) e o vazio vive DENTRO de vidro (Regra 1). */
-            <GlassCard className={cardCls} data-testid="prateleira-vazia" data-prateleira={chave}>
-              <p style={{
-                margin: 0,
-                color: COR.muted,
-                fontSize: isMobile ? "0.8rem" : "0.85rem",
-                lineHeight: 1.4,
-              }}>{vazio}</p>
-            </GlassCard>
+            )}
+            <button
+              onClick={() => navigate("/mercado")}
+              style={{
+                padding: "0.7rem 1rem",
+                background: estAtiva.encerrada
+                  ? "rgba(245,166,35,0.18)"
+                  : "linear-gradient(135deg,#f5a623,#e89400)",
+                border: "none", borderRadius: "10px",
+                color: estAtiva.encerrada ? COR.gold : "#0a0f1a",
+                fontWeight: "800", cursor: "pointer",
+                fontSize: "0.88rem", width: "100%",
+                fontFamily: "'Orbitron', sans-serif",
+                letterSpacing: "0.04em",
+                boxShadow: estAtiva.encerrada ? "none" : "0 4px 18px rgba(245,166,35,0.40)",
+              }}
+            >
+              ⚡ Dar lance
+            </button>
+          </CartaoEdicao>
+        )}
+
+        {/* VIDRO 2 · 🎫 Programada — o MESMO casco, com a zona do palpite em baixo, DENTRO do vidro.
+            As regras (`estadoPalpite`/`PILULA`) e a acção (`usePalpite`) são as MESMAS da aba
+            Ofertas Programadas — uma só verdade sobre quando se pode palpitar. */}
+        <CartaoEdicao
+          id={edicaoProgramada?.id}
+          titulo="🎫 Programada"
+          estado={estadoPal ? { texto: PILULA[estadoPal].texto, cor: PILULA[estadoPal].cor } : undefined}
+          produto={edicaoProgramada?.produto}
+          arteUrl={edicaoProgramada?.imagem_url}
+          tempo={estProgramada ? (estProgramada.timer ?? estProgramada.rotuloLongo) : undefined}
+          tempoRotulo={estProgramada?.encerrada ? "Encerrada" : "Termina em"}
+          vazio={!edicaoProgramada}
+          mensagemVazio="Nenhuma edição Programada em andamento"
+          ajudaVazio="Próxima edição —"
+          destaque
+          isMobile={isMobile}
+        >
+          {edicaoProgramada && estadoPal === "sem_palpite" && (
+            <div data-testid="palpite-zona">
+              <label htmlFor="palpite-inicio" style={{ display: "block", color: COR.text, fontSize: "0.82rem", fontWeight: 700, marginBottom: "0.35rem" }}>
+                Seu palpite (nº de lances)
+              </label>
+              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                <input
+                  id="palpite-inicio" type="number" inputMode="numeric" min="0" step="1"
+                  value={valorPalpite}
+                  onChange={(e) => setValorPalpite(e.target.value)}
+                  placeholder="Ex.: 120"
+                  style={{ flex: "1 1 120px", minHeight: "48px", padding: "0.6rem 0.75rem", borderRadius: "10px", border: "1px solid rgba(107,125,184,0.45)", background: "rgba(12,16,24,0.55)", color: COR.text, fontSize: "0.9rem" }}
+                />
+                <button
+                  type="button" onClick={() => palpitar(edicaoProgramada.id)} disabled={aPalpitar}
+                  style={{ minHeight: "48px", padding: "0.6rem 1.1rem", borderRadius: "10px", cursor: aPalpitar ? "wait" : "pointer", border: "none", background: aPalpitar ? "rgba(107,125,184,0.35)" : COR.gold, color: "#12161f", fontWeight: 800, fontSize: "0.86rem" }}
+                >
+                  {aPalpitar ? "Enviando…" : "Palpitar"}
+                </button>
+              </div>
+              {erroPalpite && (
+                <p role="alert" style={{ margin: "0.4rem 0 0", color: "#ff8a8d", fontSize: "0.78rem" }}>{erroPalpite}</p>
+              )}
+              <p style={{ margin: "0.4rem 0 0", color: COR.muted, fontSize: "0.76rem" }}>
+                O palpite dá +2 pontos de bónus. Não decide o cartão.
+              </p>
+            </div>
           )}
-        </section>
-      ))}
+          {edicaoProgramada && estadoPal === "com_palpite" && (
+            <p data-testid="palpite-feito" style={{ margin: 0, color: "#3ddc84", fontWeight: 700, fontSize: "0.86rem" }}>
+              Seu palpite: {palpiteDoUsuario?.valor} lances
+            </p>
+          )}
+          {edicaoProgramada && estadoPal === "abre_em_breve" && (
+            <p style={{ margin: 0, color: COR.muted, fontSize: "0.82rem" }}>O palpite abre quando a edição começar.</p>
+          )}
+          {edicaoProgramada && estadoPal === "encerrada" && (
+            <p style={{ margin: 0, color: COR.muted, fontSize: "0.82rem" }}>Edição encerrada.</p>
+          )}
+        </CartaoEdicao>
+      </section>
 
       {/* ── Atalhos ── */}
       <GlassCard as="section" className={cardCls}>

@@ -32,7 +32,7 @@ const tracejado = "1px dashed rgba(107,125,184,0.45)";
 
 export default function CartaoEdicao({
   id, estado, produto, arteUrl, tempo, tempoRotulo = "Termina em",
-  vazio = false, destaque = false,
+  vazio = false, destaque = false, titulo,
   mensagemVazio = "Nenhuma edição em andamento", ajudaVazio = "Volte quando houver",
   isMobile = false, children, style, ...rest
 }) {
@@ -47,6 +47,15 @@ export default function CartaoEdicao({
       style={{ padding: isMobile ? "1rem" : "1.25rem", display: "flex", flexDirection: "column", gap: "0.75rem", minWidth: 0, ...style }}
       {...rest}
     >
+      {/* UTAC108h.3 — nome da FAMÍLIA dentro do próprio vidro (Regra 1). Opcional e aditivo: as
+          abas (MLC/OP) trazem a família no cabeçalho da página e não o passam; o Início, que mostra
+          os dois vidros lado a lado, precisa de dizer a que família pertence cada um. */}
+      {titulo && (
+        <h3 data-testid="cartao-titulo" style={{
+          margin: 0, fontFamily: "'Orbitron', sans-serif", fontSize: "0.85rem", fontWeight: 800,
+          letterSpacing: "0.04em", color: COR.gold,
+        }}>{titulo}</h3>
+      )}
       {/* topo: id da edição + estado. (O `minWidth: 0` do cartão impede o nome em `nowrap` de alargar a
           coluna da página — medido a 375 px: sem ele a OP ganhava 27 px de overflow lateral.) */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem" }}>

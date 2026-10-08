@@ -361,7 +361,9 @@ test("UTAC107e.1 · palpitar no 2.º cartão regista na edição DESSE cartão",
 });
 
 test("UTAC107e.1 · os 5 estados do palpite (função pura)", async () => {
-  const { estadoPalpite } = await vite.ssrLoadModule("/src/pages/OfertasProgramadas.jsx");
+  // UTAC108h.3 — `estadoPalpite` mudou de casa (o Início passou a usar a MESMA regra):
+    // vive em `src/lib/palpite.js`, e é de lá que se carrega.
+    const { estadoPalpite } = await vite.ssrLoadModule("/src/lib/palpite.js");
   const ab = { status: "aberto" }, enc = { status: "encerrado" };
   assert.equal(estadoPalpite(ab, null), "sem_palpite");
   assert.equal(estadoPalpite(ab, { valor: 1 }), "com_palpite");
@@ -412,7 +414,9 @@ test("UTAC107e.1 · Regra 1: cabeçalho e link das Regras DENTRO de vidro; link 
 });
 
 test("UTAC107e.1 (validador) · edição AGENDADA: «ABRE EM BREVE», sem campo e sem dizer «encerrada»", async () => {
-  const { estadoPalpite } = await vite.ssrLoadModule("/src/pages/OfertasProgramadas.jsx");
+  // UTAC108h.3 — `estadoPalpite` mudou de casa (o Início passou a usar a MESMA regra):
+    // vive em `src/lib/palpite.js`, e é de lá que se carrega.
+    const { estadoPalpite } = await vite.ssrLoadModule("/src/lib/palpite.js");
   assert.equal(estadoPalpite({ status: "agendado" }, null), "abre_em_breve");
   const c = await montarEcra(undefined, ctx({ edicoes: { "PROG-5": { id: "PROG-5", tipo: "programado", status: "agendado" } } }));
   try {

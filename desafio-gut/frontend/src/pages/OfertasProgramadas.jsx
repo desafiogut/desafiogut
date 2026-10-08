@@ -28,6 +28,10 @@ import Toast from "../widgets/toast/Toast.jsx";
 import { useAppContext } from "../context/AppContext.jsx";
 import { usePontos } from "../hooks/usePontos.js";
 import { usePalpite, usePalpitesDaEdicao } from "../hooks/usePalpite.js";
+// UTAC108h.3 — as regras do palpite mudaram de casa (vivem em `lib/palpite.js`), porque o Início
+// passou a mostrar o vidro «🎫 Programada» com a zona de palpite dentro. Uma só verdade para as
+// duas telas: `estaAberta` / `edicoesProgramadasDe` / `estadoPalpite` / `PILULA`.
+import { estaAberta, edicoesProgramadasDe, estadoPalpite, PILULA } from "../lib/palpite.js";
 import { useResgatarCartao } from "../hooks/useResgatarCartao.js";
 import ResgatarCartaoModal, { CARTAO_ID } from "../components/ResgatarCartaoModal.jsx";
 // UTAC108e.1 — o MESMO cartão de edição do «Menor Lance Único» (mockup v2, variante A «Família»):
@@ -47,38 +51,9 @@ const CARTAO_DESCRICAO =
   "Cartão colecionável físico, com a arte da Família Quildo. Acumule 50 pontos para trocar por ele. "
   + "O palpite dá pontos EXTRA, mas o cartão é conquistado só com os pontos das suas compras.";
 
-/** Edição Programada ainda a aceitar palpites (o backend exige `status === "aberto"`). */
-const estaAberta = (e) => e?.status === "aberto";
-
-/**
- * UTAC107e.1 — TODAS as edições Programadas, abertas primeiro (era só a 1.ª aberta: o palpite
- * ficava longe do produto e só servia uma edição — achado do mockup `ofertas-programadas.html`).
- */
-function edicoesProgramadasDe(edicoes) {
-  const lista = Object.values(edicoes ?? {}).filter((e) => e?.tipo === "programado" && e?.id);
-  return lista.sort((a, b) => Number(estaAberta(b)) - Number(estaAberta(a)));
-}
-
-/**
- * UTAC107e.1 — os 5 estados do palpite, cartão a cartão (mockup, variante A). A copy segue o
- * mockup e não o enunciado: o backend premeia o palpite MAIS PRÓXIMO, não o exacto (`apurar-palpite`,
- * `mais_proximo`/`perdeu`) — «Acertou!» seria falso (achado E-2 do validador do 107a-front).
- */
-export function estadoPalpite(edicao, palpite) {
-  if (palpite?.apurado === true) return palpite.resultado === "mais_proximo" ? "mais_proximo" : "perdeu";
-  if (palpite) return "com_palpite";
-  if (estaAberta(edicao)) return "sem_palpite";
-  // Achado do validador: `agendado` ainda não abriu — dizer «encerrada» seria falso.
-  return edicao?.status === "agendado" ? "abre_em_breve" : "encerrada";
-}
-const PILULA = {
-  sem_palpite:  { texto: "SEM PALPITE",       cor: "#e8f0fe" },
-  com_palpite:  { texto: "COM PALPITE",       cor: "#f5a623" },
-  mais_proximo: { texto: "MAIS PRÓXIMO",      cor: "#3ddc84" },
-  perdeu:       { texto: "NÃO FOI DESSA VEZ", cor: "#ff8a8d" },
-  encerrada:    { texto: "ENCERRADA",         cor: "#6b7db8" },
-  abre_em_breve: { texto: "ABRE EM BREVE",    cor: "#f5a623" },
-};
+// UTAC108h.3 — `estaAberta`, `edicoesProgramadasDe`, `estadoPalpite` e `PILULA` saíram daqui para
+// `lib/palpite.js` (fonte única, partilhada com o vidro «🎫 Programada» do Início). Nenhum
+// comportamento mudou: as funções foram movidas verbatim.
 
 const dataCurta = (iso) => {
   const d = new Date(iso);

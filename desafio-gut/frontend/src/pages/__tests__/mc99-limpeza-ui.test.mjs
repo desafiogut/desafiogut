@@ -55,24 +55,13 @@ test("controlo positivo: o stripper apaga comentários (JSX multi-linha incluíd
   assert.ok(c.includes('const x = "Saldo de Senhas"'), "o stripper apagou uma string de código");
 });
 
-// ═══ SEG0 — Início: prateleiras de edições em scroll lateral ═════════════════════
-// UTAC108h.2 — a prateleira única («🗓️ Outras Edições») passou a DUAS («⚡ Relâmpago» e
-// «🎫 Programada»), com o título sempre visível (decisão P-2b do operador). O contentor do
-// scroll passou a `prateleira-scroll` e o markup vive agora UMA só vez, dentro do `map` das
-// duas famílias. A guarda mudou de NOME, não de INTENÇÃO: o scroll tem de continuar lateral.
-test("MC99/SEG0 (UTAC108h.2) · as prateleiras em scroll LATERAL (não empilhado)", () => {
-  const d = codigo(ler("src/pages/Dashboard.jsx"));
-  const bloco = d.match(/data-testid="prateleira-scroll"[\s\S]{0,700}/)?.[0];
-  assert.ok(bloco, "o contentor do scroll lateral desapareceu (data-testid=prateleira-scroll)");
-  assert.match(bloco, /display:\s*"flex"/, "o contentor deixou de ser flex");
-  assert.match(bloco, /overflowX:\s*"auto"/, "sem overflowX:auto não há scroll lateral");
-  assert.match(bloco, /scrollSnapType:\s*"x mandatory"/, "sem scroll-snap o swipe para a meio");
-  assert.match(bloco, /scrollSnapAlign:\s*"start"/, "cada edição tem de prender ao início");
-  assert.match(bloco, /flex:\s*"0 0 100%"/, "cada edição tem de ocupar a largura toda (1 visível)");
-  // e o grid empilhado NÃO pode voltar
-  assert.doesNotMatch(d, /gridTemplateColumns:\s*isMobile \? "1fr" : "repeat\(auto-fit, minmax\(240px/,
-    "o grid de Outras Edições voltou (era empilhado no telemóvel)");
-});
+// ═══ SEG0 — (UTAC108h.3) guarda APOSENTADA, com o objecto dela
+// A guarda do MC99 media o scroll LATERAL das edições do Início («Outras Edições» → prateleira
+// única → duas prateleiras). O UTAC108h.3 substituiu tudo isso por DOIS vidros (um por família),
+// sem lista nem carrossel. Uma guarda cujo objecto desapareceu fica verde por vacuidade — o que
+// esta série combate —, por isso sai em vez de ser deixada a mentir. O que ela protegia
+// (as edições do Início não voltarem a um grid empilhado) deixou de ter sujeito.
+// O mutador correspondente (MUT1 de scripts/mc99-prova-mutacao.mjs) foi retirado no mesmo movimento.
 
 // ═══ SEG1 — Barra inferior: Início · Carteira · Lances · Mais ═══════════════════
 test("MC99/SEG1 (UTAC106b) · barra inferior na ordem Carteira · Menor Lance Único · Início · Ofertas Programadas", () => {

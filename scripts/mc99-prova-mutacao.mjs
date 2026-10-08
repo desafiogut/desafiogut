@@ -47,15 +47,10 @@ function suite() {
 
 // cada mutação: aplica (substituição que TEM de casar) + verifica que entrou
 const M = [
-  { id: "MUT1", nome: "SEG0 — voltar a empilhar as prateleiras (grid)",
-    f: "src/pages/Dashboard.jsx",
-    // UTAC108h.2 — o contentor passou de `outras-edicoes-scroll` (prateleira única) a
-    // `prateleira-scroll` (duas prateleiras, um só markup ao serviço das duas). O mutador
-    // aponta para o nome NOVO: se ficasse no antigo, o `replace` não casava, o `entrou`
-    // dava falso e a mutação deixava de provar o que provava.
-    apl: (s) => s.replace('data-testid="prateleira-scroll"', 'data-testid="prateleira-scroll-off"')
-                  .replace('overflowX: "auto"', 'overflowX: "hidden"').replace('display: "flex",\n              gap: innerGap,', 'display: "grid",\n              gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(240px, 1fr))",'),
-    entrou: (s) => /overflowX: "hidden"/.test(s) || /repeat\(auto-fit, minmax\(240px/.test(s) },
+  // UTAC108h.3 — MUT1 (scroll lateral das edições do Início) foi RETIRADO: a guarda do MC99 que
+  // ele matava foi aposentada no mesmo UTAC (o Início passou a dois vidros, sem lista vertical nem
+  // horizontal). Um mutador que aponta a uma string inexistente não testa nada — e ainda dava
+  // «entrou: false» em silêncio.
   { id: "MUT2", nome: "SEG1 — voltar à ordem antiga da barra inferior",
     f: "src/widgets/layout/BottomNav.jsx",
     apl: (s) => s.replace(`  { path: "/carteira", label: "Carteira", Icon: IconWallet,    end: false, ariaLabel: "Ir para Minha Carteira" },
