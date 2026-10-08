@@ -15,9 +15,12 @@ import { useRecursosApp } from "../hooks/useRecursosApp.js";
 import { useMinhasParticipacoes } from "../hooks/useMinhasParticipacoes.js";
 // UTAC108c (D-1) — aviso «Sem saldo» no destino do botão da Carteira (que passou a navegar sempre).
 import SemSaldoBanner, { mostrarAvisoSemSaldo } from "../components/SemSaldoBanner.jsx";
-// UTAC108d — estado vazio «sem edição»; o sinal é o EM_BREVE_MODE, só LIDO (R18-B do 108d).
-import SemEdicaoAviso from "../components/SemEdicaoAviso.jsx";
+// UTAC108d — o sinal «sem edição» é o EM_BREVE_MODE, só LIDO (R18-B do 108d).
+// UTAC108e.1 — o aviso solto `SemEdicaoAviso` SAIU (o operador classificou-o como erro): sem edição
+// mostra-se o CARTÃO da edição em estado vazio (mockup v2, variante B «Produto em destaque»).
+import CartaoEdicao from "../components/CartaoEdicao.jsx";
 import { EM_BREVE_MODE } from "../lib/leilaoLock.js";
+import { getEstadoEdicao } from "../utils/edicao.js";
 
 // MC99 — `CATEGORIAS_POR_TIPO` + `buscarClienteDoLeilaoAtivo` viveram aqui para
 // alimentar o banner do cliente (REQ-01). Com o banner removido desta tela, o
@@ -245,11 +248,46 @@ function OverlayVencedor({
 // (Regra 1) — antes flutuava solta por cima dele.
 const FRASE_MENOR_LANCE_UNICO = "Ganha o menor lance que ninguém repetir.";
 
+/** UTAC108e.1 — estado do cartão da edição (pílula à direita do id). Cores só do `glassTokens`. */
+function estadoDoCartao(est) {
+  if (est.ativa) return { texto: "ABERTA", cor: COR.success };
+  if (est.encerrada) return { texto: "ENCERRADA", cor: COR.muted };
+  return { texto: String(est.rotulo ?? "—").toUpperCase(), cor: COR.gold };
+}
+
+/**
+ * UTAC108e.1 — o formulário do lance DESACTIVADO do cartão vazio (mockup v2 B). Sem edição não há
+ * para onde licitar: campo e botão aparecem, desligados. O `CardLance` (o formulário real) NÃO é
+ * alterado — só não é montado enquanto não há edição.
+ */
+function LanceDesativado({ isMobile }) {
+  return (
+    <div data-testid="lance-desativado" style={{ display: "grid", gap: "0.4rem" }}>
+      <label htmlFor="lance-sem-edicao" style={{ fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: COR.muted }}>
+        Seu lance (em centavos)
+      </label>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "0.6rem" }}>
+        <input
+          id="lance-sem-edicao" inputMode="numeric" disabled placeholder="Abre com a edição"
+          style={{ minHeight: "48px", minWidth: 0, padding: "0.6rem 0.75rem", borderRadius: "12px", border: "1px solid rgba(107,125,184,0.45)", background: "rgba(12,16,24,0.55)", color: COR.text, fontSize: isMobile ? "0.95rem" : "1rem", cursor: "not-allowed" }}
+        />
+        <button
+          type="button" disabled
+          style={{ minHeight: "48px", padding: "0 1.3rem", borderRadius: "12px", border: "none", background: COR.gold, color: "#0a0f1a", fontWeight: 800, opacity: 0.55, cursor: "not-allowed" }}
+        >Dar lance</button>
+      </div>
+    </div>
+  );
+}
+
 export default function MercadoLances() {
   const isMobile = useIsMobile();
   const {
     EDICAO_ATIVA,
-    modalidade, setModalidade,
+    // UTAC108e.1 (pendência 2): sem seletor, a `modalidade` fica no valor inicial do contexto — "flash"
+    // (`AppContext.jsx`, `useState("flash")`); o único setter na UI era o `ModeSelector`, que saiu.
+    modalidade,
+    edicoes, // UTAC108e.1 — arte e nome do produto da edição (o mesmo catálogo da OP)
     lances,
     prazoTimestamp, encerrado, showOverlay,
     address, isConnected, userLabel, ready,
@@ -311,7 +349,7 @@ export default function MercadoLances() {
         {/* UTAC107d — a frase da modalidade deixou de ser um <p> solto por cima do vidro: vai
             DENTRO do GlassHeader (prop `frase`, Regra 1). ⚠️ Mantém-se o limite do UTAC106b
             (ℹN3): na build das LOJAS a aba abre na vista de conformidade e a frase não aparece. */}
-        {/* ── Cabeçalho (MC66 Direção C): GlassHeader compõe identidade+auth, a frase e o seletor de modo,
+        {/* ── Cabeçalho (MC66 Direção C): GlassHeader compõe identidade+auth, título + frase + selo «⚡ Relâmpago» (UTAC108e.1: saiu o seletor de modo),
              e o rodapé legal fino. UTAC108d — saiu o herói «EM BREVE»; o estado «sem edição» vive no
              topo do <main>. ── */}
         <GlassHeader
@@ -321,10 +359,10 @@ export default function MercadoLances() {
           address={address}
           userLabel={userLabel}
           onLogin={abrirModal}
-          modalidade={modalidade}
-          setModalidade={setModalidade}
           encerrado={encerrado}
+          titulo="Menor Lance Único"
           frase={FRASE_MENOR_LANCE_UNICO}
+          selo="⚡ Relâmpago"
         />
 
         {/* MC99 — o banner do cliente (REQ-01) foi REMOVIDO desta tela: era um
@@ -348,23 +386,42 @@ export default function MercadoLances() {
               INFORMA e não esconde nada: a edição, a tabela e o formulário continuam visíveis; o lance
               em si continua bloqueado no CardLance. Só com saldo LIDO = R$ 0,00 (R18-A); nunca a
               contas corporativas (R18-B); nunca no modo «Programado», que usa senhas (UTAC108c.1). */}
-          {/* UTAC108d — os dois avisos NUNCA juntos: sem edição a correr (EM_BREVE_MODE) mostra-se o estado
-              vazio; só com edição é que faz sentido falar de saldo. */}
-          {EM_BREVE_MODE
-            ? <SemEdicaoAviso />
-            : mostrarAvisoSemSaldo({ isConnected, saldoRsCentavos, saldoRsStatus, tipoProvavel, modalidade }) && <SemSaldoBanner />}
+          {/* UTAC108d — os dois avisos NUNCA juntos: só com edição é que faz sentido falar de saldo.
+              UTAC108e.1 — sem edição já NÃO há aviso solto: o «sem edição» vive DENTRO do cartão (abaixo). */}
+          {!EM_BREVE_MODE
+            && mostrarAvisoSemSaldo({ isConnected, saldoRsCentavos, saldoRsStatus, tipoProvavel, modalidade }) && <SemSaldoBanner />}
           <section style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-            <CardLance
-              idEdicao={EDICAO_ATIVA}
-              onLanceSucesso={onLanceSucessoWrapper}
-              address={address}
-              isConnected={isConnected}
-              onConnect={abrirModal}
-              onDisconnect={desconectar}
-              encerrado={encerrado}
-              modalidade={modalidade}
-              ready={ready}
-            />
+            {/* UTAC108e.1 — CARTÃO DA EDIÇÃO (mockup v2, variante B «Produto em destaque»): a arte manda
+                (1:1 no telemóvel, 16:9 no desktop), nome e tempo na faixa, o lance por baixo. Sem edição
+                o cartão FICA, vazio (GUTO + «Nenhuma edição em andamento» + formulário desligado). */}
+            {EM_BREVE_MODE ? (
+              <CartaoEdicao destaque vazio isMobile={isMobile} id="⚡ Relâmpago" estado={{ texto: "SEM EDIÇÃO", cor: COR.muted }}>
+                <LanceDesativado isMobile={isMobile} />
+              </CartaoEdicao>
+            ) : (() => {
+              const edicao = edicoes?.[EDICAO_ATIVA] ?? null;
+              const est = getEstadoEdicao(edicao ?? { id: EDICAO_ATIVA }, { encerrado });
+              return (
+                <CartaoEdicao
+                  destaque isMobile={isMobile} id={EDICAO_ATIVA}
+                  estado={estadoDoCartao(est)}
+                  produto={edicao?.produto} arteUrl={edicao?.imagem_url}
+                  tempo={est.timer ?? est.rotulo}
+                >
+                  <CardLance
+                    idEdicao={EDICAO_ATIVA}
+                    onLanceSucesso={onLanceSucessoWrapper}
+                    address={address}
+                    isConnected={isConnected}
+                    onConnect={abrirModal}
+                    onDisconnect={desconectar}
+                    encerrado={encerrado}
+                    modalidade={modalidade}
+                    ready={ready}
+                  />
+                </CartaoEdicao>
+              );
+            })()}
 
             <LanceStatusBadge
               valor={meuUltimoLance?.valor}

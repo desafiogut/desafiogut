@@ -229,11 +229,19 @@ test("RENDER · com edição Programada a decorrer há campo + botão de palpite
   } finally { c.dup.restaurar(); }
 });
 
-test("RENDER · sem edição Programada → «Sem edição a decorrer» (sem campo)", async () => {
+test("RENDER · sem edição Programada → cartão VAZIO com o palpite desligado (108e.1; era «sem campo»)", async () => {
   const c = await montarEcra(undefined, ctx({ edicoes: { "R-1": { id: "R-1", tipo: "relampago", status: "aberto", termino_em: "2026-12-31T00:00:00.000Z" } } }));
   try {
     assert.match(c.texto(), /Sem edições programadas no momento\. Volte quando houver\./);
-    assert.equal(c.input(), undefined, "não pode haver campo de palpite sem edição");
+    // UTAC108e.1 — sem edição o CARTÃO fica (vazio, mockup v2 A) com o palpite DESLIGADO: o campo existe
+    // mas não aceita nada (era «sem campo»). O que tem de continuar impossível é palpitar.
+    const campo = c.input();
+    assert.ok(campo, "o cartão vazio perdeu o campo (desligado) do palpite");
+    assert.equal(campo.props.disabled, true, "sem edição o campo do palpite tem de estar DESLIGADO");
+    const botao = c.botao("Palpitar");
+    assert.ok(botao && botao.props.disabled === true, "sem edição o botão «Palpitar» tem de estar DESLIGADO");
+    assert.equal(botao.props.onClick, undefined, "o botão desligado não pode ter acção");
+    assert.match(c.texto(), /Nenhuma edição em andamento/, "o cartão vazio não diz que não há edição");
   } finally { c.dup.restaurar(); }
 });
 
@@ -430,5 +438,33 @@ test("UTAC107e.1 (validador) · o erro do palpite aparece SÓ no cartão que fal
     const h = c.html();
     const i8 = h.indexOf('aria-label="Edição PROG-8"');
     assert.ok(h.indexOf('role="alert"') > i8, "o alerta não está no cartão PROG-8");
+  } finally { c.dup.restaurar(); }
+});
+
+// ═══ UTAC108e.1 — OP variante A: o MESMO cartão de edição do MLC; tabela sempre presente ═══════
+test("UTAC108e.1 · cada edição usa o CartaoEdicao partilhado (arte real + GUTO + tempo) com o palpite dentro", async () => {
+  const c = await montarEcra(undefined, ctx({ edicoes: { "PROG-7": { ...EDICAO_PROG["PROG-7"], produto: "Air Fryer", imagem_url: "/artes/edicao-especial-airfryer.jpg" } } }));
+  try {
+    const h = c.html();
+    const i = h.indexOf('data-testid="op-edicao-item"');
+    assert.ok(i > 0, "o item do carrossel desapareceu");
+    const item = h.slice(i, h.indexOf("</article>", i));
+    assert.match(item, /data-testid="cartao-edicao"[^>]*data-vazio="false"[^>]*data-destaque="false"/, "não é o cartão partilhado (compacto)");
+    assert.match(item, /<img[^>]*data-testid="cartao-arte"[^>]*src="\/artes\/edicao-especial-airfryer\.jpg"/, "falta a arte real");
+    assert.match(item, /<img[^>]*src="\/assets\/guto\/custom\/guto-bemvindo\.png"/, "falta o GUTO ao lado do tempo");
+    assert.match(item, /data-estado-palpite="sem_palpite"/, "o estado do palpite deixou de chegar ao cartão");
+    assert.match(item, /id="palpite-PROG-7"/, "o palpite não está dentro do cartão partilhado");
+  } finally { c.dup.restaurar(); }
+});
+
+test("UTAC108e.1 · Regra 2: sem edição a tabela «Palpites» continua no fim (vazia), como a do MLC", async () => {
+  const c = await montarEcra(undefined, ctx({ edicoes: {} }));
+  try {
+    const h = c.html();
+    const i = h.indexOf('data-testid="op-tabela-fim"');
+    assert.ok(i > 0, "sem edição a tabela desapareceu");
+    assert.match(h.slice(i), /class="gut-glass-standard"/);
+    assert.match(semTags(h.slice(i)), /Palpites/);
+    assert.ok(i > h.indexOf('data-testid="cartao-edicao"'), "a tabela tem de vir depois do cartão (último vidro)");
   } finally { c.dup.restaurar(); }
 });

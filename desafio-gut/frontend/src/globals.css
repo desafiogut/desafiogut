@@ -34,8 +34,8 @@
   --color-gut-orange-ultra: rgba(255,107,53,0.06);
 
   /* Mantém aliases antigos para não quebrar código existente */
-  --color-gut-gold:         #ff9500;
-  --color-gut-gold-dim:     rgba(255,149,0,0.15);
+  --color-gut-gold:         #f5a623; /* UTAC108e.1: dourado único (era #ff9500) */
+  --color-gut-gold-dim:     rgba(245,166,35,0.15);
   --color-gut-gold-dark:    #e55520;
 
   /* Text */

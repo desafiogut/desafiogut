@@ -173,7 +173,7 @@ describe("UTAC108d · sem edição a correr (EM_BREVE_MODE ligado) o «Sem saldo
   test("saldo LIDO = 0 mas sem edição ⇒ sem «Sem saldo» (os dois avisos nunca juntos)", () => {
     const html = renderizar({}, true);
     assert.ok(!temAviso(html), "o «Sem saldo» apareceu sem edição a correr");
-    assert.match(html, /Nenhuma edição em andamento\./, "faltou o estado vazio no lugar do aviso");
+    assert.match(html, /Nenhuma edição em andamento</, "faltou o estado vazio (108e.1: dentro do cartão da edição)");
   });
 });
 

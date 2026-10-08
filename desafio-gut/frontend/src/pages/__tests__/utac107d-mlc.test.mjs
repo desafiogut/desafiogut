@@ -121,7 +121,8 @@ describe("UTAC107d · Menor Lance Único", () => {
   test("SEG4 · a tabela é o ÚLTIMO bloco antes do rodapé, em coluna única", () => {
     const html = renderizar();
     const iTabela = html.indexOf('data-testid="tabela-fim"');
-    const iLance = html.indexOf('data-stub="card-lance"');
+    // UTAC108e.1 — sem edição (EM_BREVE real ligado neste arnês) o lance é o formulário DESLIGADO do cartão.
+    const iLance = Math.max(html.indexOf('data-stub="card-lance"'), html.indexOf('data-testid="lance-desativado"'));
     const iFooter = html.indexOf("<footer");
     assert.ok(iTabela > 0 && iLance > 0 && iFooter > 0, `marcas em falta: tabela=${iTabela} lance=${iLance} rodapé=${iFooter}`);
     assert.ok(iLance < iTabela && iTabela < iFooter, "a tabela não está depois do lance e antes do rodapé");

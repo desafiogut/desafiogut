@@ -30,6 +30,9 @@ import { usePontos } from "../hooks/usePontos.js";
 import { usePalpite, usePalpitesDaEdicao } from "../hooks/usePalpite.js";
 import { useResgatarCartao } from "../hooks/useResgatarCartao.js";
 import ResgatarCartaoModal, { CARTAO_ID } from "../components/ResgatarCartaoModal.jsx";
+// UTAC108e.1 — o MESMO cartão de edição do «Menor Lance Único» (mockup v2, variante A «Família»):
+// só a acção muda (aqui, o palpite).
+import CartaoEdicao from "../components/CartaoEdicao.jsx";
 
 // UTAC107e.2 — endereço curto na tabela de palpites (0x1234…abcd); nunca rebenta com lixo.
 const curto = (e) => (typeof e === "string" && e.length > 12 ? `${e.slice(0, 6)}…${e.slice(-4)}` : "—");
@@ -147,20 +150,15 @@ export default function OfertasProgramadas() {
     const idCampo = `palpite-${ed.id}`;
     return (
       <div key={ed.id} data-testid="op-edicao-item" style={{ flex: "0 0 100%", minWidth: 0, scrollSnapAlign: "start" }}>
-        <GlassCard as="article" data-estado-palpite={estado} aria-label={`Edição ${ed.id}`} style={{ padding: isMobile ? "1rem" : "1.25rem", height: "100%" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem" }}>
-            <span style={{ fontSize: "0.72rem", fontWeight: 800, color: COR.gold, border: "1px solid rgba(245,166,35,0.35)", borderRadius: "999px", padding: "0.2rem 0.6rem" }}>{ed.id}</span>
-            <span style={{ fontSize: "0.72rem", fontWeight: 800, color: pil.cor, letterSpacing: "0.04em" }}>{pil.texto}</span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", margin: "0.75rem 0", padding: "0.6rem 0.75rem", background: "rgba(245,166,35,0.07)", border: "1px solid rgba(245,166,35,0.22)", borderRadius: "10px" }}>
-            <span aria-hidden="true" style={{ fontSize: "1.6rem" }}>🎁</span>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: "0.7rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>Prêmio</div>
-              <div style={{ color: COR.gold, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ed.produto || "Prêmio a anunciar"}</div>
-              <div style={{ color: COR.muted, fontSize: "0.78rem" }}>{est.timer ?? est.rotuloLongo}</div>
-            </div>
-          </div>
-
+        <CartaoEdicao
+          id={ed.id} isMobile={isMobile} data-estado-palpite={estado}
+          estado={{ texto: pil.texto, cor: pil.cor }}
+          produto={ed.produto} arteUrl={ed.imagem_url}
+          tempoRotulo={est.encerrada ? "Encerrada" : "Termina em"}
+          tempo={est.timer ?? est.rotuloLongo}
+          style={{ height: "100%" }}
+        >
+          <div style={{ paddingTop: "0.6rem", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
           {estado === "sem_palpite" && (
             <div>
               <label htmlFor={idCampo} style={{ display: "block", color: COR.text, fontSize: "0.82rem", fontWeight: 700, marginBottom: "0.35rem" }}>Seu palpite (nº de lances)</label>
@@ -207,7 +205,8 @@ export default function OfertasProgramadas() {
           {cartaoEmErro === ed.id && erroPalpite && (
             <p role="alert" style={{ margin: "0.5rem 0 0", color: COR.danger, fontSize: "0.78rem", fontWeight: 700 }}>{erroPalpite}</p>
           )}
-        </GlassCard>
+          </div>
+        </CartaoEdicao>
       </div>
     );
   }
@@ -223,13 +222,19 @@ export default function OfertasProgramadas() {
       <div style={{ maxWidth: "640px", width: "100%", display: "grid", gap: "1rem" }}>
 
         {/* 1 — CABEÇALHO (UTAC107e.1: dentro de vidro — Regra 1; era um <header> solto) */}
-        <GlassCard as="header" style={{ padding: isMobile ? "1rem" : "1.25rem" }}>
-          <h2 style={{ margin: 0, fontSize: isMobile ? "1.35rem" : "1.6rem", fontWeight: 800, color: COR.primary, letterSpacing: "0.04em" }}>
-            Ofertas Programadas
-          </h2>
-          <p style={{ margin: "0.4rem 0 0", color: COR.muted, fontSize: "0.9rem", lineHeight: 1.5 }}>
-            Junte 50 pontos e troque pelo cartão da Família Quildo
-          </p>
+        {/* UTAC108e.1 — o MESMO cabeçalho do MLC (mockup v2 `.cab-aba`): título + frase + selo do tipo. */}
+        <GlassCard as="header" style={{ padding: isMobile ? "1rem" : "1.25rem", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "0.6rem" }}>
+          <div style={{ minWidth: 0 }}>
+            <h2 data-testid="titulo-aba" style={{ margin: 0, fontFamily: "'Orbitron', sans-serif", fontSize: isMobile ? "1.15rem" : "1.4rem", fontWeight: 800, color: COR.primary, letterSpacing: "0.03em" }}>
+              Ofertas Programadas
+            </h2>
+            <p style={{ margin: "0.3rem 0 0", color: COR.gold, fontWeight: 700, fontSize: isMobile ? "0.9rem" : "1rem", lineHeight: 1.5 }}>
+              Junte 50 pontos e troque pelo cartão da Família Quildo
+            </p>
+          </div>
+          <span data-testid="selo-modo" style={{ flex: "none", fontSize: "0.75rem", fontWeight: 800, letterSpacing: "0.04em", color: COR.gold, border: "1px solid rgba(245,166,35,0.35)", background: "rgba(245,166,35,0.12)", borderRadius: "999px", padding: "0.25rem 0.65rem" }}>
+            🎫 Programadas
+          </span>
         </GlassCard>
 
         {loading && (
@@ -244,14 +249,18 @@ export default function OfertasProgramadas() {
           </GlassCard>
         )}
 
-        {/* 2 — PROGRESSO */}
+        {/* 2 — PONTOS (UTAC108e.1, mockup v2 variante A): rótulo + «faltam N» + «X / 50 pontos» + barra,
+            e o HISTÓRICO recolhido DENTRO do mesmo vidro (era um vidro à parte, no fim). */}
         {!loading && !erro && (
           <GlassCard as="section" aria-label="Progresso de pontos" style={{ padding: isMobile ? "1rem" : "1.25rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "0.5rem" }}>
-              <span style={{ color: COR.text, fontWeight: 800, fontSize: "1.05rem" }}>
-                {pontosCartao} / {pontosParaCartao} pontos
+              <span style={{ fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: COR.muted }}>Seus pontos</span>
+              <span style={{ color: COR.muted, fontSize: "0.8rem" }}>
+                {pontosCartao >= pontosParaCartao ? "meta atingida" : `faltam ${Math.max(0, pontosParaCartao - pontosCartao)}`}
               </span>
-              <span style={{ color: COR.muted, fontSize: "0.78rem" }}>{progresso}%</span>
+            </div>
+            <div style={{ marginTop: "0.25rem", color: COR.gold, fontWeight: 900, fontSize: isMobile ? "1.6rem" : "1.85rem", lineHeight: 1.1 }}>
+              {pontosCartao} / {pontosParaCartao} pontos
             </div>
             <div
               role="progressbar" aria-valuenow={pontosCartao} aria-valuemin={0} aria-valuemax={pontosParaCartao}
@@ -268,12 +277,43 @@ export default function OfertasProgramadas() {
               </p>
             )}
 
-            {/* 5 — BOTÃO DE RESGATE (UTAC106g: ACTIVO a ≥50 pontos; abre o balão de morada) */}
+            {/* 4b — HISTÓRICO (recolhido; o <details> nativo dá o toque de 48 px sem estado React) */}
+            <details aria-label="Histórico" style={{ marginTop: "0.5rem" }}>
+              <summary style={{ minHeight: "48px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", fontWeight: 800, color: COR.text, fontSize: "0.92rem" }}>
+                Histórico <span aria-hidden="true">▾</span>
+              </summary>
+              {historico.length === 0 ? (
+                <p style={{ margin: 0, color: COR.muted, fontSize: "0.82rem" }}>Sem movimentos ainda.</p>
+              ) : (
+                <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "grid", gap: "0.4rem" }}>
+                  {historico.slice().reverse().map((h, i) => (
+                    <li key={`${h?.ref ?? "m"}-${i}`} style={{ display: "flex", justifyContent: "space-between", gap: "0.5rem", color: COR.muted, fontSize: "0.82rem" }}>
+                      <span>{dataCurta(h?.data)} · {TIPO_LABEL[h?.tipo] ?? h?.tipo ?? "Movimento"}</span>
+                      <span style={{ color: Number(h?.pontos) >= 0 ? COR.ok : COR.danger, fontWeight: 700 }}>
+                        {Number(h?.pontos) >= 0 ? "+" : ""}{Number(h?.pontos ?? 0)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </details>
+          </GlassCard>
+        )}
+
+        {/* 3 — CARTÃO (colecionável) + o RESGATE por baixo dele (UTAC108e.1: o botão mudou do vidro dos
+            pontos para o vidro do cartão — mockup v2 A). UTAC106g: ACTIVO a ≥50 pontos de CARTÃO. */}
+        {!loading && !erro && (
+          <GlassCard as="section" aria-label="Cartão" style={{ padding: isMobile ? "1rem" : "1.25rem" }}>
+            <div style={cartao}>
+              <div style={{ fontSize: "2.25rem", lineHeight: 1 }} aria-hidden="true">🃏</div>
+              <h3 style={{ margin: "0.5rem 0 0.25rem", color: COR.gold, fontWeight: 800, fontSize: "1rem" }}>{CARTAO_NOME}</h3>
+              <p style={{ margin: 0, color: COR.muted, fontSize: "0.82rem", lineHeight: 1.55 }}>{CARTAO_DESCRICAO}</p>
+            </div>
             {podeResgatarCartao ? (
               <>
                 <button
                   type="button" onClick={() => setResgateAberto(true)} aria-label="Resgatar cartão"
-                  style={{ marginTop: "0.9rem", width: "100%", padding: "0.75rem 1rem", borderRadius: "12px", cursor: "pointer", border: `1px solid ${COR.gold}`, background: "linear-gradient(135deg,#f5a623,#e89400)", color: "#12161f", fontWeight: 800, fontSize: "0.9rem" }}
+                  style={{ marginTop: "0.9rem", width: "100%", minHeight: "48px", padding: "0.75rem 1rem", borderRadius: "12px", cursor: "pointer", border: `1px solid ${COR.gold}`, background: COR.gold, color: "#0a0f1a", fontWeight: 800, fontSize: "0.9rem" }}
                 >
                   🎁 Resgatar cartão
                 </button>
@@ -284,22 +324,11 @@ export default function OfertasProgramadas() {
             ) : (
               <button
                 type="button" disabled aria-label="Resgatar cartão indisponível"
-                style={{ marginTop: "0.9rem", width: "100%", padding: "0.75rem 1rem", borderRadius: "12px", cursor: "not-allowed", border: "1px solid rgba(107,125,184,0.35)", background: "transparent", color: COR.muted, fontWeight: 700, fontSize: "0.88rem" }}
+                style={{ marginTop: "0.9rem", width: "100%", minHeight: "48px", padding: "0.75rem 1rem", borderRadius: "12px", cursor: "not-allowed", border: "1px solid rgba(107,125,184,0.35)", background: "transparent", color: COR.muted, fontWeight: 700, fontSize: "0.88rem" }}
               >
                 Chegue a {pontosParaCartao} pontos para resgatar
               </button>
             )}
-          </GlassCard>
-        )}
-
-        {/* 3 — CARTÃO (colecionável) */}
-        {!loading && !erro && (
-          <GlassCard as="section" aria-label="Cartão" style={{ padding: isMobile ? "1rem" : "1.25rem" }}>
-            <div style={cartao}>
-              <div style={{ fontSize: "2.25rem", lineHeight: 1 }} aria-hidden="true">🃏</div>
-              <h3 style={{ margin: "0.5rem 0 0.25rem", color: COR.gold, fontWeight: 800, fontSize: "1rem" }}>{CARTAO_NOME}</h3>
-              <p style={{ margin: 0, color: COR.muted, fontSize: "0.82rem", lineHeight: 1.55 }}>{CARTAO_DESCRICAO}</p>
-            </div>
           </GlassCard>
         )}
 
@@ -311,28 +340,41 @@ export default function OfertasProgramadas() {
             </p>
             <button
               type="button" onClick={() => navigate("/carteira")}
-              style={{ marginTop: "0.75rem", padding: "0.65rem 1.1rem", borderRadius: "10px", cursor: "pointer", border: "none", background: COR.primary, color: "#12161f", fontWeight: 800, fontSize: "0.85rem" }}
+              style={{ marginTop: "0.75rem", minHeight: "48px", padding: "0.65rem 1.1rem", borderRadius: "10px", cursor: "pointer", border: "none", background: COR.primary, color: "#12161f", fontWeight: 800, fontSize: "0.85rem" }}
             >
               Ir para a Carteira
             </button>
           </GlassCard>
         )}
 
-        {/* 4 — EDIÇÕES PROGRAMADAS (UTAC107e.1): a secção «Palpite» separada SAIU; o palpite vive
-            DENTRO do cartão de cada edição. Mesma estrutura das «Outras Edições» do Início (MC99):
-            título em vidro + rolagem lateral com UMA edição visível e `scroll-snap` ao início. */}
+        {/* 4 — EDIÇÕES PROGRAMADAS (UTAC107e.1): o palpite vive DENTRO do cartão de cada edição; rolagem
+            lateral com UMA edição visível e `scroll-snap` ao início.
+            UTAC108e.1 — cada edição usa o `CartaoEdicao` partilhado com o MLC; SEM edição o cartão FICA,
+            vazio, com o palpite desligado (mesma correcção do 108d no MLC — nada de aviso solto). */}
         {!loading && !erro && (
           <section aria-label="Edições programadas" style={{ display: "grid", gap: "0.75rem" }}>
             <GlassCard style={{ padding: isMobile ? "1rem" : "1.25rem" }}>
-              <h3 style={{ margin: 0, color: COR.text, fontWeight: 800, fontSize: "0.95rem" }}>🎫 Edições programadas</h3>
+              <h3 style={{ margin: 0, color: COR.gold, fontWeight: 800, fontSize: "0.95rem" }}>🎫 Edições programadas</h3>
               <p style={{ margin: "0.35rem 0 0", color: COR.muted, fontSize: "0.8rem", lineHeight: 1.5 }}>
                 Palpite quantos lances a edição vai ter. O palpite mais próximo ganha +2 pontos — é bônus, não muda o cartão.
               </p>
-              {programadas.length === 0 && (
-                <p style={{ margin: "0.6rem 0 0", color: COR.muted, fontSize: "0.85rem" }}>Sem edições programadas no momento. Volte quando houver.</p>
-              )}
             </GlassCard>
-            {programadas.length > 0 && (
+            {programadas.length === 0 ? (
+              <CartaoEdicao vazio isMobile={isMobile} id="🎫 Programada" estado={{ texto: "SEM EDIÇÃO", cor: COR.muted }}>
+                <div data-testid="palpite-desativado" style={{ paddingTop: "0.6rem", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+                  <label htmlFor="palpite-sem-edicao" style={{ display: "block", color: COR.text, fontSize: "0.82rem", fontWeight: 700, marginBottom: "0.35rem" }}>Seu palpite (nº de lances)</label>
+                  <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                    <input id="palpite-sem-edicao" type="number" inputMode="numeric" disabled placeholder="Abre com a edição"
+                      style={{ flex: "1 1 120px", minHeight: "48px", padding: "0.6rem 0.75rem", borderRadius: "10px", border: "1px solid rgba(107,125,184,0.45)", background: "rgba(12,16,24,0.55)", color: COR.text, fontSize: "0.9rem", cursor: "not-allowed" }} />
+                    <button type="button" disabled
+                      style={{ minHeight: "48px", padding: "0.6rem 1.1rem", borderRadius: "10px", border: "none", background: COR.gold, color: "#12161f", fontWeight: 800, fontSize: "0.86rem", opacity: 0.55, cursor: "not-allowed" }}>
+                      Palpitar
+                    </button>
+                  </div>
+                  <p style={{ margin: "0.5rem 0 0", color: COR.muted, fontSize: "0.8rem" }}>Sem edições programadas no momento. Volte quando houver.</p>
+                </div>
+              </CartaoEdicao>
+            ) : (
               <div
                 data-testid="op-edicoes-scroll"
                 style={{
@@ -347,27 +389,6 @@ export default function OfertasProgramadas() {
           </section>
         )}
 
-        {/* 4b — HISTÓRICO */}
-        {!loading && !erro && (
-          <GlassCard as="section" aria-label="Histórico" style={{ padding: isMobile ? "1rem" : "1.25rem" }}>
-            <h3 style={{ margin: "0 0 0.5rem", color: COR.text, fontWeight: 800, fontSize: "0.95rem" }}>Histórico</h3>
-            {historico.length === 0 ? (
-              <p style={{ margin: 0, color: COR.muted, fontSize: "0.82rem" }}>Sem movimentos ainda.</p>
-            ) : (
-              <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "grid", gap: "0.4rem" }}>
-                {historico.slice().reverse().map((h, i) => (
-                  <li key={`${h?.ref ?? "m"}-${i}`} style={{ display: "flex", justifyContent: "space-between", gap: "0.5rem", color: COR.muted, fontSize: "0.82rem" }}>
-                    <span>{dataCurta(h?.data)} · {TIPO_LABEL[h?.tipo] ?? h?.tipo ?? "Movimento"}</span>
-                    <span style={{ color: Number(h?.pontos) >= 0 ? COR.ok : COR.danger, fontWeight: 700 }}>
-                      {Number(h?.pontos) >= 0 ? "+" : ""}{Number(h?.pontos ?? 0)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </GlassCard>
-        )}
-
         {/* UTAC106h — as Regras Oficiais do programa de fidelidade ficam a um toque do ecrã onde
             os pontos se acumulam (requisito Google Play: regras publicadas no app). Só acrescenta
             o link — nenhuma outra alteração a este ecrã. */}
@@ -378,15 +399,16 @@ export default function OfertasProgramadas() {
           </Link>
         </GlassCard>
 
-        {/* 6 — TABELA «Palpites — Edição <id>» (UTAC107e.1, R18-C: estrutura). Último vidro, padrão
+        {/* 6 — TABELA «Palpites — Edição <id>» (UTAC107e.1, R18-C: estrutura). UTAC108e.1: aparece SEMPRE
+            (sem edição, só «Palpites», vazia — como a do MLC). Último vidro, padrão
             da Regra 2 (o mesmo vidro e as 3 colunas da tabela do Menor Lance Único).
             UTAC107e.2 (Frente C): os dados vêm do `ler-palpites`. Durante a edição o servidor NÃO manda
             o valor — a coluna mostra 🔒; depois do fecho mostra o palpite. */}
-        {!loading && !erro && edicaoTabela && (
-          <section data-testid="op-tabela-fim" aria-label={`Palpites — Edição ${edicaoTabela.id}`}
+        {!loading && !erro && (
+          <section data-testid="op-tabela-fim" aria-label={edicaoTabela ? `Palpites — Edição ${edicaoTabela.id}` : "Palpites"}
             className="gut-glass-standard" style={{ color: COR.text, padding: isMobile ? "1rem" : "1.5rem" }}>
             <h3 style={{ margin: "0 0 0.75rem", color: COR.gold, fontWeight: 800, fontSize: isMobile ? "0.95rem" : "1.05rem", letterSpacing: "0.04em" }}>
-              Palpites — Edição {edicaoTabela.id}
+              {edicaoTabela ? `Palpites — Edição ${edicaoTabela.id}` : "Palpites"}
             </h3>
             <div className="w-full overflow-x-auto rounded-2xl">
               <table className="w-full border-collapse text-sm">

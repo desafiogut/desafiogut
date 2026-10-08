@@ -67,7 +67,9 @@ function renderizar({ emBreve = true, ...extra } = {}) {
   return renderToStaticMarkup(React.createElement(Pagina));
 }
 const texto = (h) => h.replace(/<style>[\s\S]*?<\/style>/g, "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-const VAZIO = "Nenhuma edição em andamento.";
+// UTAC108e.1 — o operador classificou o aviso solto do 108d como ERRO: o «sem edição» passou para DENTRO do
+// cartão da edição (estado vazio, mockup v2 B). A frase é a do mockup — sem ponto final.
+const VAZIO = "Nenhuma edição em andamento";
 const SEM_SALDO = "Sem saldo. Carregar agora?";
 
 /** Atributos das tags abertas que envolvem a posição `i` (do mais exterior ao mais interior). */
@@ -108,39 +110,43 @@ describe("UTAC108d · sem edição a correr (EM_BREVE_MODE ligado)", () => {
     assert.match(texto(renderizar()), /🕒 Em breve/);
   });
 
-  test("(b) o estado vazio aparece UMA vez, com as duas frases, dentro de vidro", () => {
+  test("(b) o estado vazio aparece UMA vez, com as duas frases, dentro de vidro — e DENTRO do cartão da edição (108e.1)", () => {
     const html = renderizar();
-    const i = html.indexOf(VAZIO);
-    assert.ok(i > 0, "faltou «Nenhuma edição em andamento.»");
-    assert.equal(html.split(VAZIO).length - 1, 1, "o estado vazio aparece mais de uma vez");
-    assert.match(html, /Volte quando houver\./);
+    const i = html.indexOf(VAZIO + "<");
+    assert.ok(i > 0, "faltou «Nenhuma edição em andamento»");
+    assert.equal(html.split(VAZIO + "<").length - 1, 1, "o estado vazio aparece mais de uma vez");
+    assert.match(html, /Volte quando houver/);
     assert.ok(dentroDeVidro(html, i), "o estado vazio está FORA de vidro (Regra 1)");
+    assert.ok(ancestrais(html, i).some(({ attrs }) => /data-testid="cartao-edicao"/.test(attrs) && /data-vazio="true"/.test(attrs)),
+      "o estado vazio não está DENTRO do cartão da edição (voltou o aviso solto do 108d)");
   });
 
   test("(b) A1 do validador: o estado vazio está VISÍVEL (nem ele nem os pais com hidden/display:none/opacity:0) e anunciado (role=status)", () => {
     const html = renderizar();
-    const pais = ancestrais(html, html.indexOf(VAZIO));
+    const pais = ancestrais(html, html.indexOf(VAZIO + "<")); // o texto visível (não o aria-label)
     for (const { tag, attrs } of pais) {
       assert.doesNotMatch(attrs, /\shidden(=|\s|$)/, `<${tag}> com hidden`);
       assert.doesNotMatch(attrs, /display:\s*none/, `<${tag}> com display:none`);
       assert.doesNotMatch(attrs, /opacity:\s*0(?![.\d])/, `<${tag}> com opacity:0`);
       assert.doesNotMatch(attrs, /visibility:\s*hidden/, `<${tag}> com visibility:hidden`);
     }
-    assert.ok(pais.some(({ attrs }) => /data-testid="sem-edicao"/.test(attrs) && /role="status"/.test(attrs)),
+    assert.ok(pais.some(({ attrs }) => /data-testid="cartao-vazio"/.test(attrs) && /role="status"/.test(attrs)),
       "o estado vazio perdeu o role=\"status\"");
   });
 
-  test("(b) no topo do <main>, antes do formulário do lance", () => {
+  test("(b) dentro do <main>, antes do formulário do lance (desligado, sem edição — 108e.1)", () => {
     const html = renderizar();
-    const iMain = html.indexOf("<main"), iVazio = html.indexOf(VAZIO), iLance = html.indexOf('data-stub="card-lance"');
+    const iMain = html.indexOf("<main"), iVazio = html.indexOf(VAZIO + "<"), iLance = html.indexOf('data-testid="lance-desativado"');
     assert.ok(iMain > 0 && iMain < iVazio && iVazio < iLance, `ordem errada: main=${iMain} vazio=${iVazio} lance=${iLance}`);
   });
 
-  test("a vista real fica inteira: frase do mockup, seletor de modo, formulário e tabela (vazia, sem rebentar)", () => {
+  test("a vista real fica inteira: frase do mockup, selo do modo, formulário (desligado) e tabela (vazia, sem rebentar)", () => {
     const html = renderizar({ lances: [] });
     assert.match(html, /Ganha o menor lance que ninguém repetir\./, "faltou a frase do mockup");
-    assert.match(html, /Relâmpago/, "faltou o seletor de modo");
-    assert.ok(html.includes('data-stub="card-lance"'), "o formulário do lance desapareceu");
+    assert.match(html, /⚡ Relâmpago/, "faltou o selo do modo (108e.1: o seletor saiu — fixo em Relâmpago)");
+    // 108e.1: sem edição o CardLance real não monta; o cartão mostra o formulário DESLIGADO (mockup v2 B).
+    assert.ok(html.includes('data-testid="lance-desativado"'), "o formulário do lance desapareceu");
+    assert.ok(!html.includes('data-stub="card-lance"'), "sem edição o CardLance não devia montar");
     assert.ok(html.includes('data-testid="tabela-fim"'), "a tabela desapareceu");
     assert.doesNotMatch(texto(html), /Edições na versão Web/, "caiu na vista de conformidade das lojas");
   });
