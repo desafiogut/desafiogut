@@ -346,8 +346,8 @@ export default function MercadoLances() {
           {/* UTAC108c (D-1) — o saldo verifica-se AQUI (o botão da Carteira navega sempre). O aviso
               INFORMA e não esconde nada: a edição, a tabela e o formulário continuam visíveis; o lance
               em si continua bloqueado no CardLance. Só com saldo LIDO = R$ 0,00 (R18-A); nunca a
-              contas corporativas (R18-B). */}
-          {mostrarAvisoSemSaldo({ isConnected, saldoRsCentavos, saldoRsStatus, tipoProvavel }) && <SemSaldoBanner />}
+              contas corporativas (R18-B); nunca no modo «Programado», que usa senhas (UTAC108c.1). */}
+          {mostrarAvisoSemSaldo({ isConnected, saldoRsCentavos, saldoRsStatus, tipoProvavel, modalidade }) && <SemSaldoBanner />}
           <section style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             <CardLance
               idEdicao={EDICAO_ATIVA}

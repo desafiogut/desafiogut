@@ -100,6 +100,16 @@ describe("UTAC108c · decisão pura `mostrarAvisoSemSaldo` (as três direcções
   test("R18-B: conta corporativa ⇒ não mostra", () => {
     assert.equal(mostrarAvisoSemSaldo({ ...C, tipoProvavel: "corporativo" }), false);
   });
+  test("UTAC108c.1 (N3): modo «Programado» ⇒ nunca mostra, mesmo com saldo R$ lido = 0", () => {
+    assert.equal(mostrarAvisoSemSaldo({ ...C, modalidade: "programado" }), false);
+    assert.equal(mostrarAvisoSemSaldo({ ...C, modalidade: "programado", saldoRsStatus: "stale" }), false);
+  });
+  test("UTAC108c.1: modo «Relâmpago» (\"flash\") mantém a regra anterior (R18-A)", () => {
+    assert.equal(mostrarAvisoSemSaldo({ ...C, modalidade: "flash" }), true);
+    assert.equal(mostrarAvisoSemSaldo({ ...C, modalidade: "flash", saldoRsCentavos: 500 }), false);
+    assert.equal(mostrarAvisoSemSaldo({ ...C, modalidade: "flash", saldoRsCentavos: null }), false);
+    assert.equal(mostrarAvisoSemSaldo({ ...C, modalidade: "flash", tipoProvavel: "corporativo" }), false);
+  });
 });
 
 describe("UTAC108c · o aviso na página REAL do Menor Lance Único", () => {
@@ -140,6 +150,16 @@ describe("UTAC108c · o aviso na página REAL do Menor Lance Único", () => {
 
   test("R18-B: conta corporativa (/corporativo/mercado) ⇒ sem aviso", () => {
     assert.ok(!temAviso(renderizar({ tipoProvavel: "corporativo" })));
+  });
+
+  test("UTAC108c.1 (N3): página no modo «Programado» com saldo R$ 0 ⇒ sem aviso; o formulário continua lá", () => {
+    const html = renderizar({ modalidade: "programado" });
+    assert.ok(!temAviso(html), "o aviso aparece no modo Programado");
+    assert.ok(html.includes('data-stub="card-lance"'), "o formulário do lance desapareceu");
+  });
+
+  test("UTAC108c.1: a mesma página no modo «Relâmpago» com saldo R$ 0 ⇒ com aviso (controlo do caso acima)", () => {
+    assert.ok(temAviso(renderizar({ modalidade: "flash" })));
   });
 });
 

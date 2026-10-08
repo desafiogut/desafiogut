@@ -12,7 +12,11 @@ import { GlassCard } from "@/components/ui";
 import { COR } from "./glass/glassTokens.js";
 
 /** Decide se o aviso aparece. Pura — sem coerção: só o número 0 conta como «sem saldo». */
-export function mostrarAvisoSemSaldo({ isConnected, saldoRsCentavos, saldoRsStatus, tipoProvavel }) {
+export function mostrarAvisoSemSaldo({ isConnected, saldoRsCentavos, saldoRsStatus, tipoProvavel, modalidade }) {
+  // UTAC108c.1 (N3 do validador do 108c) — no modo «Programado» o lance usa SENHAS on-chain, não R$:
+  // quem tem R$ 0,00 e senhas > 0 lia «Sem saldo» e mesmo assim conseguia licitar. É a mesma
+  // `modalidade` ("flash" | "programado") que decide o débito no CardLance (`isProgramado`).
+  if (modalidade === "programado") return false;
   if (isConnected !== true) return false;
   if (tipoProvavel === "corporativo") return false;
   if (saldoRsStatus !== "ok" && saldoRsStatus !== "stale") return false;

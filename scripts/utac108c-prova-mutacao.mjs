@@ -43,8 +43,13 @@ const MUTANTES = [
   { id: "M11", desc: "(V11) aviso inteiro com display:none", f: BAN, t: T_MLC,
     de: 'display: "flex", alignItems', para: 'display: "none", alignItems' },
   { id: "M12", desc: "(V7) aviso fora do <main>", f: MLC, t: T_MLC,
-    de: "          {mostrarAvisoSemSaldo({ isConnected, saldoRsCentavos, saldoRsStatus, tipoProvavel }) && <SemSaldoBanner />}\n", para: "",
-    tambem: ["        <main style={{", "        {mostrarAvisoSemSaldo({ isConnected, saldoRsCentavos, saldoRsStatus, tipoProvavel }) && <SemSaldoBanner />}\n        <main style={{"] },
+    de: "          {mostrarAvisoSemSaldo({ isConnected, saldoRsCentavos, saldoRsStatus, tipoProvavel, modalidade }) && <SemSaldoBanner />}\n", para: "",
+    tambem: ["        <main style={{", "        {mostrarAvisoSemSaldo({ isConnected, saldoRsCentavos, saldoRsStatus, tipoProvavel, modalidade }) && <SemSaldoBanner />}\n        <main style={{"] },
+  // UTAC108c.1 (N3):
+  { id: "M13", desc: "remover a guarda do modo Programado", f: BAN, t: T_MLC,
+    de: 'if (modalidade === "programado") return false;\n', para: "" },
+  { id: "M14", desc: "o call site deixa de passar a modalidade", f: MLC, t: T_MLC,
+    de: "tipoProvavel, modalidade }) && <SemSaldoBanner />}", para: "tipoProvavel }) && <SemSaldoBanner />}" },
 ];
 
 let provados = 0;
