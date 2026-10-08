@@ -5179,3 +5179,28 @@ re-medido `08f78b3` (pai de `644c6ce`); 84 endpoints = **76 `application/json` +
 
 **Entregaveis:** `_logs/UTAC108b-auditoria-producao.md` · este bloco R14 ·
 `Desktop/RELATORIO-UTAC108b-AUDITORIA.txt`. **Zero alteracoes de codigo.**
+
+
+## R14 (append) -- UTAC108c -- D-1: botao «Menor Lance Unico» da Carteira navega sempre (Claude Code, Opus 5.5)
+
+**Tipo:** CODIGO (frontend + testes). **Baseline:** `3e4febe`. **Commits:** `dcb4f43` (fix) -> `1e18792` (testes pos-veredicto)
+-> registo. **Suite:** frontend VERDE **867/867** (+18) · backend VERDE 1095/1101. **Deploy:** auto-deploy Git; entry
+`index-Ci4XuUO-.js` -> `index-CRWGSol9.js`; chunks `MinhaCarteira-C_FmRtxy.js` / `MercadoLances-BUfxxtJM.js` verificados.
+
+**Feito:** `MinhaCarteira.jsx` perde `disabled={!saldoReais}` (+ cursor/opacidade/title condicionais; title = «Ir para o Menor
+Lance Unico»). Novo `src/components/SemSaldoBanner.jsx` (`mostrarAvisoSemSaldo` pura + `GlassCard role="status"` com «⚠️ Sem
+saldo. Carregar agora?» e «Carregar PIX →» -> `/carteira`), montado como 1.º filho do `<main>` do `MercadoLances.jsx`; informa,
+nao esconde (o lance continua bloqueado no CardLance, intocado).
+
+**Decisoes do operador (R18):** **R18-A** o aviso so aparece com saldo LIDO (`ok`/`stale`) = 0 e login feito (o enunciado dizia
+«0 ou null»; null = «nao sei» => sem aviso). **R18-B** `CorporativoCarteira.jsx:214` («Ir dar lances», lojista) NAO tocado (sai
+no 108f) e o aviso nunca aparece a `tipoProvavel === "corporativo"`.
+
+**Testes:** `src/__tests__/utac108c-carteira-mlc.test.mjs` (6) + `src/pages/__tests__/utac108c-mlc-aviso.test.mjs` (12); mutacao
+**12/12** (`scripts/utac108c-prova-mutacao.mjs`). Licao: o `clicar()` dos arneses chama `onClick` directamente — provar
+«clicavel» mede as PROPS (`disabled`, `hidden`, `pointerEvents`, `display`), nao o clique.
+**Validador: APROVADO COM RESSALVAS** (0 graves): N1/N2 (lacunas de teste, 7 mutantes sobreviventes) fechadas, nao re-validadas;
+**N3 escalado**: em modalidade «Programado» o lance usa senhas — R$ 0 com senhas > 0 ve «Sem saldo» mas pode licitar (nao e
+regressao). **Escopo:** backend, App.jsx, CardLance, package*, 5 `.bak-*` intactos; `EM_BREVE_MODE = true`.
+**Registo:** `_logs/UTAC108c-d1-mlc.md` · `_logs/UTAC108c_SEG5_VALIDADOR.md` · `Desktop/RELATORIO-UTAC108c-D1-MLC.txt`.
+**Custo:** validador 115 615 tokens = 2,3–231 ¢ (46 ¢ se tudo input); sessao principal nao medida; ≈ 35 min. **Proximo:** 108f.
