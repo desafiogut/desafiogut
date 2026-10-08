@@ -30,7 +30,7 @@ const IconLogOut       = () => <NavIcon name="logout" size={16} />;
 // 4: «BottomNav e Sidebar em sincronia»). O resto do rail (Vitrine…Parceiro) não muda.
 // ⚠️ O destino de «Menor Lance Único» é `/mercado` (rota canónica) — `/menor-lance-unico`
 // é o ALIAS por redirect (App.jsx). Manter a canónica aqui é o que preserva o `activeTab`
-// («lances») e o isolamento corporativo (`rotasProibidas`).
+// («lances»).
 const NAV_ITEMS = [
   { path: "/carteira",            label: "Carteira",            icon: <IconWallet />,    end: false },
   { path: "/mercado",             label: "Menor Lance Único",   icon: <IconTarget />,    end: false },
@@ -43,9 +43,8 @@ const NAV_ITEMS = [
   // UTAC106h — Regras Oficiais do programa de fidelidade. Mesma ordem do `SECONDARY_LINKS`
   // do BottomNav (Vitrine · Programação · Meus Ativos · Parceiro · Regras Oficiais · Configurações).
   { path: "/regras-oficiais", label: "📜 Regras Oficiais", icon: <IconShield />, end: false },
-  // MC39.4.1 (#segurança): "Segurança" removido do nav do utilizador COMUM (rota gated
-  // p/ corporativo desde o MC39.3.1; o comum era redirecionado para "/"). Lojista acede
-  // via card no CorporativoDashboard.
+  // MC39.4.1 (#segurança): "Segurança" removido do nav do utilizador COMUM (a página
+  // saiu com o lojista no UTAC108f).
   // UTAC106c — PENDÊNCIA #4 do 106b: «Configurações» passa para o FIM da lista, para a
   // ordem dos SECUNDÁRIOS coincidir com a do BottomNav (`SECONDARY_LINKS`: Vitrine ·
   // Programação · Meus Ativos · Seja nosso parceiro · Configurações). Só a ordem mudou —

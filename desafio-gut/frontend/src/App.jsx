@@ -94,10 +94,10 @@ function RouteFallback() {
 }
 
 // UTAC108f (R18) — o lojista saiu do app: a guarda `CorporativoRoute` (MC12.2…MC89.40), o gate de cota
-// (`CotaInativa`) e o acesso directo `?rc=1` foram removidos com as rotas `/corporativo` e sub-rotas. Histórico no git.
+// (`CotaInativa`) e o acesso directo `?rc=1` foram removidos com as rotas do painel do lojista. Histórico no git.
 
 // MC12.3 Item 4 — wrapper da rota raiz. UTAC108f (R18-B): o lojista saiu do app — já NÃO há encaminhamento
-// para /corporativo; uma conta corporativa vê o Dashboard do comprador (o ADM continua a ir para /admin).
+// para o painel do lojista; uma conta corporativa vê o Dashboard do comprador (o ADM continua a ir para /admin).
 // MC88.37 — ANTES existia aqui `if (isConnected && tipoCarregando) return null;`.
 //
 // O QUE ISSO PROVOCAVA (medido, ver docs/MC88.37-CLS-DIAGNOSTICO.txt): quando o
@@ -197,7 +197,7 @@ function DashboardOuCorporativo() {
 
   if (destino === DESTINO.ADMIN)         return <Navigate to="/admin" replace />;
   // UTAC108f (R18-B) — o lojista saiu do app: uma conta corporativa passa a ver o app do comprador
-  // (o destino «corporativo» da `lib/encaminhamento.js` cai no Dashboard; limpeza da lib no 108g).
+  // (UTAC108g/R18-A: a `lib/encaminhamento.js` devolve DASHBOARD também para o ex-lojista).
   if (destino === DESTINO.ESTADO_NEUTRO) return <EstadoNeutro />;
   return <Dashboard />;
 }
@@ -408,11 +408,11 @@ export default function App() {
             <Route path="cotas"            element={<AdminCotas />} />
             <Route path="pedidos"          element={<AdminPedidos />} />
           </Route>
-          {/* UTAC108f (R18) — o lojista saiu do app: `/seja-nosso-parceiro`, `/seguranca` e `/corporativo/*`
+          {/* UTAC108f (R18) — o lojista saiu do app: `/seja-nosso-parceiro`, `/seguranca` e as rotas do lojista
               (painel, cotas, banners, analytics, cupons, carteira, mercado) foram removidas. Caem no catch-all
               abaixo → Início. O admin (`/admin/*`, incl. Cotas e Aprovações) fica. */}
           {/* UTAC107g (R18-B) — URL desconhecida (incl. as rotas removidas `/edicao/:id`,
-              `/corp`, `/corporativo/*`, `/seguranca`, `/seja-nosso-parceiro` e links antigos) vai para o Início em vez de um ecrã em branco.
+              `/corp`, as rotas do lojista, `/seguranca`, `/seja-nosso-parceiro` e links antigos) vai para o Início em vez de um ecrã em branco.
               Fica no FIM: o React Router escolhe a rota mais específica, não a primeira. */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

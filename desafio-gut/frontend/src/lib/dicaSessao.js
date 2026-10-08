@@ -174,10 +174,9 @@ export function limparDicaLojista(storage = storagePadrao()) {
  *   3. o endereço da dica é o MESMO de `privy:connections`.
  *
  * ⚠️ A condição 3 é a que impede que uma dica escrita à mão sirva de alguma
- * coisa. Quem puser `corporativo:true` com o SEU endereço vê o redirect e a
- * seguir é expulso por `CorporativoRoute` assim que /cotas responder que não tem
- * cota — o mesmo que já veria hoje ao escrever /corporativo na barra de
- * endereço. Não há ganho de superfície de ataque: isto ENCAMINHA, não autoriza.
+ * coisa. Desde o UTAC108f o palpite já não abre painel nenhum: só esconde o
+ * aviso «Sem saldo» (R18-B do UTAC108c) até /cotas responder. Não há ganho de
+ * superfície de ataque: isto ENCAMINHA, não autoriza.
  *
  * ⚠️ E NÃO é dado pessoal: é a string "corporativo" associada a um endereço
  * público que já está no disco, em `privy:connections`.

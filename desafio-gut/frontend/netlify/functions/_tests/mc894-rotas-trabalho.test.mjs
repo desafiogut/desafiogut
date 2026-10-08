@@ -19,9 +19,14 @@ import { ehRotaDeTrabalho, escondeNavegacaoConsumo } from "../../../src/lib/rota
 const SRC = resolve(dirname(fileURLToPath(import.meta.url)), "../../../src");
 const ler = (rel) => readFileSync(resolve(SRC, rel), "utf8");
 
-test("rotas de trabalho: só /admin e /corporativo", () => {
-  for (const p of ["/admin", "/admin/", "/corporativo", "/corporativo/cotas", "/corporativo/banners"]) {
+// UTAC108g — o painel do lojista saiu do app (UTAC108f): `/corporativo` deixou de ser rota de
+// trabalho (a URL cai no catch-all → Início, uma rota de CONSUMO).
+test("rotas de trabalho: só /admin", () => {
+  for (const p of ["/admin", "/admin/", "/admin/cotas"]) {
     assert.equal(ehRotaDeTrabalho(p), true, `${p} devia ser rota de trabalho`);
+  }
+  for (const p of ["/corporativo", "/corporativo/cotas", "/corporativo/banners"]) {
+    assert.equal(ehRotaDeTrabalho(p), false, `${p} já não é rota de trabalho (UTAC108g)`);
   }
 });
 
@@ -53,12 +58,10 @@ test("entradas inválidas devolvem false (nunca explodem)", () => {
 });
 
 test("a navegação de consumo só sai onde há outra saída", () => {
-  // Diferença FUNCIONAL, não estética: em /corporativo a barra inferior é a única
-  // navegação do lojista (Painel · Cotas · Banners). Só o /admin ganhou um
-  // "Sair do painel", logo só o /admin pode dispensá-la.
+  // Só o /admin ganhou um "Sair do painel", logo só o /admin pode dispensá-la.
+  // (UTAC108g — o painel do lojista, que dependia dela, saiu no UTAC108f.)
   assert.equal(escondeNavegacaoConsumo("/admin"), true);
-  assert.equal(escondeNavegacaoConsumo("/corporativo"), false,
-    "o lojista ficaria sem navegação nenhuma");
+  assert.equal(escondeNavegacaoConsumo("/corporativo"), false);
   assert.equal(escondeNavegacaoConsumo("/corporativo/cotas"), false);
   assert.equal(escondeNavegacaoConsumo("/"), false);
 });

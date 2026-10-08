@@ -17,7 +17,8 @@
 // visual do produto de consumo em rotas onde ela é o produto. A lista é
 // explícita de propósito — nada de heurísticas.
 
-const PREFIXOS_TRABALHO = ["/admin", "/corporativo"];
+// UTAC108g — o prefixo do painel do lojista saiu (o lojista saiu do app no UTAC108f).
+const PREFIXOS_TRABALHO = ["/admin"];
 
 /**
  * @param {string} pathname
@@ -31,11 +32,9 @@ export function ehRotaDeTrabalho(pathname) {
 /**
  * A navegação inferior de consumo só é RETIRADA onde há outra saída.
  *
- * ⚠️ NÃO é o mesmo que `ehRotaDeTrabalho`, e a diferença é funcional, não
- * estética: em `/corporativo` a barra inferior é a ÚNICA navegação do lojista
- * (Painel · Cotas · Banners — BottomNav.jsx:63-67). Retirá-la deixaria-o sem
- * forma de circular no telemóvel. O `/admin` recebe um "Sair do painel" no
- * cabeçalho, por isso pode dispensá-la.
+ * ⚠️ NÃO é o mesmo que `ehRotaDeTrabalho`: a barra inferior só sai onde há outra
+ * saída. O `/admin` recebe um "Sair do painel" no cabeçalho, por isso pode
+ * dispensá-la. (UTAC108g — o painel do lojista, que dependia dela, saiu.)
  */
 export function escondeNavegacaoConsumo(pathname) {
   const p = String(pathname || "").toLowerCase();

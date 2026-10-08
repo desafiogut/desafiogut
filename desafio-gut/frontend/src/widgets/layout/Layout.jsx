@@ -56,10 +56,9 @@ export default function Layout() {
   // continua em todas as rotas de consumo, onde é obrigação. Num painel de
   // administração não serve a ninguém.
   //
-  // ⚠️ A navegação inferior sai por uma condição DIFERENTE, e a diferença é
-  // funcional: em /corporativo a barra é a ÚNICA navegação do lojista
-  // (Painel · Cotas · Banners). O /admin recebe "Sair do painel" no cabeçalho,
-  // logo pode dispensá-la. Ver lib/rotasTrabalho.js.
+  // ⚠️ A navegação inferior sai por uma condição DIFERENTE: só onde há outra
+  // saída. O /admin recebe "Sair do painel" no cabeçalho, logo pode dispensá-la.
+  // Ver lib/rotasTrabalho.js.
   const trabalho = ehRotaDeTrabalho(location.pathname);
   const semNavConsumo = escondeNavegacaoConsumo(location.pathname);
   const mostrarNav = isMobile && !semNavConsumo;

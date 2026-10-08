@@ -16,7 +16,7 @@
 // por isso aqui apenas CONSUMIMOS o estado nas camadas. As camadas fixas de z-index
 // negativo empilham por viewport, independentemente do aninhamento DOM.
 //
-// MC89.4 — nas rotas de TRABALHO (/admin, /corporativo) a vinheta NÃO é montada.
+// MC89.4 — nas rotas de TRABALHO (/admin) a vinheta NÃO é montada.
 // Ela existe para dar ambiente ao leilão; num ecrã de administração só baixa o
 // contraste nos cantos, e o MC89.3 mediu texto ilegível por causa disso.
 import { useLocation } from "react-router-dom";

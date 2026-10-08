@@ -25,9 +25,8 @@ import { getEstadoEdicao } from "../utils/edicao.js";
 // MC99 — `CATEGORIAS_POR_TIPO` + `buscarClienteDoLeilaoAtivo` viveram aqui para
 // alimentar o banner do cliente (REQ-01). Com o banner removido desta tela, o
 // resultado da função deixou de ser lido por alguém — mantê-la seria uma chamada de
-// rede cujo resultado ninguém vê. A funcionalidade NÃO desapareceu: o banner
-// continua a ser gerido e visto pelo lojista em /corporativo (BannerUpload) e o
-// endpoint `banners` continua intacto.
+// rede cujo resultado ninguém vê. O endpoint `banners` continua intacto
+// (UTAC108g — o painel do lojista que o geria saiu no UTAC108f).
 // MC66 — COR migrado para components/glass/glassTokens.js (fonte única, compartilhada
 // com os subcomponentes do Glass). Importado no topo.
 
@@ -368,9 +367,7 @@ export default function MercadoLances() {
         {/* MC99 — o banner do cliente (REQ-01) foi REMOVIDO desta tela: era um
             SEGUNDO vidro colado ao topo, antes do vidro do painel principal, e a
             primeira coisa que o utilizador via nos Lances era publicidade — e não a
-            pergunta do torneio ("QUANTO VOCÊ OFERTA POR..."). O banner continua a
-            existir para o lojista em `/corporativo` (BannerUpload), que é quem o gere;
-            aqui sai a superfície, não a funcionalidade. */}
+            pergunta do torneio ("QUANTO VOCÊ OFERTA POR..."). */}
 
         {/* ── Coluna única (UTAC107d — R18-D): lance primeiro, TABELA NO FIM, a largura total,
              como último vidro antes do rodapé (Regra 2 do mockup). Era «1fr 1.6fr» no desktop,

@@ -9,14 +9,12 @@
 // ⚠️ ESTA FUNÇÃO SÓ ENCAMINHA. NÃO AUTORIZA NADA.
 // Quem decide se a porta abre continua a ser, intocado:
 //   · /admin       → AdminLayout (isAdmin real) + AdminAuthContext + backend
-//   · /corporativo → CorporativoRoute (App.jsx) + backend
 // Um palpite errado leva alguém a uma porta que não abre. É o mesmo contrato do
 // MC89.31, e o cabeçalho de lib/dicaSessao.js detalha as defesas.
 
 /** Destinos possíveis. Strings e não símbolos, para os testes lerem bem. */
 export const DESTINO = {
   ADMIN:        "/admin",
-  CORPORATIVO:  "/corporativo",
   ESTADO_NEUTRO: "estado-neutro",
   DASHBOARD:    "dashboard",
 };
@@ -47,8 +45,10 @@ export const PRAZO_ESTADO_NEUTRO_MS = 10_000;
  *     assim que há, vale só a resposta confirmada, para que o palpite nunca
  *     sobreviva à verdade. (MC89.12 / MC89.31)
  *
- *  2. LOJISTA — confirmado ou provável. É incondicional para o palpite e espera
- *     por `!tipoCarregando` no caso confirmado. (MC88.42)
+ *  2. EX-LOJISTA — confirmado ou provável. Vai para o Dashboard do comprador
+ *     (UTAC108f/R18-B): o painel do lojista saiu do app. O degrau fica para
+ *     não passar pelo estado neutro — comportamento igual ao de antes da
+ *     limpeza (UTAC108g/R18-A). (MC88.42)
  *
  *  3. ESTADO NEUTRO — parece autenticado, mas ainda NÃO SABEMOS quem é.
  *     É o degrau que o MC89.36 acrescenta. Antes disto, este caso caía no
@@ -90,10 +90,10 @@ export function decidirDestino({
   //    por decisão do operador: as telas comuns não existem para o ADM.
   if (address ? (isAdmin && !adminLoading) : adminProvavel) return DESTINO.ADMIN;
 
-  // 2. LOJISTA — inalterado face ao MC88.42. O palpite basta para ENCAMINHAR;
-  //    para o caso confirmado espera-se que já não esteja a carregar.
+  // 2. EX-LOJISTA — a condição é a do MC88.42; o destino passou a ser o
+  //    Dashboard do comprador (UTAC108g/R18-A).
   if (tipoProvavel === "corporativo" && (tipoUsuario === "corporativo" ? !tipoCarregando : true)) {
-    return DESTINO.CORPORATIVO;
+    return DESTINO.DASHBOARD;
   }
 
   // 3. ESTADO NEUTRO — o degrau novo.

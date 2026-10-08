@@ -23,7 +23,7 @@ import { tiersAgoraVisiveis, tierAtivoAgora } from "../data/programacao-junho-20
 import { apiGet } from "../lib/api.js";
 
 // UTAC108f (R18-D) — saiu o cabeçalho «Painel do Parceiro» (`VitrineHeaderLojista`, MC11.3), que
-// levava a `/corporativo/analytics`: o lojista saiu do app e a vitrine é a mesma para todos.
+// levava às estatísticas do painel do lojista: o lojista saiu do app e a vitrine é a mesma para todos.
 
 const TZ_PADRAO = "America/Sao_Paulo";
 function getTimezone() {
@@ -406,7 +406,7 @@ export default function Vitrine() {
   const { slot: slotId } = useParams();
   const tz = getTimezone();
   // MC15.4 — edicoes (mapa multi-edição) para cronómetro por slot.
-  // UTAC108f (R18-D) — saiu a «vitrine dual» do lojista (tipoUsuario/cotaCorporativa/addressCorporativo).
+  // UTAC108f (R18-D) — saiu a «vitrine dual» do lojista (tipoUsuario/cotaCorporativa/carteira corporativa).
   const {
     prazoFlash, prazoProgramado,
     edicoes,

@@ -15,7 +15,7 @@
 // Melhoria progressiva: <video> com fallback estático (WebP) via onError.
 // prefers-reduced-motion → apenas imagem estática (R3).
 // Anti-CLS: poster = imagem estática oficial, mesmas dimensões do vídeo (R4).
-// MC89.4 — nas rotas de TRABALHO (/admin, /corporativo) o fundo fica ESTÁTICO:
+// MC89.4 — nas rotas de TRABALHO (/admin) o fundo fica ESTÁTICO:
 // mantém-se a imagem, sai o vídeo e sai o parallax. Decisão do operador — "tire a
 // animação do fundo, deixe ele estático". Não é só estética: o MC89.3 mediu o
 // vídeo a descodificar (`paused=false`) num ecrã de leitura de números.
@@ -26,10 +26,11 @@ import { ehRotaDeTrabalho } from "../../lib/rotasTrabalho.js";
 
 function offsetFor(pathname) {
   const p = (pathname || "/").toLowerCase();
-  if (p.startsWith("/mercado") || p.startsWith("/corporativo/mercado")) return -12;
-  if (p.startsWith("/carteira") || p.startsWith("/corporativo")) return 12;
+  // UTAC108g — saíram os ramos das rotas do lojista e de /seguranca (removidas no UTAC108f).
+  if (p.startsWith("/mercado")) return -12;
+  if (p.startsWith("/carteira")) return 12;
   if (p.startsWith("/vitrine") || p.startsWith("/produto") || p.startsWith("/programacao")) return -6;
-  if (p.startsWith("/seguranca") || p.startsWith("/configuracoes") || p.startsWith("/ativos")) return 6;
+  if (p.startsWith("/configuracoes") || p.startsWith("/ativos")) return 6;
   return 0; // dashboard / raiz
 }
 

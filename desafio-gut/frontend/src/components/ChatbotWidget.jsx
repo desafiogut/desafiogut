@@ -201,10 +201,11 @@ export default function ChatbotWidget() {
   // idle quando a resposta chega (aditivo; não altera o fluxo do chat).
   const { signalThinking, signalIdle } = useAppEnvironment();
   // MC15.5 — badge de perfil no cabeçalho (cosmético; o backend é a fonte de
-  // verdade do perfil — R4). visitante: sem badge; comum: ●; lojista/admin: rótulo.
+  // verdade do perfil — R4). visitante: sem badge; comum: ●; admin: rótulo.
+  // UTAC108g — saiu o selo do lojista (o lojista saiu do app no UTAC108f): uma conta
+  // corporativa vê o mesmo «●» do comprador.
   const perfilBadge =
     isAdmin ? { txt: "⚡ Admin", cor: "#f5a623" }
-    : tipoUsuario === "corporativo" ? { txt: "◈ Lojista", cor: "#00d4aa" }
     : (authToken || address) ? { txt: "●", cor: "#00c853" }
     : null;
   // MC88.23 — o perfil de um autenticado é ASSÍNCRONO: `tipoUsuario` vale "comum"

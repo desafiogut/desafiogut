@@ -141,11 +141,11 @@ test("prazo esgotado sem resposta → Dashboard (nunca preso no esqueleto)", () 
   );
 });
 
-test("prazo esgotado NÃO rouba o lojista que já tem palpite", () => {
-  // A válvula não pode passar à frente de uma decisão já tomada.
+test("prazo esgotado: o ex-lojista com palpite vai para o Dashboard", () => {
+  // UTAC108g (R18-A) — o destino do ex-lojista passou a ser o Dashboard do comprador.
   assert.equal(
     com({ pareceAutenticado: true, tipoProvavel: "corporativo", prazoEsgotado: true }),
-    DESTINO.CORPORATIVO,
+    DESTINO.DASHBOARD,
   );
 });
 
@@ -159,23 +159,24 @@ test("o prazo é generoso face à janela quente medida", () => {
   );
 });
 
-// ── LOJISTA ──────────────────────────────────────────────────────────────────
+// ── EX-LOJISTA (UTAC108g/R18-A: o degrau fica, o destino é o Dashboard) ─────────
 
-test("palpite de lojista encaminha logo, sem esperar pelas cotas", () => {
+test("palpite de ex-lojista vai logo para o Dashboard, sem passar pelo estado neutro", () => {
+  // Discriminante: sem o degrau 2, este caso cairia no ESTADO_NEUTRO (até 10 s de esqueleto).
   assert.equal(
     com({ pareceAutenticado: true, tipoProvavel: "corporativo", tipoUsuario: "comum" }),
-    DESTINO.CORPORATIVO,
+    DESTINO.DASHBOARD,
   );
 });
 
-test("lojista confirmado espera que o carregamento termine", () => {
+test("ex-lojista confirmado espera que o carregamento termine", () => {
   assert.equal(
     com({ pareceAutenticado: true, tipoProvavel: "corporativo", tipoUsuario: "corporativo", tipoCarregando: true }),
     DESTINO.ESTADO_NEUTRO,
   );
   assert.equal(
     com({ pareceAutenticado: true, tipoProvavel: "corporativo", tipoUsuario: "corporativo", tipoCarregando: false }),
-    DESTINO.CORPORATIVO,
+    DESTINO.DASHBOARD,
   );
 });
 

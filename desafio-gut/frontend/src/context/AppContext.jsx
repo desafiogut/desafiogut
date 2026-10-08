@@ -92,11 +92,7 @@ const LS_KEYS_LEGADO_MOCK = [
 // esperar pela cadeia serial de autenticação (ver bloco "SALDO OTIMISTA").
 // Guarda SEMPRE o endereço a que os valores pertencem, para que a guarda de
 // coerência possa descartá-los se a sessão for outra.
-// MC89.40 (F2) — os quatro níveis de cota. O backend tem a fonte única em
-// `_lib/cota-ativacao.mjs`, que não é importável daqui (vive nas funções
-// Netlify). Duplicar uma lista é sempre um risco de divergência, por isso há um
-// teste a comparar as duas e a rebentar se alguém mexer numa e esquecer a outra.
-const CATEGORIAS_COTA = new Set(["bronze", "prata", "ouro", "diamante"]);
+// UTAC108g (R18-D) — `CATEGORIAS_COTA` (MC89.40) saiu com o `cotaAtiva`, o seu único uso.
 
 const LS_SALDO_CACHE     = "gut_saldo_cache";
 const SALDO_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 h — além disso, mostrar é pior que não mostrar
@@ -526,7 +522,7 @@ export function AppProvider({ children }) {
   //
   // PROBLEMA MEDIDO no aparelho, com a sessão corporativa real: o lojista via o
   // Dashboard COMUM durante 9012 / 3994 / 3873 ms (mediana 3994) antes de ser
-  // redirecionado para /corporativo. Não é um piscar de estilo — o corporativo
+  // redirecionado para o painel dele (que saiu no UTAC108f). Não é um piscar de estilo — o corporativo
   // é um lojista anunciante que pagou entre R$ 2.640 e R$ 18.000 por uma cota,
   // e o que lhe aparecia era o dashboard de leilão: KPIs de lances, saldo de
   // senhas, "Ir para o Mercado". Outro produto.
@@ -561,32 +557,9 @@ export function AppProvider({ children }) {
     : null;
   const tipoProvavel = tipoUsuario === "corporativo" ? "corporativo" : (tipoOtimista ?? tipoUsuario);
 
-  // MC89.40 (F2) — "a cota está PAGA?", que é uma pergunta DIFERENTE de "é
-  // lojista?".
-  //
-  // `tipoUsuario` responde à primeira e é escrito no REGISTO (cotas.mjs:427, com
-  // `vendida:false` e `categoria:null`). Durante muito tempo foi usado também
-  // como resposta à segunda — e por isso quem preenchia o formulário "Seja Nosso
-  // Parceiro" entrava no painel sem ter pago (MC89.37).
-  //
-  // As duas perguntas passam a ter cada uma o seu sinal, e não devem voltar a
-  // ser colapsadas:
-  //     tipoUsuario / tipoProvavel → ENCAMINHA  (para onde vai)
-  //     cotaAtiva                  → AUTORIZA   (o que pode fazer lá dentro)
-  //
-  // ⚠️ ISTO É CONFORTO, NÃO É A CORREÇÃO. Quem impede de facto é o servidor
-  // (`_lib/cota-utils.mjs`, MC89.40-S0): um gate só de frontend não fecha nada,
-  // porque o endpoint continua a poder ser chamado à mão. Aqui só se evita que
-  // o lojista tente e leve com um erro seco.
-  //
-  // `null` significa AINDA NÃO SEI — e é deliberadamente distinto de `false`.
-  // Quem consome tem de tratar os três estados; dizer "inativa" a quem ainda não
-  // foi verificado é a mesma família de erro que o MC89.36 veio corrigir.
-  const cotaAtiva = cotaCorporativa == null
-    ? null
-    : (cotaCorporativa.vendida === true
-       && typeof cotaCorporativa.categoria === "string"
-       && CATEGORIAS_COTA.has(cotaCorporativa.categoria.toLowerCase()));
+  // UTAC108g (R18-D) — `cotaAtiva` (MC89.40, «a cota está PAGA?») saiu: o único consumidor era o
+  // gate do painel do lojista, removido no UTAC108f. Quem impede de facto continua a ser o
+  // servidor (`_lib/cota-utils.mjs`).
 
   // Grava o tipo assim que ele é CONFIRMADO (e apaga o palpite quando deixa de
   // ser corporativo, para um ex-lojista não ficar preso ao painel antigo).
@@ -600,33 +573,13 @@ export function AppProvider({ children }) {
     gravarDicaLojista(address, tipoUsuario === "corporativo");
   }, [address, cotaCorporativa, tipoUsuario]);
 
-  // Atualiza cotaCorporativa em memória após auto-cadastro (SejaNossoParceiro)
-  // sem aguardar novo fetch do servidor.
-  // MC89.36 — o auto-cadastro é uma resposta definitiva tal como a do servidor.
-  //
-  // ⚠️ MC89.41 — `useCallback` NÃO É DECORATIVO AQUI, E A FALTA DELE DAVA UMA
-  // TEMPESTADE DE PEDIDOS.
-  // Esta função era recriada a cada render. O MC89.41 (F3) passou a chamá-la do
-  // `carregar` da CorporativoCarteira, que é um `useCallback` consumido por
-  // `useEffect(() => { carregar(); }, [carregar])`. Com uma identidade nova em
-  // cada render, `carregar` mudava sempre → o efeito voltava a correr → novo
-  // fetch → novo estado → novo render, em ciclo fechado, a bater no `/cotas`
-  // sem parar. Apanhei-o ao rever as dependências, não em execução.
-  // As três funções de estado do React são estáveis, portanto a lista vazia é
-  // correta e a identidade passa a ser constante.
-  const atualizarTipoCorporativo = useCallback((data) => {
-    setCotaCorporativa(data); setTipoCarregando(false); setTipoResolvido(true);
-  }, []);
+  // UTAC108g (R18-D) — `atualizarTipoCorporativo` (MC89.36/41) saiu: os seus dois chamadores
+  // (o auto-cadastro do parceiro e a carteira corporativa) foram apagados no UTAC108f.
 
-  // UTAC108f (R18-B) — o isolamento do lojista (MC12.3 Item 4: `rotasProibidas` → `navigate("/corporativo")`)
+  // UTAC108f (R18-B) — o isolamento do lojista (MC12.3 Item 4: `rotasProibidas`, que o reencaminhava para o painel dele)
   // SAIU com o painel do lojista: uma conta corporativa passa a ver o app do comprador. Histórico no git.
 
-  // MC12 — carteira corporativa: wallets[1] criado após cadastro corporativo.
-  // Fallback para wallets[0] se wallets[1] ainda não existe (transição).
-  const corporativoWallet = tipoUsuario === "corporativo"
-    ? (wallets[1] ?? wallets[0] ?? null)
-    : null;
-  const addressCorporativo = corporativoWallet?.address ?? null;
+  // UTAC108g — a carteira corporativa (MC12, wallets[1]) saiu: 0 consumidores desde o UTAC108f.
 
   const isConnected = authenticated && Boolean(address);
   const userLabelReal = user?.google?.name || user?.google?.email || user?.email?.address || user?.apple?.email || (tipoUsuario === "corporativo" ? cotaCorporativa?.empresa : null) || null;
@@ -1384,13 +1337,11 @@ export function AppProvider({ children }) {
     marcarNotificacoesLidas,
     // MC15.6 ITEM 8 — kill switch refletido no cliente.
     systemPausado,
-    // MC12.2 — tipo de usuário (cotas blob), cota e carteiras corporativas.
+    // MC12.2 — tipo de usuário (cotas blob) e cota. UTAC108g: saíram a carteira corporativa
+    // e o `atualizarTipoCorporativo` (0 consumidores).
     tipoUsuario,
     tipoCarregando,
-    atualizarTipoCorporativo,
     cotaCorporativa,
-    corporativoWallet,
-    addressCorporativo,
     authToken,
     obterAuthToken,
     address, privyWallet, isConnected, userLabel, ready, authenticated, user,
@@ -1408,10 +1359,6 @@ export function AppProvider({ children }) {
     // de "sei que é comum", que era a ambiguidade que punha o lojista a olhar
     // para o Dashboard errado. Só ENCAMINHA.
     tipoResolvido,
-    // MC89.40 (F2) — `true` | `false` | `null` (ainda não sei). AUTORIZA o que
-    // se pode fazer dentro do painel; não confundir com `tipoUsuario`, que só
-    // ENCAMINHA. Quem impede de facto é o servidor.
-    cotaAtiva,
     // MC89.36.1 — "há um login a decorrer neste instante" (params do OAuth no
     // URL). Fecha os 1 889 ms de Dashboard comum medidos no login fresco, em que
     // nem `gut_saldo_cache` nem `privy:connections` existem ainda.

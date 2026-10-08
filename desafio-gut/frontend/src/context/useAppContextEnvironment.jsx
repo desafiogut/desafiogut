@@ -45,9 +45,10 @@ function moodFromState(appState) {
 // rota → activeTab (derivado do react-router; não depende do AppContext).
 function tabFromPath(pathname) {
   const p = (pathname || "/").toLowerCase();
-  if (p === "/" || p.startsWith("/mercado") || p.startsWith("/corporativo/mercado")) return "lances";
-  if (p.startsWith("/carteira") || p.startsWith("/corporativo/carteira") || p.startsWith("/corporativo")) return "carteira";
-  if (p.startsWith("/seguranca") || p.startsWith("/configuracoes") || p.startsWith("/ativos")) return "perfil";
+  // UTAC108g — saíram os ramos das rotas do lojista e de /seguranca (removidas no UTAC108f).
+  if (p === "/" || p.startsWith("/mercado")) return "lances";
+  if (p.startsWith("/carteira")) return "carteira";
+  if (p.startsWith("/configuracoes") || p.startsWith("/ativos")) return "perfil";
   if (p.startsWith("/vitrine") || p.startsWith("/produto") || p.startsWith("/programacao")) return "guto";
   return "lances";
 }

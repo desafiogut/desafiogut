@@ -4,8 +4,8 @@
 // conforme a decisão de design já documentada (memória glass-kpi-button-secondary:
 // "tiles de stat clicáveis usam variant=secondary; ghost fica fora do padrão").
 // Antes do MC39.22.1 o markup vivia inline em Dashboard.jsx (botão glass cru,
-// responsivo) e CorporativoDashboard.jsx (Button secondary, tamanhos fixos) — duas
-// implementações do mesmo conceito. Aqui ficam num componente só, no padrão Button.
+// responsivo) e no painel do lojista (removido no UTAC108f) — duas implementações
+// do mesmo conceito. Aqui ficam num componente só, no padrão Button.
 //
 // Props: label, value, color (cor do valor), icon, e navegação via `to` (rota) ou
 // `onClick`. `className` propaga padding/grid do caller (ex.: cardCls). Tamanhos

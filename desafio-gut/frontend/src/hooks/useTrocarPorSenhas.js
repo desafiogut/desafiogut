@@ -8,7 +8,6 @@
 //
 // Consumido por:
 //   - src/pages/MinhaCarteira.jsx     (utilizador comum — referência)
-//   - src/pages/CorporativoCarteira.jsx (utilizador corporativo — MC17.1)
 //
 // API: { trocarPorSenhas, carregando, erro, sucesso, getAuthToken,
 //        setErro, setSucesso }
