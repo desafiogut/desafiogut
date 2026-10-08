@@ -63,3 +63,29 @@
 - **R18-B (Q2):** a conta de lojista passa a ver o **app do comprador**: sai o encaminhamento/isolamento para `/corporativo`; o tipo «corporativo» fica no contexto só para o 108c (R18-B do 108c).
 - **R18-C (Q3):** `/seguranca` **apagada** com o lojista (cai no catch-all → Início).
 - **R18-D (Vitrine):** autorizada a `Vitrine.jsx` neste UTAC para remover os 12 ramos só do lojista (cabeçalho «Painel do Parceiro» com link para `/corporativo/analytics`, banners corporativos, campos «Contrato»/«Mín. produto»); a vitrine fica igual para todos.
+
+## SEG1-SEG3 — Rotas, componentes, navegação
+- `App.jsx`: removidas as 7 rotas `/corporativo/*`, `/seguranca`, `/seja-nosso-parceiro`, a guarda `CorporativoRoute`
+  (+ gate de cota `CotaInativa` + `?rc=1`); a raiz deixa de encaminhar o lojista (destino «corporativo» → Dashboard). Admin, `/redirect` e catch-all intactos.
+- `AppContext.jsx`: removido o isolamento `rotasProibidas` → `/corporativo` (+ `navigate` morto). O tipo continua (108c).
+- `BottomNav.jsx`/`Sidebar.jsx`: removidos `CORP_TABS`, `CORPORATIVO_ITEMS`, «Segurança», «Seja nosso parceiro»; todas as contas vêem o comprador.
+- `Dashboard.jsx`: removido o atalho «🤝 Seja Nosso Parceiro». `Vitrine.jsx` (R18-D): removidos cabeçalho «Painel do Parceiro», banners corporativos, campos internos.
+- **Apagados (15):** `CorporativoDashboard/Cotas/Banners/Analytics/Carteira/Cupons.jsx`, `SejaNossoParceiro.jsx`, `Seguranca.jsx`, `CotaInativa.jsx`, `BannerUpload.jsx`, `BannerCard.jsx`, `WalletCard.jsx` (ficou órfão), `acessoDiretoCadastro.js` (+teste), `ModeSelector.jsx`, `SemEdicaoAviso.jsx`.
+
+## SEG4 — Órfãos: **nenhum removido** (R18-A). Backend intacto.
+
+## SEG5/SEG6 — Limpeza + testes
+Testes actualizados (contrato mudou, declarado): `mc991-ui`, `mc99-limpeza-ui`, `utac106c-carteira(+render)`, `utac106h-regras`, `utac107g-navegacao`, `Dashboard`, `cotaAtiva`, `vocabularioUI`, `citacoesRegulamento`; apagado `utac105b-painel`; novo `utac108f-sem-lojista` (5). **Mutação 8/8** (rota de volta, atalho de volta, CORP_TABS, isolamento, raiz → `DESTINO.CORPORATIVO`, raiz → `/corporativo`, `cotas.mjs` apagado, `admin/Cotas.jsx` apagado), restauro md5-idêntico.
+
+## SEG7 — Verificação
+Suíte **899/899 · 1095/1101 VERDE**; `vite build` OK; lint 0 erros. `/corporativo/*`, `/seguranca`, `/seja-nosso-parceiro` → catch-all provado com `matchRoutes` real (`utac107g`). Browser não aberto (declarado).
+
+## SEG8 — Validador adversarial
+Verbatim: `_logs/UTAC108f_SEG8_VALIDADOR.md`. **PARCIAL** — (a)-(m) **todos não refutados**; **F1** (o leitor de código do meu teste novo apagava 6664 caracteres do App.jsx por causa de um `/*` num comentário `//` que eu escrevi → mutantes M7/M7b sobreviviam) **corrigido** (ordem `//` antes de `/* */`, controlo positivo, guarda do encaminhamento; M7/M7b agora RED); **F2** (`navigate`/`useLocation` mortos) corrigido. Correcções não re-validadas em 2.ª ronda.
+**Declarado para o 108g (F3 + meu):** restos textuais de `/corporativo`/lojista em `lib/encaminhamento.js` (`DESTINO.CORPORATIVO` ainda é devolvido, mas cai no Dashboard), `lib/rotasTrabalho.js`, `lib/dicaSessao.js`, `context/useAppContextEnvironment.jsx`, `widgets/layout/BackgroundCanvas.jsx:29-32`, badge «◈ Lojista» do `ChatbotWidget.jsx:207`, comentário `MercadoLances.jsx:372`; `corporativoWallet` (wallets[1]) continua no AppContext.
+
+## SEG9 — Deploy + registo
+Push `c54ecff..389a1d5` (`ed4bffe` feat + `389a1d5` fix). Entry `index-Dn0gx2pr.js` → **`index-BmsJdBht.js`**, site 200, crawl 124 chunks: 0 ocorrências de `CORP_TABS`, «Painel Lojista», `seja-nosso-parceiro`, `/corporativo/cotas`; chunk admin `Cotas-*.js` presente. `package-lock.json` limpo.
+
+## Custo (¢/1M tokens; Opus 5.5: 400 in · 2000 out · 20 cache)
+Validador 329 483 tokens = 6,6–659 ¢ (132 ¢ se tudo input). Sessão principal não medida (`/cost`). Duração ≈ 1 h 45 (dentro do HI5 de 3 h).

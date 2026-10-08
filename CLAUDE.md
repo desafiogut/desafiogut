@@ -5344,3 +5344,16 @@ ressalvas corrigidas). **Operador: «ficaram boas».** Recomendacao: MLC A + OP 
 **Escopo:** backend, CardLance, SemSaldoBanner, package*, 5 `.bak-*` intactos; `EM_BREVE_MODE = true`.
 **Registo:** `_logs/UTAC108e.1-implementacao.md` · `_logs/UTAC108e.1_SEG7_VALIDADOR.md` · `Desktop/RELATORIO-UTAC108e.1-IMPLEMENTACAO.txt`.
 **Custo:** validador 577 331 tokens = 11,5-1155 ¢ (231 ¢ se tudo input); sessao principal nao medida. **Proximo:** 108f (remover lojista).
+
+
+## R14 (append) -- UTAC108f -- O LOJISTA SAI DO APP (Claude Code, Opus 5.5)
+
+**Tipo:** CODIGO (frontend + testes). **Baseline:** `c54ecff`. **Commits:** `ed4bffe` (feat) -> `389a1d5` (achados do validador) -> registo.
+**Suite:** frontend VERDE **899/899** · backend VERDE 1095/1101. **Deploy:** auto-deploy Git; entry `index-Dn0gx2pr.js` -> `index-BmsJdBht.js`.
+**SEG0 PAROU (GATE 12):** os «23 orfaos sem chamador» do 108b estao VIVOS (webhook PIX Mercado Pago, webhook Frenet, exportar-dados LGPD, health, 11 crons, consolidar-lances, pontuacao) e nenhum e do lojista. **Decisoes do operador (R18):** **A** nenhum endpoint removido (backend intacto; para o 108h) · **B** conta corporativa ve o app do comprador · **C** `/seguranca` apagada · **D** `Vitrine.jsx` autorizada para tirar os ramos do lojista.
+**Feito:** saem as 7 rotas `/corporativo/*`, `/seguranca`, `/seja-nosso-parceiro`, `CorporativoRoute` (+ gate de cota + `?rc=1`), o encaminhamento da raiz e o isolamento `rotasProibidas` do AppContext, `CORP_TABS`/`CORPORATIVO_ITEMS`/«Seguranca»/«Seja nosso parceiro» da navegacao, o atalho «Parceiro» do Inicio e os ramos do lojista da Vitrine. **15 ficheiros apagados** (6 `Corporativo*`, `SejaNossoParceiro`, `Seguranca`, `CotaInativa`, `BannerUpload`, `BannerCard`, `WalletCard`, `acessoDiretoCadastro`, `ModeSelector`, `SemEdicaoAviso`). Ficam: `/admin/*`, `cotas.mjs`, `admin/Cotas.jsx`, `/cadastro`+`/login-email` (sao do comprador, MC91.7), o tipo «corporativo» no contexto (108c).
+**Testes:** guardas de remocao + `utac108f-sem-lojista` (5); `utac105b-painel` apagado. **Mutacao 8/8.**
+**Validador: PARCIAL** -- (a)-(m) nao refutados; **F1** (o leitor de codigo do meu teste apagava 6664 caracteres do App.jsx por um `/*` dentro de um comentario `//`; M7/M7b sobreviviam) e **F2** (identificadores mortos) **corrigidos**, nao re-validados. **Para o 108g:** restos textuais de `/corporativo` em `encaminhamento.js`, `rotasTrabalho.js`, `dicaSessao.js`, `useAppContextEnvironment.jsx`, `BackgroundCanvas.jsx`, badge «◈ Lojista» do ChatbotWidget, `corporativoWallet`.
+**Escopo:** backend, CardLance, SemSaldoBanner, MLC/OP/Carteira, package*, 5 `.bak-*` intactos; `EM_BREVE_MODE = true`.
+**Registo:** `_logs/UTAC108f-remover-lojista.md` · `_logs/UTAC108f_SEG8_VALIDADOR.md` · `Desktop/RELATORIO-UTAC108f-REMOVER-LOJISTA.txt`.
+**Custo:** validador 329 483 tokens = 6,6-659 ¢ (132 ¢ se tudo input); sessao principal nao medida. **Proximo:** 108g (limpar referencias).
