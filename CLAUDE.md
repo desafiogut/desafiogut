@@ -5450,3 +5450,35 @@ EMOJI a falhar em silencio** (armadilha ja conhecida) — por Python o titulo es
 **Verificacao:** suite **VERDE 909/909** (frontend; +10 testes meus) + **1095/1101** (backend) · `vite build`
 exit 0 · 4 mutacoes a MORDER, restauro byte-identico (`a9ca771cd9c6bb55ba4c83f6395c8a01`) · producao:
 entry `index-TvfL10s1.js`, chunk `PrivyRoot-B4GSJVIh.js` com os 2 titulos/vazios, «Outras Edicoes» ×0.
+
+## R14 (append) — UTAC108h.3 — INICIO SO COM OS DOIS VIDROS (2026-10-08)
+
+**Pedido do operador** (depois de ver o 108h.2 no ar): o Inicio passa a ter **apenas duas edicoes** —
+«⚡ Relampago» e «🎫 Programada» — no MESMO casco, a diferenca a ser o nome da familia e, na Programada, a
+**zona de palpite em baixo, dentro do vidro**. Commits `8b3e4c4 -> 380d728`.
+
+**Saiu:** o vidro separado «🎯 Edicao Ativa», os titulos soltos das prateleiras, o carrossel de «Outras
+Edicoes» e o vidro de estado vazio. **Entrou:** DOIS vidros com o componente unico `CartaoEdicao` (o das
+abas MLC/OP, UTAC108e.1), agora com um rotulo de familia opcional `titulo`.
+
+**Decisao declarada:** o vidro Relampago mostra a edicao VIVA (a ativa). Mostrar as Relampago ENCERRADAS
+(que eram o conteudo da antiga prateleira) tiraria do Inicio a porta de entrada do lance. A edicao
+ESPECIAL (MC94.2/94.3.1) continua a ocupar esse lugar — e por isso e EXCLUIDA do vidro da Programada.
+
+**Fonte unica:** as regras do palpite (`estaAberta`, `edicoesProgramadasDe`, `estadoPalpite`, `PILULA`)
+saíram de `pages/OfertasProgramadas.jsx` para **`src/lib/palpite.js`**. A OP passou a importa-las de la. Sem
+isto, o Inicio teria de as copiar — duas verdades sobre quando se pode palpitar.
+
+**Guardas:** 7 testes novos do 108h.3; 3 assercoes antigas reapontadas; os testes do desenho anterior
+(prateleiras + `prateleirasDeEdicoes`) SAIRAM (o objecto desapareceu). **A guarda do MC99 foi APOSENTADA**,
+com o mutador `MUT1` retirado no mesmo movimento: media o scroll lateral das edicoes do Inicio, que deixou
+de existir — deixada la, ficaria verde por vacuidade. A **etiqueta do meu lance** (guarda B11 do
+UTAC107e.2) foi REPOSTA dentro do vidro Relampago: era funcionalidade do card que saiu.
+
+**Verificacao:** suite **904/904** (frontend) + **1095/1101** (backend) · `vite build` exit 0 · producao
+entry `index-Brxo6SkT.js`, chunk do Inicio com `palpite-zona`/os 2 titulos/«Dar lance»/o vazio dentro do
+vidro e **zero** «🎯 Edicao Ativa», `prateleira-scroll`, «Outras Edicoes», «Smart TV» · `.bak-*` 0 tocados.
+
+**Nao provado:** o ecra num browser com sessao (producao esta atras do gate LGPD e nao clico aceites por
+ninguem) — a confirmacao visual e do operador. O palpite nao foi exercido ponta a ponta (exigiria sessao +
+Passe); esta provada a ligacao ao MESMO hook e a MESMA regra da OP.
