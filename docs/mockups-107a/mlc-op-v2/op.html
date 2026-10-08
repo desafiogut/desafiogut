@@ -11,7 +11,7 @@
 <div class="prancha">
   <header>
     <h1>Ofertas Programadas · v2</h1>
-    <p>Edições <b>Programadas</b>. Base: o mockup aprovado do 107e (<code>../ofertas-programadas.html</code>, variante A) e o ecrã implementado no 107e.1. O que muda: os cartões de edição passam a ser <b>o mesmo componente do MLC</b> (arte, GUTO + tempo, acção), sobre o mesmo <b>fundo de arena</b>; a tabela é a mesma <code>TabelaEspecial</code>, agora «Palpites — Edição PROG-1» (o que o 107e.1 implementou).</p>
+    <p>Edições <b>Programadas</b>. Base: o mockup aprovado do 107e (<code>../ofertas-programadas.html</code>, variante A) e o tela implementado no 107e.1. O que muda: os cartões de edição passam a ser <b>o mesmo componente do MLC</b> (arte, GUTO + tempo, ação), sobre o mesmo <b>fundo de arena</b>; a tabela é a mesma <code>TabelaEspecial</code>, agora «Palpites — Edição PROG-1» (o que o 107e.1 implementou).</p>
   </header>
   <nav class="navdocs" aria-label="Pranchas">
     <a href="index.html">Índice v2</a><a href="mlc.html">Menor Lance Único</a><a href="op.html" aria-current="page">Ofertas Programadas</a><a href="inicio.html">Início</a><a href="../ofertas-programadas.html">OP aprovada (107e)</a>
@@ -21,7 +21,7 @@
     <span data-grupo-v="op-v2">
       <button data-v="A" aria-pressed="true" data-desc="A · Família (recomendada): a estrutura do 107e — título · pontos · cartão Quildo · carrossel de edições com o palpite dentro de cada cartão (os 5 estados) · Regras · tabela. Cartões iguais aos do MLC.">A · Família ★</button>
       <button data-v="B" data-desc="B · Progresso em destaque: um só vidro com o número grande, a barra de 14 px com marcos (0 · 25 · 50) e o cartão Quildo compacto numa linha.">B · Progresso</button>
-      <button data-v="C" data-desc="C · Cartões compactos: o cartão de edição perde altura (arte 48 px, tempo na mesma linha do estado) e o carrossel ocupa menos; a tabela sobe no ecrã.">C · Compacto</button>
+      <button data-v="C" data-desc="C · Cartões compactos: o cartão de edição perde altura (arte 48 px, tempo na mesma linha do estado) e o carrossel ocupa menos; a tabela sobe no tela.">C · Compacto</button>
     </span>
     <span class="rot" style="margin-left:12px">Estado</span>
     <span data-grupo-estado="op-v2"><button data-estado="cheio" aria-pressed="true">Com edições</button><button data-estado="vazio">Sem edição</button></span>
@@ -164,7 +164,7 @@
             </article>
           </div>
           <section class="glass ed ed--compacto ed--vazio so-vazio" aria-label="Sem edição programada">
-            <div class="linha-tempo"><span class="pilula">🎫 Programada</span><span class="t">—</span><span class="estado encerrado">SEM EDIÇÃO</span></div>
+            <div class="linha-tempo"><span class="pilula">🎫 Programada</span><span class="estado encerrado">SEM EDIÇÃO</span></div>
             <div class="produto"><div class="arte" aria-hidden="true">🎫</div><div><span class="rotulo">Prêmio</span><div class="nome">Nenhuma edição em andamento</div></div><img class="guto" src="assets/guto.png" alt="" style="margin-left:auto"></div>
             <p class="nota" style="margin:0">Volte quando houver: o palpite abre com a próxima edição.</p>
           </section>
@@ -188,7 +188,7 @@
       <ol>
         <li><span class="tag-mudou mod">mudou</span><b>Título igual ao do MLC</b>: o mesmo vidro, <code>h-aba</code> + frase + selo do tipo à direita («🎫 Programadas» aqui, «⚡ Relâmpago» lá). Pontos, histórico e cartão da Família Quildo ficam como no 107e.</li>
         <li><span class="tag-mudou mod">mudou</span><b>Cartões de edição = os do MLC</b>: topo (id + estado) → produto (arte + nome) → GUTO + tempo → <b>palpite</b>. Os 5 estados do 107e mantêm-se, cartão a cartão: sem palpite · com palpite · mais próximo (+2) · não foi dessa vez · encerrada.<span class="porque">Antes a OP usava <code>.edicao</code> (thumb + «tempo» solto) e o MLC usava <code>.slide</code>: duas peças diferentes para a mesma coisa. Agora é uma peça só. Só a Air Fryer tem arte real no repo (<code>public/artes/</code>); as outras edições ficam com o ícone até haver arte, que é o que o app faz hoje.</span></li>
-        <li><span class="tag-mudou add">novo</span><b>Sem edição, o cartão fica</b>, igual ao do MLC: moldura tracejada, «Nenhuma edição em andamento», GUTO, «Próxima edição —», palpite desactivado.</li>
+        <li><span class="tag-mudou add">novo</span><b>Sem edição, o cartão fica</b>, igual ao do MLC: moldura tracejada, «Nenhuma edição em andamento», GUTO, «Próxima edição —», palpite desativado.</li>
         <li><span class="tag-mudou mod">mantém</span><b>Tabela no fim</b>: a mesma <code>TabelaEspecial</code> do MLC (Regra 2), com o título que o 107e.1 implementou: «Palpites — Edição PROG-1», colunas # · Participante · Palpite, 🔒 enquanto a edição aceita palpites.</li>
       </ol>
       <h2 style="margin-top:18px">Variantes</h2>

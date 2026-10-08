@@ -5312,3 +5312,21 @@ Testes `utac108d-mlc-sempre` (13) + duplo `_stubs/leilaoLock.js`; mutacao **11/1
 da tabela; A5 «Art. 8» saiu). `/mercado` nao aberto em browser (gate legal). **⚠️ O operador classificou depois o aviso solto como
 ERRO** (o mockup pede o CARD da edicao em estado vazio) -> redesenho no UTAC108e, implementacao no 108e.1.
 **Registo:** `_logs/UTAC108d-mlc-sempre.md` · `_logs/UTAC108d_SEG5_VALIDADOR.md` · `Desktop/RELATORIO-UTAC108d-MLC-SEMPRE.txt`.
+
+
+## R14 (append) -- UTAC108e -- Mockups v2 MLC + OP coerentes (2.ª tentativa, Claude Code, Opus 5.5)
+
+**Tipo:** design (so `docs/mockups-107a/mlc-op-v2/`), zero codigo. **Commits:** `4f1050d` + fecho. A **1.ª tentativa (Hermes,
+`bf0caf7`/`d8c3e67`, R14 acima) foi REJEITADA** pelo operador por parecer generica; ficheiros substituidos (recuperaveis no git).
+**Diagnostico:** o Hermes usou o `tokens.css` — faltava a IDENTIDADE do app: arena de fundo (`public/assets/backgrounds/`), GUTO e
+arte real das edicoes (emojis sobre gradiente liso). **Feito:** `v2.css` sem cores novas sobre `../tokens.css`; um so cartao de edicao
+`.ed` no MLC, na OP e no Inicio (so a accao muda: lance / palpite); titulo igual com selo do tipo; mesma `TabelaEspecial` no fim;
+**correcao do 108d:** sem edicao o CARTAO fica, vazio (nao um aviso solto). 3 variantes por aba (MLC A Familia ★ / B Produto /
+C Horizontal; OP A Familia ★ / B Progresso / C Compacto) + Inicio de referencia; **14 capturas mobile 375 px** (`mobile/`, pedido do
+operador «foque apenas em me mostrar a versao mobile»). Skill **impeccable** (pedido «use as melhores skill de design») como criterio.
+Auditoria: 0 toque < 48 px, 0 texto fora de vidro, contraste min. 5,68:1. **Validador: APROVADO COM RESSALVAS** (0/12 refutados;
+ressalvas corrigidas). **Operador: «ficaram boas».** Recomendacao: MLC A + OP A. Pendente: escolha da variante -> **108e.1**
+(unificar o dourado #f5a623 vs #ff9500; MLC sem seletor fica fixo em "flash"; arte Air Fryer ainda diz «PAGA»).
+**Registo:** `_logs/UTAC108e-mockups-v2.md` (2.a tentativa no fim) · `_logs/UTAC108e_SEG6_VALIDADOR-OPUS.md` ·
+`Desktop/RELATORIO-UTAC108e-MOCKUPS.txt` · pasta `Desktop/MOCKUPS-APROVADOS-107a/mlc-op-v2/`.
+**Custo:** validador 120 437 tokens = 2,4–241 ¢ (48 ¢ se tudo input); sessao nao medida.

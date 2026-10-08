@@ -297,3 +297,99 @@ As correcções **não passaram por 2.ª validação** — declarado (GATE 11).
 
 ### 8.4 Fecho
 **Hora do fecho:** 06:16 · duração dentro do HI5 de 2 h.
+
+
+---
+---
+
+# UTAC108e — 2.ª TENTATIVA (Opus 5.5 · Claude Code, 2026-10-08)
+
+> ⚠️ Tudo o que está ACIMA desta linha é a 1.ª tentativa (Hermes, commits `bf0caf7` + `d8c3e67`), **rejeitada pelo
+> operador** por ter produzido design genérico. Fica à vista (GATE 15); os ficheiros dela foram **substituídos** no
+> commit `4f1050d` e continuam recuperáveis pelo git.
+
+## SEG-1 — Leitura obrigatória (feita antes de desenhar)
+
+Lidos: `glassTokens.js` (COR), `globals.css` (`.gut-glass-standard` 0,88 · r14 · sem blur; fontes Orbitron/Inter/JetBrains),
+`docs/mockups-107a/tokens.css` + `DESIGN.md` + `mockup.js`, os mockups aprovados `menor-lance-unico.html`,
+`ofertas-programadas.html`, `inicio.html` (completos), `tabela-especial.html`, `regra-1-glass.html`, `carteira.html` (notas),
+componentes `GlassCard.jsx`, `GlassHeader.jsx`, `CardLance.jsx` (rótulo «Seu lance (em centavos)», placeholder «Ex: 5 = R$ 0,05»),
+`TabelaLances.jsx` («📭 Nenhum lance registrado ainda»), `BottomNav.jsx` (4 abas + Mais), e os logs 107d/107e/108d (via R14).
+`desafio-gut/frontend/DESIGN.md` **não existe** (o DESIGN.md é o de `docs/mockups-107a/`).
+
+**Diagnóstico da rejeição (medido):** o Hermes **usou** o `tokens.css` (as cores batiam). O que faltava era a **identidade
+visual do app real**: a arena de fundo (`public/assets/backgrounds/background-*.webp` — holofotes, confettis, néon laranja),
+o **GUTO** e a **arte real** das edições (`public/artes/edicao-especial-airfryer.jpg`); os mockups usavam emojis (🍳/🎁)
+sobre um gradiente liso. Os tokens sozinhos não fazem o DesafioGUT parecer o DesafioGUT.
+
+Sumário de design (10 linhas) publicado no topo do `index.html` (§1).
+
+## SEG0 — Análise de coerência
+
+| divergência (mockups aprovados) | MLC (107d) | OP (107e) | v2 |
+|---|---|---|---|
+| peça de edição | `.slide` (thumb 72 px + nome + tempo) | `.edicao` (thumb 52 + «Prêmio» + tempo solto) | **um só `.ed`** nos dois + Início |
+| título | `.glass` com h-aba + frase | `.glass.titulo-aba` | **o mesmo** + selo do tipo (⚡/🎫) |
+| acção | lance fora da peça (1 campo para o slide visível) | palpite dentro de cada cartão | **dentro de cada cartão** nos dois |
+| tabela | TabelaEspecial «Lances — Edição R-1» | TabelaEspecial «Lances — Edição PROG-1» | igual; OP = «Palpites — Edição PROG-1» (o que o 107e.1 implementou) |
+| sem edição | (não desenhado) → 108d pôs aviso solto | (não desenhado) | **cartão vazio** com a mesma estrutura |
+
+## SEG1–SEG4 — Entregáveis (`docs/mockups-107a/mlc-op-v2/`)
+
+- `v2.css` — camada sobre `../tokens.css`; **sem cores novas** (só `--gut-*` e as cores de estado que o tokens.css já tem);
+  fundo de arena com véu `#050818`; componente `.ed` (+ `--vazio`, `ed-hero`, `--compacto`); título `cab-aba` (no mobile o selo
+  sobe para cima do título — corrigido depois de ver «Ofertas Programadas» a partir em 2 linhas a 375 px).
+- `v2.js` — só o controlo «Com edição / Sem edição»; variantes, larguras e auditores são o `../mockup.js` aprovado.
+- `mlc.html` — A Família ★ · B Produto em destaque (arte 1:1 / 16:9) · C Horizontal ≥ 700 px.
+- `op.html` — A Família ★ (5 estados do palpite) · B Progresso em destaque · C Compacto.
+- `inicio.html` — referência: os 4 tiles + carrossel ⚡ e 🎫 com o mesmo `.ed`.
+- `index.html` — sumário de design, **galeria mobile**, links, mudanças, recomendação (MLC A + OP A).
+- `assets/` — cópias dos assets reais (arena ×2, Air Fryer, GUTO `guto-bemvindo.png`, fontes Inter/Orbitron), para a pasta abrir sozinha no Desktop.
+- `mobile/` — **11 capturas a 375 px** tiradas do HTML real com Chrome (pedido do operador a meio do UTAC: «foque apenas em me mostrar a versão mobile»).
+
+Skill de design usada: **impeccable** (pedido do operador: «use as melhores skills de design») — como critério de qualidade
+(craft-floor: contraste, estados vazios, toque, hierarquia), em modo de **extensão do sistema existente** (não redesign).
+As 4 skills do enunciado (`mobile-ux-design`, `claude-design`, `popular-web-designs`, `design-md`) vivem no Hermes e não estão
+instaladas no Claude Code — declarado.
+
+## SEG5 — Verificação
+
+| verificação | resultado |
+|---|---|
+| Auditor do `mockup.js` (DOM real, Chrome) | **0 alvos < 48 px · 0 textos fora de vidro** em MLC A/B/C × com/sem, OP A/B/C × com/sem e Início × com/sem |
+| Contraste (WCAG, sobre o vidro composto) | mínimo **5,68:1** (chip «SEM EDIÇÃO»); texto 16,05 · corpo 12,03 · rótulos 7,17 · dourado 9,07 · título 6,49 · botão 9,45 |
+| HTML | 0 links/imagens quebrados, 0 ids duplicados, 0 `label for` órfãos, estrutura de tags fechada (script ad-hoc) |
+| Fontes / imagens | Inter + Orbitron carregadas; todas as imagens `complete` com `naturalWidth > 0` |
+| Código | `git status`: só `docs/mockups-107a/mlc-op-v2/`; zero `src/`, `netlify/`, `scripts/`, package*, `.bak-*` |
+| Desktop | copiado para `Desktop/MOCKUPS-APROVADOS-107a/mlc-op-v2/` (a pasta da 1.ª tentativa, se existia, foi renomeada, não apagada) |
+
+Commit: **`4f1050d`** (local; push depois do veredicto).
+
+## SEG6 — Validador adversarial (2.ª tentativa)
+
+Worktree próprio (`C:/Users/Moltbot/tmp-108e-val/wt` @ `4f1050d`, helper A13); mediu no DOM real (Chrome, 375 px, 14 estados)
+com auditoria própria. Veredicto verbatim: `_logs/UTAC108e_SEG6_VALIDADOR-OPUS.md` (o da 1.ª tentativa fica em `_SEG6_VALIDADOR.md`).
+**APROVADO COM RESSALVAS — 0 de 12 pontos refutados.** Cores: 33 literais, todas tokens ou o mesmo RGB de um token com outro alfa;
+o `.ed` é exactamente o `.gut-glass-standard`. Fontes e assets byte-idênticos aos de `public/`. Estilos idênticos em 13
+componentes entre MLC e OP; mesma `tabela-especial`. 0 toque < 48 px, 0 fora de vidro, 0 contraste < 4,5:1 nos 14 estados.
+
+| achado | tratamento |
+|---|---|
+| ⚠️ o range `d8c3e67..4f1050d` inclui `CLAUDE.md` e `_logs/UTAC108d-*` | são do commit intermédio `c11478a` (fecho do 108d), não do 108e — o diff do 108e cita-se como `git show 4f1050d` |
+| ℹ️ dourado: `glassTokens.js`/`globals.css:37` ainda `#ff9500` | **para o 108e.1** unificar a fonte de verdade (`#f5a623`, proposta do 107a, já usado em 56 ficheiros de `src/`) |
+| ℹ️ 3 capturas mobile em falta | **feitas** (14/14) |
+| ℹ️ padding do botão 22 (MLC) vs 18 (OP) | **unificado** a 22 px |
+| ℹ️ OP C vazia lia «Programada — SEM EDIÇÃO» | **corrigido** (sai o «—» do tempo) |
+| ℹ️ grafia pt-PT nas anotações (acção, desactivado, ecrã…) | **corrigida** em todos os ficheiros v2 |
+| ℹ️ BottomNav com `href="#"` | aceite (mockup) |
+
+Correcções pós-veredicto não re-validadas (declarado); re-auditadas pelo `mockup.js` nas 7 capturas refeitas (0/0).
+
+## SEG7 — Registo, Desktop, custo
+
+- **Feedback do operador (2026-10-08):** «ficaram boas».
+- Desktop: `Desktop/MOCKUPS-APROVADOS-107a/mlc-op-v2/` (abre sozinho: assets copiados; `../tokens.css` e `../mockup.js` presentes).
+- **Custo:** validador 120 437 tokens = 2,4–241 ¢ (≈ 48 ¢ se tudo input; Opus 5.5 ¢/1M: 400 in · 2 000 out · 20 cache).
+  Sessão principal não medida (`/cost`). **Duração:** ≈ 06:17 → 07:20 (≈ 1 h, dentro do HI5 de 2 h).
+- **Próximo:** o operador escolhe a variante de cada aba → **UTAC108e.1** (implementar). Notas para o 108e.1: unificar o dourado;
+  sem o seletor de modo o MLC fica fixo em `"flash"` (o 108c.1 lê a `modalidade`); a arte da Air Fryer ainda diz «PAGA».

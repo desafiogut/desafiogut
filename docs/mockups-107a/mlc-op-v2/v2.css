@@ -14,7 +14,7 @@
 @font-face { font-family: "Inter"; font-weight: 300 900; font-display: swap; src: url("assets/inter.woff2") format("woff2"); }
 @font-face { font-family: "Orbitron"; font-weight: 400 900; font-display: swap; src: url("assets/orbitron.woff2") format("woff2"); }
 
-/* ═══ o ecrã: a ARENA real do app por trás do vidro (era um gradiente liso nos mockups) ═══ */
+/* ═══ o tela: a ARENA real do app por trás do vidro (era um gradiente liso nos mockups) ═══ */
 .fone.depois {
   background:
     linear-gradient(180deg, rgba(5,8,24,.45) 0%, rgba(5,8,24,.72) 55%, rgba(5,8,24,.88) 100%),
@@ -38,8 +38,8 @@
   border: 1px solid rgba(245,166,35,.35); background: rgba(245,166,35,.12); border-radius: 999px; padding: 4px 10px; }
 
 /* ═══ COMPONENTE ÚNICO DE EDIÇÃO — `.ed` — usado pelo MLC, pela OP e pelo Início ═══
- * casco igual: topo (id + estado) → produto (arte real + nome + rótulo) → relógio (GUTO + tempo) → acção.
- * Muda só a acção: MLC = lance (centavos) · OP = palpite (nº de lances) · Início = ir para a aba. */
+ * casco igual: topo (id + estado) → produto (arte real + nome + rótulo) → relógio (GUTO + tempo) → ação.
+ * Muda só a ação: MLC = lance (centavos) · OP = palpite (nº de lances) · Início = ir para a aba. */
 .ed { display: flex; flex-direction: column; gap: 12px; }
 .ed .topo { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .ed .produto { display: flex; gap: 12px; align-items: center; padding: 10px; border-radius: 12px;
@@ -53,24 +53,24 @@
 .ed .t { font-family: var(--font-display); font-size: 22px; letter-spacing: .08em; color: var(--gut-gold); line-height: 1; }
 .ed .t-rot { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--gut-muted-strong); }
 
-/* estado VAZIO: a estrutura fica toda (correcção do 108d: nada de aviso solto) */
+/* estado VAZIO: a estrutura fica toda (correção do 108d: nada de aviso solto) */
 .ed--vazio .produto { background: rgba(5,8,24,.45); border: 1px dashed rgba(143,160,216,.45); }
 .ed--vazio .arte { display: grid; place-items: center; font-size: 26px; border: 1px dashed rgba(143,160,216,.45); }
 .ed--vazio .nome { color: var(--gut-text); }
 .ed--vazio .t { color: var(--gut-muted-strong); }
 .ed--vazio .guto { opacity: .75; }
 
-/* acção do MLC: rótulo VISÍVEL ligado ao campo (o do app, 107d R18-C) */
+/* ação do MLC: rótulo VISÍVEL ligado ao campo (o do app, 107d R18-C) */
 .lance { display: grid; gap: 6px; }
 .lance label { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--gut-muted-strong); }
 .lance .linha { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
 .lance .btn { width: auto; padding: 0 22px; }
 .lance .ajuda { margin: 0; font-size: 13px; color: var(--gut-muted-strong); }
 
-/* acção da OP: palpite (o do mockup aprovado) */
+/* ação da OP: palpite (o do mockup aprovado) */
 .palpite { display: grid; gap: 8px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.08); }
 .palpite .linha { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
-.palpite .btn { width: auto; padding: 0 18px; }
+.palpite .btn { width: auto; padding: 0 22px; }
 .res { margin: 0; font-weight: 700; font-size: 15px; color: var(--gut-text); }
 
 /* ═══ MLC B — produto em destaque ═══ */
@@ -112,7 +112,7 @@ details.hist summary::-webkit-details-marker { display: none; }
 .quildo-linha .ic { width: 48px; height: 48px; flex: none; border-radius: 12px; display: grid; place-items: center; font-size: 24px;
   background: linear-gradient(135deg, rgba(245,166,35,.18), rgba(255,107,53,.10)); border: 1px solid rgba(245,166,35,.45); }
 
-/* OP C — cartões compactos (a acção vira uma linha) */
+/* OP C — cartões compactos (a ação vira uma linha) */
 .ed--compacto { gap: 10px; }
 .ed--compacto .produto { padding: 8px; }
 .ed--compacto .arte { width: 48px; height: 48px; }
