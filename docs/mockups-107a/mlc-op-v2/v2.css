@@ -1,0 +1,117 @@
+/* UTAC108e — camada v2 dos mockups MLC + OP (mockup de design, NÃO é código de produção).
+ *
+ * Regra desta camada: NÃO redefine nada do tokens.css. Só acrescenta o que falta para
+ * as duas abas passarem a falar a MESMA língua visual. O que era divergente:
+ *   MLC antigo: .edicao-unica (CardLance, padding 24px, botão radius 28px, gradiente dourado)
+ *   OP antiga:  .edicao       (EicaoCard, padding 16px, botão radius 12px, dourado sólido)
+ * Aqui existe UM só componente de edição (.ed-card) usado pelas duas abas.
+ * Um só raio, um só dourado, um só vermelho, uma só coluna — os valores vêm do tokens.css.
+ */
+
+/* ══════════════════════════════════════════════════════════════════════════
+   O COMPONENTE ÚNICO DE EDIÇÃO (usado pelo MLC e pela OP)
+   Mesmo casco nas duas abas: cabeça (id + estado) → caixa (prémio) →
+   cronómetro → slot de acção. Muda só o CONTEÚDO do slot:
+     MLC → lance (centavos)      OP → palpite (quantos lances)
+   ══════════════════════════════════════════════════════════════════════════ */
+.ed-card { display: flex; flex-direction: column; gap: 12px; }
+.ed-card .cab { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.ed-card .caixa {
+  display: flex; gap: 12px; align-items: center; padding: 12px;
+  border-radius: var(--gut-radius-btn);
+  background: rgba(245,166,35,.07); border: 1px solid rgba(245,166,35,.22);
+}
+.ed-card .thumb {
+  width: 52px; height: 52px; border-radius: var(--gut-radius-btn); flex: none;
+  background: linear-gradient(135deg, #2a1d5e, #5b2b12);
+  display: grid; place-items: center; font-size: 24px;
+}
+.ed-card .cx-txt { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ed-card .cx-nome { color: var(--gut-gold); font-weight: 800; font-size: 16px; }
+.ed-card .cx-nota { color: var(--gut-muted-strong); font-size: 12px; }
+.ed-card .relogio { display: flex; align-items: baseline; justify-content: center; gap: 8px; }
+.ed-card .relogio .t {
+  font-family: var(--font-display); font-size: 24px; letter-spacing: .1em;
+  color: var(--gut-gold); line-height: 1;
+}
+.ed-card .relogio .t.breve { font-size: 18px; color: var(--gut-primary); }
+.acao { display: flex; flex-direction: column; gap: 8px; }
+.linha-campo { display: grid; gap: 8px; grid-template-columns: 1fr; }
+/* a partir de 480 px o campo e o botão ficam lado a lado (uma linha de acção) */
+@container tela (min-width: 480px) {
+  .linha-campo { grid-template-columns: 1fr auto; align-items: center; }
+  .linha-campo .btn { width: auto; min-width: 168px; }
+}
+
+/* ══════════════ VARIANTE B — cartão maior, produto em destaque ══════════════ */
+.v-b .ed-card .caixa { flex-direction: column; align-items: stretch; gap: 10px; padding: 16px; text-align: center; }
+.v-b .ed-card .thumb { width: 88px; height: 88px; font-size: 44px; margin: 0 auto; border-radius: var(--gut-radius); }
+.v-b .ed-card .cx-txt { align-items: center; }
+.v-b .ed-card .cx-nome { font-size: 20px; }
+.v-b .ed-card .relogio .t { font-size: 34px; }
+
+/* ══════════════ VARIANTE C — 2 colunas no desktop, empilhado no mobile ══════════════ */
+.duplo { display: grid; gap: var(--gut-gap); grid-template-columns: 1fr; }
+@container tela (min-width: 700px) { .duplo { grid-template-columns: 1.15fr .85fr; align-items: start; } }
+@media (max-width: 699px) { .v-c .sticky-acao { position: static; } }
+@container tela (min-width: 700px) { .v-c .sticky-acao { position: sticky; top: 0; } }
+/* ⚠️ Na coluna estreita da C o campo e o botão EMPILHAM. O @container mede a largura do
+   telefone, não a da coluna: com o botão a 168 px fixos e a coluna a ~246 px, o campo
+   encolhia para 28 px de largura (inutilizável). Medido a 768 px, corrigido aqui. */
+.v-c .sticky-acao .linha-campo { grid-template-columns: 1fr; }
+.v-c .sticky-acao .linha-campo .btn { width: 100%; min-width: 0; }
+
+/* ══════════════ OP · pontos ══════════════ */
+.pontos { display: flex; flex-direction: column; gap: 8px; }
+.pontos .linha { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.pontos .alvo { color: var(--gut-muted-strong); font-size: 13px; }
+/* variante A/C: número discreto · variante B: número em destaque (é o motor da aba) */
+.pontos .n { font-family: var(--font-display); font-size: 26px; color: var(--gut-gold); line-height: 1; }
+.v-b .pontos { gap: 12px; }
+.v-b .pontos .n { font-size: 40px; }
+.v-b .pontos .progresso { height: 16px; }
+.v-b .cartao-quildo { padding: 12px; gap: 8px; }
+.v-b .cartao-quildo .ico { font-size: 24px; }
+.v-b .cartao-quildo h2 { font-size: 13px; }
+.v-b .cartao-quildo p { font-size: 13px; }
+
+/* ══════════════ OP · carrossel denso (variante C) ══════════════ */
+.v-c .carrossel { gap: 10px; }
+.v-c .carrossel > .ed-card { padding: 12px; gap: 8px; }
+.v-c .carrossel .thumb { width: 44px; height: 44px; font-size: 20px; }
+.v-c .carrossel .relogio .t { font-size: 20px; }
+.v-c .carrossel .acao .btn { min-height: var(--gut-touch); }
+
+/* ══════════════ cartão da Família Quildo (OP) ══════════════ */
+.cartao-quildo { display: flex; gap: 12px; align-items: center; }
+.cartao-quildo .ico { font-size: 30px; flex: none; }
+.cartao-quildo h2 { margin: 0; }
+.cartao-quildo p { margin: 2px 0 0; font-size: 14px; color: var(--gut-text-body); }
+
+/* ══════════════ KPIs do Início ══════════════ */
+.kpis { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gut-gap); }
+.kpi { display: flex; flex-direction: column; gap: 2px; }
+.kpi .n { font-family: var(--font-display); font-size: 24px; color: var(--gut-gold); line-height: 1; }
+.saldo { display: flex; flex-direction: column; gap: 4px; }
+.titulo-duplo { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
+/* ══════════════ carrossel denso (Início: as duas famílias lado a lado) ══════════════ */
+.denso .carrossel { gap: 10px; }
+.denso .carrossel > .ed-card { padding: 12px; gap: 8px; }
+.denso .carrossel .thumb { width: 44px; height: 44px; font-size: 20px; }
+.denso .carrossel .relogio .t { font-size: 20px; }
+
+/* ══════════════ NOTAS da prancha (o que mudou e porquê) ══════════════ */
+.mudou { display: grid; gap: 8px; margin: 10px 0 0; padding: 0; list-style: none; counter-reset: m; }
+.mudou li { counter-increment: m; position: relative; padding: 10px 12px 10px 40px; background: #0a0e24; border: 1px solid #1f2650; border-radius: 10px; font-size: 14px; color: var(--gut-text-body); }
+.mudou li::before { content: counter(m); position: absolute; left: 10px; top: 10px; width: 20px; height: 20px; border-radius: 50%; background: #ffd23f; color: #111; font-size: 12px; font-weight: 900; display: grid; place-items: center; }
+.mudou li b { color: #fff; }
+.mudou .porque { display: block; margin-top: 4px; color: var(--gut-muted-strong); font-size: 13px; }
+.tabela-comp { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+.tabela-comp th, .tabela-comp td { text-align: left; padding: 7px 8px; border-bottom: 1px solid #1f2650; vertical-align: top; }
+.tabela-comp th { color: var(--gut-gold); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+.tabela-comp td { color: var(--gut-text-body); }
+.tabela-comp td.nao { color: #ff9a9d; }
+.tabela-comp td.sim { color: #5ee0b4; }
+.reco { border: 1px solid rgba(245,166,35,.4); background: rgba(245,166,35,.08); border-radius: 10px; padding: 12px; font-size: 14px; color: var(--gut-text-body); margin-top: 12px; }
+.reco b { color: var(--gut-gold); }

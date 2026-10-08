@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>v2 · Início — as duas famílias lado a lado (referência)</title>
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="v2.css">
+</head>
+<body>
+<div class="prancha">
+  <header>
+    <h1>SEG v2 · Início — as duas famílias na mesma tela</h1>
+    <p>Referência, não proposta: o Início está aprovado no 107c. Serve para provar que <b>Relâmpago</b> e <b>Programada</b>
+       convivem no mesmo ecrã com o mesmo componente de edição, distinguidas só pela pílula da família. Aqui os cards
+       são <b>compactos</b> (glanceáveis): no Início a pessoa vê, não age.</p>
+    <nav class="navdocs">
+      <a href="index.html">Índice</a>
+      <a href="mlc.html">Menor Lance Único</a>
+      <a href="op.html">Ofertas Programadas</a>
+      <a href="inicio.html" aria-current="page">Início</a>
+      <a href="../tokens.html">Tokens</a>
+      <a href="../regra-1-glass.html">Regra 1</a>
+      <a href="../tabela-especial.html">Regra 2</a>
+    </nav>
+  </header>
+
+  <div class="controles">
+    <span class="rot">Largura</span>
+    <span data-larguras>
+      <button data-largura="375" aria-pressed="true">375 mobile</button>
+      <button data-largura="768">768 tablet</button>
+      <button data-largura="1024">1024 desktop</button>
+    </span>
+  </div>
+
+  <div class="lado">
+    <div class="coluna-mock">
+      <span class="etq depois">Referência · 107c</span>
+
+      <div class="fone depois" id="inicio-ref">
+        <div class="barra-sis"><span>9:41</span><span>●●●</span></div>
+
+        <div class="tela coluna denso">
+          <section class="glass titulo-aba">
+            <div>
+              <h1 class="h-aba">Início</h1>
+              <p class="sub">Bem-vindo de volta.</p>
+            </div>
+            <span class="pilula">🔔 2</span>
+          </section>
+
+          <section class="glass saldo">
+            <span class="rotulo">Saldo</span>
+            <div class="valor-xl">R$ 0,00</div>
+            <button class="btn btn-nav">💠 Depositar PIX <span class="seta">›</span></button>
+          </section>
+
+          <section class="glass pontos">
+            <div class="linha"><span class="rotulo">Passe Desafio</span><span class="alvo">meta 50</span></div>
+            <div class="n">12 / 50</div>
+            <div class="progresso"><i style="width:24%"></i></div>
+            <p class="nota">Junte 50 pontos e troque pelo cartão da Família Quildo.</p>
+            <button class="btn btn-nav" style="margin-top:8px">🎫 Ver Ofertas Programadas <span class="seta">›</span></button>
+          </section>
+
+          <div class="kpis">
+            <section class="glass kpi">
+              <span class="rotulo">Lances Únicos</span>
+              <div class="n">3</div>
+            </section>
+            <section class="glass kpi">
+              <span class="rotulo">Total de Lances</span>
+              <div class="n">27</div>
+            </section>
+          </div>
+
+          <section class="glass">
+            <div class="cab-carrossel">
+              <h2 class="h-sec">⚡ Relâmpago — edições em andamento</h2>
+              <span class="pilula">Relâmpago</span>
+            </div>
+          </section>
+
+          <div class="carrossel">
+            <article class="glass ed-card" aria-label="Edição Relâmpago R-1">
+              <div class="cab"><span class="pilula">R-1</span><span class="estado aberto">EM ANDAMENTO</span></div>
+              <div class="caixa">
+                <div class="thumb" role="img" aria-label="Air Fryer">🍳</div>
+                <div class="cx-txt"><span class="rotulo">Prêmio</span><div class="cx-nome">Air Fryer</div><span class="cx-nota">Menor lance único vence</span></div>
+              </div>
+              <div class="relogio"><span class="t">24:31</span><span class="rotulo">restante</span></div>
+              <button class="btn btn-ouro">⚡ Dar lance</button>
+            </article>
+
+            <article class="glass ed-card" aria-label="Edição Relâmpago R-2">
+              <div class="cab"><span class="pilula">R-2</span><span class="estado breve">EM BREVE</span></div>
+              <div class="caixa">
+                <div class="thumb" role="img" aria-label="Fritadeira">🍟</div>
+                <div class="cx-txt"><span class="rotulo">Prêmio</span><div class="cx-nome">Fritadeira</div><span class="cx-nota">Abre às 20h</span></div>
+              </div>
+              <div class="relogio"><span class="t breve">EM BREVE</span></div>
+              <button class="btn btn-fant" disabled>⏳ Aguarde a abertura</button>
+            </article>
+          </div>
+
+          <section class="glass">
+            <div class="cab-carrossel">
+              <h2 class="h-sec">🎫 Programada — edições em andamento</h2>
+              <span class="pilula">Programada</span>
+            </div>
+          </section>
+
+          <div class="carrossel">
+            <article class="glass ed-card" aria-label="Edição PROG-1">
+              <div class="cab"><span class="pilula">PROG-1</span><span class="estado aberto">SEM PALPITE</span></div>
+              <div class="caixa">
+                <div class="thumb" role="img" aria-label="Air Fryer">🍳</div>
+                <div class="cx-txt"><span class="rotulo">Prêmio</span><div class="cx-nome">Air Fryer</div><span class="cx-nota">Palpite dá +2 pontos</span></div>
+              </div>
+              <div class="relogio"><span class="t">2d 04:10</span><span class="rotulo">restante</span></div>
+              <button class="btn btn-ouro">🎯 Palpitar</button>
+            </article>
+
+            <article class="glass ed-card" aria-label="Edição PROG-2">
+              <div class="cab"><span class="pilula">PROG-2</span><span class="estado breve">COM PALPITE</span></div>
+              <div class="caixa">
+                <div class="thumb" role="img" aria-label="Fones">🎧</div>
+                <div class="cx-txt"><span class="rotulo">Prêmio</span><div class="cx-nome">Fones</div><span class="cx-nota">Seu palpite: 340</span></div>
+              </div>
+              <div class="relogio"><span class="t">5d 11:42</span><span class="rotulo">restante</span></div>
+              <button class="btn btn-fant">Trocar palpite</button>
+            </article>
+          </div>
+
+          <p class="rodape-legal">DesafioGUT · Grupo União e Trabalho · CNPJ 23.040.066/0001-00</p>
+        </div>
+      </div>
+
+      <div class="auditoria" data-relatorio="inicio-ref">medindo…</div>
+    </div>
+
+    <aside class="notas">
+      <h2>Porque isto é a prova da coerência</h2>
+      <ol class="mudou">
+        <li><b>Mesmo card nas duas famílias.</b> O de Relâmpago e o de Programada são o mesmo <code>.ed-card</code>, com o mesmo casco e a mesma ordem interna.
+          <span class="porque">A diferença é o conteúdo da ação (lance vs palpite) e a pílula (⚡ R-1 vs 🎫 PROG-1). Se os dois cards conversam AQUI, conversam em qualquer sítio.</span></li>
+        <li><b>Mesma cabeça de secção.</b> <code>glass</code> + <code>h2.h-sec</code> + pílula da família à direita, nas duas listas.
+          <span class="porque">Antes, o Relâmpago e a Programada no Início tinham cabeçalhos de formas diferentes.</span></li>
+        <li><b>Cards compactos no Início, cards grandes nas abas.</b> É intencional: no Início a pessoa <em>vê</em>; nas abas <em>age</em>.
+          <span class="porque">Mesma família visual não quer dizer o mesmo tamanho — quer dizer a mesma gramática.</span></li>
+        <li><b>Sem tabela no Início.</b> Os placares vivem nas abas, no fim, como manda a Regra 2.
+          <span class="porque">O Início é o resumo; encher o resumo com tabelas roubaria o lugar às edições.</span></li>
+      </ol>
+
+      <h2 style="margin-top:18px">Nota de método</h2>
+      <ol class="mudou">
+        <li><b>Os valores são de amostra.</b> «R$ 0,00», «12 / 50», «3» e «27» são o mesmo que o operador viu em produção, para o mockup parecer o ecrã real.
+          <span class="porque">Nenhum número novo foi inventado para este mockup.</span></li>
+      </ol>
+
+      <div class="reco"><b>O que decidir aqui:</b> nada. Este ecrã não muda. Ele existe só para o operador confirmar que as duas famílias, quando escolher a variante do MLC e da OP, continuam a parecer uma só app.</div>
+    </aside>
+  </div>
+</div>
+<script src="../mockup.js"></script>
+</body>
+</html>

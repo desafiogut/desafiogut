@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>v2 · Ofertas Programadas (Programada) — 3 variantes</title>
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="v2.css">
+</head>
+<body>
+<div class="prancha">
+  <header>
+    <h1>SEG v2 · Ofertas Programadas — edições Programada</h1>
+    <p>Aba <code>/ofertas-programadas</code>. Mesma superfície <b>Operate</b> do Menor Lance Único: o utilizador age (palpita)
+       dentro de uma edição viva. Aqui a mecânica é <b>pontos</b>, logo o progresso é informação de 1.ª ordem — não enfeite.</p>
+    <nav class="navdocs">
+      <a href="index.html">Índice</a>
+      <a href="mlc.html">Menor Lance Único</a>
+      <a href="op.html" aria-current="page">Ofertas Programadas</a>
+      <a href="inicio.html">Início</a>
+      <a href="../tokens.html">Tokens</a>
+      <a href="../regra-1-glass.html">Regra 1</a>
+      <a href="../tabela-especial.html">Regra 2</a>
+    </nav>
+  </header>
+
+  <div class="controles">
+    <span class="rot">Variante</span>
+    <span data-grupo-v="op-depois">
+      <button data-v="A" aria-pressed="true" data-desc="A · Fiel ao antigo, harmonizado: casco do card, cabeça e estados iguais aos do MLC; ordem prêmio → cronômetro → ação.">A · Fiel + harmônica</button>
+      <button data-v="B" data-desc="B · Progresso em destaque: 12/50 grande e barra grossa (é o motor da aba); cartão da Família Quildo reduzido a uma linha.">B · Progresso em destaque</button>
+      <button data-v="C" data-desc="C · Cards compactos: carrossel denso (miniatura 44 px) para a tabela de palpites subir na tela.">C · Cards compactos</button>
+    </span>
+    <span class="rot" style="margin-left:12px">Largura</span>
+    <span data-larguras>
+      <button data-largura="375" aria-pressed="true">375 mobile</button>
+      <button data-largura="768">768 tablet</button>
+      <button data-largura="1024">1024 desktop</button>
+    </span>
+  </div>
+  <p class="nota" data-legenda="op-depois" style="margin:0 0 14px"></p>
+
+  <div class="lado">
+    <div class="coluna-mock">
+      <span class="etq depois">Proposta v2 · 3 variantes</span>
+
+      <div class="fone depois" id="op-depois">
+        <div class="barra-sis"><span>9:41</span><span>●●●</span></div>
+
+        <!-- ═══════════════ A ═══════════════ -->
+        <div class="tela coluna v-a" data-painel="A">
+          <section class="glass titulo-aba">
+            <div>
+              <h1 class="h-aba">Ofertas Programadas</h1>
+              <p class="sub">Junte 50 pontos e troque pelo cartão da Família Quildo.</p>
+            </div>
+            <span class="pilula">🎫 Programada</span>
+          </section>
+
+          <section class="glass pontos">
+            <div class="linha"><span class="rotulo">Seus pontos</span><span class="alvo">meta 50</span></div>
+            <div class="n">12 / 50</div>
+            <div class="progresso"><i style="width:24%"></i></div>
+            <p class="nota">Faltam 38 pontos. Cada compra soma 1; o palpite soma +2 de bônus.</p>
+          </section>
+
+          <section class="glass">
+            <div class="cartao-quildo">
+              <div class="ico" role="img" aria-label="Cartão colecionável">🃏</div>
+              <div>
+                <h2 class="h-sec">Cartão da Família Quildo</h2>
+                <p>Cartão colecionável físico, entregue em casa.</p>
+              </div>
+            </div>
+            <button class="btn btn-fant" style="margin-top:10px" disabled>Resgate com 50 pontos</button>
+          </section>
+
+          <section class="glass">
+            <h2 class="h-sec">🎫 Edições programadas</h2>
+            <p class="nota" style="margin-top:4px">Palpite quantos lances a edição vai ter. O palpite mais próximo ganha +2 pontos.</p>
+          </section>
+
+          <div class="carrossel">
+            <article class="glass ed-card" aria-label="Edição PROG-1">
+              <div class="cab"><span class="pilula">PROG-1</span><span class="estado aberto">SEM PALPITE</span></div>
+              <div class="caixa">
+                <div class="thumb" role="img" aria-label="Air Fryer">🍳</div>
+                <div class="cx-txt"><span class="rotulo">Prêmio</span><div class="cx-nome">Air Fryer</div><span class="cx-nota">Palpite dá +2 pontos</span></div>
+              </div>
+              <div class="relogio"><span class="t">2d 04:10</span><span class="rotulo">restante</span></div>
+              <div class="acao">
+                <label class="rotulo" for="a-p1">Quantos lances esta edição vai ter?</label>
+                <div class="linha-campo">
+                  <input class="campo" id="a-p1" inputmode="numeric" placeholder="Ex.: 120">
+                  <button class="btn btn-ouro">🎯 Palpitar</button>
+                </div>
+                <p class="nota">O palpite é bônus: não decide o cartão.</p>
+              </div>
+            </article>
+
+            <article class="glass ed-card" aria-label="Edição PROG-2">
+              <div class="cab"><span class="pilula">PROG-2</span><span class="estado breve">COM PALPITE</span></div>
+              <div class="caixa">
+                <div class="thumb" role="img" aria-label="Fones">🎧</div>
+                <div class="cx-txt"><span class="rotulo">Prêmio</span><div class="cx-nome">Fones</div><span class="cx-nota">Seu palpite: 340 lances</span></div>
+              </div>
+              <div class="relogio"><span class="t">5d 11:42</span><span class="rotulo">restante</span></div>
+              <div class="acao">
+                <label class="rotulo" for="a-p2">Mudar o palpite</label>
+                <div class="linha-campo">
+                  <input class="campo" id="a-p2" inputmode="numeric" placeholder="Ex.: 340">
+                  <button class="btn btn-fant">Trocar</button>
+                </div>
+              </div>
+            </article>
+
+            <article class="glass ed-card" aria-label="Edição PROG-0">
+              <div class="cab"><span class="pilula">PROG-0</span><span class="estado apurado-ok">MAIS PRÓXIMO</span></div>
+              <div class="caixa">
+                <div class="thumb" role="img" aria-label="Relógio">⌚</div>
+                <div class="cx-txt"><span class="rotulo">Prêmio</span><div class="cx-nome">Relógio</div><span class="cx-nota">Seu palpite: 88 · real: 90</span></div>
+              </div>
+              <div class="relogio"><span class="t breve">APURADA</span></div>
+              <p class="nota">+2 pontos creditados na carteira.</p>
+            </article>
+
+            <article class="glass ed-card" aria-label="Edição PROG-9">
+              <div class="cab"><span class="pilula">PROG-9</span><span class="estado apurado-nao">NÃO FOI DESSA VEZ</span></div>
+              <div class="caixa">
+                <div class="thumb" role="img" aria-label="Mochila">🎒</div>
+                <div class="cx-txt"><span class="rotulo">Prêmio</span><div class="cx-nome">Mochila</div><span class="cx-nota">Seu palpite: 210 · real: 154</span></div>
+              </div>
+              <div class="relogio"><span class="t breve">APURADA</span></div>
+            </article>
+
+            <article class="glass ed-card" aria-label="Edição PROG-8">
+              <div class="cab"><span class="pilula">PROG-8</span><span class="estado encerrado">ENCERRADA</span></div>
+              <div class="caixa">
+                <div class="thumb" role="img" aria-label="Kit">📦</div>
+                <div class="cx-txt"><span class="rotulo">Prêmio</span><div class="cx-nome">Kit</div><span class="cx-nota">Resultado oficial publicado</span></div>
+              </div>
+              <div class="relogio"><span class="t breve">ENCERRADA</span></div>
+            </article>
+          </div>
+
+          <section class="glass"><a class="btn btn-fant" href="../regra-1-glass.html">📜 Regras Oficiais do programa</a></section>
+
+          <section class="glass tabela-especial" aria-label="Palpites — Edição PROG-1">
+            <header><h2 class="h-sec">Palpites — Edição PROG-1</h2><span class="estado breve" role="img" aria-label="valores ocultos">🔒</span></header>
+            <table>
+              <thead><tr><th>#</th><th>Participante</th><th>Palpite</th></tr></thead>
+              <tbody>
+                <tr><td class="num">1</td><td>Ana P.</td><td>🔒</td></tr>
+                <tr><td class="num">2</td><td>0x71c…9a2</td><td>🔒</td></tr>
+                <tr><td class="num">3</td><td>Rui M.</td><td>🔒</td></tr>
+              </tbody>
+            </table>
+            <p class="rodape-tab">Palpites revelados após a apuração da edição (Art. 24).</p>
+          </section>
+
+          <p class="rodape-legal">DesafioGUT · Grupo União e Trabalho · CNPJ 23.040.066/0001-00</p>
+        </div>
+
+        <!-- ═══════════════ B ═══════════════ -->
+        <div class="tela coluna v-b" data-painel="B" hidden>
+          <section class="glass titulo-aba">
+            <div>
+              <h1 class="h-aba">Ofertas Programadas</h1>
+              <p class="sub">Junte 50 pontos e troque pelo cartão da Família Quildo.</p>
+            </div>
+            <span class="pilula">🎫 Programada</span>
+          </section>
+
+          <section class="glass pontos">
+            <div class="linha"><span class="rotulo">Seus pontos</span><span class="alvo">meta 50</span></div>
+            <div class="n">12 / 50</div>
+            <div class="progresso"><i style="width:24%"></i></div>
+            <p class="nota">Faltam 38 pontos para o cartão. Cada compra soma 1; o palpite soma +2 de bônus.</p>
+          </section>
+
+          <section class="glass">
+            <div class="cartao-quildo">
+              <div class="ico" role="img" aria-label="Cartão colecionável">🃏</div>
+              <div>
+                <h2 class="h-sec">Cartão da Família Quildo</h2>
+                <p>Colecionável físico, entregue em casa.</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="glass">
+            <h2 class="h-sec">🎫 Edições programadas</h2>
+            <p class="nota" style="margin-top:4px">Palpite quantos lances a edição vai ter.</p>
+          </section>
+
+          <div class="carrossel">
+            <article class="glass ed-card" aria-label="Edição PROG-1">
+              <div class="cab"><span class="pilula">PROG-1</span><span class="estado aberto">SEM PALPITE</span></div>
+              <div class="relogio"><span class="t">2d 04:10</span><span class="rotulo">para o fecho</span></div>
+              <div class="caixa">
+                <div class="thumb" role="img" aria-label="Air Fryer">🍳</div>
+                <div class="cx-txt"><span class="rotulo">Prêmio</span><div class="cx-nome">Air Fryer</div><span class="cx-nota">Palpite dá +2 pontos</span></div>
+              </div>
+              <div class="acao">
+                <label class="rotulo" for="b-p1">Quantos lances esta edição vai ter?</label>
+                <div class="linha-campo">
+                  <input class="campo" id="b-p1" inputmode="numeric" placeholder="Ex.: 120">
+                  <button class="btn btn-ouro">🎯 Palpitar</button>
+                </div>
+                <p class="nota">O palpite é bônus: não decide o cartão.</p>
+              </div>
+            </article>
+
+            <article class="glass ed-card" aria-label="Edição PROG-2">
+              <div class="cab"><span class="pilula">PROG-2</span><span class="estado breve">COM PALPITE</span></div>
+              <div class="relogio"><span class="t">5d 11:42</span><span class="rotulo">para o fecho</span></div>
+              <div class="caixa">
+                <div class="thumb" role="img" aria-label="Fones">🎧</div>
+                <div class="cx-txt"><span class="rotulo">Prêmio</span><div class="cx-nome">Fones</div><span class="cx-nota">Seu palpite: 340 lances</span></div>
+              </div>
+            </article>
+
+            <article class="glass ed-card" aria-label="Edição PROG-0">
+              <div class="cab"><span class="pilula">PROG-0</span><span class="estado apurado-ok">MAIS PRÓXIMO</span></div>
+              <div class="relogio"><span class="t breve">APURADA</span></div>
+              <div class="caixa">
+                <div class="thumb" role="img" aria-label="Relógio">⌚</div>
+                <div class="cx-txt"><span class="rotulo">Prêmio</span><div class="cx-nome">Relógio</div><span class="cx-nota">Seu palpite: 88 · real: 90</span></div>
+              </div>
+              <p class="nota">+2 pontos creditados na carteira.</p>
+            </article>
+          </div>
+
+          <section class="glass tabela-especial" aria-label="Palpites — Edição PROG-1">
+            <header><h2 class="h-sec">Palpites — Edição PROG-1</h2><span class="estado breve" role="img" aria-label="valores ocultos">🔒</span></header>
+            <table>
+              <thead><tr><th>#</th><th>Participante</th><th>Palpite</th></tr></thead>
+              <tbody>
+                <tr><td class="num">1</td><td>Ana P.</td><td>🔒</td></tr>
+                <tr><td class="num">2</td><td>0x71c…9a2</td><td>🔒</td></tr>
+                <tr><td class="num">3</td><td>Rui M.</td><td>🔒</td></tr>
+              </tbody>
+            </table>
+            <p class="rodape-tab">Palpites revelados após a apuração da edição (Art. 24).</p>
+          </section>
+
+          <p class="rodape-legal">DesafioGUT · Grupo União e Trabalho · CNPJ 23.040.066/0001-00</p>
+        </div>
+
+        <!-- ═══════════════ C ═══════════════ -->
+        <div class="tela coluna v-c" data-painel="C" hidden>
+          <section class="glass titulo-aba">
+            <div>
+              <h1 class="h-aba">Ofertas Programadas</h1>
+              <p class="sub">Junte 50 pontos e troque pelo cartão da Família Quildo.</p>
+            </div>
+            <span class="pilula">🎫 Programada</span>
+          </section>
+
+          <section class="glass pontos">
+            <div class="linha"><span class="rotulo">Seus pontos</span><span class="alvo">meta 50</span></div>
+            <div class="n">12 / 50</div>
+            <div class="progresso"><i style="width:24%"></i></div>
+          </section>
+
+          <div class="carrossel">
+            <article class="glass ed-card" aria-label="Edição PROG-1">
+              <div class="cab"><span class="pilula">PROG-1</span><span class="estado aberto">SEM PALPITE</span></div>
+              <div class="caixa">
+                <div class="thumb" role="img" aria-label="Air Fryer">🍳</div>
+                <div class="cx-txt"><span class="rotulo">Prêmio</span><div class="cx-nome">Air Fryer</div><span class="cx-nota">Palpite dá +2 pontos</span></div>
+              </div>
+              <div class="relogio"><span class="t">2d 04:10</span></div>
+              <div class="acao">
+                <label class="rotulo" for="c-p1">Quantos lances esta edição vai ter?</label>
+                <div class="linha-campo">
+                  <input class="campo" id="c-p1" inputmode="numeric" placeholder="Ex.: 120">
+                  <button class="btn btn-ouro">🎯 Palpitar</button>
+                </div>
+              </div>
+            </article>
+
+            <article class="glass ed-card" aria-label="Edição PROG-2">
+              <div class="cab"><span class="pilula">PROG-2</span><span class="estado breve">COM PALPITE</span></div>
+              <div class="caixa">
+                <div class="thumb" role="img" aria-label="Fones">🎧</div>
+                <div class="cx-txt"><span class="rotulo">Prêmio</span><div class="cx-nome">Fones</div><span class="cx-nota">Seu palpite: 340</span></div>
+              </div>
+              <div class="relogio"><span class="t">5d 11:42</span></div>
+            </article>
+
+            <article class="glass ed-card" aria-label="Edição PROG-0">
+              <div class="cab"><span class="pilula">PROG-0</span><span class="estado apurado-ok">MAIS PRÓXIMO</span></div>
+              <div class="caixa">
+                <div class="thumb" role="img" aria-label="Relógio">⌚</div>
+                <div class="cx-txt"><span class="rotulo">Prêmio</span><div class="cx-nome">Relógio</div><span class="cx-nota">Palpite 88 · real 90</span></div>
+              </div>
+              <div class="relogio"><span class="t breve">APURADA</span></div>
+            </article>
+          </div>
+
+          <section class="glass"><a class="btn btn-fant" href="../regra-1-glass.html">📜 Regras Oficiais do programa</a></section>
+
+          <section class="glass tabela-especial" aria-label="Palpites — Edição PROG-1">
+            <header><h2 class="h-sec">Palpites — Edição PROG-1</h2><span class="estado breve" role="img" aria-label="valores ocultos">🔒</span></header>
+            <table>
+              <thead><tr><th>#</th><th>Participante</th><th>Palpite</th></tr></thead>
+              <tbody>
+                <tr><td class="num">1</td><td>Ana P.</td><td>🔒</td></tr>
+                <tr><td class="num">2</td><td>0x71c…9a2</td><td>🔒</td></tr>
+                <tr><td class="num">3</td><td>Rui M.</td><td>🔒</td></tr>
+                <tr><td class="num">4</td><td>Clara S.</td><td>🔒</td></tr>
+              </tbody>
+            </table>
+            <p class="rodape-tab">Palpites revelados após a apuração da edição (Art. 24).</p>
+          </section>
+
+          <p class="rodape-legal">DesafioGUT · Grupo União e Trabalho · CNPJ 23.040.066/0001-00</p>
+        </div>
+      </div>
+
+      <div class="auditoria" data-relatorio="op-depois">medindo…</div>
+    </div>
+
+    <aside class="notas">
+      <h2>O que mudou face ao aprovado no 107e</h2>
+      <ol class="mudou">
+        <li><b>Mesmo componente de edição do MLC.</b> A OP usava <code>.edicao</code> com prêmio ao lado do cronómetro; passa a <code>.ed-card</code>, o mesmo casco do Relâmpago.
+          <span class="porque">É o que faz as duas abas parecerem a mesma família.</span></li>
+        <li><b>Mesma cabeça.</b> <code>glass.titulo-aba</code> + <code>h1.h-aba</code> + <code>p.sub</code>, com <code>🎫 Programada</code> na pílula — espelho do <code>⚡ Relâmpago</code>.
+          <span class="porque">Mesma gramática: pílula à direita diz sempre a QUE família a edição pertence.</span></li>
+        <li><b>A tabela passa a chamar-se «Palpites».</b> O mockup antigo dizia «Lances — Edição PROG-1»; a decisão R18-C do 107e.1 escolheu <b>Palpites</b>.
+          <span class="porque">O mockup ficou desalinhado do que foi decidido e implementado. Aqui alinha-se.</span></li>
+        <li><b>Mesmo vocabulário de estado.</b> O carrossel deixa de inventar rótulos e usa <code>.estado</code> (aberto / breve / apurado-ok / apurado-nao / encerrado).
+          <span class="porque">Os 6 estados do palpite já estavam aprovados; faltava-lhes nomes com a mesma forma dos do MLC.</span></li>
+      </ol>
+
+      <h2 style="margin-top:18px">Comparação com o MLC</h2>
+      <table class="tabela-comp">
+        <thead><tr><th>Item</th><th>MLC v2</th><th>OP v2</th><th>Conversa?</th></tr></thead>
+        <tbody>
+          <tr><td>Casco do card</td><td>.ed-card</td><td>.ed-card</td><td class="sim">igual</td></tr>
+          <tr><td>Cabeça</td><td>titulo-aba + ⚡ Relâmpago</td><td>titulo-aba + 🎫 Programada</td><td class="sim">igual</td></tr>
+          <tr><td>Ordem interna (A)</td><td>caixa → relógio → ação</td><td>caixa → relógio → ação</td><td class="sim">igual</td></tr>
+          <tr><td>Ação</td><td>lance em centavos</td><td>palpite em lances</td><td class="sim">mesmo lugar, conteúdo diferente</td></tr>
+          <tr><td>Tabela no fim</td><td>Lances · #/Participante/Valor</td><td>Palpites · #/Participante/Palpite</td><td class="sim">mesmo componente (Regra 2)</td></tr>
+          <tr><td>Só na OP</td><td>—</td><td>pontos 12/50 · cartão Quildo</td><td class="sim">conteúdo próprio, mesma forma</td></tr>
+        </tbody>
+      </table>
+
+      <h2 style="margin-top:18px">Que problema resolve cada variante</h2>
+      <ol class="mudou">
+        <li><b>A</b> — menor risco: ordem aprovada + roupa do MLC. <span class="porque">Base recomendada.</span></li>
+        <li><b>B</b> — os pontos sobem a protagonistas e o cartão da Família Quildo encolhe para uma linha. <span class="porque">A aba existe para juntar pontos; com o progresso pequeno o utilizador não sente que está a 24% do cartão.</span></li>
+        <li><b>C</b> — carrossel denso (miniatura 44 px) e a tabela de palpites logo abaixo. <span class="porque">Numa aba com carrossel + tabela, o C reduz a rolagem até ao placar.</span></li>
+      </ol>
+
+      <div class="reco"><b>Recomendação:</b> <b>A</b> como base e a barra de progresso da <b>B</b> (grossa e com o número grande) — é o motor da aba e resolve a distância até ao cartão. A <b>C</b> só faz sentido se o operador quiser o placar visível sem rolar.</div>
+    </aside>
+  </div>
+</div>
+<script src="../mockup.js"></script>
+<script>
+// Link directo para uma variante: op.html#B abre a variante B (não toca no mockup.js, que é partilhado).
+// Cobre os dois casos: carga com #B (vindo do índice) e hashchange (link # clicado na MESMA página,
+// que o browser NÃO recarrega).
+(function () {
+  function aplicar() {
+    var h = (location.hash || "").replace("#", "").toUpperCase();
+    var grupo = document.querySelector("[data-grupo-v]");
+    var b = grupo && grupo.querySelector('button[data-v="' + h + '"]');
+    if (b) b.click();
+  }
+  aplicar();
+  window.addEventListener("hashchange", aplicar);
+})();
+</script>
+</body>
+</html>
