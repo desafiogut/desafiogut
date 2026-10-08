@@ -33,6 +33,18 @@ const MUTANTES = [
   { id: "M7", desc: "o aviso passa a BLOQUEAR (esconde o formulário do lance)", f: MLC, t: T_MLC,
     de: "            <CardLance\n", para: "            {!mostrarAvisoSemSaldo({ isConnected, saldoRsCentavos, saldoRsStatus, tipoProvavel }) && <CardLance\n",
     tambem: ["              ready={ready}\n            />\n", "              ready={ready}\n            />}\n"] },
+  // Mutantes sobreviventes do validador (N1/N2), agora cobertos:
+  { id: "M8", desc: "(V4) botão MLC com pointerEvents:none", f: CART, t: T_CART,
+    de: 'boxShadow: "none",\n                  }}\n                  title="Ir para', para: 'boxShadow: "none", pointerEvents: "none",\n                  }}\n                  title="Ir para' },
+  { id: "M9", desc: "(V5) botão MLC com hidden", f: CART, t: T_CART,
+    de: 'title="Ir para o Menor Lance Único"', para: 'hidden={!saldoReais} title="Ir para o Menor Lance Único"' },
+  { id: "M10", desc: "(V10) «Carregar PIX» com disabled", f: BAN, t: T_MLC,
+    de: 'onClick={() => navigate("/carteira")}', para: 'disabled onClick={() => navigate("/carteira")}' },
+  { id: "M11", desc: "(V11) aviso inteiro com display:none", f: BAN, t: T_MLC,
+    de: 'display: "flex", alignItems', para: 'display: "none", alignItems' },
+  { id: "M12", desc: "(V7) aviso fora do <main>", f: MLC, t: T_MLC,
+    de: "          {mostrarAvisoSemSaldo({ isConnected, saldoRsCentavos, saldoRsStatus, tipoProvavel }) && <SemSaldoBanner />}\n", para: "",
+    tambem: ["        <main style={{", "        {mostrarAvisoSemSaldo({ isConnected, saldoRsCentavos, saldoRsStatus, tipoProvavel }) && <SemSaldoBanner />}\n        <main style={{"] },
 ];
 
 let provados = 0;

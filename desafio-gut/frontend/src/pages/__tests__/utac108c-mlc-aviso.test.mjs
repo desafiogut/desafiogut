@@ -123,6 +123,8 @@ describe("UTAC108c · o aviso na página REAL do Menor Lance Único", () => {
     assert.ok(iLance > 0 && iTabela > 0, `a página perdeu blocos: lance=${iLance} tabela=${iTabela}`);
     assert.match(html, /Ganha o menor lance que ninguém repetir\./, "o cabeçalho da edição desapareceu");
     assert.ok(iAviso > 0 && iAviso < iLance, "o aviso não está no topo (antes do formulário do lance)");
+    // N2 do validador: o aviso vive DENTRO do <main> (herda o padding/gap da coluna), não solto por cima.
+    assert.ok(iAviso > html.indexOf("<main"), "o aviso está fora do <main>");
   });
 
   test("saldo > 0 ⇒ o aviso DESAPARECE", () => {
@@ -151,6 +153,12 @@ describe("UTAC108c · «Carregar PIX →» navega para /carteira", () => {
     const botao = filhos.find((n) => n && n.type === "button");
     assert.ok(botao, "o aviso não tem botão");
     assert.match(String([].concat(botao.props.children).join("")), /Carregar PIX/);
+    // N1 do validador: o `onClick()` chamado à mão passaria com o botão desactivado — medir as props.
+    assert.ok(!botao.props.disabled && !botao.props.hidden, "«Carregar PIX» desactivado/escondido");
+    assert.notEqual(botao.props.style?.pointerEvents, "none", "«Carregar PIX» ignora cliques");
+    assert.notEqual(botao.props.style?.display, "none", "«Carregar PIX» escondido");
+    assert.notEqual(el.props.style?.display, "none", "o aviso inteiro está escondido (display:none)");
+    assert.ok(!el.props.hidden, "o aviso inteiro está `hidden`");
     botao.props.onClick();
     assert.deepEqual(globalThis.__NAVEGADAS, ["/carteira"]);
   });

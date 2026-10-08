@@ -85,6 +85,10 @@ for (const [nome, centavos, status] of [
   test(`UTAC108c/D-1 · ${nome}: o botão NÃO está desactivado e o clique navega para /mercado`, async () => {
     const { b, ctrl } = await botaoMlc(centavos, status);
     assert.ok(!b.props.disabled, `o botão continua desactivado (disabled=${JSON.stringify(b.props.disabled)})`);
+    // N1 do validador: «clicável» também exclui esconder/neutralizar por outras vias.
+    assert.ok(!b.props.hidden, "o botão está `hidden`");
+    assert.notEqual(b.props.style?.pointerEvents, "none", "o botão ignora cliques (pointer-events:none)");
+    assert.notEqual(b.props.style?.display, "none", "o botão está escondido (display:none)");
     assert.notEqual(b.props.style?.cursor, "not-allowed", "o cursor ainda diz «proibido»");
     assert.notEqual(b.props.style?.opacity, 0.5, "o botão ainda parece desactivado (opacidade 0,5)");
     b.props.onClick();
