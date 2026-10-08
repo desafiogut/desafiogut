@@ -239,10 +239,13 @@ export default function MinhaCarteira() {
                 >
                   {`Comprar Passe Desafio ${PRECO_PASSE_DESAFIO}`}
                 </button>
+                {/* UTAC108c (D-1, Opção A do operador) — o botão NAVEGA SEMPRE. Tinha
+                    `disabled={!saldoReais}`: com saldo R$ 0,00 (ou ainda a carregar) o clique não fazia
+                    nada e o utilizador lia «o botão não navega». O saldo verifica-se no DESTINO (aviso
+                    «Sem saldo» no MercadoLances; o lance em si continua bloqueado no CardLance). */}
                 <button
                   type="button"
                   onClick={irParaMenorLanceUnico}
-                  disabled={!saldoReais}
                   style={{
                     // MC48 P2 — laranja suave (CTA de lance). UTAC106c — passa a «Menor Lance Único».
                     ...botaoPrimario,
@@ -250,10 +253,8 @@ export default function MinhaCarteira() {
                     border: "1px solid rgba(245,166,35,0.4)",
                     color: COR.gold,
                     boxShadow: "none",
-                    cursor: !saldoReais ? "not-allowed" : "pointer",
-                    opacity: !saldoReais ? 0.5 : 1,
                   }}
-                  title={!saldoReais ? "Deposite PIX primeiro" : "Abre o Mercado no Menor Lance Único"}
+                  title="Ir para o Menor Lance Único"
                 >
                   ⚡ Menor Lance Único
                 </button>

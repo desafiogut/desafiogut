@@ -13,6 +13,8 @@ import { COR } from "../components/glass/glassTokens.js";
 import { useRecursosApp } from "../hooks/useRecursosApp.js";
 // UTAC000.17bc (17c) — participações do titular (endpoint `/minhas-participacoes` do UTAC000.17a).
 import { useMinhasParticipacoes } from "../hooks/useMinhasParticipacoes.js";
+// UTAC108c (D-1) — aviso «Sem saldo» no destino do botão da Carteira (que passou a navegar sempre).
+import SemSaldoBanner, { mostrarAvisoSemSaldo } from "../components/SemSaldoBanner.jsx";
 
 // MC99 — `CATEGORIAS_POR_TIPO` + `buscarClienteDoLeilaoAtivo` viveram aqui para
 // alimentar o banner do cliente (REQ-01). Com o banner removido desta tela, o
@@ -253,6 +255,7 @@ export default function MercadoLances() {
     abrirModal, desconectar,
     handleLanceSucesso, handleNovaRodada,
     authToken, fecharOverlay, // UTAC000.17bc (17c) — token das participações e saída explícita do overlay
+    saldoRsCentavos, saldoRsStatus, tipoProvavel, // UTAC108c — só para o aviso «Sem saldo»
   } = useAppContext();
   // UTAC000.17bc (17c/GATE 21) — em que EDIÇÕES o titular deu lance (filtrado pelo token, no servidor).
   const { participacoes } = useMinhasParticipacoes(authToken);
@@ -340,6 +343,11 @@ export default function MercadoLances() {
           padding: isMobile ? "1rem" : "1.5rem 2rem",
           flex: 1,
         }}>
+          {/* UTAC108c (D-1) — o saldo verifica-se AQUI (o botão da Carteira navega sempre). O aviso
+              INFORMA e não esconde nada: a edição, a tabela e o formulário continuam visíveis; o lance
+              em si continua bloqueado no CardLance. Só com saldo LIDO = R$ 0,00 (R18-A); nunca a
+              contas corporativas (R18-B). */}
+          {mostrarAvisoSemSaldo({ isConnected, saldoRsCentavos, saldoRsStatus, tipoProvavel }) && <SemSaldoBanner />}
           <section style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             <CardLance
               idEdicao={EDICAO_ATIVA}
