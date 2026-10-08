@@ -47,6 +47,8 @@ let edicoesPedidas = null;
 let definirPontos = null;
 let chamadasPontos = null;
 let estadoPasse = null;
+// UTAC108h.2 — a separação das edições não-ativas nas duas prateleiras (função pura).
+let prateleirasDeEdicoes = null;
 
 before(async () => {
   vite = await createServer({
@@ -76,7 +78,7 @@ before(async () => {
   ({ definirPontos, chamadasPontos } = await vite.ssrLoadModule(`${STUBS}/usePontos.js`));
   // react-router-dom é CJS: carregado pelo node, que é o que o Vite externaliza em SSR.
   ({ MemoryRouter } = await vite.ssrLoadModule("/src/__tests__/_ponte-ssr.mjs"));
-  ({ default: Pagina, estadoPasse } = await vite.ssrLoadModule("/src/pages/Dashboard.jsx"));
+  ({ default: Pagina, estadoPasse, prateleirasDeEdicoes } = await vite.ssrLoadModule("/src/pages/Dashboard.jsx"));
 });
 after(async () => { if (vite) await vite.close(); });
 
@@ -251,23 +253,38 @@ describe("MC94.2/MC94.3.1 · Dashboard — a edição especial NO SLOT", () => {
     assert.doesNotMatch(texto(html), /Ir para o Mercado de Lances/, "o botão da R-1 ficou no slot da especial");
   });
 
-  test("na hora, a especial NÃO aparece também em 'Outras Edições'", () => {
+  test("na hora, a especial NÃO é desenhada TAMBÉM nas prateleiras (UTAC108h.2)", () => {
     const html = renderizar({
       edicoes: { "R-1": R1, "ESPECIAL-AIRFRYER": especial(Date.now() - 60_000, { status: "aberto" }) },
     });
-    assert.doesNotMatch(texto(html), /Outras Edições/, "desenhada duas vezes");
+    // ⚠️ UTAC108h.2 — esta guarda procurava a AUSÊNCIA do título «Outras Edições». Com a
+    // prateleira única substituída por DUAS, esse título deixou de existir e a asserção antiga
+    // (`doesNotMatch /Outras Edições/`) passaria VERDE por aritmética, não por medição — o
+    // buraco que a skill `verification-blindspots` descreve. Mede-se agora o ALVO: nenhuma
+    // prateleira pode conter a especial.
+    // ⚠️ A âncora é `prateleira-` (não `prateleira-scroll`): neste cenário NÃO há edições
+    // extra (só a ativa e a especial, ambas excluídas), logo as duas prateleiras ficam VAZIAS
+    // e o que existe é `prateleira-vazia`. Ancorar no carrossel dava «controlo falhou» — erro
+    // meu na 1.ª versão, apanhado pela própria asserção de controlo.
+    const iPrat = html.indexOf('data-testid="prateleira-');
+    assert.ok(iPrat > 0, "controlo: as prateleiras não renderizaram");
+    assert.equal(html.slice(iPrat).includes("ESPECIAL-AIRFRYER"), false,
+      "a especial foi desenhada também numa prateleira (ficaria duas vezes no ecrã)");
     // Contagem directa: a especial tem de aparecer UMA vez em todo o ecrã.
     const vezes = (texto(html).match(/Air Fryer/g) || []).length;
     assert.equal(vezes, 1, `a especial apareceu ${vezes} vezes no ecrã`);
   });
 
-  test("'Outras Edições' continua a mostrar as outras", () => {
+  test("as prateleiras continuam a mostrar as outras edições (UTAC108h.2)", () => {
     const relamp = { id: "RELAMP-3", tipo: "relampago", produto: "Smart TV", termino_em: "2026-05-31T03:52:13.827Z", lances: 0, status: "encerrado" };
     const html = renderizar({
       edicoes: { "R-1": R1, "RELAMP-3": relamp, "ESPECIAL-AIRFRYER": especial(Date.now() - 60_000, { status: "aberto" }) },
     });
-    assert.match(texto(html), /Outras Edições/);
+    assert.match(texto(html), /⚡ Relâmpago/); // o título da prateleira (sempre visível)
     assert.match(html, /Smart TV/);
+    // e o card vive DENTRO da prateleira, não solto na página
+    const iPrat = html.indexOf('data-testid="prateleira-scroll"');
+    assert.ok(iPrat > 0 && html.slice(iPrat).includes("Smart TV"), "o card da RELAMP-3 saiu da prateleira");
   });
 
   test("uma PROG-* em `agendadas` não vira card especial", () => {
@@ -380,16 +397,22 @@ describe("UTAC107c · Início — Passe Desafio, destino e remoções", () => {
     }
   });
 
-  test("Regra 1: o título «Outras Edições» fica DENTRO de vidro", () => {
+  // UTAC108h.2 — passou a haver DOIS títulos de prateleira, e ambos ficam SEMPRE visíveis
+  // (decisão P-2b). O alvo é medido pelo <h3> da prateleira, não por uma contagem na página:
+  // «⚡ Relâmpago» também aparece como RÓTULO dentro do card da Edição Ativa (Dashboard.jsx:434),
+  // e uma busca solta apanhá-lo-ia em vez do título.
+  test("Regra 1: os títulos das DUAS prateleiras ficam DENTRO de vidro", () => {
     definirPontos({});
     const relamp = { id: "RELAMP-3", tipo: "relampago", produto: "Smart TV", termino_em: "2026-05-31T03:52:13.827Z", lances: 0, status: "encerrado" };
     const html = renderizar({ edicoes: { "R-1": R1, "RELAMP-3": relamp } });
-    const i = html.indexOf("Outras Edições");
-    assert.ok(i > 0, "controlo: o título não foi renderizado");
-    const antes = html.slice(0, i);
-    const abre = antes.lastIndexOf("gut-glass-standard");
-    const fecha = antes.lastIndexOf("</div>");
-    assert.ok(abre > fecha, "o título «Outras Edições» está fora de um contentor de vidro");
+    for (const titulo of ["⚡ Relâmpago", "🎫 Programada"]) {
+      const m = html.match(new RegExp(`<h3[^>]*>\\s*${titulo}\\s*</h3>`));
+      assert.ok(m, `o título «${titulo}» não foi renderizado como <h3> da prateleira`);
+      const antes = html.slice(0, html.indexOf(m[0]));
+      const abre = antes.lastIndexOf("gut-glass-standard");
+      const fecha = antes.lastIndexOf("</div>");
+      assert.ok(abre > fecha, `o título «${titulo}» está fora de um contentor de vidro`);
+    }
   });
 
   // ⚠️ Achado do validador adversarial (UTAC107c): na sequência REAL o par address+authToken fica
@@ -485,5 +508,122 @@ describe("UTAC107g · Início — «Acesso Rápido» sem atalhos redundantes", (
     // /carteira e /mercado continuam no ecrã: KPI «Saldo (R$)» e CTA da Edição Ativa
     assert.match(fonte, /label: "Saldo \(R\$\)"[^\n]*to: "\/carteira"/, "o KPI «Saldo» deixou de levar à Carteira");
     assert.match(fonte, /onClick=\{\(\) => navigate\("\/mercado"\)\}/, "o CTA da Edição Ativa deixou de levar ao /mercado");
+  });
+});
+
+
+// ═══ UTAC108h.2 — DUAS prateleiras no Início (Relâmpago + Programada) ═════════════════════════
+// Decisão P-2 do operador, tomada DEPOIS do diagnóstico UTAC108h.1: a divisão em duas
+// prateleiras tinha ficado FORA do escopo do UTAC107c (R18-C) e nunca chegou a ser
+// implementada — o Início tinha UMA prateleira só («🗓️ Outras Edições») que misturava as duas
+// famílias. P-2b: o título de cada prateleira fica SEMPRE visível, mesmo com a lista vazia, e
+// nesse caso o estado vazio vive DENTRO de vidro (Regra 1).
+describe("UTAC108h.2 · Início — as DUAS prateleiras", () => {
+  const PROG = { id: "PROG-1", tipo: "programado", produto: "Air Fryer", termino_em: iso(Date.now() + 5 * H), lances: 0, status: "aberto" };
+  const REL  = { id: "RELAMP-7", tipo: "relampago", produto: "Smart TV", termino_em: iso(Date.now() + H), lances: 0, status: "aberto" };
+
+  /** O <h3> do título da prateleira — mede o ALVO, não uma contagem na página. */
+  function h3(html, titulo) {
+    const m = html.match(new RegExp(`<h3[^>]*>\\s*${titulo}\\s*</h3>`));
+    return m ? { tag: m[0], i: html.indexOf(m[0]) } : null;
+  }
+  const contar = (s, alvo) => s.split(alvo).length - 1;
+  /** A pílula do id do card (o `EdicaoCard` mostra o id em `>ID<`). */
+  const pilula = (html, id) => contar(html, `>${id}<`);
+
+  test("renderizam as DUAS prateleiras, na ordem Relâmpago → Programada", () => {
+    definirPontos({}); definirResultadoOficial(null);
+    const html = renderizar({ edicoes: { "R-1": R1, "RELAMP-7": REL, "PROG-1": PROG } });
+    const r = h3(html, "⚡ Relâmpago"), p = h3(html, "🎫 Programada");
+    assert.ok(r, "o título «⚡ Relâmpago» não renderizou");
+    assert.ok(p, "o título «🎫 Programada» não renderizou");
+    assert.ok(r.i < p.i, `ordem errada: Relâmpago=${r.i} Programada=${p.i}`);
+  });
+
+  test("cada prateleira mostra SÓ a sua família (nenhuma edição nas duas)", () => {
+    definirPontos({}); definirResultadoOficial(null);
+    const html = renderizar({ edicoes: { "R-1": R1, "RELAMP-7": REL, "PROG-1": PROG } });
+    const r = h3(html, "⚡ Relâmpago"), p = h3(html, "🎫 Programada");
+    const iRel = html.indexOf("RELAMP-7"), iProg = html.indexOf("PROG-1");
+    assert.ok(iRel > r.i && iRel < p.i, `o card RELAMP-7 não está na prateleira de Relâmpago (${iRel})`);
+    assert.ok(iProg > p.i, `o card PROG-1 não está na prateleira de Programada (${iProg})`);
+    assert.equal(pilula(html, "RELAMP-7"), 1, "a RELAMP-7 aparece mais do que uma vez");
+    assert.equal(pilula(html, "PROG-1"), 1, "a PROG-1 aparece mais do que uma vez");
+  });
+
+  test("P-2b — com as DUAS listas vazias, os DOIS títulos ficam e os dois vazios aparecem", () => {
+    definirPontos({}); definirResultadoOficial(null);
+    const html = renderizar(); // só a R-1 (ativa) → nenhuma edição extra
+    const r = h3(html, "⚡ Relâmpago"), p = h3(html, "🎫 Programada");
+    assert.ok(r && p, "um dos títulos desapareceu com a lista vazia (P-2b)");
+    const t = texto(html);
+    assert.match(t, /Nenhuma edição Relâmpago em andamento/, "falta o vazio da prateleira de Relâmpago");
+    assert.match(t, /Nenhuma edição Programada em andamento/, "falta o vazio da prateleira de Programada");
+    assert.equal(contar(html, 'data-testid="prateleira-vazia"'), 2, "os dois vazios deviam estar em vidro");
+  });
+
+  test("P-2b — uma lista cheia e a outra vazia: os DOIS títulos ficam", () => {
+    definirPontos({}); definirResultadoOficial(null);
+    const html = renderizar({ edicoes: { "R-1": R1, "RELAMP-7": REL } });
+    assert.ok(h3(html, "⚡ Relâmpago") && h3(html, "🎫 Programada"), "um título desapareceu");
+    assert.equal(contar(html, 'data-testid="prateleira-scroll"'), 1, "a prateleira cheia devia ter carrossel");
+    assert.equal(contar(html, 'data-testid="prateleira-vazia"'), 1, "a prateleira vazia devia ter o estado vazio");
+  });
+
+  test("Regra 1 — o texto do estado vazio vive DENTRO de vidro", () => {
+    definirPontos({}); definirResultadoOficial(null);
+    const html = renderizar();
+    const i = html.indexOf("Nenhuma edição Programada em andamento");
+    assert.ok(i > 0, "controlo: o vazio não renderizou");
+    const antes = html.slice(0, i);
+    const abre = antes.lastIndexOf("gut-glass-standard");
+    const fecha = antes.lastIndexOf("</div>");
+    assert.ok(abre > fecha, "o estado vazio ficou FORA do vidro (Regra 1)");
+  });
+
+  test("a edição ativa e a especial continuam FORA das prateleiras", () => {
+    definirPontos({}); definirResultadoOficial(null);
+    const html = renderizar({ edicoes: { "R-1": R1, "RELAMP-7": REL, "ESPECIAL-AIRFRYER": especial(Date.now() - 60_000, { status: "aberto" }) } });
+    const iPrat = html.indexOf('data-testid="prateleira-scroll"');
+    assert.ok(iPrat > 0, "controlo: as prateleiras não renderizaram");
+    const dentro = html.slice(iPrat);
+    assert.equal(dentro.includes("ESPECIAL-AIRFRYER"), false, "a especial entrou numa prateleira");
+    assert.equal(pilula(dentro, "R-1"), 0, "a edição ativa entrou numa prateleira");
+  });
+
+  // ── a separação, medida SEM render (função pura) ───────────────────────────────────────────
+  describe("prateleirasDeEdicoes — a separação (função pura)", () => {
+    const E = (id, tipo) => ({ id, tipo, termino_em: iso(Date.now() + H) });
+    const mapa = (...eds) => Object.fromEntries(eds.map((e) => [e.id, e]));
+
+    test("separa por tipo, sem perder nem duplicar nenhuma edição", () => {
+      const eds = mapa(E("A", "relampago"), E("B", "programado"), E("C", "relampago"), E("D", "programado"));
+      const { relampago, programada } = prateleirasDeEdicoes(eds, "R-1", () => false);
+      assert.deepEqual(relampago.map((e) => e.id), ["A", "C"]);
+      assert.deepEqual(programada.map((e) => e.id), ["B", "D"]);
+      assert.equal(relampago.length + programada.length, 4, "houve perda ou duplicação na separação");
+    });
+
+    test("exclui a edição ativa e as especiais (critérios do MC15.4/MC94.2)", () => {
+      const eds = mapa(E("R-1", "relampago"), E("ESPECIAL-AIRFRYER", "relampago"), E("X", "relampago"));
+      const { relampago, programada } = prateleirasDeEdicoes(eds, "R-1", (id) => id.startsWith("ESPECIAL-"));
+      assert.deepEqual(relampago.map((e) => e.id), ["X"]);
+      assert.deepEqual(programada, []);
+    });
+
+    test("tipo ausente ou desconhecido cai em `relampago` (a regra do useEdicoes.js:83)", () => {
+      const eds = mapa(E("SEM-TIPO", undefined), E("ESTRANHO", "leilao"), E("P", "programado"));
+      const { relampago, programada } = prateleirasDeEdicoes(eds, "R-1", () => false);
+      assert.deepEqual(relampago.map((e) => e.id).sort(), ["ESTRANHO", "SEM-TIPO"]);
+      assert.deepEqual(programada.map((e) => e.id), ["P"]);
+    });
+
+    test("mapa vazio ou ausente → duas listas vazias (nunca rebenta)", () => {
+      for (const entrada of [null, undefined, {}]) {
+        const { relampago, programada } = prateleirasDeEdicoes(entrada, "R-1", () => false);
+        assert.deepEqual(relampago, [], String(entrada));
+        assert.deepEqual(programada, [], String(entrada));
+      }
+    });
   });
 });

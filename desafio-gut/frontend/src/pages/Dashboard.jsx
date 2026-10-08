@@ -64,6 +64,30 @@ const ATALHOS = [
 ];
 
 /**
+ * UTAC108h.2 — separa as edições não-ativas nas DUAS famílias do Desafio (decisão P-2).
+ *
+ * Critérios de EXCLUSÃO inalterados desde o MC15.4/MC94.2: sai a edição ATIVA (que tem o
+ * card próprio no topo do ecrã) e saem as ESPECIAIS (MC94.2 — às 20:00 a especial passa
+ * para `edicoes` e seria desenhada duas vezes).
+ *
+ * O agrupamento usa `tipo`, que o `useEdicoes` normaliza para exactamente
+ * "programado" | "relampago" (`useEdicoes.js:83`). Qualquer valor inesperado (ou ausente)
+ * cai em `relampago` — a MESMA regra do normalizador — para que nenhuma edição
+ * desapareça por trazer um `tipo` estranho.
+ *
+ * Função PURA, exportada para poder ser medida sem render (`Dashboard.test.mjs`).
+ */
+export function prateleirasDeEdicoes(edicoes, edicaoAtiva, ehEspecialFn = ehEspecial) {
+  const extra = Object.values(edicoes || {}).filter(
+    (e) => e && e.id !== edicaoAtiva && !ehEspecialFn(e.id)
+  );
+  return {
+    relampago: extra.filter((e) => e.tipo !== "programado"),
+    programada: extra.filter((e) => e.tipo === "programado"),
+  };
+}
+
+/**
  * UTAC107c — estado do tile «Passe Desafio»: "sem-sessao" | "carregando" | "erro" | "vazio" | "dados".
  *
  * ⚠️ Achado do validador adversarial: sem `address`+`authToken` o `usePontos` devolve a forma
@@ -148,9 +172,15 @@ export default function Dashboard() {
   // "Edição Ativa" abaixo). Cada uma renderiza um cronómetro independente.
   // MC94.2 — e menos as ESPECIAL-*: às 20:00 a especial passa para `edicoes` e
   // seria desenhada duas vezes (card especial + EdicaoCard com "EM BREVE").
-  const edicoesExtra = Object.values(edicoes || {}).filter(
-    (e) => e && e.id !== EDICAO_ATIVA && !ehEspecial(e.id)
-  );
+  //
+  // UTAC108h.2 — AS DUAS PRATELEIRAS (decisão P-2 do operador). Até aqui havia UMA
+  // prateleira só («🗓️ Outras Edições») que MISTURAVA as duas famílias do Desafio: a
+  // divisão tinha ficado fora do escopo do UTAC107c (R18-C) e nunca foi implementada
+  // (diagnóstico UTAC108h.1). Agora separam-se por `tipo`, que o `useEdicoes` JÁ normaliza
+  // para "programado" | "relampago" (`useEdicoes.js:83`) — não há dado novo a inventar.
+  // Os critérios de EXCLUSÃO são os mesmos de antes (a edição ativa e as especiais).
+  const { relampago: edicoesRelampago, programada: edicoesProgramada } =
+    prateleirasDeEdicoes(edicoes, EDICAO_ATIVA);
 
   // MC45 — edição ativa (objeto) para o banner clicável. Fallback defensivo
   // garante sempre um id navegável mesmo antes de o mapa hidratar.
@@ -473,25 +503,40 @@ export default function Dashboard() {
         </GlassCard>
       </section>
 
-      {/* ── MC15.4 ITEM 7 — Outras edições com cronómetros independentes ── */}
-      {edicoesExtra.length > 0 && (
-        <section style={{ marginBottom: sectionGap }}>
+      {/* ── UTAC108h.2 — DUAS prateleiras: «⚡ Relâmpago» e «🎫 Programada» (decisão P-2) ──
+          Cada título vive dentro de vidro (Regra 1) e fica SEMPRE visível (decisão P-2b):
+          com a lista vazia a prateleira NÃO desaparece — mostra o estado vazio dentro de
+          vidro. A ordem é Relâmpago → Programada, a do mockup aprovado.
+          O markup do carrossel é o do MC99 (scroll lateral, uma edição visível) e vive UMA
+          só vez, aqui, ao serviço das duas famílias. */}
+      {[
+        { chave: "relampago", titulo: "⚡ Relâmpago", lista: edicoesRelampago,
+          vazio: "Nenhuma edição Relâmpago em andamento." },
+        { chave: "programado", titulo: "🎫 Programada", lista: edicoesProgramada,
+          vazio: "Nenhuma edição Programada em andamento." },
+      ].map(({ chave, titulo, lista, vazio }) => (
+        <section key={chave} style={{ marginBottom: sectionGap }}>
           {/* MC88.43 — "em Andamento" era uma afirmação FIXA, escrita à mão, que
               não perguntava a fonte nenhuma. Sobrepunha-se a três cartões que
               diziam "Encerrada" (B3). O título passa a ser neutro: quem declara
               o estado é cada cartão, e só a fonte única lho dita. */}
           {/* UTAC107c — Regra 1: o título flutuava fora de vidro; passa a ter o seu. */}
           <GlassCard className={cardCls} style={{ marginBottom: innerGap }}>
-            <h3 style={{ ...cardTitulo, margin: 0 }}>🗓️ Outras Edições</h3>
+            <h3 style={{ ...cardTitulo, margin: 0 }}>{titulo}</h3>
           </GlassCard>
           {/* MC99 — scroll LATERAL (era empilhado). No telemóvel o `grid` punha as
-              edições numa coluna única, uma sobre a outra, e "Outras Edições" comia a
+              edições numa coluna única, uma sobre a outra, e a prateleira comia a
               dobra inteira. Passa a UMA edição visível de cada vez, as restantes por
               swipe. `scroll-snap` prende cada cartão ao início — sem ele o swipe para a
               meio. Toda a informação de cada edição é preservada: só o eixo de leitura
-              mudou (vertical → horizontal). */}
+              mudou (vertical → horizontal).
+              UTAC108h.2 — o testid passou de `outras-edicoes-scroll` a `prateleira-scroll`
+              (o nome antigo era do tempo da prateleira única). A guarda do MC99 e o seu
+              mutador foram actualizados no mesmo movimento. */}
+          {lista.length > 0 ? (
           <div
-            data-testid="outras-edicoes-scroll"
+            data-testid="prateleira-scroll"
+            data-prateleira={chave}
             style={{
               display: "flex",
               gap: innerGap,
@@ -502,10 +547,10 @@ export default function Dashboard() {
               paddingBottom: "0.25rem",
             }}
           >
-            {edicoesExtra.map((ed) => (
+            {lista.map((ed) => (
               <div
                 key={ed.id}
-                data-testid="outras-edicoes-item"
+                data-testid="prateleira-item"
                 style={{ flex: "0 0 100%", minWidth: 0, scrollSnapAlign: "start" }}
               >
                 <EdicaoCard
@@ -517,8 +562,19 @@ export default function Dashboard() {
               </div>
             ))}
           </div>
+          ) : (
+            /* P-2b — lista vazia: o título FICA (acima) e o vazio vive DENTRO de vidro (Regra 1). */
+            <GlassCard className={cardCls} data-testid="prateleira-vazia" data-prateleira={chave}>
+              <p style={{
+                margin: 0,
+                color: COR.muted,
+                fontSize: isMobile ? "0.8rem" : "0.85rem",
+                lineHeight: 1.4,
+              }}>{vazio}</p>
+            </GlassCard>
+          )}
         </section>
-      )}
+      ))}
 
       {/* ── Atalhos ── */}
       <GlassCard as="section" className={cardCls}>

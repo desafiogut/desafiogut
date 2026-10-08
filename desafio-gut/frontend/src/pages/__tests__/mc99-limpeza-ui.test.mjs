@@ -55,11 +55,15 @@ test("controlo positivo: o stripper apaga comentários (JSX multi-linha incluíd
   assert.ok(c.includes('const x = "Saldo de Senhas"'), "o stripper apagou uma string de código");
 });
 
-// ═══ SEG0 — Início: Outras Edições em scroll lateral ════════════════════════════
-test("MC99/SEG0 · Outras Edições em scroll LATERAL (não empilhado)", () => {
+// ═══ SEG0 — Início: prateleiras de edições em scroll lateral ═════════════════════
+// UTAC108h.2 — a prateleira única («🗓️ Outras Edições») passou a DUAS («⚡ Relâmpago» e
+// «🎫 Programada»), com o título sempre visível (decisão P-2b do operador). O contentor do
+// scroll passou a `prateleira-scroll` e o markup vive agora UMA só vez, dentro do `map` das
+// duas famílias. A guarda mudou de NOME, não de INTENÇÃO: o scroll tem de continuar lateral.
+test("MC99/SEG0 (UTAC108h.2) · as prateleiras em scroll LATERAL (não empilhado)", () => {
   const d = codigo(ler("src/pages/Dashboard.jsx"));
-  const bloco = d.match(/data-testid="outras-edicoes-scroll"[\s\S]{0,700}/)?.[0];
-  assert.ok(bloco, "o contentor do scroll lateral desapareceu (data-testid=outras-edicoes-scroll)");
+  const bloco = d.match(/data-testid="prateleira-scroll"[\s\S]{0,700}/)?.[0];
+  assert.ok(bloco, "o contentor do scroll lateral desapareceu (data-testid=prateleira-scroll)");
   assert.match(bloco, /display:\s*"flex"/, "o contentor deixou de ser flex");
   assert.match(bloco, /overflowX:\s*"auto"/, "sem overflowX:auto não há scroll lateral");
   assert.match(bloco, /scrollSnapType:\s*"x mandatory"/, "sem scroll-snap o swipe para a meio");
