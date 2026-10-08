@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import {
   subscribeLanceDado,
@@ -444,7 +444,7 @@ export function AppProvider({ children }) {
   // Privy auth — MC12: customMetadata como fonte de verdade do tipoUsuario.
   // ATENÇÃO: useWallets/address ANTES de qualquer hook que os use em deps (TDZ mc11.16-t2).
   const { ready, authenticated, user, login, logout } = usePrivy();
-  const navigate = useNavigate();
+  // UTAC108f — `navigate` saiu: o único uso era o isolamento do lojista.
   const { wallets } = useWallets();
   const privyWallet = wallets.find((w) => w.walletClientType === "privy") || wallets[0];
   const address     = privyWallet?.address ?? null;

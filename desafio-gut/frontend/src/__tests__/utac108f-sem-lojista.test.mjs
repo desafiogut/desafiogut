@@ -11,10 +11,12 @@ import { fileURLToPath } from "node:url";
 const SRC = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FRONT = resolve(SRC, "..");
 const ler = (p) => readFileSync(resolve(SRC, p), "utf8");
+// F1 do validador: tirar os `//` de linha ANTES dos blocos `/* */` — um `/*` dentro de um comentário de linha
+// (ex.: «rotas `/corporativo/*`») abria um falso bloco e apagava 6664 caracteres de código do App.jsx.
 const codigo = (s) => s
   .replace(/\{\/\*[\s\S]*?\*\/\}/g, "")
-  .replace(/\/\*[\s\S]*?\*\//g, "")
-  .split(/\r?\n/).map((l) => l.replace(/(^|[^:"'`])\/\/.*$/, "$1")).join("\n");
+  .split(/\r?\n/).map((l) => l.replace(/(^|[^:"'`])\/\/.*$/, "$1")).join("\n")
+  .replace(/\/\*[\s\S]*?\*\//g, "");
 
 test("rotas: nenhuma rota `/corporativo*`, `/seguranca` nem `/seja-nosso-parceiro` no router", () => {
   const app = codigo(ler("App.jsx"));
@@ -22,6 +24,12 @@ test("rotas: nenhuma rota `/corporativo*`, `/seguranca` nem `/seja-nosso-parceir
   assert.doesNotMatch(app, /path="\/seguranca"/);
   assert.doesNotMatch(app, /path="\/seja-nosso-parceiro"/);
   assert.doesNotMatch(app, /CorporativoRoute|temAcessoDiretoCadastro|Navigate to="\/corporativo"/);
+  // F1 do validador: controlo POSITIVO de que o texto lido não perdeu código, e a raiz não volta a
+  // encaminhar o lojista para /corporativo (por literal ou pela constante).
+  for (const s of ["function DashboardOuCorporativo", "decidirDestino({", "DESTINO.ADMIN", "return <Dashboard />"]) {
+    assert.ok(app.includes(s), `o leitor de código perdeu «${s}» (comentário a abrir um falso bloco?)`);
+  }
+  assert.doesNotMatch(app, /Navigate[^>]*(\/corporativo|DESTINO\.CORPORATIVO)/, "o lojista voltou a ser encaminhado");
   // controlo: o admin, o retorno OAuth e o catch-all continuam
   assert.match(app, /<Route path="\/admin" element=\{<AdminAuthProvider><AdminLayout \/><\/AdminAuthProvider>\}>/);
   assert.match(app, /<Route path="cotas"\s+element=\{<AdminCotas \/>\} \/>/);

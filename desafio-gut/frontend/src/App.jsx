@@ -1,6 +1,6 @@
 // force deploy 2026-05-11 — reset versionado + MOCK_MODE removido
 import { lazy, Suspense, useEffect, useState } from "react";
-import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 // MC88.4 — plugin nativo do Capacitor para interceptar o deep link do OAuth
 // (Privy/Google) no Android. Aliased para CapApp: o export chama-se App e
 // colidiria com o componente App() abaixo.
@@ -94,11 +94,10 @@ function RouteFallback() {
 }
 
 // UTAC108f (R18) — o lojista saiu do app: a guarda `CorporativoRoute` (MC12.2…MC89.40), o gate de cota
-// (`CotaInativa`) e o acesso directo `?rc=1` foram removidos com as rotas `/corporativo/*`. Histórico no git.
+// (`CotaInativa`) e o acesso directo `?rc=1` foram removidos com as rotas `/corporativo` e sub-rotas. Histórico no git.
 
-// MC12.3 Item 4 — wrapper da rota raiz: lojistas autenticados NUNCA veem
-// o Dashboard de leilão. Vão direto para /corporativo. Comuns/visitantes
-// continuam vendo o Dashboard normal (zero regressão R1).
+// MC12.3 Item 4 — wrapper da rota raiz. UTAC108f (R18-B): o lojista saiu do app — já NÃO há encaminhamento
+// para /corporativo; uma conta corporativa vê o Dashboard do comprador (o ADM continua a ir para /admin).
 // MC88.37 — ANTES existia aqui `if (isConnected && tipoCarregando) return null;`.
 //
 // O QUE ISSO PROVOCAVA (medido, ver docs/MC88.37-CLS-DIAGNOSTICO.txt): quando o
