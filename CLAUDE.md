@@ -5357,3 +5357,15 @@ ressalvas corrigidas). **Operador: «ficaram boas».** Recomendacao: MLC A + OP 
 **Escopo:** backend, CardLance, SemSaldoBanner, MLC/OP/Carteira, package*, 5 `.bak-*` intactos; `EM_BREVE_MODE = true`.
 **Registo:** `_logs/UTAC108f-remover-lojista.md` · `_logs/UTAC108f_SEG8_VALIDADOR.md` · `Desktop/RELATORIO-UTAC108f-REMOVER-LOJISTA.txt`.
 **Custo:** validador 329 483 tokens = 6,6-659 ¢ (132 ¢ se tudo input); sessao principal nao medida. **Proximo:** 108g (limpar referencias).
+
+
+## R14 (append) -- UTAC108g -- LIMPAR REFERENCIAS AO LOJISTA (Claude Code, Opus 5.5)
+
+**Tipo:** CODIGO (frontend + testes). **Baseline:** `4d909a1`. **Commits:** `f398c0f` (refactor) -> `ceb9c67` (achados do validador) -> registo.
+**Suite:** frontend VERDE **899/899** · backend VERDE 1095/1101. **Deploy:** auto-deploy Git; entry `index-BmsJdBht.js` -> `index-DnPRjG5D.js`; crawl 124 chunks sem referencias.
+**SEG0 PAROU (6 ambiguidades). Decisoes do operador (R18):** **A** o degrau 2 do `encaminhamento.js` fica mas devolve DASHBOARD (`DESTINO.CORPORATIVO` apagado; comportamento igual — o validador enumerou 9216 inputs, 0 diferencas) · **B** meta = 0 `/corporativo` no codigo de PRODUCAO (comentarios incluidos; testes exceptuados) · **C** NENHUM endpoint removido (`debug-pedido`/`info-pagamento` -> 108h; backend intacto) · **D** saem `cotaAtiva`, `CATEGORIAS_COTA`, `atualizarTipoCorporativo` (0 consumidores). Mantidos `userLabelReal` e `Privacidade.jsx:91` (texto legal).
+**Feito:** `/corporativo` em producao 17 -> 0 (`rotasTrabalho` so `/admin`; `tabFromPath`/`offsetFor` sem ramos do lojista e de `/seguranca`; comentarios em 12 ficheiros); selo «◈ Lojista» do chat removido (ex-lojista ve «●»); `corporativoWallet`/`addressCorporativo` fora do AppContext. Mantidos: `tipoProvavel === "corporativo"` (R18-B do 108c), `cotaCorporativa`, `cotas.mjs`, `admin/Cotas.jsx`, 5 `.bak-*`, `EM_BREVE_MODE = true`.
+**Testes:** novo `utac108g-sem-referencias` (8, varredura com controlo positivo); `cotaAtiva.test` (-9 +1 guarda), `encaminhamento.test` (3 expectativas), extensao declarada `netlify/functions/_tests/mc894-rotas-trabalho.test.mjs`. **Mutacao 8/8** + 3/3 sobreviventes do validador.
+**Validador: APROVADO** (0 ⛔; ⚠️ badge com outro texto e ramo `/seguranca` sem guarda -> fechados, nao re-validados; ℹ️ `robots.txt` e `scripts/test-mc12.mjs` -> 108h).
+**Registo:** `_logs/UTAC108g-limpar-referencias.md` · `_logs/UTAC108g_SEG7_VALIDADOR.md` · `Desktop/RELATORIO-UTAC108g-LIMPAR-REFERENCIAS.txt`.
+**Custo:** validador 133 551 tokens = 2,7–267 ¢ (53,4 ¢ se tudo input); sessao principal nao medida. **Proximo:** 108h (limpeza geral).
