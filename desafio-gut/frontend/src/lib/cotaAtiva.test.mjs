@@ -85,72 +85,17 @@ test("categoria inventada → inativa", () => {
   assert.equal(cotaAtiva({ vendida: true, categoria: "platina" }), false);
 });
 
-// ── FORMA DAS DECISÕES EM App.jsx ───────────────────────────────────────────
-
-test("⚠️ o gate de cota SUBSTITUI conteúdo — não pode redirecionar", () => {
-  // Se aqui aparecesse um <Navigate>, voltaria o ciclo /corporativo ↔ / que o
-  // MC88.42 mediu (sete voltas, 1974→5064 ms), porque o MC89.36 encaminha para
-  // cá pelo palpite antes de a cota responder.
+// ── UTAC108f — o gate de cota (CorporativoRoute + CotaInativa) e o F3 da CorporativoCarteira SAÍRAM
+// com o lojista (decisão do operador: o lojista sai do app). Os 6 testes que fixavam esse código
+// (gate substitui conteúdo · `=== false` · rotas de compra isentas · ecrã de bloqueio · F3 sem poller ·
+// F3 só com dados) deram lugar a este guarda de remoção. A regra `cotaAtivaDe` (acima) continua testada:
+// o AppContext ainda a calcula.
+test("UTAC108f · o gate de cota do lojista saiu do App.jsx e o CotaInativa foi apagado", async () => {
+  const { existsSync } = await import("node:fs");
   const app = semComentarios(ler("../App.jsx"));
-  const linhas = app.split("\n");
-  const i = linhas.findIndex((l) => l.includes("cotaAtiva === false"));
-  assert.ok(i >= 0, "o gate de cota desapareceu do CorporativoRoute");
-  // O `return` vive na linha seguinte ao `if` — olha-se para o BLOCO, não para
-  // uma linha. (A primeira versão deste teste olhava só para a linha do `if` e
-  // dava vermelho sem que nada estivesse errado no produto.)
-  const bloco = linhas.slice(i, i + 3).join("\n");
-  assert.match(bloco, /CotaInativa/, "o gate deixou de substituir o conteúdo");
-  assert.doesNotMatch(bloco, /Navigate/,
-    "o gate passou a redirecionar — volta o ciclo do MC88.42");
-});
-
-test("⚠️ o gate compara com `=== false`, não com `!cotaAtiva`", () => {
-  // `!null` é true. Com `!cotaAtiva`, um lojista PAGO veria "cota inativa"
-  // durante todo o arranque, até /cotas responder.
-  const app = semComentarios(ler("../App.jsx"));
-  assert.match(app, /if \(cotaAtiva === false/,
-    "o gate passou a tratar 'ainda não sei' como 'inativa'");
-});
-
-test("⚠️ as rotas de COMPRA ficam fora do gate", () => {
-  // Sem isto, o botão "Comprar cota" levaria ao próprio ecrã de bloqueio: uma
-  // porta para uma parede (lição do MC89.34).
-  const app = semComentarios(ler("../App.jsx"));
-  assert.match(app, /ROTAS_SEM_GATE_DE_COTA/, "a lista de isenções desapareceu");
-  assert.match(app, /"\/corporativo\/carteira"/, "a rota de COMPRA entrou no gate");
-  assert.match(app, /"\/corporativo\/cotas"/, "a rota de ESTADO da cota entrou no gate");
-  const linha = app.split("\n").find((l) => l.includes("cotaAtiva === false"));
-  assert.match(linha, /ROTAS_SEM_GATE_DE_COTA\.has/,
-    "o gate deixou de consultar as isenções");
-});
-
-test("o ecrã de bloqueio tem saída e distingue 'incompleta' de 'não pagou'", () => {
-  const c = ler("../components/CotaInativa.jsx");
-  assert.match(c, /Comprar cota/, "o caminho para comprar desapareceu");
-  assert.match(c, /incompleta/,
-    "deixou de distinguir a cota incompleta — mandaria comprar quem já pagou");
-  assert.doesNotMatch(semComentarios(c), /animation:\s*["'`]gut-fade/,
-    "ganhou pulsação: isto é um estado de BLOQUEIO, não de espera — sugeriria 'aguarde' a quem tem de agir");
-});
-
-// ── MC89.41 (F3) — DESTRANCAR SEM REABRIR ───────────────────────────────────
-
-test("⚠️ F3 não pode acrescentar poller: reutiliza o `carregar` que já existe", () => {
-  const c = ler("../pages/CorporativoCarteira.jsx");
-  const src = semComentarios(c);
-  // O polling de confirmação já existia (MC17.1). Se aparecer um segundo
-  // setInterval/setTimeout recorrente para /cotas, é poller novo — e o MC89.33
-  // mediu ~36 pedidos/min em repouso, que os MC88.3x passaram meses a limpar.
-  assert.equal((src.match(/setInterval\(/g) || []).length, 0,
-    "apareceu um setInterval na carteira — o F3 devia reutilizar o polling existente");
-  assert.match(src, /atualizarTipoCorporativo\(rc\.data\)/,
-    "o F3 deixou de propagar a cota para o contexto — o painel só destrancaria ao reabrir a app");
-});
-
-test("⚠️ F3 só propaga com dados: um 404 não pode reabrir o gate", () => {
-  const src = semComentarios(ler("../pages/CorporativoCarteira.jsx"));
-  assert.match(src, /if \(rc\.ok && rc\.data\) atualizarTipoCorporativo/,
-    "passou a propagar sem verificar — um 404 poria cotaCorporativa a null e reabriria o gate");
+  assert.doesNotMatch(app, /cotaAtiva === false|ROTAS_SEM_GATE_DE_COTA|CotaInativa|CorporativoRoute/);
+  assert.equal(existsSync(new URL("../components/CotaInativa.jsx", import.meta.url)), false);
+  assert.equal(existsSync(new URL("../pages/CorporativoCarteira.jsx", import.meta.url)), false);
 });
 
 test("⚠️ atualizarTipoCorporativo TEM de ser estável (senão é um ciclo de fetch)", () => {

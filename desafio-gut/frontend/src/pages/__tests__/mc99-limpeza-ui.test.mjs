@@ -195,21 +195,10 @@ test("MC99/SEG3.1 · o banner (2.º vidro) saiu dos Lances", () => {
   assert.ok(m.includes("TabelaLances"), "o painel de lances desapareceu — removeu-se a coisa errada");
 });
 
-test("MC99/SEG3.2 · os heroes de Seja Nosso Parceiro estão em vidro padrão", () => {
-  const s = codigo(ler("src/pages/SejaNossoParceiro.jsx"));
-  // ⚠️ SÃO DOIS. A página tem dois ramos de render (o normal e o de "cadastro
-  // indisponível"), cada um com o seu hero. A 1.ª versão desta guarda olhava só para o
-  // PRIMEIRO `<motion.header` — e por isso deixou passar uma correcção INCOMPLETA: eu
-  // tinha glazado apenas o do segundo ramo. Um guarda que verifica "o primeiro" quando
-  // existem dois é meio guarda. Agora são TODOS.
-  const posicoes = [...s.matchAll(/<motion\.header/g)].map((m) => m.index);
-  assert.ok(posicoes.length >= 2, `esperava 2 heroes (2 ramos de render), vi ${posicoes.length}`);
-  posicoes.forEach((pos, i) => {
-    const tag = s.slice(pos, s.indexOf(">", pos));
-    assert.match(tag, /className="gut-glass-standard"/,
-      `o hero #${i + 1} está SOLTO sobre a ilustração (sem superfície) — o defeito do MC89.4`);
-  });
-  assert.ok(s.includes("Seja Nosso Parceiro!"), "o título do hero desapareceu");
+// UTAC108f (R18) — a página «Seja Nosso Parceiro» saiu com o lojista: o guarda dos heroes ficou sem objecto.
+test("UTAC108f · os heroes de Seja Nosso Parceiro já não existem (página removida)", async () => {
+  const { existsSync } = await import("node:fs");
+  assert.equal(existsSync(new URL("../SejaNossoParceiro.jsx", import.meta.url)), false);
 });
 
 // ═══ SEG4 — coerência para o utilizador comum ══════════════════════════════════

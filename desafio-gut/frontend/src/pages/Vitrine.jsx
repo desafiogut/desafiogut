@@ -12,7 +12,6 @@
 
 import { useEffect, useState } from "react";
 import { Link, useParams, Navigate } from "react-router-dom";
-import DOMPurify from "dompurify";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { useAppContext, useAppTimer } from "../context/AppContext.jsx";
 import { GlassCard } from "@/components/ui";
@@ -23,49 +22,8 @@ import { imagemProdutoSrc } from "../lib/imagem.js";
 import { tiersAgoraVisiveis, tierAtivoAgora } from "../data/programacao-junho-2026.js";
 import { apiGet } from "../lib/api.js";
 
-// MC11.3 — Header dual da Vitrine. Renderizado SOMENTE quando
-// tipoUsuario === "corporativo": dá ao lojista um resumo da cota ativa +
-// atalho para /corporativo/analytics, mantendo abaixo a vitrine "cliente
-// final" para ele ver o que o usuário comum enxerga.
-function VitrineHeaderLojista({ cota, isMobile }) {
-  const categoria = cota?.categoria || "—";
-  const impressoes = cota?.impressoes != null ? cota.impressoes : "—";
-  const cliques    = cota?.cliques    != null ? cota.cliques    : "—";
-  const ctr        = cota?.ctr        != null ? `${cota.ctr.toFixed(1)}%` : "—";
-  return (
-    <GlassCard
-      as="section"
-      aria-label="Painel do Parceiro"
-      className={`flex gap-3 ${isMobile ? 'flex-col items-start p-4' : 'flex-row items-center justify-between px-6 py-5'}`}
-    >
-      <div>
-        <div style={{
-          display: "flex", alignItems: "center", gap: "0.5rem",
-          fontSize: "0.72rem", fontWeight: 800, letterSpacing: "0.08em",
-          color: "#00d4aa", textTransform: "uppercase",
-        }}>
-          🏢 Painel do Parceiro · Vitrine
-        </div>
-        <div style={{ marginTop: "0.35rem", fontSize: isMobile ? "0.92rem" : "1.02rem", color: "#e8f0fe", fontWeight: 700 }}>
-          Cota <strong style={{ color: "#f5a623" }}>{categoria}</strong>
-          {" "}· {impressoes} imp · {cliques} cliq · {ctr} CTR
-        </div>
-      </div>
-      <Link
-        to="/corporativo/analytics"
-        style={{
-          padding: "0.6rem 0.9rem",
-          background: "linear-gradient(135deg,#00d4aa,#00a888)",
-          color: "#0a0f1a", fontWeight: 800, fontSize: "0.8rem",
-          textDecoration: "none", borderRadius: "10px",
-          letterSpacing: "0.04em", whiteSpace: "nowrap",
-        }}
-      >
-        Ver analytics completo →
-      </Link>
-    </GlassCard>
-  );
-}
+// UTAC108f (R18-D) — saiu o cabeçalho «Painel do Parceiro» (`VitrineHeaderLojista`, MC11.3), que
+// levava a `/corporativo/analytics`: o lojista saiu do app e a vitrine é a mesma para todos.
 
 const TZ_PADRAO = "America/Sao_Paulo";
 function getTimezone() {
@@ -164,10 +122,7 @@ function formatarTimer(segundosRestantes) {
   return `${pad(m)}:${pad(s)}`;
 }
 
-function SlotCard({ slot, isMobile, sticky, hrefOverride, status, timer, cotaInfo, bannerSvg, produtos, corporativo }) {
-  const safeBannerSvg = bannerSvg
-    ? DOMPurify.sanitize(bannerSvg, { USE_PROFILES: { svg: true } })
-    : null;
+function SlotCard({ slot, isMobile, sticky, hrefOverride, status, timer, cotaInfo, produtos }) {
   return (
     <GlassCard
       as="article"
@@ -250,10 +205,7 @@ function SlotCard({ slot, isMobile, sticky, hrefOverride, status, timer, cotaInf
             : `${slot.cotasDisponiveis}`}
         />
         <Info label="Tipo" value={slot.modalidade} small />
-        {/* MC39.3.1 (#8): "Contrato"/"Mín. produto" são dados internos do lojista —
-            só visíveis ao perfil corporativo. O utilizador final vê Cotas + Tipo + benefícios. */}
-        {corporativo && <Info label="Contrato" value={slot.valorContrato} />}
-        {corporativo && <Info label="Mín. produto" value={slot.valorMinProduto} />}
+        {/* UTAC108f (R18-D) — «Contrato»/«Mín. produto» (dados internos do lojista, MC39.3.1 #8) saíram. */}
       </div>
 
       <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
@@ -265,18 +217,7 @@ function SlotCard({ slot, isMobile, sticky, hrefOverride, status, timer, cotaInf
         ))}
       </ul>
 
-      {/* MC12 — banner real para corporativo */}
-      {safeBannerSvg && (
-        <div
-          aria-label="Banner publicitário do parceiro"
-          style={{
-            borderRadius: "8px", overflow: "hidden",
-            border: `1px solid ${slot.corBorda}`,
-            maxHeight: "100px",
-          }}
-          dangerouslySetInnerHTML={{ __html: safeBannerSvg }}
-        />
-      )}
+      {/* UTAC108f (R18-D) — saiu o banner real do parceiro (MC12), só visível ao lojista. */}
 
       {/* MC15 ITEM 3 — produtos reais no slot */}
       {produtos && produtos.length > 0 && (
@@ -364,7 +305,7 @@ function Info({ label, value, small }) {
   );
 }
 
-function VitrineDetalhe({ slot, isMobile, corporativo }) {
+function VitrineDetalhe({ slot, isMobile }) {
   return (
     <div style={{ padding: isMobile ? "1rem" : "1.5rem 2rem", color: "#e8f0fe", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
       <nav aria-label="Trilha de navegação" style={{ fontSize: "0.78rem", color: "#94a3b8" }}>
@@ -393,27 +334,8 @@ function VitrineDetalhe({ slot, isMobile, corporativo }) {
         display: "flex", flexDirection: "column", gap: "1rem",
         boxShadow: `0 4px 18px rgba(0,0,0,0.35), 0 0 0 1px ${slot.corDim}`,
       }}>
-        {/* MC99.1 (SEG6) — decisão do operador (R18): «Cotas disponíveis» e «Exclusividade»
-            passam a ser dados do LOJISTA. Medido ANTES de gatear — a lição do MC99 é
-            perguntar o que o utilizador PERDE, não onde eu disse que estava:
-              · as COTAS não se perdem: o SlotCard já mostra «Cotas» («N de M» atribuídas)
-                a todos, com decisão anterior a documentá-lo (MC39.3.1 #8). O que sai daqui
-                é uma REPETIÇÃO na vista de detalhe, não a informação;
-              · «EXCLUSIVIDADE» não existe em mais lado nenhum: passa a ser visível apenas
-                ao perfil corporativo. Fica registado no relatório como perda ASSUMIDA por
-                decisão do operador — não como descuido.
-            A grelha inteira é gateada (e não só as duas linhas): com as quatro células
-            gated, o comum veria uma caixa vazia com padding e borda. */}
-        {corporativo && (
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: "0.75rem" }}>
-            <Info label="Cotas disponíveis" value={`${slot.cotasDisponiveis}`} />
-            <Info label="Exclusividade" value={slot.exclusiva ? "Sim" : "Não"} small />
-            {/* MC39.3.1 (#8): dados internos do lojista — só perfil corporativo. */}
-            <Info label="Valor de contrato" value={slot.valorContrato} />
-            <Info label="Valor mín. produto" value={slot.valorMinProduto} />
-          </div>
-        )}
-
+        {/* UTAC108f (R18-D) — a grelha do lojista («Cotas disponíveis», «Exclusividade», «Valor de contrato»,
+            «Valor mín. produto», MC99.1 SEG6) saiu com o lojista. */}
         <div>
           <h2 style={{ margin: "0 0 0.5rem", fontSize: "0.85rem", fontWeight: 800, color: slot.cor, letterSpacing: "0.04em", textTransform: "uppercase" }}>
             Benefícios de visibilidade
@@ -483,36 +405,14 @@ export default function Vitrine() {
   const isMobile = useIsMobile();
   const { slot: slotId } = useParams();
   const tz = getTimezone();
-  // MC12 — vitrine dual: tipoUsuario + addressCorporativo para banners reais.
   // MC15.4 — edicoes (mapa multi-edição) para cronómetro por slot.
+  // UTAC108f (R18-D) — saiu a «vitrine dual» do lojista (tipoUsuario/cotaCorporativa/addressCorporativo).
   const {
-    prazoFlash, prazoProgramado, tipoUsuario, cotaCorporativa, addressCorporativo,
+    prazoFlash, prazoProgramado,
     edicoes,
   } = useAppContext();
   // MC44 P0 — timer via contexto isolado.
   const { edicoesTick, timeLeftEdicaoSegundos } = useAppTimer();
-
-  // MC12 — banners reais para usuário corporativo (app + site).
-  const [bannerData, setBannerData] = useState({ app: null, site: null });
-  useEffect(() => {
-    if (tipoUsuario !== "corporativo" || !addressCorporativo) {
-      setBannerData({ app: null, site: null });
-      return;
-    }
-    let cancel = false;
-    Promise.all([
-      apiGet(`banners?cliente_id=${encodeURIComponent(addressCorporativo)}&formato=app`),
-      apiGet(`banners?cliente_id=${encodeURIComponent(addressCorporativo)}&formato=site`),
-    ])
-      .then(([rApp, rSite]) => {
-        if (cancel) return;
-        const app  = rApp.ok  ? rApp.data  : null;
-        const site = rSite.ok ? rSite.data : null;
-        setBannerData({ app, site });
-      })
-      .catch(() => {});
-    return () => { cancel = true; };
-  }, [tipoUsuario, addressCorporativo]);
 
   // Tick a cada 1s para atualizar timers visíveis nos cards (Onda 5 FASE 0).
   // Cálculo é absoluto: `prazo - now`, então não acumula drift.
@@ -560,7 +460,7 @@ export default function Vitrine() {
   if (slotId) {
     const slot = SLOTS.find((s) => s.id === slotId);
     if (!slot) return <Navigate to="/vitrine" replace />;
-    return <VitrineDetalhe slot={slot} isMobile={isMobile} corporativo={tipoUsuario === "corporativo"} />;
+    return <VitrineDetalhe slot={slot} isMobile={isMobile} />;
   }
 
   // Regra §8: domingos ocultam Bronze e Ouro.
@@ -613,9 +513,6 @@ export default function Vitrine() {
 
   return (
     <div style={{ padding: isMobile ? "1rem" : "1.5rem 2rem", color: COR.text, display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-      {tipoUsuario === "corporativo" && (
-        <VitrineHeaderLojista cota={cotaCorporativa} isMobile={isMobile} />
-      )}
       {/* MC67 — topo da Vitrine DENTRO de Glass (item 6); avatar GUTO removido
           (item 2); jargão de "Especificação Refatorada §…"/"§8 da spec" removido
           (item 5); cores alinhadas à paleta oficial (#ff6b35). */}
@@ -666,12 +563,6 @@ export default function Vitrine() {
             timer={slotTimerMap[slot.id]}
             cotaInfo={slotCotasMap[slot.id]}
             produtos={produtosPorCat[slot.id] || []}
-            corporativo={tipoUsuario === "corporativo"}
-            bannerSvg={tipoUsuario === "corporativo"
-              ? (slot.id === "diamante" || slot.id === "ouro"
-                  ? bannerData.site?.svg ?? null
-                  : bannerData.app?.svg ?? null)
-              : null}
           />
         ))}
       </section>
@@ -707,8 +598,6 @@ export default function Vitrine() {
                   timer={slotTimerMap[slot.id]}
                   cotaInfo={slotCotasMap[slot.id]}
                   produtos={produtosPorCat[slot.id] || []}
-                  corporativo={tipoUsuario === "corporativo"}
-                  bannerSvg={tipoUsuario === "corporativo" ? (bannerData.app?.svg ?? null) : null}
                 />
               </div>
             ))}
@@ -725,8 +614,6 @@ export default function Vitrine() {
                 timer={slotTimerMap[slot.id]}
                 cotaInfo={slotCotasMap[slot.id]}
                 produtos={produtosPorCat[slot.id] || []}
-                corporativo={tipoUsuario === "corporativo"}
-                bannerSvg={tipoUsuario === "corporativo" ? (bannerData.app?.svg ?? null) : null}
               />
             ))}
           </div>

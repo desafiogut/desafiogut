@@ -230,7 +230,8 @@ test("UTAC106c/RENDER · barra e rail: 4 principais na ordem canónica e 5 secun
   const semTags = (h) => h.replace(/<[^>]+>/g, "|");
 
   const ROT = ["Carteira", "Menor Lance Único", "Início", "Ofertas Programadas"];
-  const SEC = ["Vitrine (4 Slots)", "Programação", "Meus Ativos", "🤝 Seja nosso parceiro!", "Configurações"];
+  // UTAC108f — «🤝 Seja nosso parceiro!» saiu com o lojista.
+  const SEC = ["Vitrine (4 Slots)", "Programação", "Meus Ativos", "📜 Regras Oficiais", "Configurações"];
   const ordemOk = (t, lista) => lista.every((r, i) => t.indexOf(r) > -1 && (i === 0 || t.indexOf(r) > t.indexOf(lista[i - 1])));
 
   const tB = semTags(renderToStaticMarkup(React.createElement(React.Fragment, null, cB.resultado())));
@@ -247,10 +248,11 @@ test("UTAC106c/RENDER · barra e rail: 4 principais na ordem canónica e 5 secun
   const tB2 = semTags(renderToStaticMarkup(React.createElement(React.Fragment, null, cB.resultado())));
   assert.ok(ordemOk(tB2, SEC), `barra (sheet aberto): secundários fora de ordem (${JSON.stringify(SEC.map((r) => tB2.indexOf(r)))})`);
   assert.ok(ordemOk(tS, SEC), `rail: secundários dessincronizados da barra (${JSON.stringify(SEC.map((r) => tS.indexOf(r)))})`);
-  // e o rail tem MESMO a ordem na forma antiga? (controlo negativo: a divergência era Config. antes de Parceiro)
-  assert.ok(tS.indexOf("Meus Ativos") < tS.indexOf("🤝 Seja nosso parceiro!") &&
-            tS.indexOf("🤝 Seja nosso parceiro!") < tS.indexOf("Configurações"),
-    "a ordem antiga (Configurações antes de Parceiro) voltou ao rail");
+  // UTAC108f — «🤝 Seja nosso parceiro!» saiu com o lojista; controlo: não voltou à barra nem ao rail.
+  assert.equal(tB2.indexOf("Seja nosso parceiro"), -1, "o link do parceiro voltou à barra");
+  assert.equal(tS.indexOf("Seja nosso parceiro"), -1, "o link do parceiro voltou ao rail");
+  // e «Configurações» continua no FIM dos secundários (a ordem antiga era Config. antes de Parceiro)
+  assert.ok(tS.indexOf("Meus Ativos") < tS.indexOf("Configurações"), "Configurações saiu do fim do rail");
 });
 
 // ═══ UTAC107g (Frente B) — indicador DISCRETO das senhas antigas na Carteira ══════════════════

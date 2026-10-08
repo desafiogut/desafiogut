@@ -164,5 +164,6 @@ test("os IDENTIFICADORES e o NOME DO CONTRATO são preservados (não é um refac
   // essa premissa: o campo continua a ser contrato interno, agora com o nome novo.
   assert.match(ler("src/pages/Vitrine.jsx"), /\bmodalidade\b/, "o campo modalidade (ex-tipoLeilao) é contrato interno");
   assert.match(ler("src/context/AppContext.jsx"), /leilaoTimer\.js/, "o import de leilaoTimer é interno");
-  assert.match(ler("src/pages/Seguranca.jsx"), /LeilaoGUT/, "o nome do contrato on-chain é um facto");
+  // UTAC108f — a `Seguranca.jsx` (só do lojista) foi apagada; o nome do contrato continua em `utils/web3.js`.
+  assert.match(ler("src/utils/web3.js"), /LeilaoGUT/, "o nome do contrato on-chain é um facto")
 });

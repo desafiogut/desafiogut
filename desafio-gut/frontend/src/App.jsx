@@ -10,7 +10,6 @@ import { AppProvider, useAppContext } from "./context/AppContext.jsx";
 // defeito: a rota não existia e o utilizador ficava preso ali DEPOIS de o login
 // concluir. A regra vive fora do componente para ser testável.
 import { decidirSaidaDoRetorno, deveOferecerSaidaManual } from "./lib/retornoOAuth.js";
-import { temAcessoDiretoCadastro } from "./lib/acessoDiretoCadastro.js";
 import AppLayout from "./widgets/layout/AppLayout.jsx";
 import BackgroundCanvas from "./widgets/layout/BackgroundCanvas.jsx";
 import { AppEnvironmentProvider } from "./context/useAppContextEnvironment.jsx";
@@ -31,7 +30,6 @@ import Vitrine         from "./pages/Vitrine.jsx";
 import EstadoNeutro    from "./components/EstadoNeutro.jsx";
 // MC89.40 (F2) — ecrã de bloqueio do painel do lojista sem cota paga. Eager:
 // substitui conteúdo já em rota, um fallback de Suspense aqui seria um piscar.
-import CotaInativa     from "./components/CotaInativa.jsx";
 import ChatbotWidget   from "./components/ChatbotWidget.jsx";
 // MC88.25 (P3) — avisa se a app nao estiver na rede de producao. Silencioso em mainnet.
 import AvisoRede       from "./components/AvisoRede.jsx";
@@ -50,7 +48,6 @@ const MercadoLances        = lazy(() => import("./pages/MercadoLances.jsx"));
 const OfertasProgramadas   = lazy(() => import("./pages/OfertasProgramadas.jsx")); // UTAC106b
 const ScheduleView         = lazy(() => import("./components/ScheduleView.jsx"));
 const MeusAtivos           = lazy(() => import("./pages/MeusAtivos.jsx"));
-const Seguranca            = lazy(() => import("./pages/Seguranca.jsx"));
 const Configuracoes        = lazy(() => import("./pages/Configuracoes.jsx"));
 // UTAC106h — Regras Oficiais do programa de fidelidade (requisito da Google Play: regras
 // publicadas no app). Vive DENTRO do AppLayout para ser alcançável pelo menu «Mais».
@@ -71,13 +68,6 @@ const AdminConfiguracoes   = lazy(() => import("./pages/admin/ConfiguracoesAdmin
 const AdminAprovacoes      = lazy(() => import("./pages/admin/Aprovacoes.jsx"));
 const AdminCotas           = lazy(() => import("./pages/admin/Cotas.jsx"));
 const AdminPedidos         = lazy(() => import("./pages/admin/Pedidos.jsx")); // MC-ECOMMERCE-01a
-const CorporativoDashboard = lazy(() => import("./pages/CorporativoDashboard.jsx"));
-const CorporativoCotas     = lazy(() => import("./pages/CorporativoCotas.jsx"));
-const CorporativoBanners   = lazy(() => import("./pages/CorporativoBanners.jsx"));
-const CorporativoAnalytics = lazy(() => import("./pages/CorporativoAnalytics.jsx"));
-const CorporativoCarteira  = lazy(() => import("./pages/CorporativoCarteira.jsx"));
-const CorporativoCupons    = lazy(() => import("./pages/CorporativoCupons.jsx")); // UTAC105b
-const SejaNossoParceiro    = lazy(() => import("./pages/SejaNossoParceiro.jsx"));
 // MC91.7 — rotas públicas de entrada por e-mail (usuário comum). Lazy: saem
 // do chunk inicial (code-splitting MC39.19), padrão das demais páginas.
 const Cadastro             = lazy(() => import("./pages/Cadastro.jsx"));
@@ -103,97 +93,8 @@ function RouteFallback() {
   );
 }
 
-// MC12.2 — CorporativoRoute usa tipoUsuario derivado de cotas blob.
-// tipoCarregando evita redirect prematuro enquanto o fetch do blob está pendente.
-// MC17 — query param ?rc=1: acesso direto sem Privy após cadastro.
-// Usa window.location (full page reload garante search params corretos).
-// MC89.40 (F2) — rotas do mundo lojista que continuam abertas MESMO com a cota
-// inativa. Sem esta lista, o botão "Comprar cota" do ecrã de bloqueio levaria a
-// uma rota que mostra… o ecrã de bloqueio. Seria uma porta para uma parede — o
-// erro que o MC89.34 já ensinou a não repetir.
-//   /corporativo/carteira → é ONDE SE COMPRA
-//   /corporativo/cotas    → é onde se vê o estado ("ATIVA"/"INATIVA")
-const ROTAS_SEM_GATE_DE_COTA = new Set(["/corporativo/carteira", "/corporativo/cotas"]);
-
-function CorporativoRoute({ children }) {
-  const {
-    tipoUsuario, tipoProvavel, tipoCarregando, cotaCorporativa, isConnected,
-    pareceAutenticado, ready,
-    // MC89.40 (F2) — true | false | null (ainda não sei).
-    cotaAtiva,
-  } = useAppContext();
-  const { pathname } = useLocation();
-  // MC39.4.1 — esperar o Privy inicializar antes de decidir o redirect. Sem isto, um
-  // hard-reload de uma rota gated (ex.: /seguranca) bouncava o lojista para "/" porque
-  // isConnected ainda era false durante a inicialização do Privy.
-  //
-  // MC88.42 — com o palpite otimista, o lojista chega aqui ANTES de as cotas
-  // responderem. Se esta guarda continuasse a devolver `null` nesse intervalo,
-  // ele trocava o Dashboard errado por um ECRÃ EM BRANCO — que é exatamente o
-  // defeito que o MC88.37 corrigiu. Medido antes desta alteração: /corporativo
-  // ficava vazio ~74 ms antes de o painel aparecer.
-  //
-  // Por isso o `tipoProvavel` também é aceite AQUI: o encaminhamento e a guarda
-  // passam a usar a MESMA fonte. Sem isto, o redirect otimista mandava o
-  // utilizador para uma porta que o mandava de volta.
-  if (!ready) return null;
-  // ⚠️ MC88.42 — `!isConnected` NÃO significa "não autenticado" durante o
-  // restauro do Privy; é a mesma armadilha do MC88.38. Com o encaminhamento
-  // otimista isto criou um CICLO que eu próprio medi: `/` mandava para
-  // `/corporativo`, esta guarda via `isConnected` false e mandava de volta para
-  // `/`, que mandava outra vez — SETE voltas entre os 1974 e os 5064 ms, com o
-  // ecrã em branco. Enquanto a sessão está a ser restaurada (`pareceAutenticado`)
-  // espera-se, em vez de expulsar.
-  if (!isConnected) {
-    if (pareceAutenticado) return children;
-    if (!temAcessoDiretoCadastro(window.location.search)) return <Navigate to="/" replace />;
-    return children;
-  }
-  if (tipoCarregando) return tipoProvavel === "corporativo" ? children : null;
-
-  // ⚠️ A EXPULSÃO EXIGE UMA RESPOSTA POSITIVA, não a ausência de resposta.
-  //
-  // O efeito que busca as cotas (AppContext:338) tem `user.google.email` e
-  // `user.apple.email` nas dependências, e esses campos só resolvem A MEIO do
-  // restauro do Privy — portanto o efeito CORRE VÁRIAS VEZES. Entre corridas,
-  // `tipoCarregando` volta a false com `cotaCorporativa` ainda a null, o que
-  // fazia `tipoUsuario` cair para "comum" e esta linha expulsar o lojista.
-  //
-  // Medido: a rota saltava /corporativo ↔ / sete vezes entre os 3,4 s e os
-  // 5,4 s. O operador viu-o como "o ícone do painel está a piscar".
-  //
-  // `cotaCorporativa == null` é ambíguo — significa "ainda não encontrei" E
-  // "não é lojista". Enquanto o palpite disser corporativo (última sessão
-  // CONFIRMADA neste endereço), essa ambiguidade não pode expulsar ninguém.
-  // Só uma cota devolvida que NÃO seja corporativa o faz.
-  const confirmadoNaoCorporativo = cotaCorporativa != null && tipoUsuario !== "corporativo";
-  if (confirmadoNaoCorporativo) return <Navigate to="/" replace />;
-  if (tipoUsuario !== "corporativo" && tipoProvavel !== "corporativo") {
-    return <Navigate to="/" replace />;
-  }
-
-  // ── MC89.40 (F2) — A COTA TEM DE ESTAR PAGA PARA USAR O PAINEL ─────────────
-  //
-  // ⚠️ ESTE GATE SUBSTITUI O CONTEÚDO, NÃO REDIRECIONA. E isso não é estilo: se
-  // aqui houvesse um `<Navigate to="/">`, voltaria o CICLO que o MC88.42 mediu —
-  // sete voltas entre `/` e `/corporativo` nos 1974→5064 ms —, porque o MC89.36
-  // encaminha o lojista para cá pelo PALPITE, antes de a cota ter respondido.
-  // Encaminhar e autorizar continuam a ser coisas separadas.
-  //
-  // `cotaAtiva === null` significa "ainda não sei": nesse caso deixa-se passar,
-  // porque as guardas acima já garantiram que é lojista e o SERVIDOR recusa
-  // qualquer escrita que não deva acontecer. Bloquear no "não sei" mostraria
-  // "cota inativa" a um lojista pago durante o arranque — a mesma família de
-  // erro que o MC89.36 veio corrigir: afirmar o que ainda não se sabe.
-  //
-  // ⚠️ Isto é CONFORTO. Quem impede de facto é `_lib/cota-utils.mjs` no
-  // servidor. Um gate só aqui não fecha nada.
-  if (cotaAtiva === false && !ROTAS_SEM_GATE_DE_COTA.has(pathname)) {
-    return <CotaInativa />;
-  }
-
-  return children;
-}
+// UTAC108f (R18) — o lojista saiu do app: a guarda `CorporativoRoute` (MC12.2…MC89.40), o gate de cota
+// (`CotaInativa`) e o acesso directo `?rc=1` foram removidos com as rotas `/corporativo/*`. Histórico no git.
 
 // MC12.3 Item 4 — wrapper da rota raiz: lojistas autenticados NUNCA veem
 // o Dashboard de leilão. Vão direto para /corporativo. Comuns/visitantes
@@ -296,7 +197,8 @@ function DashboardOuCorporativo() {
   });
 
   if (destino === DESTINO.ADMIN)         return <Navigate to="/admin" replace />;
-  if (destino === DESTINO.CORPORATIVO)   return <Navigate to="/corporativo" replace />;
+  // UTAC108f (R18-B) — o lojista saiu do app: uma conta corporativa passa a ver o app do comprador
+  // (o destino «corporativo» da `lib/encaminhamento.js` cai no Dashboard; limpeza da lib no 108g).
   if (destino === DESTINO.ESTADO_NEUTRO) return <EstadoNeutro />;
   return <Dashboard />;
 }
@@ -471,7 +373,7 @@ export default function App() {
               `activeTab` (derivado da rota) fica em «lances» e — o que importa — o
               isolamento corporativo (`rotasProibidas`, AppContext) continua a apanhar o
               lojista, porque o pathname efectivo passa a `/mercado` (achado ⚠A1 do
-              validador do UTAC106b). */}
+              validador do UTAC106b). UTAC108f: o isolamento corporativo saiu com o lojista. */}
           <Route path="/menor-lance-unico" element={<Navigate to="/mercado" replace />} />
           {/* UTAC106b — Ofertas Programadas (programa de fidelidade: Passe R$ 2,00 → pontos
               → cartão). Placeholder: o conteúdo real chega em UTAC próprio; enquanto isso a
@@ -483,9 +385,6 @@ export default function App() {
           <Route path="/produto/:id" element={<DetalheProduto />} />
           <Route path="/programacao"   element={<ScheduleView />} />
           <Route path="/ativos"     element={<MeusAtivos />}    />
-          {/* MC39.3.1 (#7): checklist de segurança é só para o lojista (corporativo).
-              Comum/visitante → CorporativoRoute redireciona para "/". */}
-          <Route path="/seguranca"  element={<CorporativoRoute><Seguranca /></CorporativoRoute>} />
           <Route path="/configuracoes" element={<Configuracoes />} />
           {/* UTAC106h — Regras Oficiais (fonte: docs/regras-oficiais.md). Dentro do AppLayout:
               acessível pelo menu «Mais» com a navegação intacta. */}
@@ -510,22 +409,11 @@ export default function App() {
             <Route path="cotas"            element={<AdminCotas />} />
             <Route path="pedidos"          element={<AdminPedidos />} />
           </Route>
-          {/* MC11.1 — rota pública: Seja Nosso Parceiro. Sem proteção. */}
-          <Route path="/seja-nosso-parceiro" element={<SejaNossoParceiro />} />
-          {/* UTAC107g — `/corp` (MC17, painel do lojista SEM guarda) saiu: o único produtor,
-              SejaNossoParceiro, passou a `/corporativo` no MC99.1 (`irParaPainel`); zero
-              referências em src/, netlify/functions/ e e-mails. */}
-          {/* MC11 — rotas corporativas (gated por CorporativoRoute). */}
-          <Route path="/corporativo"            element={<CorporativoRoute><CorporativoDashboard /></CorporativoRoute>} />
-          <Route path="/corporativo/cotas"      element={<CorporativoRoute><CorporativoCotas /></CorporativoRoute>} />
-          <Route path="/corporativo/banners"    element={<CorporativoRoute><CorporativoBanners /></CorporativoRoute>} />
-          <Route path="/corporativo/analytics"  element={<CorporativoRoute><CorporativoAnalytics /></CorporativoRoute>} />
-          <Route path="/corporativo/cupons"     element={<CorporativoRoute><CorporativoCupons /></CorporativoRoute>} />{/* UTAC105b */}
-          {/* MC17.1 — carteira do lojista + mercado dedicado (isolamento R4 preservado). */}
-          <Route path="/corporativo/carteira"   element={<CorporativoRoute><CorporativoCarteira /></CorporativoRoute>} />
-          <Route path="/corporativo/mercado"    element={<CorporativoRoute><MercadoLances /></CorporativoRoute>} />
-          {/* UTAC107g (R18-B) — URL desconhecida (incl. as rotas removidas `/edicao/:id` e
-              `/corp`, e links antigos) vai para o Início em vez de um ecrã em branco.
+          {/* UTAC108f (R18) — o lojista saiu do app: `/seja-nosso-parceiro`, `/seguranca` e `/corporativo/*`
+              (painel, cotas, banners, analytics, cupons, carteira, mercado) foram removidas. Caem no catch-all
+              abaixo → Início. O admin (`/admin/*`, incl. Cotas e Aprovações) fica. */}
+          {/* UTAC107g (R18-B) — URL desconhecida (incl. as rotas removidas `/edicao/:id`,
+              `/corp`, `/corporativo/*`, `/seguranca`, `/seja-nosso-parceiro` e links antigos) vai para o Início em vez de um ecrã em branco.
               Fica no FIM: o React Router escolhe a rota mais específica, não a primeira. */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

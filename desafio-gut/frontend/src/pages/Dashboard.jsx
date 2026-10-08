@@ -59,9 +59,7 @@ const VALOR_POR_SENHA_BRL = 2;
 const ATALHOS = [
   { label: "Vitrine 4 Slots",   icon: "🪟", to: "/vitrine"       },
   { label: "Meus Ativos",       icon: "📊", to: "/ativos"        },
-  // MC39.3.1 (#7): atalho "Segurança" removido do Dashboard do utilizador comum —
-  // o checklist de proteção passou a ser exclusivo do painel corporativo (lojista).
-  { label: "Seja Nosso Parceiro", icon: "🤝", to: "/seja-nosso-parceiro" },
+  // UTAC108f (R18) — saiu o atalho «🤝 Seja Nosso Parceiro» (o lojista saiu do app).
   { label: "Configurações",     icon: "⚙️", to: "/configuracoes" },
 ];
 

@@ -65,8 +65,9 @@ test("controlo positivo: o router reconstruído resolve as rotas vivas como em p
   assert.equal(destino("/carteira"), "/carteira");
   assert.equal(destino("/mercado"), "/mercado");
   assert.equal(destino("/ativos"), "/ativos");
-  assert.equal(destino("/corporativo"), "/corporativo");
-  assert.equal(destino("/corporativo/cotas"), "/corporativo/cotas");
+  // UTAC108f — o lojista saiu: `/corporativo/*` deixou de ter rota (o controlo passa a ser o admin).
+  assert.equal(destino("/admin"), "(index)");
+  assert.equal(destino("/admin/cotas"), "cotas");
   assert.equal(destino("/admin/usuarios/0xabc"), "usuarios/:endereco");
   assert.equal(destino("/produto/7"), "/produto/:id");
 });
@@ -79,6 +80,14 @@ test("Frente C · `/edicao/:id` e `/corp` deixaram de ter rota — caem no catch
   assert.doesNotMatch(APP, /path=["']\/corp["']/, "a rota /corp continua registada");
   assert.doesNotMatch(APP, /EdicaoDetalhe/, "o App.jsx ainda importa/usa EdicaoDetalhe");
   assert.ok(!existsSync(join(SRC, "pages", "EdicaoDetalhe.jsx")), "pages/EdicaoDetalhe.jsx continua no disco (R18-C)");
+});
+
+test("UTAC108f · as rotas do lojista deixaram de existir — caem no catch-all (→ Início)", () => {
+  for (const url of ["/corporativo", "/corporativo/cotas", "/corporativo/banners", "/corporativo/analytics",
+                     "/corporativo/cupons", "/corporativo/carteira", "/corporativo/mercado",
+                     "/seguranca", "/seja-nosso-parceiro"]) {
+    assert.equal(destino(url), "*", `${url} ainda tem rota`);
+  }
 });
 
 test("Frente C · o catch-all manda para o Início e não rouba nenhuma rota viva", () => {
@@ -144,8 +153,11 @@ test("catch-all não esconde rotas perdidas: todo o destino de menu e de navega�
       for (const m of txt.matchAll(/(?:navigate\(\s*|\bto=\{[^}`]*?)`(\/[^`$]*)\$\{/g)) add(`${m[1]}prova-1`, p);
     }
   })(SRC);
-  assert.ok(destinos.size >= 30, `controlo: só ${destinos.size} destinos recolhidos — o extractor está cego`);
-  for (const sonda of ["/vitrine/prova-1", "/seguranca", "/admin/pedidos", "/corporativo/cupons"]) {
+  // UTAC108f — com o lojista removido o extractor recolhe 26 destinos (eram ≥ 30 com os menus e links do lojista);
+  // o limiar baixa ao medido-com-folga, e as sondas abaixo continuam a provar que ele vê.
+  assert.ok(destinos.size >= 20, `controlo: só ${destinos.size} destinos recolhidos — o extractor está cego`);
+  // UTAC108f — as sondas `/seguranca` e `/corporativo/cupons` saíram com o lojista; ficam destinos vivos.
+  for (const sonda of ["/vitrine/prova-1", "/regras-oficiais", "/admin/pedidos", "/ofertas-programadas"]) {
     assert.ok(destinos.has(sonda), `controlo: o extractor não viu ${sonda}`);
   }
   const perdidos = [...destinos].filter(([u]) => destino(u) === "*" || destino(u) === null);
@@ -155,7 +167,7 @@ test("catch-all não esconde rotas perdidas: todo o destino de menu e de navega�
 test("Frente A · nenhum destino ficou sem caminho: cada rota de navegação está num menu", () => {
   const bn = semComentarios(ler("widgets/layout/BottomNav.jsx"));
   for (const p of ["/carteira", "/mercado", "/ofertas-programadas", "/vitrine", "/programacao",
-                   "/ativos", "/seja-nosso-parceiro", "/regras-oficiais", "/configuracoes"]) {
+                   "/ativos", "/regras-oficiais", "/configuracoes"]) { // UTAC108f: sem o parceiro
     assert.match(bn, new RegExp(`path:\\s*"${p.replace(/\//g, "\\/")}"`), `${p} perdeu o caminho no telemóvel`);
     assert.notEqual(destino(p), "*", `${p} perdeu a rota`);
   }

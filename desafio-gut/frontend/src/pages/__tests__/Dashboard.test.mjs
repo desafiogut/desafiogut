@@ -458,11 +458,12 @@ describe("UTAC107g · Início — «Acesso Rápido» sem atalhos redundantes", (
     return (bloco.match(/<button[\s\S]*?<\/button>/g) || []).map(texto);
   }
 
-  test("ficam EXACTAMENTE os 4 atalhos para destinos que no telemóvel só vivem no «Mais»", () => {
+  // UTAC108f — o atalho «🤝 Seja Nosso Parceiro» saiu com o lojista: ficam 3.
+  test("ficam EXACTAMENTE os 3 atalhos para destinos que no telemóvel só vivem no «Mais»", () => {
     definirResultadoOficial(null);
     const r = atalhos(renderizar());
     assert.deepEqual(r.map((t) => t.replace(/^\S+\s+/, "")),
-      ["Vitrine 4 Slots", "Meus Ativos", "Seja Nosso Parceiro", "Configurações"],
+      ["Vitrine 4 Slots", "Meus Ativos", "Configurações"],
       `atalhos renderizados: ${JSON.stringify(r)}`);
   });
 
@@ -479,7 +480,7 @@ describe("UTAC107g · Início — «Acesso Rápido» sem atalhos redundantes", (
     const bloco = fonte.match(/const ATALHOS = \[[\s\S]*?\];/)?.[0];
     assert.ok(bloco, "o array ATALHOS desapareceu");
     const destinos = [...bloco.matchAll(/^\s*\{[^}]*\bto:\s*"([^"]+)"/gm)].map((m) => m[1]);
-    assert.deepEqual(destinos, ["/vitrine", "/ativos", "/seja-nosso-parceiro", "/configuracoes"]);
+    assert.deepEqual(destinos, ["/vitrine", "/ativos", "/configuracoes"]); // UTAC108f: sem o parceiro
     assert.equal(new Set(destinos).size, destinos.length, "dois atalhos para o mesmo destino");
     // /carteira e /mercado continuam no ecrã: KPI «Saldo (R$)» e CTA da Edição Ativa
     assert.match(fonte, /label: "Saldo \(R\$\)"[^\n]*to: "\/carteira"/, "o KPI «Saldo» deixou de levar à Carteira");

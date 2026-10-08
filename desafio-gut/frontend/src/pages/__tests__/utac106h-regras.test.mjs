@@ -132,7 +132,7 @@ test("LINK · a Sidebar tem as Regras Oficiais na MESMA posição relativa (orde
   const side = ler("src/widgets/layout/Sidebar.jsx");
   const ordemNav = [...nav.matchAll(/path: "(\/[a-z-]+)"/g)].map((m) => m[1]);
   const ordemSide = [...side.matchAll(/path: "(\/[a-z-]+)"/g)].map((m) => m[1]);
-  const secundarios = ["/vitrine", "/programacao", "/ativos", "/seja-nosso-parceiro", "/regras-oficiais", "/configuracoes"];
+  const secundarios = ["/vitrine", "/programacao", "/ativos", "/regras-oficiais", "/configuracoes"]; // UTAC108f: sem o parceiro
   for (const p of secundarios) {
     assert.ok(ordemNav.includes(p), `BottomNav sem ${p}`);
     assert.ok(ordemSide.includes(p), `Sidebar sem ${p}`);

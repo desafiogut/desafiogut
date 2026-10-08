@@ -38,31 +38,17 @@ test("controlo positivo: o stripper apaga comentários e poupa código", () => {
   assert.ok(c.includes("irParaPainel();"), "apagou código");
 });
 
-test("MC99.1/SEG2 · um único ponto de entrada para o painel do lojista", () => {
-  const c = codigo(ler("src/pages/SejaNossoParceiro.jsx"));
-  // (a) o helper existe exactamente uma vez
-  assert.equal(conta(c, "const irParaPainel ="), 1, "o helper irParaPainel desapareceu ou foi duplicado");
-  // (b) a navegação literal só pode existir DENTRO do helper — quem a copiar outra vez
-  //     cria um segundo sítio que pode divergir, que é o que o SEG2 veio eliminar.
-  assert.equal(conta(c, 'navigate("/corporativo"'), 1,
-    'há um navigate("/corporativo") directo fora do helper — o SEG2 foi revertido');
-  // (c) os 4 sítios continuam a usar o helper
-  assert.equal(conta(c, "irParaPainel();"), 4, "esperava 4 chamadas a irParaPainel()");
+// UTAC108f (R18) — o lojista saiu do app: o SEG2 (helper `irParaPainel` do SejaNossoParceiro) e o SEG6
+// (grelha «Cotas disponíveis/Exclusividade» só do lojista na Vitrine) ficaram sem objecto. Guardas de remoção:
+test("UTAC108f · a página «Seja Nosso Parceiro» saiu (sem painel do lojista para onde entrar)", async () => {
+  const { existsSync } = await import("node:fs");
+  assert.equal(existsSync(resolve(FRONT, "src/pages/SejaNossoParceiro.jsx")), false);
+  assert.doesNotMatch(codigo(ler("src/App.jsx")), /SejaNossoParceiro|seja-nosso-parceiro/);
 });
 
-test("MC99.1/SEG6 · «Cotas disponíveis» e «Exclusividade» são dados do LOJISTA", () => {
+test("UTAC108f (R18-D) · a Vitrine já não tem ramos do lojista (grelha interna, cabeçalho, banners)", () => {
   const c = codigo(ler("src/pages/Vitrine.jsx"));
-  // A grelha inteira fica dentro de {corporativo && ( ... )}: as quatro células são
-  // internas ao lojista. Gatear só duas deixaria uma caixa vazia com padding e borda.
-  const m = c.match(/\{corporativo && \(\s*<div style=\{\{ display: "grid"[\s\S]*?<\/div>\s*\)\}/);
-  assert.ok(m, "a grelha das cotas não está dentro de um guarda corporativo");
-  for (const rotulo of ["Cotas disponíveis", "Exclusividade"]) {
-    assert.ok(m[0].includes(rotulo), `${rotulo} saiu do bloco gateado (o lojista perdeu-a)`);
-  }
-  // E as que já eram gateadas por MC39.3.1 continuam lá dentro (não se perdeu nada ao lojista)
-  for (const rotulo of ["Valor de contrato", "Valor mín. produto"]) {
-    assert.ok(m[0].includes(rotulo), `${rotulo} desapareceu do painel do lojista`);
-  }
+  assert.doesNotMatch(c, /corporativo|VitrineHeaderLojista|bannerSvg|Valor de contrato|Exclusividade/);
 });
 
 test("MC99.1/SEG6 · CONTROLO — o utilizador comum NÃO perdeu a informação das cotas", () => {

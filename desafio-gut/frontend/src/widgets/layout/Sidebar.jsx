@@ -39,9 +39,7 @@ const NAV_ITEMS = [
   { path: "/vitrine",       label: "Vitrine (4 Slots)", icon: <IconTarget />,    end: false },
   { path: "/programacao",   label: "Programação",       icon: <IconTarget />,    end: false },
   { path: "/ativos",        label: "Meus Ativos",       icon: <IconTrending />,  end: false },
-  // MC11.1 — Seção pública "Seja Nosso Parceiro" (visível a TODOS: não logados,
-  // comuns e lojistas). Porta de entrada para o fluxo corporativo.
-  { path: "/seja-nosso-parceiro", label: "🤝 Seja nosso parceiro!", icon: <IconTrending />, end: false },
+  // UTAC108f (R18) — «🤝 Seja nosso parceiro!» saiu com o lojista.
   // UTAC106h — Regras Oficiais do programa de fidelidade. Mesma ordem do `SECONDARY_LINKS`
   // do BottomNav (Vitrine · Programação · Meus Ativos · Parceiro · Regras Oficiais · Configurações).
   { path: "/regras-oficiais", label: "📜 Regras Oficiais", icon: <IconShield />, end: false },
@@ -55,21 +53,11 @@ const NAV_ITEMS = [
   { path: "/configuracoes", label: "Configurações",     icon: <IconSettings />,  end: false },
 ];
 
-// MC11 — Itens exclusivos do Usuário Corporativo (Lojista). Renderizados
-// SOMENTE quando tipoUsuario === "corporativo". Usuário Comum não vê.
-const CORPORATIVO_ITEMS = [
-  { path: "/corporativo",           label: "🏢 Painel Lojista", icon: <IconDashboard />, end: true  },
-  { path: "/corporativo/cotas",     label: "📢 Minhas Cotas",   icon: <IconTarget />,    end: false },
-  { path: "/corporativo/banners",   label: "🖼️ Meus Banners",  icon: <IconTrending />,  end: false },
-  { path: "/corporativo/analytics", label: "📊 Analytics",      icon: <IconTrending />,  end: false },
-];
+// UTAC108f (R18) — `CORPORATIVO_ITEMS` (Painel Lojista · Cotas · Banners · Analytics) saiu com o lojista.
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 const ADMIN_ITEM = { path: "/admin", label: "⚙️ Admin", icon: <IconSettings />, end: false };
-// MC39.6 (#segurança): "Segurança" deixa de ser card do CorporativoDashboard e passa para a
-// navegação. No desktop (sem secção "Mais") fica na cauda do rail corporativo, junto às utilidades
-// (Configurações). Exclusivo do corporativo; rota /seguranca gated por CorporativoRoute.
-const SEGURANCA_ITEM = { path: "/seguranca", label: "Segurança", icon: <IconShield />, end: false };
+// UTAC108f (R18-C) — o item «Segurança» (só do lojista) saiu com a página `/seguranca`.
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
@@ -77,7 +65,6 @@ export default function Sidebar() {
     isConnected, address, userLabel,
     saldoSenhas, saldoSenhasStatus,
     abrirModal, desconectar,
-    tipoUsuario,
     // MC11.2 — auth-state granular: ready (Privy SDK bootou) e authenticated
     // (sessão Privy ativa). authenticated=true && address=null = embedded
     // wallet sendo criada (gap após email-OTP). Sem isso o usuário via o
@@ -86,25 +73,8 @@ export default function Sidebar() {
   } = useAppContext();
   const { isAdmin } = useAdmin(address);
   const reduce = useReducedMotion();
-  // MC12.3 Item 4 — Isolamento do mundo lojista. Corporativo NÃO vê links
-  // comuns de Leilão (Dashboard de leilão, carteira pessoal, mercado, vitrine,
-  // programação, ativos, segurança, "seja nosso parceiro"). Vê apenas:
-  //   - 🏢 Painel Lojista + 📢 Cotas + 🖼️ Banners + 📊 Analytics (CORPORATIVO_ITEMS)
-  //   - ⚙️ Configurações (compartilhado)
-  //   - ⚙️ Admin (se isAdmin, preserva RBAC)
-  // Comum/visitante: comportamento atual (sem regressão R1).
-  const configItem = NAV_ITEMS.find(i => i.path === "/configuracoes");
-  let itensNav;
-  if (tipoUsuario === "corporativo") {
-    itensNav = [
-      ...CORPORATIVO_ITEMS,
-      ...(configItem ? [configItem] : []),
-      SEGURANCA_ITEM,
-      ...(isAdmin ? [ADMIN_ITEM] : []),
-    ];
-  } else {
-    itensNav = isAdmin ? [...NAV_ITEMS, ADMIN_ITEM] : NAV_ITEMS;
-  }
+  // UTAC108f (R18-B) — o isolamento do lojista (MC12.3 Item 4) saiu: todas as contas vêem o rail do comprador.
+  const itensNav = isAdmin ? [...NAV_ITEMS, ADMIN_ITEM] : NAV_ITEMS;
 
   // Sufixo curto refletindo status de leitura on-chain (idle/ok = vazio).
   // MC88.40 — o "◇" do estado "stale" saiu: era o mesmo problema que o

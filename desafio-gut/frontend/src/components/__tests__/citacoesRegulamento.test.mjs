@@ -136,7 +136,7 @@ test("os outros ficheiros que citam o Regulamento continuam alinhados, ocorrênc
       [/\["Art\. 26",\s+"Lance mínimo/, /\["Art\. 25",\s+"Apuração automática/], /\["Art\. 27"/],
     ["src/pages/MeusAtivos.jsx",
       [/Art\. 25: Apuração automática · Art\. 7: Menor lance único ganha/], /Art\. 26: Apuração/],
-    ["src/pages/Seguranca.jsx", [/Art\. 9 e Art\. 10 do Regulamento/], /Art\. 35/],
+    // UTAC108f — `Seguranca.jsx` (só do lojista) foi apagada com o painel do lojista.
   ];
   for (const [f, devem, naoDeve] of casos) {
     const t = ler(f);

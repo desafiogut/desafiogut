@@ -37,10 +37,8 @@ const SECONDARY_LINKS = [
   { path: "/vitrine",             label: "Vitrine (4 Slots)",      Icon: IconTarget   },
   { path: "/programacao",         label: "Programação",            Icon: IconTarget   },
   { path: "/ativos",              label: "Meus Ativos",            Icon: IconTrending },
-  // MC39.4.1 (#segurança): "Segurança" removido do nav do utilizador COMUM — a rota
-  // /seguranca é gated (corporativo) desde o MC39.3.1; o comum era atirado para "/".
-  // O lojista acede via card no CorporativoDashboard.
-  { path: "/seja-nosso-parceiro", label: "🤝 Seja nosso parceiro!", Icon: IconTrending },
+  // UTAC108f (R18) — o lojista saiu do app: saíram «🤝 Seja nosso parceiro!» e, do menu corporativo,
+  // «Segurança» e «Analytics».
   // UTAC106h — Regras Oficiais do programa de fidelidade (requisito Google Play: regras
   // publicadas no app). Ícone reutilizado (`shield`) — não se acrescenta desenho novo ao
   // `navModel.jsx`, que está fora do escopo autorizado deste UTAC.
@@ -67,37 +65,19 @@ export default function BottomNav() {
     // proteger o botão "Aceito" durante o gap authenticated && !address (pós
     // email-OTP, embedded wallet em criação). Sem isso o botão fica travado.
     ready, authenticated,
-    tipoUsuario,
   } = useAppContext();
   const { isAdmin } = useAdmin(address);
   const reduce = useReducedMotion();
 
-  // MC14.10.1 ITEM 3 — mobile copia lógica de Sidebar.jsx:110-119
-  const CORP_TABS = [
-    { path: "/corporativo",          label: "Painel",   Icon: IconDashboard, end: true,  ariaLabel: "Painel Lojista" },
-    { path: "/corporativo/cotas",    label: "Cotas",    Icon: IconTarget,    end: false, ariaLabel: "Minhas Cotas" },
-    { path: "/corporativo/banners",  label: "Banners",  Icon: IconTrending,  end: false, ariaLabel: "Meus Banners" },
-  ];
+  // UTAC108f (R18) — saíram as abas do lojista (`CORP_TABS`: Painel/Cotas/Banners). Todas as contas
+  // vêem as abas do comprador.
 
   const baseLinks = isAdmin
     ? [...SECONDARY_LINKS, { path: "/admin", label: "⚙️ Admin", Icon: IconSettings }]
     : SECONDARY_LINKS;
 
-  const tabsAtivas = tipoUsuario === "corporativo" ? CORP_TABS : MAIN_TABS;
-  const secundariosAtivos = tipoUsuario === "corporativo"
-    ? [
-        { path: "/corporativo/analytics", label: "📊 Analytics", Icon: IconTrending },
-        { path: "/configuracoes", label: "Configurações", Icon: IconSettings },
-        // MC39.6 (#segurança): "Segurança" deixa de ser card do dashboard e passa para o
-        // menu "Mais" (canto inferior direito). Rota /seguranca gated por CorporativoRoute.
-        { path: "/seguranca", label: "Segurança", Icon: IconShield },
-      ]
-    : baseLinks;
-
-  // MC14.10.1 ITEM 1 — esconder link de parceria para lojista (já cadastrado)
-  const linksSecundarios = tipoUsuario === "corporativo"
-    ? secundariosAtivos
-    : baseLinks;
+  const tabsAtivas = MAIN_TABS;
+  const secundariosAtivos = baseLinks;
 
   useEffect(() => { setMoreOpen(false); }, [location.pathname]);
 

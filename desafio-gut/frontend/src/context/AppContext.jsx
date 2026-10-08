@@ -618,31 +618,8 @@ export function AppProvider({ children }) {
     setCotaCorporativa(data); setTipoCarregando(false); setTipoResolvido(true);
   }, []);
 
-  // MC12.3 Item 4 — Isolamento do mundo lojista. Se um corporativo cair em
-  // rota de usuário comum (Dashboard, carteira, mercado, vitrine, ativos…),
-  // redireciona automaticamente para /corporativo. Replace para não
-  // poluir o histórico do navegador.
-  useEffect(() => {
-    if (tipoCarregando) return;
-    if (tipoUsuario !== "corporativo") return;
-    // MC39.4.2 (#segurança): "/seguranca" REMOVIDO das rotas proibidas. Desde o MC39.3.1
-    // (#7) a página de segurança é EXCLUSIVA do corporativo (gated por CorporativoRoute).
-    // O isolamento bouncava o lojista de volta para /corporativo ao aceder a /seguranca
-    // (o acesso "não funcionava"). MC39.6: o acesso a Segurança passou a viver na navegação
-    // (sheet "Mais" no BottomNav / cauda da Sidebar). Mantém-se o isolamento das demais
-    // rotas comuns.
-    const rotasProibidas = new Set([
-      "/", "/carteira", "/mercado", "/vitrine", "/programacao",
-      "/ativos", "/seja-nosso-parceiro",
-      // UTAC106c — PENDÊNCIA #1 do 106b: a rota nova entra no isolamento corporativo.
-      // As páginas de CONSUMO expulsam o lojista para /corporativo; /ofertas-programadas
-      // nasceu no 106b e ficou de fora da lista, deixando o lojista entrar por URL directa.
-      "/ofertas-programadas",
-    ]);
-    if (rotasProibidas.has(location.pathname)) {
-      navigate("/corporativo", { replace: true });
-    }
-  }, [tipoUsuario, tipoCarregando, location.pathname, navigate]);
+  // UTAC108f (R18-B) — o isolamento do lojista (MC12.3 Item 4: `rotasProibidas` → `navigate("/corporativo")`)
+  // SAIU com o painel do lojista: uma conta corporativa passa a ver o app do comprador. Histórico no git.
 
   // MC12 — carteira corporativa: wallets[1] criado após cadastro corporativo.
   // Fallback para wallets[0] se wallets[1] ainda não existe (transição).

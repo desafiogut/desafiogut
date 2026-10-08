@@ -175,20 +175,12 @@ test("UTAC107b/SEG0 · o e-mail PIX continua na Carteira (o depósito NÃO o mos
 });
 
 // ═══ SEG2 — pendência #1: /ofertas-programadas no rotasProibidas ════════════════════
-test("UTAC106c/SEG2 · /ofertas-programadas está no rotasProibidas (expulsão do lojista)", () => {
+// UTAC108f (R18-B) — o isolamento do lojista (`rotasProibidas` → `/corporativo`) SAIU com o painel do lojista:
+// uma conta corporativa passa a ver o app do comprador. O guarda inverte-se: o isolamento não pode voltar.
+test("UTAC108f · o isolamento do lojista saiu do AppContext (nada reencaminha para /corporativo)", () => {
   const ac = codigo(ler("context/AppContext.jsx"));
-  const m = ac.match(/const rotasProibidas = new Set\(\[([\s\S]*?)\]\)/);
-  assert.ok(m, "o `rotasProibidas` desapareceu do AppContext");
-  const rotas = [...m[1].matchAll(/"([^"]+)"/g)].map((x) => x[1]);
-  assert.ok(rotas.includes("/ofertas-programadas"),
-    `a lista não expulsa o lojista de /ofertas-programadas: ${JSON.stringify(rotas)}`);
-  // controlo: as rotas de consumo que já lá estavam continuam lá (não se substituiu a lista)
-  for (const r of ["/carteira", "/mercado"]) {
-    assert.ok(rotas.includes(r), `a lista perdeu ${r} — partiu o isolamento que já funcionava`);
-  }
-  // e o mecanismo de expulsão continua vivo
-  assert.match(ac, /if \(rotasProibidas\.has\(location\.pathname\)\)\s*\{\s*navigate\("\/corporativo", \{ replace: true \}\)/,
-    "o guarda que reencaminha o lojista desapareceu");
+  assert.doesNotMatch(ac, /rotasProibidas/, "o `rotasProibidas` voltou ao AppContext");
+  assert.doesNotMatch(ac, /navigate\("\/corporativo"/, "voltou um reencaminhamento para /corporativo");
 });
 
 // ═══ SEG3 — pendência #2: copy «paga» → «oferta» ════════════════════════════════════
