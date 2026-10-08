@@ -5118,3 +5118,64 @@ cartoon (109b) · L-4 os 8 MP4 nao analisados ao detalhe · L-5 o JPEG de propor
 
 **Registo:** `_logs/UTAC109a-inventario.md` · `GUTO-Eletrodomesticos/_contact-sheet.png` ·
 `Desktop/RELATORIO-109a.txt`. **Proximo:** 109b (mecanismo de consistencia do GUTO) -> 109c (geracao).
+
+
+## R14 (append) — UTAC108b — AUDITORIA LOCAL vs PRODUCAO (READ-ONLY)
+
+**Fecho:** 2026-10-07 · **HEAD/origin/main:** `08f78b3` (o enunciado esperava `740eb7e`; desvio
+declarado — o UTAC108a fechou em `740eb7e` e a serie **109a** correu depois; `git diff 86ffe2c..HEAD`
+toca so `_logs/`, `CLAUDE.md` e `docs/` => **ZERO alteracoes em `src/`/`netlify/`**; ultimo commit que
+tocou `src/` = `7d4c5de`). **Suite:** frontend **849/849** · backend **1095/1101** -> VERDE.
+**Producao:** `https://silly-stardust-ca71bc.netlify.app/` **200**; bundle `assets/index-Ci4XuUO-.js`.
+
+### Os 4 erros reportados pelo operador — diagnosticados
+1-2. **Privy CORS + 422** em `api.privy.io/api/v1/analytics_events` -> **COSMETICO** (beacon do
+proprio SDK; `grep -rn "privy\.io" src/` = 4 ocorrencias **documentais**, 0 chamadas nossas; o login
+funciona). 3-4. **`/cotas` 404** -> **404 POR DESENHO**, nao codigo morto: `cotas.mjs` existe e
+**responde** (`?cliente=` **200 JSON**, `?email=` **401 JSON**); os 404 nascem em
+`cotas.mjs:291` (`email_nao_encontrado`), `:316` (`cota_nao_encontrada`) e `:241`
+(`cnpj_nao_encontrado`) — utilizador **sem cota**; e o proprio repo ja o documenta
+(`src/lib/retornoOAuth.js:12-15`). **A hipotese «endpoints Via A removidos» esta REFUTADA por medicao.**
+
+### Achados novos
+- **D-6 (ATENCAO, documental):** o manifesto (107b#1) afirma que 5 nomes foram removidos como orfaos;
+  medido: so **3** (`creditoTxHash`, `trocaInfo`, `trocaErro`). **`useTrocarPorSenhas`** e
+  **`CreditoStatus`** EXISTEM e tem **consumidores vivos** (`components/CardLance.jsx:25`,
+  `pages/CorporativoBanners.jsx:12`, `components/CreditoStatus.jsx`, `hooks/useCreditoStatus.js`,
+  `lib/creditoPolling.js`) — a remocao foi do **import na `MinhaCarteira`**, nao dos modulos.
+  Producao e `dist` concordam => nao e producao velha. **Corrigir no 108h.**
+- **D-7 (armadilha):** `/netlify/functions/<ep>` **sem o ponto** devolve **200 `text/html`** (o
+  `index.html` do catch-all) — e nao 404; um nome de funcao **inexistente** tambem. **Um 200 nunca
+  prova que a funcao existe: a prova e o `content-type`** (`application/json` vs `text/html`).
+  O codigo usa a forma correcta (`src/lib/api.js:23` = `/.netlify/functions/`).
+- **D-8 (regua):** o manifesto cita **25 orfaos**; medido **23** por sitio de chamada. Re-medir quando
+  se tratar dos orfaos.
+
+### Producao vs codigo — SINCRONIZADOS (prova por conteudo)
+**137 chunks** de producao descarregados; **16 de 17 literais** da serie 107 com **resultado identico**
+producao vs `dist` local (os nomes de chunk diferem por desenho — a Netlify emite nomes proprios).
+**Inventario de endpoints:** **84 locais, 84 servidos em producao (0 em falta)**; **23** servidos **sem
+chamador** no frontend (8 sao `*-scheduled`/`webhook-*` => **nao** apagar em bloco).
+
+### Prioridades
+**P0** D-1 -> **108c** (botao MLC `disabled={!saldoReais}`, `MinhaCarteira.jsx:245`: navegar sempre e
+validar no destino). **P1** remover o lojista -> **108f** (nota: `cotas` tem **15 chamadores** e o painel
+`src/pages/admin/Cotas.jsx:50` => nao pode ser «apagar o `cotas.mjs`»). **P2** decidir
+`useTrocarPorSenhas`/`CreditoStatus`. **P4** desligar `debug-pedido` (**503** sem token, 0 chamadores).
+**P5** Privy = ruido, nada a fazer.
+
+### Erros dos meus instrumentos (declarados)
+1. 1.a sonda com `curl -o /dev/null` + caminho MSYS -> **`bytes=0`** em **todos** os pedidos; aceitar
+   isso teria produzido o achado inventado «producao nao serve nada». Corrigido com `urllib` + `C:/`.
+2. 1.a corrida da suite em **background** -> `stdin is not a tty`, exit 1, **sem numeros** (falso-verde
+   conhecido). Re-corrida em **foreground** com `< /dev/null`.
+
+**Validador adversarial (SEG6):** *APROVADO COM RESSALVAS — 0 bloqueantes*; **0 das 10 alegacoes-nucleo**
+refutadas; 4 imprecisoes (F-1..F-4) corrigidas por **errata** (`E-1..E-4`, §10 do log) — `origin/main`
+re-medido `08f78b3` (pai de `644c6ce`); 84 endpoints = **76 `application/json` + 8 `text/plain`, 0
+`text/html`**; chunks **137** (o validador reporta 187 num crawl mais largo — duas reguas declaradas);
+`index.html` declara **4 `modulepreload` + 1 entry**. Veredicto verbatim em
+`_logs/UTAC108b_SEG6_VALIDADOR.md`.
+
+**Entregaveis:** `_logs/UTAC108b-auditoria-producao.md` · este bloco R14 ·
+`Desktop/RELATORIO-UTAC108b-AUDITORIA.txt`. **Zero alteracoes de codigo.**
