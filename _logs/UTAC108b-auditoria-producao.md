@@ -338,3 +338,43 @@ são o único lote seguro para desligar **sem** tocar em UI.
 2.ª ronda (declarado — GATE 11: são erratas de redacção/reprodutibilidade, com a medição apresentada
 acima). O veredicto integral, verbatim, está em `_logs/UTAC108b_SEG6_VALIDADOR.md`, com a resposta
 do executor ao lado.
+
+
+---
+
+## 11. Fecho (SEG7) — registo, custo e duração
+
+**Hora do fecho:** 21:17 · **Arranque:** 21:01 ⇒ dentro do HI5 de 2 h.
+
+### Custo (Hermes usa USD) — fonte `state.db`, `cost_status = estimated`
+
+| Sessão | `source` | mensagens | chamadas | custo |
+|---|---|---|---|---|
+| `20261007_000624_7dfe52` (**sessão CLI PARTILHADA**, iniciada 00:06) | `cli` | 521 | 258 | **0,50838** (acumulado) |
+| ↳ menos a leitura no fecho do **UTAC109a** | | | | − 0,20099 |
+| ↳ **diferença** | | | | **0,30739** ← **tecto**: cobre também todo o trabalho GUTO/PLANO que correu nesta mesma sessão **entre** os dois UTACs |
+| `20261007_210931_a7c9b1` (validador adversarial, sessão própria) | `subagent` | 23 | 13 | **0,01122** |
+| **Atribuível a este UTAC, isolável** | | | | **0,01122** (≈ 1,1 centavo) |
+| **Atribuível a este UTAC, com a parte CLI (TECTO)** | | | | **≈ 0,3186 ≈ 31,9 centavos** |
+
+⚠️ **Declarado:** a plataforma **não abriu sessão nova** para este UTAC — reutilizou a sessão CLI do
+início do dia (a mesma do UTAC109a). A diferença de **0,30739** **não é só deste UTAC**: entre os dois
+correu o trabalho de imagens/vídeo do GUTO e a análise do «PLANO». O número **isolável** é o do
+validador (**0,01122**); a parte CLI fica como **tecto**, não como medição.
+
+**SALDO DA API: NÃO LIDO** (declarado — a **R5** do `CLAUDE.md` proíbe tocar em credenciais; o `.env`
+não é lido). Comando pronto para o operador, com a chave dele:
+`curl -s -H "Authorization: Bearer <CHAVE>" https://api.deepseek.com/user/balance`
+
+### Commits e registo (R18 — 3 lugares)
+
+| Commit | Conteúdo |
+|---|---|
+| `644c6ce` | `_logs/UTAC108b-auditoria-producao.md` (auditoria — base entregue ao validador) |
+| (mesmo log) | errata `E-1..E-4` pós-veredicto |
+| (commit do veredicto) | `_logs/UTAC108b_SEG6_VALIDADOR.md` (veredicto **verbatim** + resposta do executor) |
+| `4e76215` | bloco **R14** do `CLAUDE.md` |
+
+3 lugares: log · bloco R14 · `Desktop/RELATORIO-UTAC108b-AUDITORIA.txt` ✓
+`HEAD` = `origin/main` no fecho (o registo final nomeia os commits anteriores; este commit não se cita
+a si mesmo).
