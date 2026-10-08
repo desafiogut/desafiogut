@@ -55,7 +55,7 @@ const VALOR_POR_SENHA_BRL = 2;
 
 // UTAC107g (R18-A) — saíram «Depositar PIX», «Converter Ficha» e «Dar Lance»: o destino de
 // cada um (/carteira, /mercado) já é uma aba da barra principal E já tem, neste mesmo ecrã,
-// outro elemento que leva lá (KPI «Saldo», CTA da Edição Ativa). «Converter Ficha» ainda
+// outro elemento que leva lá (KPI «Saldo», o botão do vidro «⚡ Relâmpago»). «Converter Ficha» ainda
 // prometia a troca R$→senha que o UTAC107b tirou da Carteira. Ficam os atalhos para destinos
 // que, no telemóvel, só existem dentro do «Mais» (1 toque em vez de 2).
 const ATALHOS = [
@@ -150,13 +150,10 @@ export default function Dashboard() {
     edicoes, agendadas, Date.now() + (Number.isFinite(offsetRelogioMs) ? offsetRelogioMs : 0),
   );
 
-  // MC15.4 ITEM 7 — edições adicionais (todas menos R-1, que já tem o card
-  // "Edição Ativa" abaixo). Cada uma renderiza um cronómetro independente.
-  // MC94.2 — e menos as ESPECIAL-*: às 20:00 a especial passa para `edicoes` e
-  // seria desenhada duas vezes (card especial + EdicaoCard com "EM BREVE").
-  //
-  // ⚠️ A ESPECIAL fica de fora: ela ocupa o vidro «⚡ Relâmpago» (slot da edição ativa, MC94.2).
-  // Sem esta exclusão apareceria duas vezes no ecrã — medido num teste que conta o produto.
+  // UTAC108h.3 — o vidro «🎫 Programada» mostra a primeira edição Programada ABERTA (a MESMA
+  // escolha da aba Ofertas Programadas: `edicoesProgramadasDe` põe as abertas primeiro).
+  // ⚠️ A ESPECIAL fica de fora: ela ocupa o vidro «⚡ Relâmpago» (o lugar da edição ativa, MC94.2)
+  // e, sem esta exclusão, apareceria duas vezes no ecrã — medido por um teste que conta o produto.
   const edicaoProgramada = edicoesProgramadasDe(edicoes).filter((e) => !ehEspecial(e.id))[0] ?? null;
   /** Regista o palpite da edição programada mostrada (mesma regra da OP: inteiro >= 0). */
   async function palpitar(edicaoId) {
