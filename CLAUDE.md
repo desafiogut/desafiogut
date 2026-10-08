@@ -5408,3 +5408,45 @@ nao existe titulo de prateleira nenhum em producao.
 **Estado: PARADO.** READ-ONLY; nada alterado. Correccao = **P-1** (UTAC proprio), dependente da
 decisao de produto **P-2** (duas prateleiras vs filtro na prateleira unica; e o que fazer quando uma
 lista esta vazia). Suite VERDE 899/899 + 1095/1101. Duraçao 11:38→11:43.
+
+## R14 (append) — UTAC108h.2 — DUAS PRATELEIRAS NO INICIO (2026-10-08)
+
+**Veredicto:** implementado, verificado e EM PRODUCAO. Validador adversarial: **APROVADO, 0 bloqueantes**
+(10/10 alvos (a)-(j) refutados). Commits `c929c6e -> e737930`.
+
+**O que mudou:** o Inicio tinha UMA prateleira so («🗓️ Outras Edicoes») que misturava as duas familias —
+a divisao tinha sido EXCLUIDA do escopo do UTAC107c (R18-C) e nunca foi implementada (diagnostico
+UTAC108h.1). Agora sao DUAS («⚡ Relampago» + «🎫 Programada»), com o titulo SEMPRE visivel (decisao P-2b) e
+o estado vazio DENTRO de vidro (Regra 1).
+
+**Como:** `Dashboard.jsx` ganhou a funcao PURA exportada `prateleirasDeEdicoes(edicoes, ativa, ehEspecial)`
+— separa por `tipo`, que o `useEdicoes.js:83` JA normaliza para `"programado" | "relampago"`; `tipo`
+ausente/estranho cai em `relampago` (a MESMA regra do normalizador). Criterios de EXCLUSAO inalterados
+(edicao ativa + especiais, do MC15.4/MC94.2). O render passou a um `map` sobre 2 familias: o markup do
+carrossel do MC99 vive UMA so vez. O testid do carrossel passou de `outras-edicoes-scroll` a
+`prateleira-scroll` — a guarda do MC99 e o mutador MUT1 de `scripts/mc99-prova-mutacao.mjs` foram
+actualizados no mesmo movimento e a guarda CONTINUA a morder.
+
+**NAO tocados:** `EdicaoCard.jsx`, `useEdicoes.js`, `OfertasProgramadas.jsx`, MinhaCarteira, MLC, backend
+(`netlify/`), `package*.json`, os 5 `.bak-*`, `EM_BREVE_MODE`. Commit com 4 ficheiros, mais nenhum.
+
+**P-3 MEDIDO (novo):** o `GET /.netlify/functions/edicoes` e PUBLICO ⇒ da para medir a producao sem
+credenciais (sem violar R5). Em 2026-10-08: **5 edicoes, TODAS `relampago`, ZERO `programado`**. Consequencia:
+a prateleira «🎫 Programada» nasce VAZIA em producao — o estado vazio da P-2b nao e laboratorio, e o ecra real.
+
+**Desvio declarado:** o enunciado pedia o vazio «a decorrer»; o guard de pt-BR do repo PROIBE essa expressao
+(`utac107g2-pt-br.test.mjs`, `PT_PT_I`). Usada a forma que o app ja usa — «em andamento» (`CartaoEdicao.jsx:36`).
+
+**Achado latente:** `src/i18n/pt.js:35` — chave `dash.outrasEdicoes` ficou ORFA (o titulo passou a literal no
+Dashboard). Vai para o UTAC108h (limpeza geral). NAO tocada aqui (i18n fora do ambito).
+
+**Erros dos MEUS instrumentos (declarados):** (1) li o exit_code do fim do pipeline (`grep|tr`) em vez do
+`node --test` — o `tr` devolve sempre 0 e a 1.a leitura concluiu «nao morde» nas 4 mutacoes, quando mordiam
+(3/3/4/3 falhas); (2) a 1.a versao de um teste meu ancorava o controlo numa prateleira VAZIA (testid
+inexistente) — apanhado pela propria assercao de controlo; (3) a 1.a mutacao nao casou nada (ficheiro CRLF,
+padroes com `\n`) — apanhado pelo `assert count==1` da mutacao; (4) «Programada ×0» no build era o **grep de
+EMOJI a falhar em silencio** (armadilha ja conhecida) — por Python o titulo esta la.
+
+**Verificacao:** suite **VERDE 909/909** (frontend; +10 testes meus) + **1095/1101** (backend) · `vite build`
+exit 0 · 4 mutacoes a MORDER, restauro byte-identico (`a9ca771cd9c6bb55ba4c83f6395c8a01`) · producao:
+entry `index-TvfL10s1.js`, chunk `PrivyRoot-B4GSJVIh.js` com os 2 titulos/vazios, «Outras Edicoes» ×0.
