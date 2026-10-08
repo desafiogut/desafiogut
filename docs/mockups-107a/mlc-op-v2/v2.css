@@ -1,130 +1,140 @@
-/* UTAC108e — camada v2 dos mockups MLC + OP (mockup de design, NÃO é código de produção).
+/* UTAC108e (Opus 5.5) — camada v2 dos mockups MLC + OP. Mockup de design, NÃO é código de produção.
  *
- * ⚠️ HONESTIDADE SOBRE O tokens.css (correcção pós-validador): esta camada NÃO é uma adição pura.
- * O `tokens.css` JÁ declarava um `.ed-card` (bloco «EdicaoCard.jsx», tokens.css:146-153) — era o
- * card da OP. A v2 REUSA esse nome para as duas abas e SOBREPÕE 5 valores dele (ganha por ordem de
- * carga: tokens.css primeiro, v2.css depois). O que muda, e porquê:
- *   .ed-card ............ gap 10px -> 12px (o --gut-gap do tokens, para alinhar com as outras pilhas)
- *   .cab ................ igual (id à esquerda, estado à direita)
- *   .caixa .............. padding 10/12 -> 12px; raio 10px -> var(--gut-radius-btn) 12px
- *   .thumb .............. RENOMEIA o `.banner` do tokens (mesmas 52px, mesma ideia) — a v2 não usa .banner
- *   .relogio ............ align-items center -> baseline; gap 10px -> 8px
- *   .relogio .t ......... 22px -> 24px (o cronômetro é informação de 1.ª ordem nas duas abas)
- * O `.ed-card .guto` do tokens fica sem uso nestas páginas (o v2 usa `.pilula` + `.thumb`).
- * NÃO é redefinição gratuita: é a aplicação da MESMA família às duas abas, com os valores medidos.
- *
- * O que era divergente antes:
- *   MLC antigo: .edicao-unica (classe que NEM EXISTE no tokens.css; padding 24px, botão radius 28px,
- *               gradiente dourado) — a roupa do MLC era literalmente fora do sistema.
- *   OP antiga:  .edicao (EicaoCard, padding 16px, botão radius 12px, dourado sólido)
- * Aqui existe UM só componente de edição (.ed-card) usado pelas duas abas.
- * Um só raio, um só dourado, um só vermelho, uma só coluna — os valores vêm do tokens.css.
+ * REGRA DESTA CAMADA: não declara cor nenhuma nova. Tudo vem de `../tokens.css` (o sistema dos mockups
+ * aprovados do 107a-front, medido contra `globals.css` + `glassTokens.js`) e dos ASSETS REAIS do app
+ * (`desafio-gut/frontend/public/…`, copiados para ./assets para a pasta abrir sozinha no Desktop):
+ *   assets/arena-mobile.webp · arena-desktop.webp  ← public/assets/backgrounds/background-*.webp (o fundo do app)
+ *   assets/airfryer.jpg                            ← public/artes/edicao-especial-airfryer.jpg (arte real de edição)
+ *   assets/guto.png                                ← public/assets/guto/custom/guto-bemvindo.png (GUTO do gate)
+ *   assets/inter.woff2 · orbitron.woff2            ← public/fonts/*-latin.woff2 (as fontes auto-hospedadas)
+ * O véu navy sobre a arena usa o `--gut-bg` (#050818 = rgb 5,8,24) com alfa — a mesma cor do fundo do app.
  */
 
-/* ══════════════════════════════════════════════════════════════════════════
-   O COMPONENTE ÚNICO DE EDIÇÃO (usado pelo MLC e pela OP)
-   Mesmo casco nas duas abas: cabeça (id + estado) → caixa (prêmio) →
-   cronômetro → slot de acção. Muda só o CONTEÚDO do slot:
-     MLC → lance (centavos)      OP → palpite (quantos lances)
-   ══════════════════════════════════════════════════════════════════════════ */
-.ed-card { display: flex; flex-direction: column; gap: 12px; }
-.ed-card .cab { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.ed-card .caixa {
-  display: flex; gap: 12px; align-items: center; padding: 12px;
-  border-radius: var(--gut-radius-btn);
-  background: rgba(245,166,35,.07); border: 1px solid rgba(245,166,35,.22);
+/* fontes: o caminho do tokens.css só resolve dentro do repo; estas resolvem também na cópia do Desktop */
+@font-face { font-family: "Inter"; font-weight: 300 900; font-display: swap; src: url("assets/inter.woff2") format("woff2"); }
+@font-face { font-family: "Orbitron"; font-weight: 400 900; font-display: swap; src: url("assets/orbitron.woff2") format("woff2"); }
+
+/* ═══ o ecrã: a ARENA real do app por trás do vidro (era um gradiente liso nos mockups) ═══ */
+.fone.depois {
+  background:
+    linear-gradient(180deg, rgba(5,8,24,.45) 0%, rgba(5,8,24,.72) 55%, rgba(5,8,24,.88) 100%),
+    url("assets/arena-mobile.webp") center top / cover no-repeat,
+    var(--gut-bg);
 }
-.ed-card .thumb {
-  width: 52px; height: 52px; border-radius: var(--gut-radius-btn); flex: none;
-  background: linear-gradient(135deg, #2a1d5e, #5b2b12);
-  display: grid; place-items: center; font-size: 24px;
-}
-.ed-card .cx-txt { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.ed-card .cx-nome { color: var(--gut-gold); font-weight: 800; font-size: 16px; }
-.ed-card .cx-nota { color: var(--gut-muted-strong); font-size: 12px; }
-.ed-card .relogio { display: flex; align-items: baseline; justify-content: center; gap: 8px; }
-.ed-card .relogio .t {
-  font-family: var(--font-display); font-size: 24px; letter-spacing: .1em;
-  color: var(--gut-gold); line-height: 1;
-}
-.ed-card .relogio .t.breve { font-size: 18px; color: var(--gut-primary); }
-.acao { display: flex; flex-direction: column; gap: 8px; }
-.linha-campo { display: grid; gap: 8px; grid-template-columns: 1fr; }
-/* a partir de 480 px o campo e o botão ficam lado a lado (uma linha de acção) */
-@container tela (min-width: 480px) {
-  .linha-campo { grid-template-columns: 1fr auto; align-items: center; }
-  .linha-campo .btn { width: auto; min-width: 168px; }
+.fone.depois[data-largura="768"], .fone.depois[data-largura="1024"] {
+  background:
+    linear-gradient(180deg, rgba(5,8,24,.45) 0%, rgba(5,8,24,.78) 60%, rgba(5,8,24,.9) 100%),
+    url("assets/arena-desktop.webp") center top / cover no-repeat,
+    var(--gut-bg);
 }
 
-/* ══════════════ VARIANTE B — cartão maior, produto em destaque ══════════════ */
-.v-b .ed-card .caixa { flex-direction: column; align-items: stretch; gap: 10px; padding: 16px; text-align: center; }
-.v-b .ed-card .thumb { width: 88px; height: 88px; font-size: 44px; margin: 0 auto; border-radius: var(--gut-radius); }
-.v-b .ed-card .cx-txt { align-items: center; }
-.v-b .ed-card .cx-nome { font-size: 20px; }
-.v-b .ed-card .relogio .t { font-size: 34px; }
+/* ═══ título de aba — o MESMO nas duas abas (glass + h-aba + frase + selo do tipo à direita) ═══ */
+/* mobile: o selo sobe para cima do título (senão «Ofertas Programadas» parte em 2 linhas a 375 px);
+   a partir de 700 px fica à direita, na mesma linha */
+.cab-aba { display: flex; flex-direction: column-reverse; align-items: flex-start; gap: 8px; }
+@container tela (min-width: 700px) { .cab-aba { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; } }
+.cab-aba .sub { margin-top: 2px; }
+.selo-tipo { flex: none; font-size: 12px; font-weight: 800; letter-spacing: .04em; color: var(--gut-gold);
+  border: 1px solid rgba(245,166,35,.35); background: rgba(245,166,35,.12); border-radius: 999px; padding: 4px 10px; }
 
-/* ══════════════ VARIANTE C — 2 colunas no desktop, empilhado no mobile ══════════════ */
-.duplo { display: grid; gap: var(--gut-gap); grid-template-columns: 1fr; }
-@container tela (min-width: 700px) { .duplo { grid-template-columns: 1.15fr .85fr; align-items: start; } }
-@media (max-width: 699px) { .v-c .sticky-acao { position: static; } }
-@container tela (min-width: 700px) { .v-c .sticky-acao { position: sticky; top: 0; } }
-/* ⚠️ Na coluna estreita da C o campo e o botão EMPILHAM. O @container mede a largura do
-   telefone, não a da coluna: com o botão a 168 px fixos e a coluna a ~246 px, o campo
-   encolhia para 28 px de largura (inutilizável). Medido a 768 px, corrigido aqui. */
-.v-c .sticky-acao .linha-campo { grid-template-columns: 1fr; }
-.v-c .sticky-acao .linha-campo .btn { width: 100%; min-width: 0; }
+/* ═══ COMPONENTE ÚNICO DE EDIÇÃO — `.ed` — usado pelo MLC, pela OP e pelo Início ═══
+ * casco igual: topo (id + estado) → produto (arte real + nome + rótulo) → relógio (GUTO + tempo) → acção.
+ * Muda só a acção: MLC = lance (centavos) · OP = palpite (nº de lances) · Início = ir para a aba. */
+.ed { display: flex; flex-direction: column; gap: 12px; }
+.ed .topo { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.ed .produto { display: flex; gap: 12px; align-items: center; padding: 10px; border-radius: 12px;
+  background: rgba(245,166,35,.07); border: 1px solid rgba(245,166,35,.22); }
+.ed .arte { width: 64px; height: 64px; border-radius: 10px; flex: none; object-fit: cover; display: block;
+  background: rgba(5,8,24,.6); }
+.ed .nome { color: var(--gut-gold); font-weight: 800; font-size: 16px; line-height: 1.25; }
+.ed .relogio { display: flex; align-items: center; justify-content: center; gap: 12px; }
+.ed .guto { width: 44px; height: 44px; flex: none; border-radius: 12px; background: rgba(5,8,24,.55);
+  border: 1px solid rgba(255,255,255,.08); display: block; }
+.ed .t { font-family: var(--font-display); font-size: 22px; letter-spacing: .08em; color: var(--gut-gold); line-height: 1; }
+.ed .t-rot { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--gut-muted-strong); }
 
-/* ══════════════ OP · pontos ══════════════ */
-.pontos { display: flex; flex-direction: column; gap: 8px; }
-.pontos .linha { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-.pontos .alvo { color: var(--gut-muted-strong); font-size: 13px; }
-/* variante A/C: número discreto · variante B: número em destaque (é o motor da aba) */
-.pontos .n { font-family: var(--font-display); font-size: 26px; color: var(--gut-gold); line-height: 1; }
-.v-b .pontos { gap: 12px; }
-.v-b .pontos .n { font-size: 40px; }
-.v-b .pontos .progresso { height: 16px; }
-.v-b .cartao-quildo { padding: 12px; gap: 8px; }
-.v-b .cartao-quildo .ico { font-size: 24px; }
-.v-b .cartao-quildo h2 { font-size: 13px; }
-.v-b .cartao-quildo p { font-size: 13px; }
+/* estado VAZIO: a estrutura fica toda (correcção do 108d: nada de aviso solto) */
+.ed--vazio .produto { background: rgba(5,8,24,.45); border: 1px dashed rgba(143,160,216,.45); }
+.ed--vazio .arte { display: grid; place-items: center; font-size: 26px; border: 1px dashed rgba(143,160,216,.45); }
+.ed--vazio .nome { color: var(--gut-text); }
+.ed--vazio .t { color: var(--gut-muted-strong); }
+.ed--vazio .guto { opacity: .75; }
 
-/* ══════════════ OP · carrossel denso (variante C) ══════════════ */
-.v-c .carrossel { gap: 10px; }
-.v-c .carrossel > .ed-card { padding: 12px; gap: 8px; }
-.v-c .carrossel .thumb { width: 44px; height: 44px; font-size: 20px; }
-.v-c .carrossel .relogio .t { font-size: 20px; }
-.v-c .carrossel .acao .btn { min-height: var(--gut-touch); }
+/* acção do MLC: rótulo VISÍVEL ligado ao campo (o do app, 107d R18-C) */
+.lance { display: grid; gap: 6px; }
+.lance label { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--gut-muted-strong); }
+.lance .linha { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+.lance .btn { width: auto; padding: 0 22px; }
+.lance .ajuda { margin: 0; font-size: 13px; color: var(--gut-muted-strong); }
 
-/* ══════════════ cartão da Família Quildo (OP) ══════════════ */
-.cartao-quildo { display: flex; gap: 12px; align-items: center; }
-.cartao-quildo .ico { font-size: 30px; flex: none; }
-.cartao-quildo h2 { margin: 0; }
-.cartao-quildo p { margin: 2px 0 0; font-size: 14px; color: var(--gut-text-body); }
+/* acção da OP: palpite (o do mockup aprovado) */
+.palpite { display: grid; gap: 8px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.08); }
+.palpite .linha { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+.palpite .btn { width: auto; padding: 0 18px; }
+.res { margin: 0; font-weight: 700; font-size: 15px; color: var(--gut-text); }
 
-/* ══════════════ KPIs do Início ══════════════ */
-.kpis { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gut-gap); }
-.kpi { display: flex; flex-direction: column; gap: 2px; }
-.kpi .n { font-family: var(--font-display); font-size: 24px; color: var(--gut-gold); line-height: 1; }
-.saldo { display: flex; flex-direction: column; gap: 4px; }
-.titulo-duplo { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+/* ═══ MLC B — produto em destaque ═══ */
+.ed-hero .vitrine { position: relative; border-radius: 12px; overflow: hidden; border: 1px solid rgba(245,166,35,.22); }
+.ed-hero .vitrine img { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: cover; }
+.ed-hero .vitrine .faixa { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center;
+  justify-content: space-between; gap: 10px; padding: 10px 12px; background: rgba(5,8,24,.86); }
+.ed-hero .vitrine .faixa .nome { color: var(--gut-gold); font-weight: 800; }
+.ed-hero.ed--vazio .vitrine { border-style: dashed; border-color: rgba(143,160,216,.45); }
+.ed-hero.ed--vazio .vazio-arte { aspect-ratio: 1 / 1; display: grid; place-items: center; align-content: center; gap: 8px;
+  background: rgba(5,8,24,.55); text-align: center; padding: 16px; }
+.ed-hero.ed--vazio .vazio-arte .ic { font-size: 40px; }
+.ed-hero.ed--vazio .vazio-arte b { color: var(--gut-text); font-size: 16px; }
+@container tela (min-width: 700px) { .ed-hero .vitrine img, .ed-hero.ed--vazio .vazio-arte { aspect-ratio: 16 / 9; } }
 
-/* ══════════════ carrossel denso (Início: as duas famílias lado a lado) ══════════════ */
-.denso .carrossel { gap: 10px; }
-.denso .carrossel > .ed-card { padding: 12px; gap: 8px; }
-.denso .carrossel .thumb { width: 44px; height: 44px; font-size: 20px; }
-.denso .carrossel .relogio .t { font-size: 20px; }
+/* ═══ MLC C — horizontal a partir de 700 px (card | formulário); empilhado no mobile ═══ */
+.duas-col { display: grid; gap: var(--gut-gap); }
+@container tela (min-width: 700px) { .duas-col { grid-template-columns: 1.15fr 1fr; align-items: stretch; } }
+.form-col { display: flex; flex-direction: column; justify-content: center; gap: 12px; }
+@container tela (min-width: 700px) { .tela.larga { max-width: 912px; } .tela.larga > .tabela-especial,
+  .tela.larga > .rodape-legal { width: 100%; max-width: var(--gut-coluna); margin-left: auto; margin-right: auto; } }
 
-/* ══════════════ NOTAS da prancha (o que mudou e porquê) ══════════════ */
-.mudou { display: grid; gap: 8px; margin: 10px 0 0; padding: 0; list-style: none; counter-reset: m; }
-.mudou li { counter-increment: m; position: relative; padding: 10px 12px 10px 40px; background: #0a0e24; border: 1px solid #1f2650; border-radius: 10px; font-size: 14px; color: var(--gut-text-body); }
-.mudou li::before { content: counter(m); position: absolute; left: 10px; top: 10px; width: 20px; height: 20px; border-radius: 50%; background: #ffd23f; color: #111; font-size: 12px; font-weight: 900; display: grid; place-items: center; }
-.mudou li b { color: #fff; }
-.mudou .porque { display: block; margin-top: 4px; color: var(--gut-muted-strong); font-size: 13px; }
-.tabela-comp { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
-.tabela-comp th, .tabela-comp td { text-align: left; padding: 7px 8px; border-bottom: 1px solid #1f2650; vertical-align: top; }
-.tabela-comp th { color: var(--gut-gold); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
-.tabela-comp td { color: var(--gut-text-body); }
-.tabela-comp td.nao { color: #ff9a9d; }
-.tabela-comp td.sim { color: #5ee0b4; }
-.reco { border: 1px solid rgba(245,166,35,.4); background: rgba(245,166,35,.08); border-radius: 10px; padding: 12px; font-size: 14px; color: var(--gut-text-body); margin-top: 12px; }
-.reco b { color: var(--gut-gold); }
+/* ═══ OP — pontos + cartão (os do mockup aprovado) ═══ */
+.cartao-quildo { border-radius: 14px; padding: 14px; text-align: center;
+  background: linear-gradient(135deg, rgba(245,166,35,.18), rgba(255,107,53,.10)); border: 1px solid rgba(245,166,35,.45); }
+details.hist summary { min-height: 48px; display: flex; align-items: center; justify-content: space-between; cursor: pointer;
+  list-style: none; font-weight: 800; color: var(--gut-text-body); }
+details.hist summary::-webkit-details-marker { display: none; }
+.hist ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 14px; color: var(--gut-text-body); }
+.hist li { display: flex; justify-content: space-between; }
+.ganho { color: #5ee0b4; } /* = .estado.aberto do tokens.css */
+
+/* OP B — progresso em destaque: o número e a barra mandam; marcos de 10/25/50 sobre a barra */
+.pontos-hero .valor { font-size: 48px; font-weight: 900; color: var(--gut-gold); line-height: 1; margin-top: 4px; }
+.pontos-hero .valor small { font-size: 22px; color: var(--gut-muted-strong); font-weight: 800; }
+.pontos-hero .progresso { height: 14px; }
+.marcos { display: flex; justify-content: space-between; margin-top: 6px; font-size: 12px; font-weight: 700; color: var(--gut-muted-strong); }
+.quildo-linha { display: flex; align-items: center; gap: 12px; }
+.quildo-linha .ic { width: 48px; height: 48px; flex: none; border-radius: 12px; display: grid; place-items: center; font-size: 24px;
+  background: linear-gradient(135deg, rgba(245,166,35,.18), rgba(255,107,53,.10)); border: 1px solid rgba(245,166,35,.45); }
+
+/* OP C — cartões compactos (a acção vira uma linha) */
+.ed--compacto { gap: 10px; }
+.ed--compacto .produto { padding: 8px; }
+.ed--compacto .arte { width: 48px; height: 48px; }
+.ed--compacto .linha-tempo { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ed--compacto .t { font-size: 18px; }
+
+/* ═══ controlo «estado» (com edição / sem edição) — o resto dos controlos é o mockup.js ═══ */
+.fone[data-estado="vazio"] .so-cheio { display: none !important; }
+.fone[data-estado="cheio"] .so-vazio { display: none !important; }
+
+/* índice */
+.resumo-design { display: grid; gap: 6px; margin: 0; padding: 14px 16px 14px 34px; background: #0a0e24; border: 1px solid #1f2650;
+  border-radius: 12px; color: var(--gut-text-body); font-size: 14px; max-width: 980px; }
+.resumo-design b { color: #fff; }
+.amostras { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 0; }
+.amostras span { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--gut-text-body); }
+.amostras i { width: 18px; height: 18px; border-radius: 5px; border: 1px solid rgba(255,255,255,.2); display: inline-block; }
+.cartoes-idx { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; max-width: 980px; }
+.cartoes-idx a { display: block; padding: 14px 16px; border-radius: 12px; background: #0a0e24; border: 1px solid #1f2650;
+  color: var(--gut-text-body); text-decoration: none; min-height: 48px; }
+.cartoes-idx a:hover, .cartoes-idx a:focus-visible { border-color: var(--gut-primary); }
+.cartoes-idx a b { display: block; color: #fff; font-family: var(--font-display); font-size: 14px; letter-spacing: .04em; margin-bottom: 4px; }
+.idx-sec { font-family: var(--font-display); color: var(--gut-gold); font-size: 16px; margin: 26px 0 10px; letter-spacing: .04em; }
+.texto-idx { max-width: 980px; color: var(--gut-text-body); }
+.texto-idx li { margin: 4px 0; }

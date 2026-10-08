@@ -1,127 +1,80 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Mockups v2 — Menor Lance Único + Ofertas Programadas</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockups v2 — MLC + OP coerentes</title>
 <link rel="stylesheet" href="../tokens.css">
 <link rel="stylesheet" href="v2.css">
 <style>
-  .cartoes { display: grid; gap: 12px; grid-template-columns: 1fr; }
-  @media (min-width: 820px) { .cartoes { grid-template-columns: 1fr 1fr; } }
-  .cartao-lnk { display: block; text-decoration: none; }
-  .cartao-lnk h2 { color: var(--gut-gold); font-size: 15px; margin: 0 0 4px; }
-  .cartao-lnk p { color: var(--gut-text-body); margin: 0; font-size: 14px; }
-  .var-lnks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-  .var-lnks a { display: inline-flex; align-items: center; gap: 6px; min-height: var(--gut-touch); padding: 0 14px; border-radius: var(--gut-radius-btn); border: 1px solid rgba(245,166,35,.40); background: rgba(245,166,35,.10); color: var(--gut-gold); font-weight: 800; font-size: 14px; text-decoration: none; }
-  .var-lnks a:hover { background: rgba(245,166,35,.18); }
-  .var-lnks a.sec { border-color: rgba(143,160,216,.45); background: transparent; color: var(--gut-muted-strong); }
-  .selo { display: inline-block; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; background: rgba(16,185,129,.15); color: #5ee0b4; margin-left: 8px; vertical-align: 2px; }
-  .selo.alt { background: rgba(245,166,35,.14); color: var(--gut-gold); }
+  .galeria { display: flex; gap: 18px; overflow-x: auto; padding: 4px 2px 14px; scroll-snap-type: x proximity; }
+  .galeria figure { margin: 0; flex: none; width: 300px; scroll-snap-align: start; }
+  .galeria img { width: 300px; display: block; border-radius: 22px; border: 1px solid #1f2650; }
+  .galeria figcaption { margin-top: 8px; font-size: 13px; color: var(--gut-text-body); }
+  .galeria figcaption b { color: #fff; }
 </style>
 </head>
 <body>
 <div class="prancha">
   <header>
     <h1>Mockups v2 — MLC + OP coerentes</h1>
-    <p>As duas frentes do DesafioGUT passam a falar a mesma língua visual. <b>Nada aqui está implementado</b> —
-       são propostas de design para o operador escolher. Cada aba tem <b>3 variantes</b>; escolhe-se uma de cada.</p>
+    <p>UTAC108e (Opus 5.5) · <b>versão mobile (375 px)</b> em primeiro lugar, como pedido. As pranchas interactivas têm também 768 e 1024 px. Substitui a tentativa anterior (rejeitada por parecer genérica), que fica no histórico do git (<code>d8c3e67</code>).</p>
   </header>
 
-  <section class="glass" style="margin-bottom:16px">
-    <h2 class="h-sec">Como usar</h2>
-    <ol class="mudou">
-      <li>Abra o <b>Menor Lance Único</b> e o <b>Ofertas Programadas</b> (links abaixo).</li>
-      <li>Em cada um, clique em <b>A</b>, <b>B</b> ou <b>C</b> para trocar a variante — a mesma tela, três desenhos.</li>
-      <li>Use <b>375 / 768 / 1024</b> para ver no celular, no tablet e no computador.</li>
-      <li>Em baixo, à direita, há a auditoria ao vivo: <b>toque ≥ 48 px</b> e <b>Regra 1</b> (texto dentro de vidro). Se estiver a verde, não há violações.</li>
-      <li>Diga qual variante quer de cada aba no fim. O <b>Início</b> não se escolhe — é só a prova de que as duas convivem.</li>
-    </ol>
-  </section>
-
-  <div class="cartoes">
-    <div class="glass cartao-lnk">
-      <h2>⚡ Menor Lance Único <span class="selo alt">edições Relâmpago</span></h2>
-      <p>O usuário dá o lance. Ação primeiro, placar no fim.</p>
-      <div class="var-lnks">
-        <a href="mlc.html#A">A · Fiel + harmônica</a>
-        <a href="mlc.html#B">B · Cartão maior</a>
-        <a href="mlc.html#C">C · 2 colunas</a>
-        <a class="sec" href="mlc.html">abrir sem variante fixa</a>
-      </div>
-    </div>
-
-    <div class="glass cartao-lnk">
-      <h2>🎫 Ofertas Programadas <span class="selo alt">edições Programada</span></h2>
-      <p>O usuário palpita e junta pontos. O progresso é informação, não enfeite.</p>
-      <div class="var-lnks">
-        <a href="op.html#A">A · Fiel + harmônica</a>
-        <a href="op.html#B">B · Progresso em destaque</a>
-        <a href="op.html#C">C · Cards compactos</a>
-        <a class="sec" href="op.html">abrir sem variante fixa</a>
-      </div>
-    </div>
-
-    <div class="glass cartao-lnk">
-      <h2>🏠 Início <span class="selo">referência</span></h2>
-      <p>Não é proposta: o Início está aprovado no 107c. Está aqui só para confirmar que as duas famílias convivem na mesma tela.</p>
-      <div class="var-lnks">
-        <a href="inicio.html">Abrir o Início</a>
-        <a class="sec" href="../inicio.html">ver o aprovado no 107c</a>
-      </div>
-    </div>
-
-    <div class="glass cartao-lnk">
-      <h2>📐 Regras e tokens</h2>
-      <p>Os valores usados não foram inventados: vêm do <code>tokens.css</code> da série 107a.</p>
-      <div class="var-lnks">
-        <a href="../tokens.html">Tokens + contraste</a>
-        <a class="sec" href="../regra-1-glass.html">Regra 1</a>
-        <a class="sec" href="../tabela-especial.html">Regra 2</a>
-      </div>
-    </div>
+  <h2 class="idx-sec">1 · Sumário de design (lido do repo, não inventado)</h2>
+  <ol class="resumo-design">
+    <li><b>Fundo:</b> navy <code>#050818</code> (<code>COR.bg</code>) + a <b>arena real</b> do app (<code>public/assets/backgrounds/background-*.webp</code>: holofotes, confettis, néon laranja).</li>
+    <li><b>Vidro (Regra 1):</b> <code>.gut-glass-standard</code> = <code>rgba(13,18,53,.88)</code>, borda <code>rgba(255,255,255,.10)</code>, raio 14 px, <b>sem blur</b> (MC82.1).</li>
+    <li><b>Acento de marca:</b> laranja <code>#ff6b35</code> (<code>COR.primary</code>) só nos títulos de aba.</li>
+    <li><b>Dourado:</b> <code>#f5a623</code> (o único dourado proposto no 107a; o app ainda usa também <code>#ff9500</code>) para valores, nomes de prêmio, tempo e CTA; texto sobre dourado <code>#0a0f1a</code> (9,45:1).</li>
+    <li><b>Texto:</b> <code>#e8f0fe</code> (16:1) · corpo <code>#c8d0f0</code> (12:1) · rótulos <code>#8fa0d8</code> (7,2:1). Estados: verde <code>#5ee0b4</code>, vermelho <code>#ff9a9d</code>.</li>
+    <li><b>Tipografia:</b> <b>Orbitron</b> só em títulos (aba 18 px, secção 14 px) e no cronómetro; <b>Inter</b> no resto (corpo 15 px, rótulos 12 px maiúsculas, valor 30–48 px peso 900). As fontes auto-hospedadas do app.</li>
+    <li><b>Espaçamento:</b> margem lateral 16 px (24 a partir de 700), padding do vidro 16/20 px, 12 px entre vidros, coluna de 640 px.</li>
+    <li><b>Raios:</b> 14 px vidro · 12 px botões e caixas internas · 10 px campos e arte · 999 px pílulas.</li>
+    <li><b>Toque:</b> 48 px mínimo (campos, botões, histórico, links).</li>
+    <li><b>Já existia e reaproveitei:</b> <code>tokens.css</code> e <code>mockup.js</code> do 107a-front, o carrossel do MC99, a <code>TabelaEspecial</code> (Regra 2), os 5 estados do palpite (107e), o rótulo «Seu lance (em centavos)» (107d), o GUTO e a arte real das edições.</li>
+  </ol>
+  <div class="amostras" aria-label="Amostras de cor">
+    <span><i style="background:#050818"></i>#050818</span><span><i style="background:rgba(13,18,53,.88)"></i>vidro .88</span><span><i style="background:#ff6b35"></i>#ff6b35</span><span><i style="background:#f5a623"></i>#f5a623</span><span><i style="background:#e8f0fe"></i>#e8f0fe</span><span><i style="background:#8fa0d8"></i>#8fa0d8</span><span><i style="background:#5ee0b4"></i>#5ee0b4</span>
   </div>
 
-  <section class="glass" style="margin-top:16px">
-    <h2 class="h-sec">O que corre mal hoje (medido nos mockups aprovados)</h2>
-    <table class="tabela-comp">
-      <thead><tr><th>Item</th><th>Menor Lance Único (107d)</th><th>Ofertas Programadas (107e)</th><th>v2</th></tr></thead>
-      <tbody>
-        <tr><td>Componente do card</td><td class="nao">.edicao-unica</td><td class="nao">.edicao</td><td class="sim">.ed-card (um só)</td></tr>
-        <tr><td>Raio</td><td class="nao">24 px · botão 28 px (pílula)</td><td class="sim">14 px · botão 12 px</td><td class="sim">14 px · 12 px</td></tr>
-        <tr><td>Dourado</td><td class="nao">gradiente f5a623→e89400</td><td class="sim">f5a623 sólido</td><td class="sim">f5a623 sólido</td></tr>
-        <tr><td>Largura de conteúdo</td><td class="nao">sem limite (estica)</td><td class="sim">640 px</td><td class="sim">640 px</td></tr>
-        <tr><td>Cabeça da aba</td><td class="nao">título solto dentro do vidro</td><td class="sim">titulo-aba</td><td class="sim">titulo-aba</td></tr>
-        <tr><td>Estados do card</td><td class="nao">só o 🔒 da tabela</td><td class="sim">.estado</td><td class="sim">.estado</td></tr>
-        <tr><td>Tabela no fim</td><td class="sim">sim (Regra 2)</td><td class="sim">sim (Regra 2)</td><td class="sim">sim (Regra 2)</td></tr>
-      </tbody>
-    </table>
-    <p class="nota">A conclusão é uma só: <b>o conteúdo já era o mesmo nas duas abas — o que divergia era a roupa</b>. Era daí que vinha a sensação de «duas apps».</p>
-  </section>
+  <h2 class="idx-sec">2 · Versão mobile (375 px), lado a lado</h2>
+  <p class="texto-idx" style="margin:0 0 10px">Deslize para o lado. As capturas foram tiradas do HTML real com Chrome; cada uma passou o auditor do <code>mockup.js</code> (0 alvos &lt; 48 px · 0 textos fora de vidro).</p>
+  <div class="galeria">
+    <figure><img src="mobile/mlc-A-com-edicao.jpeg" alt="MLC variante A com edição"><figcaption><b>MLC · A ★</b> · com edição</figcaption></figure>
+    <figure><img src="mobile/mlc-A-sem-edicao.jpeg" alt="MLC variante A sem edição"><figcaption><b>MLC · A ★</b> · sem edição (correcção do 108d)</figcaption></figure>
+    <figure><img src="mobile/op-A-com-edicao.jpeg" alt="OP variante A com edições"><figcaption><b>OP · A ★</b> · com edições</figcaption></figure>
+    <figure><img src="mobile/op-A-sem-edicao.jpeg" alt="OP variante A sem edição"><figcaption><b>OP · A ★</b> · sem edição</figcaption></figure>
+    <figure><img src="mobile/mlc-B-com-edicao.jpeg" alt="MLC variante B com edição"><figcaption><b>MLC · B</b> · produto em destaque</figcaption></figure>
+    <figure><img src="mobile/mlc-B-sem-edicao.jpeg" alt="MLC variante B sem edição"><figcaption><b>MLC · B</b> · sem edição</figcaption></figure>
+    <figure><img src="mobile/op-B-com-edicao.jpeg" alt="OP variante B"><figcaption><b>OP · B</b> · progresso em destaque</figcaption></figure>
+    <figure><img src="mobile/mlc-C-com-edicao.jpeg" alt="MLC variante C"><figcaption><b>MLC · C</b> · no mobile empilha (o horizontal é ≥ 700 px)</figcaption></figure>
+    <figure><img src="mobile/op-C-com-edicao.jpeg" alt="OP variante C"><figcaption><b>OP · C</b> · cartões compactos</figcaption></figure>
+    <figure><img src="mobile/inicio-com-edicao.jpeg" alt="Início com edições"><figcaption><b>Início</b> · as duas famílias</figcaption></figure>
+    <figure><img src="mobile/inicio-sem-edicao.jpeg" alt="Início sem edição"><figcaption><b>Início</b> · sem edição</figcaption></figure>
+  </div>
 
-  <section class="glass" style="margin-top:16px">
-    <h2 class="h-sec">Recomendação do Hermes</h2>
-    <div class="reco">
-      <b>Menor Lance Único → A</b>, com uma ideia roubada à B: o cronômetro acima do prêmio (é informação, não decoração).<br>
-      <b>Ofertas Programadas → A</b>, com a barra de progresso da B (grossa, com o número grande) — a aba existe para juntar pontos e o progresso tem de se sentir.<br>
-      <b>Variante C</b> (2 colunas / cards compactos) só compensa se o operador usar sobretudo o computador; <b>no celular a diferença é nula</b>.
-      <p class="nota" style="margin:8px 0 0">Motivo de fundo: as duas abas são superfícies <b>Operate</b>. O mínimo que muda e já entrega coerência é sempre a escolha mais segura — daí a A como base.</p>
-    </div>
-  </section>
+  <h2 class="idx-sec">3 · Pranchas interactivas</h2>
+  <div class="cartoes-idx">
+    <a href="mlc.html"><b>Menor Lance Único</b>Variantes A · B · C, com e sem edição, 375/768/1024</a>
+    <a href="op.html"><b>Ofertas Programadas</b>Variantes A · B · C, com e sem edição, 375/768/1024</a>
+    <a href="inicio.html"><b>Início (referência)</b>As duas famílias com o mesmo cartão</a>
+  </div>
 
-  <section class="glass" style="margin-top:16px">
-    <h2 class="h-sec">O que NÃO foi tocado</h2>
-    <ol class="mudou">
-      <li><b>Nenhum arquivo do app.</b> Zero alterações em <code>src/</code>, <code>netlify/</code>, <code>scripts/</code>.
-        <span class="porque">É design, não implementação — a implementação é um UTAC próprio depois de o operador escolher.</span></li>
-      <li><b>Os mockups aprovados da série 107a.</b> Os originais (<code>menor-lance-unico.html</code>, <code>ofertas-programadas.html</code>, <code>inicio.html</code>…) ficam onde estão, intactos.
-        <span class="porque">Esta pasta é <code>mlc-op-v2/</code>, ao lado deles. Nada foi substituído.</span></li>
-      <li><b>Os valores.</b> Raio, espaçamento, cores e tipografia vêm do <code>tokens.css</code> da série 107a — não houve paleta nova.
-        <span class="porque">Se a coerência se fizesse com cores novas, teríamos duas famílias outra vez.</span></li>
-    </ol>
-  </section>
+  <h2 class="idx-sec">4 · O que mudou e porquê</h2>
+  <ul class="texto-idx">
+    <li><b>Uma peça só para a edição.</b> Antes o MLC usava <code>.slide</code> e a OP <code>.edicao</code>: duas formas para a mesma coisa. Agora as duas abas (e o Início) usam o cartão <code>.ed</code>: id + estado → arte + prêmio → GUTO + tempo → acção. Só a acção muda: <b>lance</b> no MLC, <b>palpite</b> na OP.</li>
+    <li><b>O mesmo título nas duas abas</b>, com o selo do tipo («⚡ Relâmpago» / «🎫 Programadas»), e a <b>mesma tabela no fim</b> (Regra 2): «Lances — Edição RELAMP-2» e «Palpites — Edição PROG-1».</li>
+    <li><b>Correcção do 108d:</b> sem edição, o <b>cartão continua lá</b>, vazio (moldura tracejada, «Nenhuma edição em andamento», GUTO, «Próxima edição —», acção desactivada com «Volte quando houver»). Nada de aviso solto.</li>
+    <li><b>A identidade real do DesafioGUT</b>, que faltava na tentativa anterior: a arena do fundo do app, o GUTO e a arte real da edição (Air Fryer). Os mockups antigos usavam emojis sobre um fundo liso.</li>
+    <li><b>Copy:</b> pt-BR. «Nenhuma edição em andamento» (o enunciado dizia «a decorrer», que é pt-PT). ⚠️ A arte real da Air Fryer ainda diz «Quanto você <b>PAGA</b>» (o app passou a «oferta» no 106c): é o asset existente, a trocar quando houver arte nova.</li>
+  </ul>
 
-  <p class="rodape-legal">DesafioGUT · Grupo União e Trabalho · CNPJ 23.040.066/0001-00</p>
+  <h2 class="idx-sec">5 · Recomendação</h2>
+  <p class="texto-idx"><b>MLC A + OP A.</b> São gémeas peça por peça (mesmo título, mesmo cartão, mesma tabela), ficam mais perto do que já foi aprovado no 107d/107e e são as mais baratas de implementar no 108e.1. Se quiser mais impacto comercial no MLC, a <b>B</b> é a alternativa forte: a arte da edição vira montra. Na OP, a <b>B</b> só compensa se o objectivo for empurrar o resgate do cartão.</p>
+
+  <h2 class="idx-sec">6 · Como usar</h2>
+  <p class="texto-idx">Veja a galeria acima (mobile). Para mexer, abra uma prancha, escolha a variante, alterne «Com edição / Sem edição» e compare. Diga a letra que quer em cada aba (ex.: «MLC A, OP B»).</p>
 </div>
 </body>
 </html>
