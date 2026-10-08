@@ -5296,3 +5296,19 @@ Alvo final **re-medido**: 21/21 estados (9 MLC + 9 OP + 3 Inicio) sem alvos < 48
 
 **Entregaveis:** `docs/mockups-107a/mlc-op-v2/` · este bloco R14 ·
 `Desktop/RELATORIO-UTAC108e-MOCKUPS.txt` · `Desktop/MOCKUPS-108e-MLC-OP/` (copia autonoma).
+
+
+## R14 (append) -- UTAC108d -- MLC: herói «EM BREVE» substituído por estado vazio (Claude Code, Opus 5.5)
+
+**Tipo:** CODIGO (frontend + testes). **Baseline:** `1f00b30`. **Commits:** `50a9223` -> `a68ec46`. **Suite:** frontend VERDE
+**885/885** · backend VERDE 1095/1101. **Deploy:** `index-BZluhY9V.js` -> `index-BwrYbmL7.js`.
+**Premissa do enunciado REFUTADA:** o early return `!isLeilaoAtivo` -> «Edições na versão Web» é a conformidade das LOJAS e na
+web nao dispara (pwa=true); o «EM BREVE» vinha do heroi incondicional `GlassHeader` -> `ComingSoonHero` (MC65/66).
+**R18-A** trocar o heroi, early return intacto. **R18-B** sinal «sem edicao» = `EM_BREVE_MODE` (so lido, continua `true`).
+Feito: sai o `ComingSoonHero` do `GlassHeader`; novo `SemEdicaoAviso.jsx` («⏳ Nenhuma edicao em andamento. Volte quando houver.»,
+pt-BR em vez do «a decorrer» do enunciado) no topo do `<main>`; `EM_BREVE_MODE ? estado vazio : «Sem saldo»` (nunca juntos).
+Testes `utac108d-mlc-sempre` (13) + duplo `_stubs/leilaoLock.js`; mutacao **11/11** (108d) e 14/14 (108c).
+**Validador: APROVADO COM RESSALVAS** (A1/A4 fechados; **A2 escalado**: CardLance activo sob o estado vazio; A3 pilula «🕒 Em breve»
+da tabela; A5 «Art. 8» saiu). `/mercado` nao aberto em browser (gate legal). **⚠️ O operador classificou depois o aviso solto como
+ERRO** (o mockup pede o CARD da edicao em estado vazio) -> redesenho no UTAC108e, implementacao no 108e.1.
+**Registo:** `_logs/UTAC108d-mlc-sempre.md` · `_logs/UTAC108d_SEG5_VALIDADOR.md` · `Desktop/RELATORIO-UTAC108d-MLC-SEMPRE.txt`.
