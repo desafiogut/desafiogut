@@ -317,3 +317,24 @@ são o único lote seguro para desligar **sem** tocar em UI.
 | Os 4 erros reportados diagnosticados? | **SIM** — 2 cosméticos (Privy), 2 por desenho (`cotas.mjs:291/316`) |
 | Discrepâncias listadas? | **SIM** — D-1..D-5 (do manifesto) + **D-6, D-7, D-8 (novas)** |
 | Bundle local vs produção | **sincronizado** (prova por conteúdo, 137 chunks) |
+
+
+---
+
+## 10. ERRATA PÓS-VEREDICTO (validador adversarial, art. no worktree de `644c6ce`)
+
+**Veredicto do validador: APROVADO COM RESSALVAS — 0 bloqueantes.** **0 das 10 alegações-núcleo**
+(A1..A10) foram refutadas. Foram assinaladas **4 imprecisões** (F-1..F-4), **re-medidas por mim**
+(não copiei os números do validador). As frases erradas **ficam à vista** (§0 e §4) — é esta a errata.
+
+| # | Afirmação do log (fica à vista) | Re-medição minha | Correção |
+|---|---|---|---|
+| **E-1** | §0: «`HEAD`/`origin/main` = `08f78b3`/`08f78b3` (iguais)» | `origin/main` = **`08f78b3`** no clone principal **e** no worktree; `08f78b3` é o **pai** de `644c6ce` (o commit desta auditoria). No worktree o `HEAD` é `644c6ce` — inerente (o worktree nasce no commit auditado) | **precisão**: o baseline foi medido **antes** do commit do próprio documento; a igualdade HEAD=origin/main é a de `08f78b3` |
+| **E-2** | §4: «os `401/405` provam que a função está lá — **a resposta é JSON**, não HTML» | dos 84: **76 `application/json`** + **8 `text/plain`** (7 × `*-scheduled` → 403; `img-proxy` → 400); **0 `text/html`** | ler «a resposta **não é `text/html`**» (JSON **ou** `text/plain`). O discriminador e os **84/84** não mudam |
+| **E-3** | §0/§2: «**137** chunks baixados» | re-medido com BFS mais agressivo: **137** (5,75 MB) ⇒ **o meu número reproduz**. O validador reporta **187** num crawl mais largo — **declaro as duas réguas**, não adopto a dele | a conclusão de sincronia **não** muda (a amostra é ≥ a minha) |
+| **E-4** | §0: «+ **6 chunks de vendor**» | o `index.html` servido declara **4 `modulepreload`** (rolldown-runtime, react, router, motion) **+ 1 entry = 5** | corrigido para **4+1** |
+
+**Nota:** nenhuma das quatro altera uma conclusão. As correcções **não foram re-validadas** por uma
+2.ª ronda (declarado — GATE 11: são erratas de redacção/reprodutibilidade, com a medição apresentada
+acima). O veredicto integral, verbatim, está em `_logs/UTAC108b_SEG6_VALIDADOR.md`, com a resposta
+do executor ao lado.
