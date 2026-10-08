@@ -5204,3 +5204,17 @@ no 108f) e o aviso nunca aparece a `tipoProvavel === "corporativo"`.
 regressao). **Escopo:** backend, App.jsx, CardLance, package*, 5 `.bak-*` intactos; `EM_BREVE_MODE = true`.
 **Registo:** `_logs/UTAC108c-d1-mlc.md` · `_logs/UTAC108c_SEG5_VALIDADOR.md` · `Desktop/RELATORIO-UTAC108c-D1-MLC.txt`.
 **Custo:** validador 115 615 tokens = 2,3–231 ¢ (46 ¢ se tudo input); sessao principal nao medida; ≈ 35 min. **Proximo:** 108f.
+
+
+## R14 (append) -- UTAC108c.1 -- N3: aviso «Sem saldo» escondido no modo Programado (Claude Code, Opus 5.5)
+
+**Tipo:** CODIGO (frontend + testes). **Baseline:** `b8ee946`. **Commit:** `37d9420` -> registo. **Suite:** frontend VERDE
+**871/871** (+4) · backend VERDE 1095/1101. **Deploy:** auto-deploy Git; entry `index-CRWGSol9.js` -> `index-BZluhY9V.js`;
+chunk `MercadoLances-CdjCLUBx.js` com a guarda. `mostrarAvisoSemSaldo` (`SemSaldoBanner.jsx`) recebe `modalidade` e devolve
+`false` em `"programado"`; o call site do `MercadoLances` passa a MESMA `modalidade` do contexto (`AppContext.jsx:180`,
+`"flash" | "programado"`, escolhida no `ModeSelector`) que o CardLance usa para decidir o debito (`CardLance.jsx:91`).
+Relampago, R18-A e R18-B inalterados; CardLance, backend, package*, `.bak-*` intactos; `EM_BREVE_MODE = true`.
+Mutacao **14/14** (M13 guarda · M14 call site). **Validador: APROVADO COM RESSALVAS** (0 graves; I2 escalado: Programado com
+R$ 0 e 0 senhas fica so com o aviso do CardLance, sem atalho «Carregar PIX»). **N3 FECHADA.**
+**Registo:** `_logs/UTAC108c.1-n3-programado.md` · `_logs/UTAC108c.1_SEG5_VALIDADOR.md` · `Desktop/RELATORIO-UTAC108c.1-N3.txt`.
+**Custo:** validador 96 765 tokens = 1,9–194 ¢ (39 ¢ se tudo input); ≈ 20 min. **Proximo:** 108f.
