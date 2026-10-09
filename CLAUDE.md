@@ -5524,3 +5524,48 @@ restauro byte-identico (`pt.js` `7b3f708c6f3003f3e0369325a39a20dc`, `robots.txt`
 (a skill do Soul ID e «for a PERSON'S FACE», 5-20 FACE photos; o GUTO e mascote cartoon 3D com 8 imagens de
 corpo inteiro e 0 close-ups — LACUNA L-3 do 109a); (B) verificar **primeiro** `Desktop\GUTO\GUTO original\`
 (LACUNA L-1: a referencia original perdeu-se); se nao estiver la, usar 2-3 das 8 (`02`, `03`, `06`).
+
+
+## R14 (append) -- UTAC109c -- DIAGNOSTICO: CARROSSEL DE VIDEOS + O DEFEITO DO BRANCO (hermes / deepseek)
+
+**Tipo:** diagnostico PURO, READ-ONLY (zero alteracoes de codigo). Baseline `04a07e7`. Sem validador
+(ressalva 5 do enunciado). **PARADO — a correccao e o UTAC109d.**
+
+**O carrossel.** `src/components/CarrosselGUTO.jsx` (unico consumidor: `src/pages/Dashboard.jsx:282`,
+`size` 116 mobile / 176 desktop). **8 slides** = 8 WebM (VP9 + tag `alpha_mode=1`, 512x512, 443 KB-1,66 MB)
++ 8 posters PNG, servidos de `public/assets/guto/carrossel/guto-{1..8}.{webm,png}` com `?v=mc58`.
+Sem fetch/API/Blob. Crossfade de **1 s** a **50%** da duracao real, com no maximo 2 `<video>` montados.
+
+**O defeito do branco — REPRODUZIDO, mas NAO no carrossel no ar.**
+- O carrossel EM PRODUCAO esta LIMPO: varridos **todos** os frames (10 fps, RGBA) das 8 webm + 3 sprites
+  = **0,0000 de branco na borda** em todos; alfa 45-59% (carrossel) e 72-74% (sprites). Os 16 ficheiros
+  servidos sao **byte-identicos** ao disco (md5 16/16).
+- O **material NOVO** tem fundo **BRANCO OPACO e SEM alfa**: `Desktop\NOVO GUTO animado oficial\*.mp4`
+  (8 MP4 h264/yuv420p, 960x960, 10 s, 0,86-1,71 MB, sem audio, borda **80-99% branca opaca**) e as 16
+  PNG novas (`NOVO GUTO estatico oficial[/CORRIGIDO]`, 4096x4096, **transp = 0,0**, borda 89-99,9% branca).
+  MP4/H.264 **nao suporta alfa** ⇒ posto no carrossel como esta, da um **quadrado branco**.
+- Hipoteses descartadas por medicao: aspect-ratio (tudo 1:1), background do contentor (nao existe),
+  gap/padding (e entre o carrossel e o logo), frame branca (varredura completa), opacity (2 camadas
+  transparentes). A hipotese «browser sem alfa VP9» daria **PRETO** (o plano de cor e (0,0,0)) - nao branco.
+  O branco que EXISTE no carrossel e **conteudo** (eletrodomesticos brancos + placa «LANCE UNICO»).
+
+**DRIFT MEDIDO (GATE 2 / licao «o artefacto move-se»).** A pasta-fonte passou de **20** ficheiros (109a)
+para **36**: apareceram 2 subpastas novas (mtime 2026-10-07 06:51 e 20:07). E a pasta dos videos novos esta
+**FORA** da pasta-fonte — `Desktop\NOVO GUTO animado oficial\` (8 MP4 + `LEIA-ME.txt`): correccao do
+operador durante este UTAC. O `LEIA-ME` diz: Higgsfield CLI **Seedance 2.5** (image-to-video), 960x960,
+30 fps, h264, sem audio, 10 s boomerang, enquadramento fixado (imagem como 1.o e ultimo frame), textos
+corrigidos - e ainda «MENOR LANCE UNICO» (1), «O MENOR LANCE UNICO VENCE» (2), «PARTICIPE JA» (8):
+o material novo esta **meio-des-leiloizado** (saiu martelo/pulpito/microfone; entrou carrinho/caixas/sacos).
+⚠️ A pasta «NOVO» **nao e toda nova**: 2 de 8 sao copias das antigas (1.png = `03-guto-maquina-lavar`,
+8.png = `08-guto-conjunto-eletrodomesticos`).
+
+**LACUNA L-1 — VERIFICADA.** `Desktop\GUTO\GUTO original\` **existe** e tem **1** ficheiro:
+`guto tradicional (1).png` (1024x1536, RGBA, **67,5% transparente** ⇒ fundo LIMPO). Nao e o `0539243f...915e.png`
+do grafo ComfyUI (esse continua ausente): a L-1 estrita permanece, mas ha um GUTO original utilizavel.
+Os **8 MP4 do 109a** (L-4) foram medidos pela 1.a vez: todos **sem alfa e com fundo branco opaco**.
+
+**Para o 109d (bloqueador):** remover o fundo branco frame-a-frame + encode **WebM VP9 `alpha_mode=1`**
+(`-pix_fmt yuva420p`), verificar o alfa por DESCODIFICACAO (o `ffprobe` reporta `yuv420p` e nao prova o alfa),
+**subir a constante `V`** do cache-bust (os assets sao `immutable, max-age=1 ano`), e **decidir a fonte unica**
+(o material novo esta espalhado em 2 sitios). Escaladas 4 perguntas ao operador (onde viu o branco, que
+dispositivo, qual a fonte, e se ha de haver uma 3.a geracao sem «MENOR LANCE UNICO»).
