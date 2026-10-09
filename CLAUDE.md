@@ -5569,3 +5569,53 @@ Os **8 MP4 do 109a** (L-4) foram medidos pela 1.a vez: todos **sem alfa e com fu
 **subir a constante `V`** do cache-bust (os assets sao `immutable, max-age=1 ano`), e **decidir a fonte unica**
 (o material novo esta espalhado em 2 sitios). Escaladas 4 perguntas ao operador (onde viu o branco, que
 dispositivo, qual a fonte, e se ha de haver uma 3.a geracao sem «MENOR LANCE UNICO»).
+
+
+## R14 (append) -- UTAC109d -- REMOVER O FUNDO BRANCO DOS 8 VIDEOS NOVOS (hermes / deepseek)
+
+**Baseline** `3ba5d2e` -> commit **`dd01f50`** (troca) + registo. Testes: frontend **914/914**
+(910 + 4 novos), backend **1095/1101** VERDE. **Validador adversarial: APROVADO, 0 bloqueantes**
+(worktree A13, 687s, 0 ficheiros do repo tocados). Deploy verificado em producao.
+
+**O que mudou:** os 8 WebM + 8 PNG posters de `desafio-gut/frontend/public/assets/guto/carrossel/`
+sao AGORA o material NOVO (`Desktop\NOVO GUTO animado oficial\`, que o UTAC109c mediu com fundo
+BRANCO OPACO e sem alfa) processado para **VP9 `alpha_mode=1` 512x512** (288-1308KB; total 4,5MB vs
+8,3MB dos antigos). Unica alteracao de codigo: `CarrosselGUTO.jsx:27` `const V = "mc58"` -> **`"mc59"`**
+(cache-bust). Novo guarda `src/__tests__/utac109d-carrossel.test.mjs` (4 testes).
+
+**SEG0 -- a licao:** o pipeline que gerou os WebM actuais (MC58, Jul/2026) esta DOCUMENTADO em 5 sitios
+(`cloud.md` MC58.1/MC58.3, `GUTO/GUTO-ANIMADO GLASS DASHBOARD/notas_mc58{1,2,3}.txt`,
+`MC-HISTORICO/recuperados-lixeira/MC58.3-RELATORIO.md` e **`MC58.2-PLANO-MIGRACAO.md` §3.1**, a receita),
+mas o CODIGO (`whitecut.py` v1, `finalize.py`, `process_all.py`, `finalize_universal.py`) era scratchpad
+**nunca versionado e perdeu-se** (`GUTO-ANIMADO GLASS DASHBOARD/_mc58work/` esta VAZIO; 0 `.py` em
+qualquer commit/branch; nada no disco). O operador pediu para NAO inventar -> pedi decisao (4 opcoes),
+sem resposta no prazo -> re-implementei o ALGORITMO DOCUMENTADO e fiz PILOTO antes dos 8. **O pipeline
+passou a estar versionado** no Apendice A de `_logs/UTAC109d-remover-fundo.md`.
+
+**Receita reproduzida (MC58.2 §3.1):** (1) flood-fill de BORDAS (`whitecut` v1, `scipy.ndimage.label`)
+remove so o branco conectado a moldura -- brancos internos (camisa/olhos) e eletrodomesticos ficam;
+SEM o passo `whitecut2` do vidro fosco da img1; (2) downscale PREMULTIPLICADO 960->512 + RGB dos
+transparentes->preto + **erode 2px** (mata o halo); (3) `ffmpeg -c:v libvpx-vp9 -pix_fmt yuva420p
+-b:v 0 -crf 30` -> `alpha_mode=1`; (4) poster = 1.o frame com alfa. Deterministico cv2/scipy, 0 ML.
+
+**DESVIO DECLARADO (atacado pelo validador e nao derrubado):** `white_thr` **232 (default documentado)
+-> 185**. Com 232 o chao claro dos videos v2 fica como faixa clara opaca (o material do MC58 tinha
+podios escuros e nunca viu este caso; o `whitecut2` que o resolvia e exclusivo do vidro da img1).
+Calibracao MEDIDA (frame 150): residuo claro na metade inferior 22 879 px (232) -> **506 px (185)**,
+com o **aco escuro dos eletrodomesticos IDENTICO** (54 851 px em todos os limiares) e gate visual a
+confirmar a maquina intacta. Fica a consideracao do operador.
+
+**Licoes operacionais (instrumentos):** (a) o decode de VP9-alfa **por omissao DESCARTA o alfa**
+(da `yuv420p` e pixels pretos opacos) -- medir alfa exige `-c:v libvpx-vp9 -i f.webm -pix_fmt rgba`,
+e o `ffprobe` sozinho reporta `yuv420p` mesmo quando o `alpha_mode=1` existe; (b) um extrator que
+reutilize o ficheiro de saida devolve **frame STALE** e mente (deu valores identicos para 8 ficheiros
+diferentes) -- nomes unicos por (ficheiro,t) e remover antes de extrair; (c) `cv2.cvtColor(dstack([bgr,a]),
+COLOR_RGBA2BGRA)` troca R<->B no poster (o `webm` nunca teve o bug) -- para BGRA usar `imwrite(dstack([bgr,a]))`.
+
+**Cache-bust (medido, nao suposto):** a query `?v=` **nao e chave de CDN** -- a Netlify devolve o
+ficheiro NOVO no mesmo caminho mesmo com `?v=mc58`; o `?v=` invalida apenas a **cache do browser**
+(os assets sao `immutable, max-age=1 ano`) -> sem subir a constante, um browser com cache continuaria
+a mostrar os videos antigos durante 1 ano. Por isso a subida para `mc59` e obrigatoria.
+**Deploy:** push = auto-deploy Git (NAO usar `netlify deploy --build`, que corre build local e ensuja
+o `package-lock` do frontend). Verificado: entry `index-B2GWopzJ.js` -> `index-Dz3nLTfv.js` a t+142s;
+`guto-1.webm?v=mc59` = 397 840 B md5 `11368a8b8220` = o novo; +9 assets sem divergencia.
