@@ -111,6 +111,47 @@ test("A2/A3 · 1.º vidro = o MESMO GlassHeader do MLC e o MESMO envelope ⇒ me
   } finally { c.fim(); }
 });
 
+// ═══ Achados do validador (SEG3) ═════════════════════════════════════════════════════════════════
+test("SEG3 · o login do 1.º vidro da OP está ligado: o botão chama o `abrirModal` do contexto; ligado mostra o endereço", async () => {
+  let aberto = 0;
+  definirMobile(false);
+  definirContexto({ isConnected: false, address: null, user: null, authToken: null, userLabel: null, edicoes: PROG, ready: true,
+    refetchSaldo: () => {}, saldoRsCentavos: null, saldoRsStatus: "idle", refetchSaldoRs: () => {}, setModalidade: () => {},
+    privyWallet: null, abrirModal: () => { aberto++; } });
+  const dup = duploDeFetch(() => ({ status: 200, json: LEITURA }));
+  const ctrl = montar(OP, []);
+  try {
+    await ctrl.assentar();
+    const nos = [];
+    (function walk(n) { if (n == null || typeof n !== "object") return; if (Array.isArray(n)) { n.forEach(walk); return; } nos.push(n); if (n.props) walk(n.props.children); })(ctrl.resultado());
+    // o GlassHeader é um componente: encontra-se pelo elemento e verifica-se a cablagem das props
+    const gh = nos.find((n) => n.props?.titulo === "Ofertas Programadas");
+    assert.ok(gh, "a OP não usa o GlassHeader");
+    assert.equal(gh.props.isConnected, false, "isConnected não vem do contexto");
+    assert.equal(gh.props.encerrado, false);
+    gh.props.onLogin();
+    assert.equal(aberto, 1, "o login da OP não abre o modal do contexto");
+  } finally { ctrl.desmontar(); dup.restaurar(); }
+  const c = await render();
+  try { assert.match(c.t, /✅ 0xAbC1\.\.\.4567/, "ligado, o rodapé do 1.º vidro não mostra o endereço"); } finally { c.fim(); }
+});
+
+test("SEG3 · MC88.43 na tabela nova: com EM BREVE não há «Prazo: <data>»; com a edição ATIVA há", async () => {
+  const c = await render();
+  try { assert.doesNotMatch(semTags(tabelaDe(c.h)), /Prazo:/, "EM BREVE ao lado de um prazo real"); } finally { c.fim(); }
+  definirEmBreve(false);
+  try {
+    const a = await render();
+    try { assert.match(semTags(tabelaDe(a.h)), /Prazo: \d/); } finally { a.fim(); }
+  } finally { definirEmBreve(true); }
+});
+
+test("SEG3 · selo de estado da tabela com texto navy (AA ≥ 4,5:1 nas 4 cores de estado); grelha com alignContent start", async () => {
+  const c = await render();
+  try { assert.match(tabelaDe(c.h), /data-testid="op-tabela-estado" style="[^"]*color:#0a0f1a/); } finally { c.fim(); }
+  assert.match(codigo("pages/OfertasProgramadas.jsx"), /<main style=\{\{[\s\S]{0,600}alignContent: "start"/);
+});
+
 // ═══ B1 — «📋 Palpites» com o padrão de «📋 Lances — Edição R-1» ══════════════════════════════════
 const DOIS = { ok: true, revelado: false, palpites: [{ endereco: A, data: "x" }, { endereco: B, data: "y" }] };
 test("B1 · desktop: título 📋 Orbitron + id a dourado + selo + «🔒 valores ocultos até o fim» + #/Participante/Palpite 🔒", async () => {

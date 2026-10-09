@@ -26,6 +26,13 @@ const MUTANTES = [
   ["M8 nome volta a 9rem", CARTAO, 'flex: "1 1 12.5rem"', 'flex: "1 1 9rem"'],
   ["M9 P1 desligada", EDICAO, 'estado === ESTADO_EDICAO.ATIVA && edicao?.tipo === "programado"', "false"],
   ["M10 P2 desligada", CARTAO, 'palpite: Object.freeze({ mensagem: "Sem edições programadas no momento."', 'palpite: Object.freeze({ mensagem: "Nenhuma edição em andamento"'],
+  // Sobreviventes do validador adversarial (SEG3) — fechados com os testes «SEG3 ·».
+  ["M11 (V6) login desligado", OP, "onLogin={abrirModal}", "onLogin={() => {}}"],
+  ["M12 (V7) isConnected fixo", OP, "isConnected={isConnected}", "isConnected={false}"],
+  ["M13 (V8) encerrado true", OP, "encerrado={false}", "encerrado={true}"],
+  ["M14 (V5) prazo com EM BREVE", OP, "{est.timer == null && (", "{true && ("],
+  ["M15 (V2) sem alignContent", OP, 'alignContent: "start",', ""],
+  ["M16 selo branco (< AA)", OP, 'fontWeight: 700, color: "#0a0f1a" },', 'fontWeight: 700, color: "#fff" },'],
 ];
 
 // Lotes: `node scripts/utac109g-prova-mutacao.mjs M1 M2 …` (sem argumentos = todos). Correr em lotes

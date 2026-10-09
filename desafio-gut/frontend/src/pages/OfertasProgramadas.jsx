@@ -405,7 +405,10 @@ export default function OfertasProgramadas() {
 // diz nada) e o vazio tem 1 linha (a 2.ª linha do molde é copy de lance; não se inventa a do palpite).
 const tabelaEstilos = {
   titulo: { margin: 0, fontWeight: 800, letterSpacing: "0.04em", fontFamily: "'Orbitron', sans-serif", color: COR.gold },
-  badge: { padding: "0.22rem 0.75rem", borderRadius: "20px", fontSize: "0.7rem", fontWeight: 700, color: "#fff" },
+  // ⚠️ achado do validador (SEG3): o branco do molde dá 2,54–3,76:1 sobre as cores de estado (< AA). Aqui o
+  // texto é o navy do app (#0a0f1a, o mesmo do botão dourado): 6,76 (EM BREVE) · 7,55 (ATIVA) · 5,09
+  // (ENCERRADA) · 4,79 (INDISPONÍVEL). O selo da `TabelaLances` (MLC) fica como está — fora do escopo.
+  badge: { padding: "0.22rem 0.75rem", borderRadius: "20px", fontSize: "0.7rem", fontWeight: 700, color: "#0a0f1a" },
 };
 
 function TabelaPalpites({ edicao, tabela, isMobile }) {
