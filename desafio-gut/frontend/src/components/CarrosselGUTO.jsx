@@ -24,7 +24,7 @@ import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useReducedMotion } from "framer-motion";
 import useAposPrimeiraPintura from "../hooks/useAposPrimeiraPintura.js";
 
-const V = "mc58"; // cache-bust dos assets imutáveis (?v=)
+const V = "mc59"; // cache-bust dos assets imutáveis (?v=) — UTAC109d: subiu de mc58 (troca dos 8 vídeos)
 const N = 8;
 const SLIDES = Array.from({ length: N }, (_, i) => ({
   webm: `/assets/guto/carrossel/guto-${i + 1}.webm?v=${V}`,
