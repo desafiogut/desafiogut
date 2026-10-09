@@ -21,11 +21,14 @@ const MUTANTES = [
   ["M3 laranja volta ao destaque", CART, '  primary: "#f5a623", primaryDim: "rgba(245,166,35,0.15)",', '  primary: "#ff6b35", primaryDim: "rgba(255,107,53,0.15)",'],
   ["M4 Indique volta a verde-água", PAINEL, '  primary:    "#f5a623",', '  primary:    "#00d4aa",'],
   ["M5 CTA volta ao gradiente de 2 tons", CART, 'background: "#f5a623",', 'background: "linear-gradient(135deg,#f5a623,#e89400)",'],
-  ["M6 texto branco no CTA dourado", CART, 'const ON_GOLD = "#0a0f1a";', 'const ON_GOLD = "#ffffff";'],
+  ["M6 CTA do Passe volta a dourado SÓLIDO", CART,
+    'background: "rgba(245,166,35,0.14)",\n                    border: "1px solid rgba(245,166,35,0.4)",\n                    color: COR.gold,\n                    boxShadow: "none",\n                  }}\n                  title={`Comprar o Passe Desafio',
+    'background: COR.gold,\n                    color: ON_GOLD,\n                  }}\n                  title={`Comprar o Passe Desafio'],
   ["M7 título volta ao tamanho do 109h", CART, 'fontSize: isMobile ? "0.85rem" : "0.88rem",', 'fontSize: isMobile ? "1.5rem" : "1.75rem",'],
   ["M8 erro deixa de ser vermelho", CART, 'danger: "#ef4444",', 'danger: "#f5a623",'],
   ["M9 secundário do Indique perde o amarelo", PAINEL, '  gold:       "#f5a623",', '  gold:       "#6b7db8",'],
   ["M10 botões da Carteira a 44 px", CART, 'width: "100%",\n    minHeight: "48px",', 'width: "100%",\n    minHeight: "44px",'],
+  ["M11 «Copiar código» volta a cheio", PAINEL, 'onClick={copiarCodigo} disabled={!dados.codigo} style={botaoSecundario}', 'onClick={copiarCodigo} disabled={!dados.codigo} style={{ ...botaoSecundario, background: "#f5a623", color: "#04080f" }}'],
 ];
 
 const SEL = process.argv.slice(2);

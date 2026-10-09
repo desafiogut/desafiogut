@@ -105,14 +105,9 @@ export default function PainelIndicacao({ isMobile: isMobileProp }) {
     fontSize:      isMobile ? "0.85rem" : "0.88rem",
     fontWeight:    "800", color: COR.primary, letterSpacing: "0.03em",
   };
-  const botaoPrimario = {
-    width: "100%",
-    padding: isMobile ? "0.75rem 1rem" : "0.7rem 1.2rem",
-    background: "#f5a623",
-    border: "none", borderRadius: "12px", color: "#04080f",
-    fontWeight: "800", fontSize: "0.85rem", cursor: "pointer",
-    boxShadow: "0 4px 14px rgba(245,166,35,0.35)",
-  };
+  // UTAC109h.3 (decisão do operador, 2026-10-09) — o botão «📋 Copiar código» deixou de ser
+  // cheio e usa o MESMO padrão dos outros botões do app (`botaoSecundario`: tingido + contorno +
+  // texto amarelo). O antigo `botaoPrimario` (cheio `#f5a623`) ficou sem uso e saiu.
   const botaoSecundario = {
     width: "100%",
     padding: isMobile ? "0.75rem 1rem" : "0.7rem 1.2rem",
@@ -192,7 +187,7 @@ export default function PainelIndicacao({ isMobile: isMobileProp }) {
           gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
           gap: "0.6rem",
         }}>
-          <button onClick={copiarCodigo} disabled={!dados.codigo} style={botaoPrimario}>
+          <button onClick={copiarCodigo} disabled={!dados.codigo} style={botaoSecundario}>
             {copiado ? "✓ Copiado!" : "📋 Copiar código"}
           </button>
           <button onClick={compartilhar} disabled={!dados.codigo} style={botaoSecundario}>

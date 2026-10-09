@@ -125,24 +125,31 @@ test("UTAC106c/SEG1 · a Carteira delega a compra ao hook (sem I/O inline) — U
 });
 
 // ═══ SEG1b — UTAC107b: contraste, ordem, Regra 1, e-mail PIX ═══════════════════════
-test("UTAC107b/SEG4 · o botão «Comprar Passe» usa texto NAVY sobre dourado SÓLIDO (≥4,5:1)", () => {
-  // Antes: branco sobre o gradiente dourado = 2,03:1 (reprova o AA). Decisão 5 do operador:
-  // texto navy. Guarda-se a INVARIANTE do par de cores + o contraste WCAG calculado.
+test("UTAC107b/SEG4 + UTAC109h.3 · o botão «Comprar Passe» segue o padrão amarelo dos outros (≥4,5:1)", () => {
+  // HISTÓRICO DA DECISÃO, À VISTA: o UTAC107b (decisão 5) fixou aqui dourado SÓLIDO + texto navy
+  // porque branco sobre o gradiente dourado dava 2,03:1. O UTAC109h.3 (decisão do operador,
+  // 2026-10-09) pôs este botão no MESMO padrão amarelo dos restantes botões do ecrã («Depositar
+  // PIX», «Menor Lance Único», «Ofertas Programadas»): tingido `rgba(245,166,35,0.14)` + contorno
+  // `rgba(245,166,35,0.4)` + texto `COR.gold`. A INVARIANTE guardada é a MESMA de antes: o par de
+  // cores do rótulo tem de passar o AA (o que mudou foi o par, não a exigência).
   assert.match(CART, /const ON_GOLD = "#0a0f1a";/, "a constante ON_GOLD desapareceu");
   const i = CART.indexOf("Comprar Passe Desafio ${PRECO_PASSE_DESAFIO}");
   assert.ok(i > -1, "o rótulo do botão do Passe desapareceu");
   const bloco = CART.slice(CART.lastIndexOf("<button", i), i);
-  assert.match(bloco, /background:\s*COR\.gold/, "o botão do Passe não usa dourado sólido");
-  assert.match(bloco, /color:\s*ON_GOLD/, "o botão do Passe não usa o texto navy (contraste)");
+  assert.match(bloco, /background:\s*"rgba\(245,166,35,0\.14\)"/, "o botão do Passe não está no padrão tingido dos outros");
+  assert.match(bloco, /border:\s*"1px solid rgba\(245,166,35,0\.4\)"/, "o botão do Passe perdeu o contorno do padrão");
+  assert.match(bloco, /color:\s*COR\.gold/, "o botão do Passe não usa o texto amarelo do padrão");
   assert.doesNotMatch(bloco, /color:\s*"#fff"/, "o botão do Passe voltou ao texto branco (2,03:1)");
-  // WCAG 2.x — luminância relativa + razão de contraste
+  assert.doesNotMatch(bloco, /background:\s*COR\.gold/, "o botão do Passe voltou ao dourado SÓLIDO (fora do padrão)");
+  // WCAG 2.x — luminância relativa + razão de contraste; o par REAL é o rótulo sobre o botão
+  // tingido composto sobre o vidro: rgba(245,166,35,.14) sobre #0c1131 = #2d262f.
   const lum = (hex) => {
     const c = [1, 3, 5].map((k) => parseInt(hex.slice(k, k + 2), 16) / 255)
       .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
     return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
   };
   const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
-  const r = ratio("#0a0f1a", "#f5a623");
+  const r = ratio("#f5a623", "#2d262f");
   assert.ok(r >= 4.5, `contraste do botão do Passe = ${r.toFixed(2)}:1 (< 4,5:1)`);
 });
 

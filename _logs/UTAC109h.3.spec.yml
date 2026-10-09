@@ -1,0 +1,42 @@
+schema: utac/1
+name: UTAC109h.3
+title: "Carteira: «Comprar Passe Desafio» e «📋 Copiar código» ao padrão amarelo tingido dos outros botões"
+type: produto
+baseline: e48acf6
+motivo: >-
+  Decisão do operador: «esta perfeito, porem o comprar passe desafio, esta fora do padrao, e o copir
+  codigo tbm» / «deixe eles no padrao amarelo dos outros botoes». Medido: no ecrã da Carteira, 4 dos 6
+  botões usam o estilo tingido rgba(245,166,35,0.14) + contorno rgba(245,166,35,0.4) + texto amarelo
+  (PIX, MLC, OP) e o «Comprar Passe» era DOURADO SÓLIDO + navy; no painel, «Compartilhar» era tingido e
+  «Copiar código» era AMARELO SÓLIDO. Os dois sólidos eram os que destoavam.
+frentes:
+  - id: A
+    nome: Comprar Passe ao padrão tingido (MinhaCarteira.jsx)
+    entrega: [src/pages/MinhaCarteira.jsx]
+  - id: B
+    nome: Copiar código ao estilo do irmão (PainelIndicacao.jsx)
+    entrega: [src/components/PainelIndicacao.jsx]
+  - id: C
+    nome: Contratos de teste (actualizar preservando a invariante de contraste) + mutação
+    entrega: [src/__tests__/utac106c-carteira.test.mjs, src/__tests__/utac109h2-carteira.test.mjs, scripts/utac109h2-prova-mutacao.mjs]
+  - id: D
+    nome: Validador adversarial de UI
+    entrega: [_logs/UTAC109h.3_SEG4_VALIDADOR.md]
+autoriza:
+  - alterar os 2 componentes do ecra e os contratos que fixavam o estilo destes 2 botoes
+  - commit + push foreground; validador em worktree proprio (A13)
+proibe:
+  - git add -A
+  - qualquer alteracao de layout, tamanho, ordem ou copy (era o estilo dos 2 botoes)
+  - GlassHeader.jsx, CartaoEdicao.jsx, Dashboard.jsx (Inicio), MLC, OP, backend, package*, .bak-*
+  - laranja #ff6b35 em qualquer ponto do ecra da Carteira
+dependencias:
+  - UTAC109h.2 fechado (e48acf6) e em producao
+regras_activas: [E, T, G, L, S, A, P, AU, ST, HI]
+regras_extra: []
+stop_conditions_extra: []
+ressalvas:
+  - HI5 2 h por UTAC
+  - a invariante de contraste AA nao pode baixar (par novo = 7,25:1)
+  - "se o operador queria o inverso (todos CHEIOS), e outro UTAC: declarar"
+  - gate LGPD a bloquear o browser -> protocolo do 109f

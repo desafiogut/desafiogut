@@ -236,10 +236,17 @@ export default function MinhaCarteira() {
                   onClick={() => setPasseAberto(true)}
                   style={{
                     ...botaoPrimario,
-                    // UTAC107b (decisão 5) — dourado SÓLIDO + texto navy `#0a0f1a` = 9,45:1
-                    // (era branco sobre o gradiente = 2,03:1, reprovava o AA).
-                    background: COR.gold,
-                    color: ON_GOLD,
+                    // UTAC109h.3 (decisão do operador, 2026-10-09) — este botão deixou de ser
+                    // DOURADO SÓLIDO e passa ao MESMO padrão amarelo dos restantes botões do ecrã
+                    // («Depositar PIX», «Menor Lance Único», «Ofertas Programadas»): tingido
+                    // `rgba(245,166,35,0.14)` + contorno `rgba(245,166,35,0.4)` + texto amarelo.
+                    // Substitui a decisão 5 do UTAC107b (dourado cheio + navy — que era o que
+                    // destoava). O `ON_GOLD` mantém-se definido (contrato do UTAC106c) mas já não
+                    // é usado por nenhum CTA.
+                    background: "rgba(245,166,35,0.14)",
+                    border: "1px solid rgba(245,166,35,0.4)",
+                    color: COR.gold,
+                    boxShadow: "none",
                   }}
                   title={`Comprar o Passe Desafio por ${PRECO_PASSE_DESAFIO}`}
                 >

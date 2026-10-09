@@ -18,7 +18,7 @@
 //   5 · os alvos da Carteira mantêm 48 px e o «↻» 48×48;
 //   6 · contraste WCAG AA nos pares tocados, com CONTROL NEGATIVO (branco sobre o amarelo reprova);
 //   7 · o texto visível não mudou — a mudança é de COR (e de nada mais);
-//   8 · o CTA dourado mantém o texto navy `ON_GOLD` `#0a0f1a` (branco sobre `#f5a623` = 2,03:1).
+//   8 · nenhum botão usa preenchimento AMARELO SÓLIDO: o padrão é o tingido (UTAC109h.3).
 //
 // ⚠️ LIMITES DECLARADOS (não são regressões deste UTAC — vinham do estado anterior e o revert
 //    repõe-nos de propósito): (a) o `PainelIndicacao` («Indique e Ganhe») não tem `minHeight` nos
@@ -175,7 +175,19 @@ test("UTAC109h.2 · 7 — o texto visível não mudou: a mudança é de cor, nã
   assert.ok(PAINEL.includes("📋 Copiar código") && PAINEL.includes("📤 Compartilhar"), "os botões do Indique perderam o rótulo");
 });
 
-test("UTAC109h.2 · 8 — o CTA dourado mantém o texto navy ON_GOLD (#0a0f1a)", () => {
-  assert.match(CART, /const ON_GOLD = "#0a0f1a";/, "a constante ON_GOLD desapareceu");
-  assert.match(CART, /background: COR\.gold,\n                    color: ON_GOLD,/, "o CTA do Passe perdeu o par dourado+navy");
+test("UTAC109h.2 · 8 — nenhum botão das 2 peças usa preenchimento AMARELO SÓLIDO (padrão único)", () => {
+  // UTAC109h.3 (decisão do operador, 2026-10-09): «Comprar Passe Desafio» e «📋 Copiar código»
+  // destoavam por serem CHEIOS; passaram ao padrão amarelo tingido dos restantes botões.
+  assert.match(CART, /const ON_GOLD = "#0a0f1a";/, "a constante ON_GOLD desapareceu (contrato do UTAC106c)");
+  assert.doesNotMatch(codigo(CART), /color:\s*ON_GOLD/, "uma CTA da Carteira voltou ao par dourado-sólido+navy");
+  assert.doesNotMatch(codigo(CART), /background:\s*COR\.gold/, "um botão da Carteira voltou ao dourado SÓLIDO");
+  assert.doesNotMatch(codigo(PAINEL), /background:\s*"#f5a623"/, "um botão do painel voltou ao amarelo SÓLIDO");
+  assert.doesNotMatch(codigo(PAINEL), /const botaoPrimario/, "o objecto cheio `botaoPrimario` do painel voltou");
+  // e o botão do Passe está no padrão tingido, igual aos irmãos
+  const i = CART.indexOf("Comprar Passe Desafio ${PRECO_PASSE_DESAFIO}");
+  const bloco = CART.slice(CART.lastIndexOf("<button", i), i);
+  assert.match(bloco, /background:\s*"rgba\(245,166,35,0\.14\)"/, "o Passe não segue o padrão tingido");
+  assert.ok((codigo(CART).match(/rgba\(245,166,35,0\.14\)/g) || []).length >= 4,
+    "menos de 4 botões da Carteira no padrão tingido (PIX, Passe, MLC, OP)");
+  assert.match(PAINEL, /onClick=\{copiarCodigo\}[^>]*style=\{botaoSecundario\}/, "o «Copiar código» não usa o padrão dos irmãos");
 });
