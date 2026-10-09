@@ -53,16 +53,16 @@ function timerColor(tempoRestante, totalSegundos) {
 
 const VALOR_POR_SENHA_BRL = 2;
 
-// UTAC107g (R18-A) — saíram «Depositar PIX», «Converter Ficha» e «Dar Lance»: o destino de
-// cada um (/carteira, /mercado) já é uma aba da barra principal E já tem, neste mesmo ecrã,
-// outro elemento que leva lá (KPI «Saldo», o botão do vidro «⚡ Relâmpago»). «Converter Ficha» ainda
-// prometia a troca R$→senha que o UTAC107b tirou da Carteira. Ficam os atalhos para destinos
-// que, no telemóvel, só existem dentro do «Mais» (1 toque em vez de 2).
-const ATALHOS = [
-  { label: "Vitrine 4 Slots",   icon: "🪟", to: "/vitrine"       },
-  { label: "Meus Ativos",       icon: "📊", to: "/ativos"        },
-  // UTAC108f (R18) — saiu o atalho «🤝 Seja Nosso Parceiro» (o lojista saiu do app).
-  { label: "Configurações",     icon: "⚙️", to: "/configuracoes" },
+// UTAC109f — os acessos rápidos do Início são os 4 do enunciado: Carteira · Regras · Suporte · Perfil.
+// (Vitrine, Meus Ativos e Configurações, que eram os atalhos do UTAC107g, continuam no menu «Mais».)
+// Decisões do operador (R18-B/C do 109f): «Perfil» → /configuracoes (é o ecrã da conta; não existe
+// /perfil); «Suporte» → o e-mail oficial do rodapé (MC88.44) — `href`, não rota.
+export const EMAIL_SUPORTE = "desafiogut01@gmail.com";
+export const ATALHOS = [
+  { label: "Carteira", icon: "💳", to: "/carteira"        },
+  { label: "Regras",   icon: "📜", to: "/regras-oficiais" },
+  { label: "Suporte",  icon: "✉️", href: `mailto:${EMAIL_SUPORTE}` },
+  { label: "Perfil",   icon: "👤", to: "/configuracoes"   },
 ];
 
 /**
@@ -378,10 +378,20 @@ export default function Dashboard() {
               </Suspense>
             )}
           />
+        ) : estAtiva.emBreve ? (
+          // UTAC109f (R18-A) — sem edição o vidro Relâmpago é o MESMO cartão vazio da aba MLC
+          // (`MercadoLances.jsx`, UTAC108e.1/109e): GUTO animado 7 + «Seu lance (em centavos)» desligado.
+          // O sinal é o da fonte única (`getEstadoEdicao` → EM BREVE ⇔ EM_BREVE_MODE; guarda MC88.43).
+          <CartaoEdicao
+            vazio acao="lance" titulo="⚡ Relâmpago"
+            estado={{ texto: "SEM EDIÇÃO", cor: "#6b7db8" }}
+            isMobile={isMobile}
+          />
         ) : (
           <CartaoEdicao
             id={edicaoAtiva.id}
             titulo="⚡ Relâmpago"
+            acao="lance"
             estado={{ texto: estAtiva.rotulo, cor: estAtiva.cor }}
             produto={edicaoAtiva.produto}
             arteUrl={edicaoAtiva.imagem_url}
@@ -424,13 +434,14 @@ export default function Dashboard() {
         <CartaoEdicao
           id={edicaoProgramada?.id}
           titulo="🎫 Programada"
-          estado={estadoPal ? { texto: PILULA[estadoPal].texto, cor: PILULA[estadoPal].cor } : undefined}
+          acao="palpite"
+          estado={estadoPal
+            ? { texto: PILULA[estadoPal].texto, cor: PILULA[estadoPal].cor }
+            : { texto: "SEM EDIÇÃO", cor: "#6b7db8" }}
           produto={edicaoProgramada?.produto}
           arteUrl={edicaoProgramada?.imagem_url}
           tempo={estProgramada ? (estProgramada.timer ?? estProgramada.rotuloLongo) : undefined}
           vazio={!edicaoProgramada}
-          mensagemVazio="Nenhuma edição Programada em andamento"
-          ajudaVazio="Próxima edição —"
           isMobile={isMobile}
         >
           {edicaoProgramada && estadoPal === "sem_palpite" && (
@@ -475,37 +486,55 @@ export default function Dashboard() {
         </CartaoEdicao>
       </section>
 
-      {/* ── Atalhos ── */}
-      <GlassCard as="section" className={cardCls}>
+      {/* ── Bloco 5 · Acessos rápidos (UTAC109f) ──
+          4 alvos iguais (ícone + rótulo + a mesma cor), 2×2 no telemóvel e 4 numa linha no desktop.
+          Toque ≥ 48 px (mobile-ux-design: 48 dp Android); dourado #f5a623 sobre o vidro navy = 9,07:1 (AA).
+          O «Suporte» é um e-mail (`<a href>`), os outros são rotas (`navigate`). */}
+      <GlassCard as="section" className={cardCls} data-testid="acessos-rapidos" style={{ marginBottom: sectionGap }}>
         <h3 style={cardTitulo}>🚀 Acesso Rápido</h3>
         <div style={{
           display: "grid",
-          gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "repeat(auto-fill, minmax(150px, 1fr))",
+          gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "repeat(4, minmax(0, 1fr))",
           gap: "0.5rem",
         }}>
-          {ATALHOS.map(({ label, icon, to }) => (
-            <button
-              key={label}
-              onClick={() => navigate(to)}
-              style={{
-                display: "flex", alignItems: "center", gap: "0.45rem",
-                padding: "0.65rem 0.85rem",
-                background: "rgba(245,166,35,0.08)",
-                border: "1px solid rgba(245,166,35,0.22)",
-                borderRadius: "10px",
-                color: COR.gold,
-                cursor: "pointer",
-                fontSize: "0.8rem", fontWeight: "600",
-                transition: "all 0.15s",
-                textAlign: "left",
-                minWidth: 0,
-              }}
-            >
-              <span style={{ fontSize: "0.95rem", flexShrink: 0 }}>{icon}</span>
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
-            </button>
-          ))}
+          {ATALHOS.map(({ label, icon, to, href }) => {
+            const estilo = {
+              display: "flex", alignItems: "center", justifyContent: "center", gap: "0.45rem",
+              minHeight: "48px", padding: "0.65rem 0.85rem", boxSizing: "border-box",
+              background: "rgba(245,166,35,0.08)",
+              border: "1px solid rgba(245,166,35,0.22)",
+              borderRadius: "10px",
+              color: COR.gold,
+              cursor: "pointer",
+              fontSize: "0.85rem", fontWeight: "700",
+              transition: "all 0.15s",
+              textDecoration: "none",
+              minWidth: 0,
+            };
+            const conteudo = (
+              <>
+                <span aria-hidden="true" style={{ fontSize: "1rem", flexShrink: 0 }}>{icon}</span>
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
+              </>
+            );
+            return href
+              ? <a key={label} data-atalho={label} href={href} style={estilo}>{conteudo}</a>
+              : <button key={label} type="button" data-atalho={label} onClick={() => navigate(to)} style={estilo}>{conteudo}</button>;
+          })}
         </div>
+      </GlassCard>
+
+      {/* ── Bloco 6 · Glass final: vencedores (UTAC109f) ──
+          ⚠️ LACUNA declarada: não existe fonte pública de vencedores (o `/edicoes` não traz o vencedor, o
+          `registrar-vencedor` do `produtos` foi fechado e o resultado oficial só se lê on-chain, edição a
+          edição). Fica o vidro com o aviso no padrão dos placeholders do app (`MeusAtivos`, UTAC105c),
+          sem números nem nomes inventados e sem «ver todos» (não há destino). Sem 🏆: o troféu só se dá
+          com o resultado oficial (UTAC107e.1, V2). */}
+      <GlassCard as="section" className={cardCls} data-testid="vencedores">
+        <h3 style={cardTitulo}>🏅 Vencedores</h3>
+        <p data-estado="placeholder" style={{ margin: 0, color: COR.text, fontSize: "0.85rem", lineHeight: 1.5 }}>
+          Esta área ainda não está disponível. Os vencedores das edições vão aparecer aqui quando o recurso for lançado.
+        </p>
       </GlassCard>
 
       {/* MC16 — overlay de fim de leilão (relâmpago e programado) */}

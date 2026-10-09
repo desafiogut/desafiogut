@@ -24,6 +24,17 @@ export const ACOES = Object.freeze({
   palpite: Object.freeze({ botao: "Dar palpite", rotulo: "Seu palpite (nº de lances)" }),
 });
 
+/**
+ * UTAC109f (P2) — o texto do cartão VAZIO por acção. O palpite volta a ter a frase própria da OP
+ * («Sem edições programadas no momento…», que saiu no 109e); sem acção (ou lance) fica o texto de
+ * sempre. Um `mensagemVazio`/`ajudaVazio` explícito continua a mandar.
+ */
+const VAZIO_PADRAO = Object.freeze({ mensagem: "Nenhuma edição em andamento", ajuda: "Volte quando houver" });
+export const VAZIO_POR_ACAO = Object.freeze({
+  lance: VAZIO_PADRAO,
+  palpite: Object.freeze({ mensagem: "Sem edições programadas no momento.", ajuda: "Volte quando houver" }),
+});
+
 /** UTAC109e — o GUTO animado 7 (array de módulo: referência estável para o `memo` do carrossel). */
 export const GUTO_ANIMADO_7 = Object.freeze([SLIDES[6]]);
 
@@ -66,13 +77,15 @@ const acaoValida = (acao) => typeof acao === "string" && Object.hasOwn(ACOES, ac
 
 export default function CartaoEdicao({
   id, estado, produto, arteUrl, tempo, acao,
-  vazio = false, titulo,
-  mensagemVazio = "Nenhuma edição em andamento", ajudaVazio = "Volte quando houver",
+  vazio = false, titulo, mensagemVazio: mensagemDada, ajudaVazio: ajudaDada,
   isMobile = false, children, style, ...rest
 }) {
   const nome = produto || "Prêmio a anunciar";
   const formato = isMobile ? "1 / 1" : "16 / 9";
   const temAcao = acaoValida(acao);
+  const textoVazio = temAcao ? VAZIO_POR_ACAO[acao] : VAZIO_PADRAO;
+  const mensagemVazio = mensagemDada ?? textoVazio.mensagem;
+  const ajudaVazio = ajudaDada ?? textoVazio.ajuda;
   return (
     <GlassCard
       as="article"
@@ -95,7 +108,8 @@ export default function CartaoEdicao({
       {/* topo: id da edição + estado. (O `minWidth: 0` do cartão impede o nome em `nowrap` de alargar a
           coluna da página — medido a 375 px: sem ele a OP ganhava 27 px de overflow lateral.) */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem" }}>
-        <span style={pilula}>{id}</span>
+        {/* UTAC109f — sem id (vidro vazio do Início) não se desenha uma cápsula vazia. */}
+        {id ? <span style={pilula}>{id}</span> : <span />}
         {estado && (
           <span data-testid="cartao-estado" style={{ fontSize: "0.72rem", fontWeight: 800, letterSpacing: "0.04em", color: estado.cor ?? COR.muted }}>
             {estado.texto}
@@ -127,12 +141,15 @@ export default function CartaoEdicao({
             ) : (
               <div aria-hidden="true" style={{ aspectRatio: formato, display: "grid", placeItems: "center", fontSize: "2.5rem", background: "rgba(5,8,24,0.55)" }}>🎁</div>
             )}
-            <div style={{
-              position: "absolute", left: 0, right: 0, bottom: 0, display: "flex", alignItems: "center",
-              justifyContent: "space-between", gap: "0.6rem", padding: "0.6rem 0.75rem", background: "rgba(5,8,24,0.86)",
+            {/* UTAC109f (P4) — a 375 px um tempo em TEXTO («Em andamento — palpite já!») não cabe ao lado do
+                nome: com `flex: none` espremia o nome a zero. Agora o nome tem um mínimo (9rem) e, quando não
+                há espaço para os dois, o tempo desce para a linha de baixo (quebra entre palavras). */}
+            <div data-testid="cartao-faixa" style={{
+              position: "absolute", left: 0, right: 0, bottom: 0, display: "flex", flexWrap: "wrap", alignItems: "center",
+              justifyContent: "space-between", gap: "0.35rem 0.6rem", padding: "0.6rem 0.75rem", background: "rgba(5,8,24,0.86)",
             }}>
-              <span style={{ color: COR.gold, fontWeight: 800, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nome}</span>
-              {tempo && <span data-testid="cartao-tempo" style={{ ...tempoEstilo, fontSize: "1.15rem", flex: "none" }}>{tempo}</span>}
+              <span data-testid="cartao-nome" style={{ color: COR.gold, fontWeight: 800, flex: "1 1 9rem", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nome}</span>
+              {tempo && <span data-testid="cartao-tempo" style={{ ...tempoEstilo, fontSize: "1.15rem", flex: "0 1 auto", minWidth: 0, textAlign: "right", lineHeight: 1.15 }}>{tempo}</span>}
             </div>
           </>
         )}

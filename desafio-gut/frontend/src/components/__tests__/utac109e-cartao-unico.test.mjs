@@ -24,7 +24,7 @@ const codigo = (src) => src
   .replace(/\/\*[\s\S]*?\*\//g, "")
   .split(/\r?\n/).map((l) => l.replace(/(^|[^:"'`])\/\/.*$/, "$1")).join("\n");
 
-let React = null, renderToStaticMarkup = null, vite = null, Cartao = null, ACOES = null;
+let React = null, renderToStaticMarkup = null, vite = null, Cartao = null, ACOES = null, VPA = null;
 
 before(async () => {
   vite = await createServer({
@@ -35,7 +35,7 @@ before(async () => {
   });
   ({ React, renderToStaticMarkup } = await vite.ssrLoadModule("/src/__tests__/_ponte-ssr.mjs"));
   const m = await vite.ssrLoadModule("/src/components/CartaoEdicao.jsx");
-  Cartao = m.default; ACOES = m.ACOES;
+  Cartao = m.default; ACOES = m.ACOES; VPA = m.VAZIO_POR_ACAO;
 });
 after(async () => { if (vite) await vite.close(); });
 
@@ -46,6 +46,8 @@ const VAZIO = { id: "SEM", estado: { texto: "SEM EDIÇÃO" }, vazio: true };
 const formato = (h) => h
   .replaceAll(ACOES.lance.botao, "§B").replaceAll(ACOES.palpite.botao, "§B")
   .replaceAll(ACOES.lance.rotulo, "§R").replaceAll(ACOES.palpite.rotulo, "§R")
+  // UTAC109f (P2) — o texto do vazio passou a ser próprio de cada acção (a OP recuperou a sua frase).
+  .replaceAll(VPA.lance.mensagem, "§V").replaceAll(VPA.palpite.mensagem, "§V")
   .replace(/\b(lance|palpite)(?=[-"])/g, "§A");
 
 describe("UTAC109e · a acção é a única diferença", () => {

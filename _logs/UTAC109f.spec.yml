@@ -1,0 +1,40 @@
+schema: utac/1
+name: UTAC109f
+title: "Início: ordem final + acessos rápidos + glass final + 5 pendências herdadas do 109e"
+type: produto
+baseline: 731ec28
+motivo: >-
+  Montar o Início na ordem final (carrossel → 4 glass pequenos → MLC → OP → acessos → glass final)
+  e fechar as pendências do 109e (P1 faixa «lance já!» em cartão de palpite; P2 frase da OP vazia;
+  P3 browser; P4 375 px; P5 skills de design).
+frentes:
+  - id: A
+    nome: Reordenar o Início (6 blocos)
+    entrega: [src/pages/Dashboard.jsx]
+  - id: B
+    nome: 5 pendências (P1-P5) na fonte partilhada
+    entrega: [src/utils/edicao.js, src/components/CartaoEdicao.jsx]
+  - id: C
+    nome: Validador adversarial de design
+    entrega: [_logs/UTAC109f_SEG3_VALIDADOR.md]
+autoriza:
+  - alterar src/pages/Dashboard.jsx, src/components/CartaoEdicao.jsx, src/utils/edicao.js
+  - criar/alterar testes em src/**/__tests__/ e scripts/utac109f-*.mjs
+  - screenshots em _logs/utac109f-browser/
+  - commit + push foreground; despachar validador em worktree próprio (A13)
+proibe:
+  - git add -A
+  - os 4 glass pequenos (stats/StatTile), a aba OP (OfertasProgramadas.jsx), a Carteira
+  - backend (netlify/), gate legal, contrato on-chain, EM_BREVE_MODE
+  - reimplementar o CartaoEdicao do 109e
+  - package*.json, .bak-*
+dependencias:
+  - UTAC109e fechado (dcf8460, 0daf3af, 731ec28)
+regras_activas: [E, T, G, L, S, A, P, AU, ST, HI]
+regras_extra: []
+stop_conditions_extra: []
+ressalvas:
+  - HI5 2 h
+  - histórico público de vencedores sem fonte → placeholder + LACUNA
+  - gate LGPD a bloquear P3 → LACUNA
+  - skill de design inacessível → PARAR

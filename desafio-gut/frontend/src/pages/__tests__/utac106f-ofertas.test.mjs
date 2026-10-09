@@ -243,7 +243,8 @@ test("RENDER · sem edição Programada → cartão VAZIO com o palpite desligad
     assert.doesNotMatch(h, /em centavos/, "o palpite é um nº de lances, não R$");
     // nenhum botão de palpite ACTIVO (com acção) quando não há edição
     assert.equal(c.nos().filter((n) => n.type === "button" && texto(n).includes("Dar palpite")).length, 0, "sem edição apareceu um botão de palpite com acção");
-    assert.match(c.texto(), /Nenhuma edição em andamento/, "o cartão vazio não diz que não há edição");
+    // UTAC109f (P2) — a OP recuperou a sua frase do vazio (saíra no 109e), agora vinda do `CartaoEdicao` por acção.
+    assert.match(c.texto(), /Sem edições programadas no momento\./, "o cartão vazio não diz que não há edições programadas");
   } finally { c.dup.restaurar(); }
 });
 
@@ -493,7 +494,7 @@ test("UTAC108e.1 · T2: o cartão vazio da OP está VISÍVEL (nem ele nem os pai
   const c = await montarEcra(undefined, ctx({ edicoes: {} }));
   try {
     const h = c.html();
-    const i = h.indexOf("Nenhuma edição em andamento<");
+    const i = h.indexOf("Sem edições programadas no momento.<"); // UTAC109f (P2)
     assert.ok(i > 0, "o cartão vazio não diz que não há edição");
     for (const { tag, attrs } of pilhaVidro(h, i)) {
       assert.doesNotMatch(attrs, /\shidden(=|\s|$)|display:\s*none|visibility:\s*hidden|opacity:\s*0(?![.\d])/, `<${tag}> escondido`);

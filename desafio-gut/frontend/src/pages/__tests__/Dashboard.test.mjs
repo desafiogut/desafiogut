@@ -49,6 +49,9 @@ let chamadasPontos = null;
 let estadoPasse = null;
 // UTAC108h.2 — a separação das edições não-ativas nas duas prateleiras (função pura).
 let prateleirasDeEdicoes = null;
+// UTAC109f
+let definirEmBreve = null;
+let getEstadoEdicao = null;
 
 before(async () => {
   vite = await createServer({
@@ -66,6 +69,9 @@ before(async () => {
         { find: /^\.\.\/hooks\/useResultadoOficial\.js$/, replacement: `${STUBS}/useResultadoOficial.js` },
         // UTAC107c — os pontos de CARTÃO do tile «Passe Desafio».
         { find: /^\.\.\/hooks\/usePontos\.js$/, replacement: `${STUBS}/usePontos.js` },
+        // UTAC109f — o `EM_BREVE_MODE` real é a constante `true`; o duplo (UTAC108d) deixa testar os DOIS ramos
+        // (vidro Relâmpago vazio / com edição; P1 «palpite já!» só existe com a edição ATIVA). Default = true.
+        { find: /^\.\.\/lib\/leilaoLock\.js$/, replacement: `${STUBS}/leilaoLock.js` },
       ],
     },
   });
@@ -79,6 +85,8 @@ before(async () => {
   // react-router-dom é CJS: carregado pelo node, que é o que o Vite externaliza em SSR.
   ({ MemoryRouter } = await vite.ssrLoadModule("/src/__tests__/_ponte-ssr.mjs"));
   ({ default: Pagina, estadoPasse, prateleirasDeEdicoes } = await vite.ssrLoadModule("/src/pages/Dashboard.jsx"));
+  ({ definirEmBreve } = await vite.ssrLoadModule(`${STUBS}/leilaoLock.js`));
+  ({ getEstadoEdicao } = await vite.ssrLoadModule("/src/utils/edicao.js"));
 });
 after(async () => { if (vite) await vite.close(); });
 
@@ -461,47 +469,160 @@ describe("UTAC107c · Início — Passe Desafio, destino e remoções", () => {
   });
 });
 
-// ═══ UTAC107g (Frente A, R18-A) — «Acesso Rápido» sem duplicações ═════════════════════════════
-// Saíram «Depositar PIX», «Converter Ficha» e «Dar Lance»: o destino de cada um (/carteira,
-// /mercado) já é uma aba da barra E já tem, NESTE ecrã, outro elemento que leva lá (KPI «Saldo»,
-// CTA da Edição Ativa). «Converter Ficha» prometia a troca R$→senha que o 107b removeu.
-describe("UTAC107g · Início — «Acesso Rápido» sem atalhos redundantes", () => {
-  /** Os rótulos dos <button> da secção «Acesso Rápido» (só dela — não da página inteira). */
+// ═══ UTAC107g → UTAC109f — «Acesso Rápido» ════════════════════════════════════════════════════════
+// O contrato do 107g (Vitrine · Meus Ativos · Configurações) foi SUBSTITUÍDO pelo enunciado do 109f:
+// Carteira · Regras · Suporte · Perfil (R18-B «Perfil» → /configuracoes; R18-C «Suporte» → e-mail oficial).
+// Os 3 destinos do 107g continuam no menu «Mais»; o que o 107g proibia (Depositar PIX, Converter Ficha)
+// continua proibido.
+describe("UTAC109f · Início — acessos rápidos", () => {
+  /** Os elementos [data-atalho] da secção dos acessos rápidos (só dela). */
   function atalhos(html) {
-    const i = html.indexOf("Acesso Rápido");
-    assert.ok(i >= 0, "a secção «Acesso Rápido» desapareceu");
-    const fim = html.indexOf("</section>", i);
-    const bloco = html.slice(i, fim > i ? fim : undefined);
-    return (bloco.match(/<button[\s\S]*?<\/button>/g) || []).map(texto);
+    const i = html.indexOf('data-testid="acessos-rapidos"');
+    assert.ok(i >= 0, "a secção dos acessos rápidos desapareceu");
+    const bloco = html.slice(i, html.indexOf("</section>", i));
+    return [...bloco.matchAll(/<(a|button)\b([^>]*data-atalho="([^"]+)"[^>]*)>([\s\S]*?)<\/\1>/g)]
+      .map((m) => ({ tag: m[1], attrs: m[2], nome: m[3], texto: texto(m[4]) }));
   }
 
-  // UTAC108f — o atalho «🤝 Seja Nosso Parceiro» saiu com o lojista: ficam 3.
-  test("ficam EXACTAMENTE os 3 atalhos para destinos que no telemóvel só vivem no «Mais»", () => {
+  test("EXACTAMENTE 4 acessos, por esta ordem: Carteira · Regras · Suporte · Perfil (ícone + rótulo)", () => {
     definirResultadoOficial(null);
     const r = atalhos(renderizar());
-    assert.deepEqual(r.map((t) => t.replace(/^\S+\s+/, "")),
-      ["Vitrine 4 Slots", "Meus Ativos", "Configurações"],
-      `atalhos renderizados: ${JSON.stringify(r)}`);
+    assert.deepEqual(r.map((a) => a.nome), ["Carteira", "Regras", "Suporte", "Perfil"]);
+    for (const a of r) assert.match(a.texto, new RegExp(`^\\S+ ${a.nome}$`), `«${a.texto}» não é ícone + rótulo`);
   });
 
-  test("os 3 removidos NÃO aparecem (nem como atalho, nem noutro sítio do Início)", () => {
-    const t = texto(renderizar());
-    for (const s of ["Depositar PIX", "Converter Ficha", "Dar Lance"]) {
-      assert.ok(!t.includes(s), `«${s}» continua no Início`);
+  test("toque ≥ 48 px e o MESMO estilo/cor nos 4 (padronizados)", () => {
+    const r = atalhos(renderizar());
+    assert.equal(r.length, 4);
+    for (const a of r) {
+      assert.match(a.attrs, /min-height:\s*48px/, `${a.nome} sem alvo de 48 px`);
+      assert.match(a.attrs, /color:\s*#f5a623/, `${a.nome} com outra cor`);
     }
+    const estilos = r.map((a) => a.attrs.match(/style="([^"]*)"/)?.[1]);
+    assert.equal(new Set(estilos).size, 1, "os 4 acessos não partilham o mesmo estilo");
   });
 
-  test("cada atalho → destino ÚNICO, e os destinos removidos continuam alcançáveis no mesmo ecrã", async () => {
+  test("destinos: /carteira, /regras-oficiais, mailto do suporte, /configuracoes", async () => {
     const { readFileSync } = await import("node:fs");
     const fonte = readFileSync(caminho(AQUI, "../Dashboard.jsx"), "utf8");
-    const bloco = fonte.match(/const ATALHOS = \[[\s\S]*?\];/)?.[0];
+    const bloco = fonte.match(/export const ATALHOS = \[[\s\S]*?\];/)?.[0];
     assert.ok(bloco, "o array ATALHOS desapareceu");
-    const destinos = [...bloco.matchAll(/^\s*\{[^}]*\bto:\s*"([^"]+)"/gm)].map((m) => m[1]);
-    assert.deepEqual(destinos, ["/vitrine", "/ativos", "/configuracoes"]); // UTAC108f: sem o parceiro
-    assert.equal(new Set(destinos).size, destinos.length, "dois atalhos para o mesmo destino");
-    // /carteira e /mercado continuam no ecrã: KPI «Saldo (R$)» e CTA da Edição Ativa
-    assert.match(fonte, /label: "Saldo \(R\$\)"[^\n]*to: "\/carteira"/, "o KPI «Saldo» deixou de levar à Carteira");
-    assert.match(fonte, /onClick=\{\(\) => navigate\("\/mercado"\)\}/, "o CTA da Edição Ativa deixou de levar ao /mercado");
+    const destinos = [...bloco.matchAll(/\b(to|href):\s*[`"]([^`"]+)[`"]/g)].map((m) => m[2]);
+    assert.deepEqual(destinos, ["/carteira", "/regras-oficiais", "mailto:${EMAIL_SUPORTE}", "/configuracoes"]);
+    const sup = atalhos(renderizar()).find((a) => a.nome === "Suporte");
+    assert.equal(sup.tag, "a");
+    assert.match(sup.attrs, /href="mailto:desafiogut01@gmail\.com"/, "o Suporte não aponta ao e-mail oficial");
+    for (const a of atalhos(renderizar()).filter((x) => x.nome !== "Suporte")) assert.equal(a.tag, "button");
+  });
+
+  test("os atalhos que o 107g tirou continuam fora do Início", () => {
+    const t = texto(renderizar());
+    for (const s of ["Depositar PIX", "Converter Ficha", "Vitrine 4 Slots"]) assert.ok(!t.includes(s), `«${s}» voltou ao Início`);
+  });
+});
+
+// ═══ UTAC109f — ORDEM FINAL, GLASS FINAL, P1/P2/P4 ══════════════════════════════════════════════════
+describe("UTAC109f · Início — ordem final e pendências do 109e", () => {
+  const PROG = { id: "PROG-1", tipo: "programado", produto: "Air Fryer", termino_em: iso(Date.now() + 5 * H), lances: 0, status: "aberto", imagem_url: "/artes/p.png" };
+  /** O <article> do cartão que contém `marca` (os cartões não se aninham). */
+  const fatia = (html, marca) => {
+    const i = html.indexOf(marca); assert.ok(i >= 0, `não encontrei ${marca}`);
+    const ini = html.lastIndexOf("<article", i);
+    return html.slice(ini, html.indexOf("</article>", i) + "</article>".length);
+  };
+
+  test("a ordem dos 6 blocos: carrossel → 4 glass pequenos → MLC → OP → acessos → glass final", () => {
+    definirPontos({}); definirResultadoOficial(null);
+    const html = renderizar({ edicoes: { "R-1": R1, "PROG-1": PROG } });
+    const marcas = ["guto-1.png?v=", "Saldo (R$)", ">⚡ Relâmpago<", ">🎫 Programada<", 'data-testid="acessos-rapidos"', 'data-testid="vencedores"'];
+    const pos = marcas.map((m) => html.indexOf(m));
+    assert.ok(pos.every((p, k) => p > 0 && (k === 0 || p > pos[k - 1])),
+      `ordem: ${JSON.stringify(Object.fromEntries(marcas.map((m, k) => [m, pos[k]])))}`);
+  });
+
+  test("os 4 glass pequenos: Saldo · Passe Desafio · Lances Únicos · Total de Lances (por esta ordem)", () => {
+    definirPontos({}); definirResultadoOficial(null);
+    const html = renderizar();
+    const ini = html.indexOf("Saldo (R$)"), fim = html.indexOf(">⚡ Relâmpago<");
+    const rotulos = (html.slice(html.lastIndexOf("<section", ini), fim).match(/<button[\s\S]*?<\/button>/g) || []).map(texto);
+    assert.equal(rotulos.length, 4, JSON.stringify(rotulos));
+    ["Saldo (R$)", "Passe Desafio", "Lances Únicos", "Total de Lances"].forEach((r, k) => assert.ok(rotulos[k].includes(r), `${k}: ${rotulos[k]}`));
+  });
+
+  test("glass final: dentro de vidro, aviso honesto (LACUNA), sem dados inventados, sem 🏆 nem «ver todos»", () => {
+    definirResultadoOficial(null);
+    const html = renderizar({ vencedor: { endereco: "0xaaaa000000000000000000000000000000000001", valor: 300 }, encerrado: true });
+    const i = html.indexOf('data-testid="vencedores"');
+    assert.ok(i > 0, "o glass final não existe");
+    const sec = html.slice(html.lastIndexOf("<section", i), html.indexOf("</section>", i));
+    assert.match(sec, /gut-glass-standard/, "o glass final não é vidro");
+    assert.match(sec, /data-estado="placeholder"/);
+    assert.match(texto(sec), /Esta área ainda não está disponível/);
+    assert.doesNotMatch(texto(sec), /0x|R\$|\d/, "o placeholder mostra dados");
+    assert.doesNotMatch(sec, /🏆|ver todos/i);
+  });
+
+  test("glass MLC sem edição (EM BREVE) = o cartão vazio da aba MLC: GUTO 7 + «Seu lance (em centavos)» desligado", () => {
+    definirPontos({}); definirResultadoOficial(null);
+    const v = fatia(renderizar(), ">⚡ Relâmpago<");
+    assert.match(v, /data-vazio="true"/);
+    assert.match(v, /data-acao="lance"/);
+    assert.match(v, /data-testid="guto-animado-7"/);
+    assert.match(v, /<label[^>]*>Seu lance \(em centavos\)<\/label>/);
+    assert.match(v, /<button[^>]*disabled=""[^>]*>Dar lance<\/button>/);
+    assert.match(texto(v), /Nenhuma edição em andamento/);
+  });
+
+  test("glass MLC COM edição (fora do EM BREVE): R-1 + porta do lance, sem GUTO 7 (bidireccional)", () => {
+    definirPontos({}); definirResultadoOficial(null);
+    definirEmBreve(false);
+    try {
+      const v = fatia(renderizar(), ">⚡ Relâmpago<");
+      assert.match(v, /data-vazio="false"/);
+      assert.match(v, />R-1</);
+      assert.match(texto(v), /Dar lance/);
+      assert.doesNotMatch(v, /guto-animado-7/);
+    } finally { definirEmBreve(true); }
+  });
+
+  test("P1 · fonte: edição ATIVA Programada → «palpite já!»; Relâmpago/sem tipo → «lance já!»", () => {
+    definirEmBreve(false);
+    try {
+      const fut = { termino_em: iso(Date.now() + H) };
+      assert.equal(getEstadoEdicao({ ...fut, tipo: "programado" }).rotuloLongo, "Em andamento — palpite já!");
+      assert.equal(getEstadoEdicao({ ...fut, tipo: "relampago" }).rotuloLongo, "Em andamento — lance já!");
+      assert.equal(getEstadoEdicao({ ...fut }).rotuloLongo, "Em andamento — lance já!");
+      // só o estado ATIVO muda: uma Programada encerrada continua «Edição encerrada»
+      assert.equal(getEstadoEdicao({ tipo: "programado", termino_em: iso(Date.now() - H) }).rotuloLongo, "Edição encerrada");
+    } finally { definirEmBreve(true); }
+    assert.equal(getEstadoEdicao({ tipo: "programado" }).rotuloLongo, "Aguardando abertura", "EM BREVE não muda");
+  });
+
+  test("P1 · no ecrã: a faixa do vidro OP diz «palpite já!» e NUNCA «lance já!»", () => {
+    definirPontos({}); definirResultadoOficial(null);
+    definirEmBreve(false);
+    try {
+      const v = fatia(renderizar({ edicoes: { "R-1": R1, "PROG-1": PROG } }), ">🎫 Programada<");
+      assert.match(texto(v), /Em andamento — palpite já!/);
+      assert.doesNotMatch(texto(v), /lance já!/);
+    } finally { definirEmBreve(true); }
+  });
+
+  test("P2 · vidro OP vazio diz «Sem edições programadas no momento.»; com edição não (bidireccional)", () => {
+    definirPontos({}); definirResultadoOficial(null);
+    const vazio = fatia(renderizar(), ">🎫 Programada<");
+    assert.match(texto(vazio), /Sem edições programadas no momento\./);
+    assert.match(vazio, /data-acao="palpite"/);
+    const cheio = fatia(renderizar({ edicoes: { "R-1": R1, "PROG-1": PROG } }), ">🎫 Programada<");
+    assert.doesNotMatch(texto(cheio), /Sem edições programadas/);
+  });
+
+  test("P4 · a faixa do cartão deixa o tempo descer de linha em vez de espremer o nome", () => {
+    definirPontos({}); definirResultadoOficial(null);
+    const v = fatia(renderizar({ edicoes: { "R-1": R1, "PROG-1": PROG } }), ">🎫 Programada<");
+    assert.match(v, /data-testid="cartao-faixa"[^>]*style="[^"]*flex-wrap:\s*wrap/);
+    assert.match(v, /data-testid="cartao-nome"[^>]*style="[^"]*flex:\s*1 1 9rem/);
+    assert.doesNotMatch(v, /data-testid="cartao-tempo"[^>]*style="[^"]*flex:\s*none/);
   });
 });
 
@@ -535,11 +656,16 @@ describe("UTAC108h.3 · Início — apenas as duas edições", () => {
     assert.doesNotMatch(t, /Smart TV|RELAMP-3/, "uma Relâmpago ENCERRADA continua no Início");
   });
 
+  // UTAC109f (R18-A) — com EM BREVE o vidro Relâmpago é o cartão vazio da aba MLC; a edição VIVA
+  // só aparece fora do EM BREVE (duplo `leilaoLock`).
   test("o vidro Relâmpago mostra a edição VIVA (R-1) e mantém a porta do lance", () => {
     definirPontos({}); definirResultadoOficial(null);
-    const html = renderizar({ edicoes: { "R-1": R1, "RELAMP-3": REL_ENC } });
-    assert.match(html, />R-1</, "o vidro Relâmpago não mostra a edição ativa");
-    assert.match(texto(html), /Dar lance/, "o vidro Relâmpago perdeu a acção do lance");
+    definirEmBreve(false);
+    try {
+      const html = renderizar({ edicoes: { "R-1": R1, "RELAMP-3": REL_ENC } });
+      assert.match(html, />R-1</, "o vidro Relâmpago não mostra a edição ativa");
+      assert.match(texto(html), /Dar lance/, "o vidro Relâmpago perdeu a acção do lance");
+    } finally { definirEmBreve(true); }
   });
 
   test("o palpite vive DENTRO do vidro da Programada (input + botão)", () => {
@@ -558,7 +684,7 @@ describe("UTAC108h.3 · Início — apenas as duas edições", () => {
     definirPontos({}); definirResultadoOficial(null);
     const html = renderizar(); // só a R-1
     assert.equal(vidros(html).length, 2, "os dois vidros têm de continuar a existir");
-    assert.match(texto(html), /Nenhuma edição Programada em andamento/, "falta o estado vazio da Programada");
+    assert.match(texto(html), /Sem edições programadas no momento\./, "falta o estado vazio da Programada (UTAC109f P2)");
     assert.match(html, /data-vazio="true"/, "o vidro vazio não está marcado como vazio");
   });
 
@@ -581,11 +707,18 @@ describe("UTAC108h.3 · Início — apenas as duas edições", () => {
     assert.match(v, /data-testid="guto-animado-7"[\s\S]*?guto-7\.png\?v=/, "o GUTO animado 7 não está no vidro vazio");
   });
 
+  // UTAC109f (R18-A) — com EM BREVE o vidro Relâmpago passou a ser vazio (com GUTO 7); fora do EM BREVE,
+  // com as duas edições, nenhum vidro tem o GUTO 7.
   test("UTAC109e · com edição Programada: o GUTO animado 7 NÃO aparece em nenhum vidro", () => {
     definirPontos({}); definirResultadoOficial(null);
-    const vs = fatias(renderizar({ edicoes: { "R-1": R1, "PROG-1": PROG } }));
-    assert.equal(vs.length, 2);
-    for (const v of vs) assert.doesNotMatch(v, /guto-animado-7|guto-7\.png/, "o GUTO animado 7 apareceu com edição");
+    const prog = fatias(renderizar({ edicoes: { "R-1": R1, "PROG-1": PROG } })).find((v) => v.includes(">PROG-1<"));
+    assert.doesNotMatch(prog, /guto-animado-7|guto-7\.png/, "o GUTO animado 7 apareceu com edição");
+    definirEmBreve(false);
+    try {
+      const vs = fatias(renderizar({ edicoes: { "R-1": R1, "PROG-1": PROG } }));
+      assert.equal(vs.length, 2);
+      for (const v of vs) assert.doesNotMatch(v, /guto-animado-7|guto-7\.png/, "o GUTO animado 7 apareceu com edição");
+    } finally { definirEmBreve(true); }
   });
 
   test("a Programada escolhida é a ABERTA (a mesma regra da aba OP)", () => {

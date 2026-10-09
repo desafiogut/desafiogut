@@ -96,7 +96,7 @@ const PERFIL_ESTADO = {
  *             emBreve: boolean, encerrada: boolean, ativa: boolean }}
  */
 export function getEstadoEdicao(edicao, opts = {}) {
-  return montar(derivar(edicao, opts));
+  return montar(derivar(edicao, opts), edicao);
 }
 
 function derivar(edicao, opts) {
@@ -141,11 +141,18 @@ export function timerTravado() {
   return EM_BREVE_MODE ? EM_BREVE_LABEL : null;
 }
 
-function montar(estado) {
+// UTAC109f (P1) — a frase do estado ATIVO depende da FAMÍLIA da edição: numa Programada o
+// comprador dá um PALPITE, não um lance (o cartão da OP dizia «lance já!» a quem só pode
+// palpitar). Nasce aqui, na fonte única, e não em cada ecrã.
+const ROTULO_LONGO_ATIVA_PALPITE = "Em andamento — palpite já!";
+
+function montar(estado, edicao) {
   const perfil = PERFIL_ESTADO[estado];
+  const ehPalpite = estado === ESTADO_EDICAO.ATIVA && edicao?.tipo === "programado";
   return {
     estado,
     ...perfil,
+    ...(ehPalpite ? { rotuloLongo: ROTULO_LONGO_ATIVA_PALPITE } : {}),
     cor:       COR_ESTADO[estado],
     emBreve:   estado === ESTADO_EDICAO.EM_BREVE,
     encerrada: estado === ESTADO_EDICAO.ENCERRADA,
