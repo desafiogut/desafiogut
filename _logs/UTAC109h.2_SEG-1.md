@@ -21,7 +21,7 @@ melhor juízo». Escolhi a **leitura literal** das palavras dele:
 |---|---|
 | «volte ao anterior» | repor o ecrã **exactamente** como em `1a41cf7` (layout, tamanhos, 1.º vidro com tudo, 4 estilos de botão) |
 | «era somente a cor» | a **única** diferença face a `1a41cf7` é cor (provado em §-1.3) |
-| «nao deixe laranja, deixe apenas amarelo» | **uma só** cor de destaque: `#f5a623`; o laranja `#ff6b35` **não existe** em nenhum ponto |
+| «nao deixe laranja, deixe apenas amarelo» | **uma só** cor de destaque: `#f5a623`; o laranja `#ff6b35` **não existe** em nenhum ponto ⚠️ **REFUTADO repo-wide — ver errata E1** |
 | «no tom que ja temos no app, como o amarelo do botao palpite» | `COR.gold = "#f5a623"` — medido: o botão «Dar palpite» usa `background: COR.gold` em `Dashboard.jsx:462` e `OfertasProgramadas.jsx:153`; o próprio `glassTokens.js` nota que `#f5a623` é «o dos mockups aprovados e de 56 ficheiros de src/» |
 
 **Não escolhi** a variante «manter o layout novo e só trocar o laranja» (opção 3), porque contradiz
@@ -105,3 +105,85 @@ do **comentário-cabeçalho** que declara o que saiu (a armadilha documentada no
 
 **SEGUIR** para commit local → validador adversarial → fecho em 3 lugares → push. O revert é
 `git revert`ável num só commit se o operador quiser a leitura oposta.
+
+## Adenda SEG-1b — correcções pedidas pelo validador (1.ª ronda) e prova no ambiente que as expôs
+
+O validador da 1.ª ronda (`_logs/UTAC109h.2_SEG4_VALIDADOR.md`) deu **APROVADO COM RESSALVAS — 1
+bloqueante**, e o bloqueante era **real**: a minha guarda nova era **frágil ao fim de linha**.
+
+| Achado | O que era | Correcção (commit `f509e21`) |
+|---|---|---|
+| **F1 ⚠️ (bloqueante)** | O teste novo usava `\n` nos regex multi-linha e o `.gitattributes` **não** fixa `*.jsx` a LF ⇒ num worktree/clone limpo (fonte **CRLF**) dava **2 falhas** (testes 5 e 8); 9/9 só com fonte LF. | `ler()` que normaliza `\r\n` → `\n` na leitura dos dois componentes. |
+| **F2 ⚠️ (mesma raiz)** | No worktree CRLF a baseline já tinha 2 RED ⇒ os mutantes **M6/M10 reportavam 2 RED = igual à baseline**: prova **VACUOSA**. O mutador não exigia baseline verde. | O mutador passa a **exigir `fail == 0` antes de mutar** (aborta com exit 2 e «BASELINE VERMELHA») e a exigir `fail > baseline` em cada mutante. |
+| **F8 ℹ️** | O comentário-cabeçalho do `PainelIndicacao.jsx` ficou **mutilado pela minha própria substituição de cor**: dizia «Saíram o verde-água `#f5a623`, o gradiente `#0aa37e`, o verde `#f5a623` e o `#f5a623`». | Corrigido para `#00d4aa` / `#0aa37e` / `#10b981` / `#fbbf24`. |
+| **F3/F4 ℹ️** | «0 ocorrências» e «tom único» sem **escopo** ⇒ literalmente falsos repo-wide (as cores retiradas vivem em `glassTokens.js`, `globals.css`, `OfertasProgramadas.jsx`) e as **modais** da Carteira mantêm o gradiente de 2 tons `#f5a623→#e89400`. | Nota de **ESCOPO** acrescentada aos dois ficheiros: «uma só cor» vale para as **duas peças** do ecrã; modais e tokens globais **ficam como estavam** (fora do âmbito). Detalhe em §Pendências. |
+| **F5 ℹ️** | Redacção: o git registou **1 D** (teste) + **1 R052** (mutador **renomeado**, 52 % de similaridade) — não 2 remoções. | Corrigido neste log. |
+| **F7 ℹ️** | O número de RAM «1 504 MB» era o **da minha execução**; o validador mediu 1 169 e 1 493 (momentos diferentes). | Registado abaixo como valor **por execução**, não como constante. |
+
+### Prova no WORKTREE NOVO com fonte CRLF (o ambiente que expunha o defeito) — o que o validador exigiu
+```
+worktree @ f509e21 (junctions A13)
+  EOL da fonte:  MinhaCarteira.jsx -> CRLF: 405 | LF soltas: 0
+  teste isolado: ℹ tests 9 · ℹ pass 9 · ℹ fail 0            <- era 7/9 antes da correcção
+  mutador lote 1: baseline do teste: fail=0 · M1..M5 PROVADO (1-2 RED > baseline 0) · MUTAÇÃO 5/5
+  mutador lote 2: baseline do teste: fail=0 · M6..M10 PROVADO (1-2 RED > baseline 0) · MUTAÇÃO 5/5
+  suíte canónica: frontend VERDE 970/970 · backend VERDE 1095/1101 · VEREDITO: VERDE   (14:15-14:18)
+```
+⇒ fecha também o limite «a suíte canónica correu só no main tree» que o validador declarou.
+
+### Incidente de arrumação (worktree) — medido, sem dano
+`worktree-helper.mjs remover` devolveu **`Permission denied`** (o helper **recusou forçar**, como manda a A13:
+«o `git recusou/falhou remover e NÃO há prova de que está limpo»). O `git` **já tinha desregistado** o worktree e
+o que ficou no disco era uma pasta **VAZIA** (conteúdo e junctions já apagados) ⇒ `rmdir /s /q` só do directório
+vazio. **Prova de que as junctions não foram seguidas:** `node_modules` real **498 / 414 antes e depois**.
+O excesso de RAM era meu: `bash` da própria sessão (cwd dentro do worktree) segurava o directório.
+
+## Pendências novas (declaradas, não corrigidas — fora do âmbito autorizado)
+
+| # | Pendência | Evidência |
+|---|---|---|
+| **P-109h.2-1** | **As modais da Carteira mantêm as cores retiradas**: `ComprarFichasModal.jsx:266` e `ComprarPasseModal.jsx:77` usam `linear-gradient(135deg,#f5a623,#e89400)` e o `COR` local lista `#fbbf24`/`#10b981`/`#a78bfa`. Herdado (nem `93e17ac` nem `f509e21` tocaram nesses ficheiros) e **fora do R18-C do 109h** («modais fora»). **Decisão do operador:** se «apenas amarelo/tom único» deve valer também para as modais e para os tokens globais (`glassTokens.js:7` `primary:"#ff6b35"`, `globals.css` tokens laranja), é UTAC próprio. | validador ℹ️ F4 |
+| **P-109h.2-2** | **Dois worktrees órfãos registados no repo**, de outros executores — nenhum com commits fora do `main`: (a) `C:/Users/Moltbot/AppData/Local/Temp/claude/C--Users-Moltbot/ffd22ecc-…/scratchpad/wt-94` @ `e3d8791` — **1 414 edições locais** (apagamento de `.agents/skills/**`), 689 KB, 0 commits próprios; (b) `C:/Users/Moltbot/tmp-109h-val/wt` @ `93e17ac` — **limpo** (0 edições, 0 commits), 93 MB. **Não limpei** (arrumação em UTAC alheio segue a regra do operador: saneamento em UTAC próprio; e a A13 manda arquivar antes de apagar). | `git worktree list` |
+| **P-109h.2-3** | Os botões do `PainelIndicacao` («📋 Copiar código»/«📤 Compartilhar») continuam **sem `minHeight`** (44-45 px, < 48) — o revert repõe o estado anterior de propósito; o validador confirmou o limite como **verdadeiro**, não como defeito novo. | validador alegação 12 |
+| **P-109h.2-4** | O número de RAM é **por execução** (1 504 na minha; 1 169/1 493 nas do validador) e a suíte deu VERDE **abaixo** de 1 500 numa das corridas ⇒ reforça a **A14 a medir depois de estabilizar**, não no instante. | validador ℹ️ F7 |
+
+## SEG4 — validador adversarial (1.ª e 2.ª ronda)
+
+**1.ª ronda** (`_logs/UTAC109h.2_SEG4_VALIDADOR.md`, alvo `11f6416`): **APROVADO COM RESSALVAS — 1
+bloqueante.** O conteúdo resistiu (revert fiel só-de-cor, 3 contratos byte-iguais a `1a41cf7`,
+contrastes ao centésimo, suíte verde); o bloqueante era da **reprodutibilidade da própria guarda**.
+**2.ª ronda** (`_logs/UTAC109h.2_SEG4b_VALIDADOR.md`, alvo `f509e21` = a correcção): **APROVADO COM
+RESSALVAS — 0 bloqueantes.** As 6 alegações da correcção resistiram; o validador **atacou o guarda**
+(teste deliberadamente vermelho ⇒ `BASELINE VERMELHA` + exit 2, sem PROVADOS) e **fechou o limite** que
+ele próprio tinha declarado (suíte canónica **no worktree CRLF**: 970/970 · 1095/1101).
+
+### Resposta do executor às ressalvas (ressalva → tratamento)
+| # | Ronda | Tratamento nesta passagem |
+|---|---|---|
+| **F1/F2** | 1.ª | ⚠️ **BLOQUEANTE — FECHADO.** `ler()` normaliza `\r\n`; mutador exige baseline verde. **Provado no worktree CRLF**: 9/9, baseline 0, 10/10, suíte 970/970. |
+| **F8** | 1.ª | FECHADO — o comentário do `PainelIndicacao` deixa de citar `#f5a623` onde deviam estar `#00d4aa`/`#10b981`/`#fbbf24`. |
+| **F3/F4** | 1.ª | FECHADO como **escopo** (nota nos 2 ficheiros, «as duas peças do ecrã»); o resto vai a pendência **P-109h.2-1**. |
+| **F5** | 1.ª | FECHADO na redacção («1 `D` + 1 `R052` = renomeado»). |
+| **F6** | 1.ª | Nada a fazer — o detector declarado **já incluía nomes de cor** (reconhecido pelo validador na 2.ª ronda, R6). |
+| **F7 / R4** | 1.ª/2.ª | A RAM passa a ser reportada **por execução** e **não** como prova — o harness não tem gate de RAM. |
+| **R1** | 2.ª | **Dívida declarada**: o `.gitattributes` continua **sem** `*.jsx/.tsx/.css text eol=lf` ⇒ a guarda ficou EOL-tolerante **no leitor**, não na causa-raiz. Mudar a política de EOL do repo é **higiene de repo** ⇒ UTAC próprio (regra do operador: saneamento em UTAC próprio). |
+| **R2/R3** | 2.ª | FECHADO nesta passagem: a adenda SEG-1b **vai commitada** e a frase refutada ficou **à vista, marcada** (errata E1). |
+| **R5** | 2.ª | Assinalado: o mutador prova «**algum** teste ficou RED (delta > baseline)», não «a asserção visada». Rigor para UTAC futuro; os 10 mutantes são distintos e o validador não encontrou contaminação cruzada. |
+| **R7** | 2.ª | Cosmético: o cabeçalho cita só o 2.º stop do gradiente (`#0aa37e`), que era `#00d4aa→#0aa37e`. Sem impacto. |
+
+## Errata (pós-veredicto) — a versão errada fica À VISTA, marcada
+
+**E1 — «o laranja `#ff6b35` não existe em nenhum ponto» (§-1.2, linha marcada acima).** O texto original
+**fica à vista**. O validador **refutou-o repo-wide** (2.ª ronda, medição 7; também a 1.ª ronda, F3): com
+strip de comentários sobre `frontend/src` (**283 ficheiros visitados**) o `#ff6b35` aparece **18×**, o
+`#fbbf24` **52×**, o `#10b981` **35×**, o `#00d4ff` **11×**, o `#e89400` **9×** — por exemplo em
+`components/glass/glassTokens.js:7`, `globals.css` (tokens laranja) e `OfertasProgramadas.jsx:48`. A frase
+correcta é a de **§-1.4**: «0 nas **duas peças** do ecrã» (Carteira + Indique e Ganhe). É a mesma classe
+de erro que a série já pune: **um «0» sem escopo declarado é uma alegação falsa**, mesmo quando o facto
+escopado é verdadeiro.
+
+## Custo e fecho
+- **Executor:** Hermes (DeepSeek). **Baseline:** `6d62637` · **Commits:** `11f6416` (revert + cor única) →
+  `f509e21` (correcção do bloqueante) → **este commit** (fecho: logs, relatório, R14).
+- **Custo:** sessões lidas no `state.db` do Hermes; **saldo da API NÃO LIDO** (R5 proíbe tocar em credenciais).
+  Valores no relatório do Desktop (`Desktop/RELATORIO-UTAC109h.2-CARTEIRA-REVERT.txt`).
