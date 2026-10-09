@@ -5619,3 +5619,31 @@ a mostrar os videos antigos durante 1 ano. Por isso a subida para `mc59` e obrig
 **Deploy:** push = auto-deploy Git (NAO usar `netlify deploy --build`, que corre build local e ensuja
 o `package-lock` do frontend). Verificado: entry `index-B2GWopzJ.js` -> `index-Dz3nLTfv.js` a t+142s;
 `guto-1.webm?v=mc59` = 397 840 B md5 `11368a8b8220` = o novo; +9 assets sem divergencia.
+
+## R14 (append) -- UTAC109d.1 -- CARROSSEL: play() no 1.o carregamento + bolsas brancas (Claude Code, Opus 5.5)
+
+**Tipo:** diagnostico + correccao (frontend + assets). **Baseline:** `2c2b31d`. **Commit:** `ea857c6` (as 2 correccoes) -> registo.
+**Suite:** frontend VERDE **917/917** (+3) · backend VERDE 1095/1101. **Deploy:** auto-deploy Git (t+160 s), entry `index-y2nUEYgn.js` -> `index-Bez_-42d.js`;
+chunk do carrossel `PrivyRoot-BJZw88XW.js` com `mc60`; 16 assets `?v=mc60` md5 16/16 = repo.
+
+**Hipotese do Hermes REFUTADA** (VP9 alfa nao suportado no telemovel): decoder OK (`readyState 4`, `canPlayType=probably`) e o **desktop tambem**
+ficava parado. **Causa raiz:** o `useEffect` do `play()` (`CarrosselGUTO.jsx`) dependia de `[cur, reduce]`; os `<video>` so montam depois de `pronto`
+(`useAposPrimeiraPintura`, **MC88.36 `0f07456`, 2026-07-28**) e sem `autoPlay` -> num carregamento novo ficavam `paused, t=0` para sempre. So animava
+depois de sair do Inicio e voltar (`jaPintou` e de MODULO) — o caso que o 109d viu. **«So aparece 1 dos 8» = o mesmo defeito** (a troca de slide so
+dispara a meio do video activo). Nao e regressao do 109d. **Correccao:** deps `[cur, reduce, pronto]` + guarda `!pronto`. Teste de RUNTIME novo
+`src/__tests__/utac109d1-carrossel-play.test.mjs` (componente real no `_hook-runner`, refs ligados antes dos efeitos); mutacao (tirar `pronto`) -> RED.
+
+**R18 — EXTENSAO DE ESCOPO autorizada pelo operador:** «ainda tem muitos videos com o fundo branco» -> bordas limpas (0,000), mas **bolsas de fundo
+FECHADAS** (entre arames/rodas do carrinho, pernas, sacos) que o flood-fill de bordas do 109d nao alcanca. O enunciado proibia regerar os videos/alterar o
+pipeline; o operador autorizou (10 condicoes). **Pipeline Apendice A v2** (`_logs/UTAC109d.1-mobile.md`): + componentes brancos nao ligados a borda com
+lum >= 230, sat <= 10, area >= 150, **anel com < 45 % escuro** (letras/ecra excluidos) e **voto temporal +-3 frames (>= 4/7)**. A 1.a versao (lum >= 234,
+sem anel, frame a frame) foi **REFUTADA pelo validador** (apagava letras do portatil do v4, deixava bolsas, piscava) e corrigida. **So os videos 2, 4 e 6
+mudam** (branco inferior/frame 8124->1030, 9485->1263, 3370->645); 1/3/5/7/8 byte-identicos ao mc59. Cache-bust **mc59 -> mc60**. Backup:
+`C:\Users\Moltbot\tmp-109d1\backup-mc59\`.
+
+**Validador adversarial:** ronda 1 PARCIAL (C1 aprovada; C2 v1 refutada) -> ronda 2 **APROVADO COM RESSALVAS, 0 bloqueantes**. ⚠️ R2-1 faixa branca do
+chao entre as rodas do v4 (blob 552 px); ⚠️ R2-2 piscar residual ligeiro (v4 media 100->126; uma mancha de 273 px alterna 8x em 10 s). Verificacao
+funcional no build de producao do mesmo commit (vite preview): desktop e 375px Android animam no 1.o carregamento e avancam de slide. **Nao medido:**
+telemovel/APK real (o APK so recebe com AAB novo — 109j). **Escopo:** backend, package*, 5 `.bak-*`, MLC/OP/Carteira intactos; `EM_BREVE_MODE = true`.
+**Registo:** `_logs/UTAC109d.1-mobile.md` · `_logs/UTAC109d.1_SEG6_VALIDADOR.md` · `Desktop/RELATORIO-UTAC109d.1-MOBILE.txt`.
+**Custo:** validador 758 075 tokens = 15–1516 ¢ (303 ¢ se tudo input); sessao principal nao medida (≈ 104 ¢ se tudo input). ≈ 1 h 15 (HI5 2 h).

@@ -432,3 +432,5 @@ if __name__ == "__main__":
 | Backup dos originais | `C:\Users\Moltbot\tmp-109d\backup-originais\` (16 ficheiros; md5 do `guto-1.webm` = `28822746ed1c`) |
 | Provas visuais | `tmp-109d\piloto-comparacao.png`, `tradeoff-thr.png`, `saida-8.png`, `posters-8.png` |
 | Commits | `dd01f50` (troca) · registo no commit seguinte |
+
+> 🔁 **Substituido pelo Apendice A v2 (UTAC109d.1, 2026-10-09)** — `_logs/UTAC109d.1-mobile.md` §Apendice A v2: acrescenta a remocao das bolsas de fundo fechadas (anel + voto temporal). O texto acima fica como registo da v1.
