@@ -5685,3 +5685,15 @@ placeholder no padrao do MeusAtivos (**LACUNA:** nao ha fonte publica de vencedo
 **Escopo:** 4 glass pequenos, aba OP, Carteira, backend, gate legal, `EM_BREVE_MODE = true`, package*, 5 `.bak-*` intactos.
 **Registo:** `_logs/UTAC109f-inicio.md` · `_logs/UTAC109f_SEG-1_MEDICAO.md` · `_logs/UTAC109f_SEG3_VALIDADOR.md` ·
 `Desktop/RELATORIO-UTAC109f-INICIO.txt`.
+
+
+## R14 (append) -- UTAC109g -- OFERTAS PROGRAMADAS ALINHADAS COM O MLC + PADRAO PALPITES (Claude Code, Opus 5.5)
+
+**Tipo:** CODIGO (frontend + testes). **Baseline:** `fee1609`. **Commits:** `1fc7321` (feat) -> achados do validador -> registo.
+**Suite:** frontend VERDE **961/961** (+14) · backend VERDE 1095/1101. **Mutacao 16/16** (`scripts/utac109g-prova-mutacao.mjs`, correr por lotes).
+**Decisoes do operador (R18):** **A** a OP usa o MESMO `GlassHeader` do MLC (identidade + login + titulo/frase/selo + rodape CNPJ) e o mesmo envelope `<main>` (sem os 640 px) · **B** aviso do bonus logo abaixo da edicao · **C** nome do produto no `CartaoEdicao` 9rem -> 12,5rem (na fonte) · **D** frase da OP «Junte 50 pontos e troque pelo cartão» (a do operador «…cartão Quildo» ainda quebrava a 375; «Quildo» saiu).
+**Feito:** a edicao da OP e o 2.º vidro, a MESMA altura do MLC (medido no browser local: **299/299 px a 375, 311/311 a 1280**; o validador mediu 0 px de 320 a 1280); cartoes vazios iguais (465/684 px); `alignContent: "start"` na grelha (sem ele os vidros esticavam). Tabela «📋 Palpites — Edicao <id>» moldada na «📋 Lances — Edicao R-1» (titulo Orbitron, selo, «🔒 valores ocultos ate o fim», 📭, lista no telemovel/tabela no desktop), selo com texto navy (AA). Nome a 375: 151 -> 283 px. P1 (so por teste: `EM_BREVE_MODE = true`) e P2 verificadas na fonte.
+**Validador: PARCIAL, 0 bloqueantes** -- refutou o meu AA do selo (branco 2,5-3,8:1 -> corrigido) e 4 sobreviventes de teste (login da OP, «Prazo» com EM BREVE) -> fechados, nao re-validados. **Declarados:** botao de login do `GlassHeader` 33 px (ja no MLC; agora tambem na OP); selo branco da `TabelaLances` do MLC (< AA); `data-testid="frase-mlc"` tambem na OP; 320 px trunca/quebra.
+**Escopo:** MercadoLances, TabelaLances, components/glass, Dashboard, Carteira, backend, package*, 5 `.bak-*` intactos; `EM_BREVE_MODE = true`.
+**Registo:** `_logs/UTAC109g-op-alinhamento.md` · `_logs/UTAC109g_SEG-1_MEDICAO.md` · `_logs/UTAC109g_SEG3_VALIDADOR.md` · `_logs/utac109g-browser/` · `Desktop/RELATORIO-UTAC109g-OP.txt`.
+**Custo:** validador 141 060 tokens = 2,8-282 ¢ (56 ¢ se tudo input); sessao principal nao medida (`/cost`).
