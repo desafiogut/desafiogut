@@ -5,9 +5,10 @@ type: produto
 baseline: e48acf6
 motivo: >-
   Decisão do operador: «esta perfeito, porem o comprar passe desafio, esta fora do padrao, e o copir
-  codigo tbm» / «deixe eles no padrao amarelo dos outros botoes». Medido: no ecrã da Carteira, 4 dos 6
-  botões usam o estilo tingido rgba(245,166,35,0.14) + contorno rgba(245,166,35,0.4) + texto amarelo
-  (PIX, MLC, OP) e o «Comprar Passe» era DOURADO SÓLIDO + navy; no painel, «Compartilhar» era tingido e
+  codigo tbm» / «deixe eles no padrao amarelo dos outros botoes». Medido (ANTES da mudanca): na grelha
+  da Carteira, 3 dos 4 botoes (PIX, MLC, OP) usavam o estilo tingido rgba(245,166,35,0.14) + contorno
+  rgba(245,166,35,0.4) + texto amarelo e o «Comprar Passe» era DOURADO SÓLIDO + navy — o 4.o que destoava
+  e que passa a tingido nesta mudanca; no painel, «Compartilhar» era tingido e
   «Copiar código» era AMARELO SÓLIDO. Os dois sólidos eram os que destoavam.
 frentes:
   - id: A

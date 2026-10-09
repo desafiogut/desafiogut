@@ -30,7 +30,10 @@ const COR = {
   pix: "#f5a623",
 };
 // UTAC107b — texto sobre o DOURADO. Branco sobre `#f5a623` dá 2,03:1 e falha o AA
-// (mockup 107a-front, §SEG4); navy `#0a0f1a` dá 9,45:1. É o único par usado no CTA dourado.
+// (mockup 107a-front, §SEG4); navy `#0a0f1a` dá 9,45:1. Era o par do CTA DOURADO SÓLIDO do Passe
+// até ao UTAC109h.3, que pôs esse botão no padrão amarelo tingido dos restantes; a constante fica
+// definida por contrato de teste do UTAC106c e já **não é usada por nenhum CTA** (achado F4 do
+// validador do 109h.3 — registado, não removida).
 const ON_GOLD = "#0a0f1a";
 
 // MC99 (HARD GATE 4) — o card "🏦 Dados para Pagamento (Art. 21)", que consumia esta

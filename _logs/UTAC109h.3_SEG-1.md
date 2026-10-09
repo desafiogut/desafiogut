@@ -60,3 +60,32 @@ inline e o **tingido é o dominante** no app (`rgba(245,166,35,…)` aparece em 
 - Sem medição no browser (prova estática sobre o código + contraste recalculado).
 - A leitura de «padrão amarelo dos outros botões» = **tingido** (o padrão dominante no ecrã e no app) — se o
   operador queria o inverso (todos **cheios**), é outro UTAC.
+
+## SEG4 — veredicto do validador adversarial (commit `bcbeeba`)
+
+**APROVADO COM RESSALVAS — 0 bloqueantes.** Reproduziu por execução, em **worktree próprio com `.jsx` em
+CRLF** (o ambiente que já custou um bloqueante no 109h.2): escopo de 7 ficheiros; o bloco tingido do Passe
+igual aos 3 irmãos; `botaoPrimario` do painel removido **sem uso de código** (grep + mutação); **nenhum**
+botão das 2 peças renderiza amarelo sólido (enumerou todos: 4 no grid, o «↻», «ver em Meus Ativos» e
+«Carregar agora»); contraste **7,2463:1** recalculado (sensibilidade: nunca desce de ~7,1); suíte
+`970/970 · 1095/1101` **também no worktree CRLF** (e os 6 do backend são `skipped`, não falhas —
+`fail 0`); mutação **11/11** com baseline `fail=0` e md5 de restauro idêntico. **Sonda de vacuidade
+própria:** removeu as sobreposições do Passe (voltando ao sólido latente) ⇒ o teste 8 do 109h2 **e** o
+teste do 106c caem ⇒ as guardas **mordem**.
+
+### Resposta do executor às ressalvas
+| # | Tratamento nesta passagem |
+|---|---|
+| **F3** (contradição entre dois comentários do mesmo ficheiro) | **CORRIGIDO**: o comentário do `ON_GOLD` deixa de afirmar «é o único par usado no CTA dourado» e passa a declarar que **já não é usado** (histórico preservado). |
+| **F1** (A3 «nenhuma referência em lado nenhum» — falso no literal) | **REFORMULADO**: era «**sem uso de código**»; sobram referências **textuais** (comentário, regex do teste, logs) — deliberadas. |
+| **F2** (A5 «histórico não apagado» — falso no literal) | **REFORMULADO**: o bloco de comentário original **foi** substituído; a informação sobrevive noutros pontos (`MinhaCarteira.jsx` `9,45:1`; teste do 106c com «decisão 5» e `2,03:1`). |
+| **F8** (o spec dizia «4 dos 6» e enumerava 3) | **CORRIGIDO** acima. |
+| **F4** (`ON_GOLD` código morto) | **Declarado e mantido**: é contrato de teste do UTAC106c (a constante tem de existir). Removê-la exige UTAC próprio (mexe num guarda da série). |
+| **F5** (`botaoPrimario` base latente sólido) | **Declarado**: 4/4 usos sobrepõem fundo/cor/sombra ⇒ nada é renderizado sólido; a guarda cobre o caso (bloco do Passe + contagem ≥ 4). |
+| **F6** («Copiar código» = «Compartilhar» ⇒ sem hierarquia) | **Declarado e escalado**: é consequência directa do pedido («no padrão dos outros»). **Decisão do operador** se quer recuperar a distinção — UTAC próprio. |
+| **F7** (tingidos não uniformes entre as 2 peças: 0.14/0.4 vs 0.12/0.35) | **Nota de consistência**, não regressão: cada peça mantém os seus valores; unificar é opção de design. |
+| **F9** (há CTAs sólidos no app) | **Relativizado** no texto acima. |
+| **F10** (Passe usa `COR.gold`, PIX usa `COR.pix` — aliases de `#f5a623`) | Aceito: render idêntico. |
+
+**Correcção pós-veredicto:** a única alteração de código foi o comentário F3 (sem efeito de comportamento)
+⇒ **declarada como NÃO re-validada**; a suíte e os testes isolados foram re-corridos na mesma passagem.
