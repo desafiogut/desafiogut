@@ -509,6 +509,10 @@ describe("UTAC109f · Início — acessos rápidos", () => {
     assert.ok(bloco, "o array ATALHOS desapareceu");
     const destinos = [...bloco.matchAll(/\b(to|href):\s*[`"]([^`"]+)[`"]/g)].map((m) => m[2]);
     assert.deepEqual(destinos, ["/carteira", "/regras-oficiais", "mailto:${EMAIL_SUPORTE}", "/configuracoes"]);
+    // V14 — no desktop (SSR = não-mobile) os 4 numa linha; o 2×2 é só do telemóvel
+    const html = renderizar();
+    const i = html.indexOf('data-testid="acessos-rapidos"');
+    assert.match(html.slice(i, html.indexOf("</section>", i)), /grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
     const sup = atalhos(renderizar()).find((a) => a.nome === "Suporte");
     assert.equal(sup.tag, "a");
     assert.match(sup.attrs, /href="mailto:desafiogut01@gmail\.com"/, "o Suporte não aponta ao e-mail oficial");
@@ -549,6 +553,21 @@ describe("UTAC109f · Início — ordem final e pendências do 109e", () => {
     ["Saldo (R$)", "Passe Desafio", "Lances Únicos", "Total de Lances"].forEach((r, k) => assert.ok(rotulos[k].includes(r), `${k}: ${rotulos[k]}`));
   });
 
+  // ⚠️2 do validador (109f): sem esta guarda, mudar o destino/cor de um tile passava a suíte. Os blocos do
+  // `passeStat`/`stats` e do render dos KPIs têm de ser BYTE-IGUAIS ao baseline `731ec28` (fins de linha normalizados).
+  test("os 4 glass pequenos ficam BYTE-IGUAIS ao baseline 731ec28 (diff zero) e o Saldo leva à Carteira", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { createHash } = await import("node:crypto");
+    const s = readFileSync(caminho(AQUI, "../Dashboard.jsx"), "utf8").replace(/\r\n/g, "\n");
+    const bloco = (a, b) => { const i = s.indexOf(a), j = s.indexOf(b); assert.ok(i > 0 && j > i, `bloco ${a}`); return s.slice(i, j); };
+    const sha = (t) => createHash("sha256").update(t).digest("hex");
+    assert.equal(sha(bloco("  const passeStat = {", "  const cardPad")),
+      "92686ab28a655631dbffe87c3469d6f7eb5f14c25ade0b1fd7f8c15c1c67922d", "os dados dos 4 tiles mudaram");
+    assert.equal(sha(bloco("      {/* ── KPIs ── */}", "      {/* ── UTAC108h.3")),
+      "0b037a7abb13b9db6272de47aadddafdc98da2121615d967d11f51a3ce68db69", "o render dos 4 tiles mudou");
+    assert.match(s, /label: "Saldo \(R\$\)"[^\n]*to: "\/carteira"/, "o KPI «Saldo» deixou de levar à Carteira");
+  });
+
   test("glass final: dentro de vidro, aviso honesto (LACUNA), sem dados inventados, sem 🏆 nem «ver todos»", () => {
     definirResultadoOficial(null);
     const html = renderizar({ vencedor: { endereco: "0xaaaa000000000000000000000000000000000001", valor: 300 }, encerrado: true });
@@ -557,7 +576,8 @@ describe("UTAC109f · Início — ordem final e pendências do 109e", () => {
     const sec = html.slice(html.lastIndexOf("<section", i), html.indexOf("</section>", i));
     assert.match(sec, /gut-glass-standard/, "o glass final não é vidro");
     assert.match(sec, /data-estado="placeholder"/);
-    assert.match(texto(sec), /Esta área ainda não está disponível/);
+    // V4 — o texto INTEIRO (o padrão dos placeholders de MeusAtivos), sem nada acrescentado
+    assert.equal(texto(sec), "🏅 Vencedores Esta área ainda não está disponível. Os vencedores das edições vão aparecer aqui quando o recurso for lançado.");
     assert.doesNotMatch(texto(sec), /0x|R\$|\d/, "o placeholder mostra dados");
     assert.doesNotMatch(sec, /🏆|ver todos/i);
   });
@@ -571,6 +591,7 @@ describe("UTAC109f · Início — ordem final e pendências do 109e", () => {
     assert.match(v, /<label[^>]*>Seu lance \(em centavos\)<\/label>/);
     assert.match(v, /<button[^>]*disabled=""[^>]*>Dar lance<\/button>/);
     assert.match(texto(v), /Nenhuma edição em andamento/);
+    assert.match(v, /data-testid="cartao-estado"[^>]*>SEM EDIÇÃO</, "V5: o vazio do Relâmpago perdeu «SEM EDIÇÃO»");
   });
 
   test("glass MLC COM edição (fora do EM BREVE): R-1 + porta do lance, sem GUTO 7 (bidireccional)", () => {
@@ -613,6 +634,7 @@ describe("UTAC109f · Início — ordem final e pendências do 109e", () => {
     const vazio = fatia(renderizar(), ">🎫 Programada<");
     assert.match(texto(vazio), /Sem edições programadas no momento\./);
     assert.match(vazio, /data-acao="palpite"/);
+    assert.match(vazio, /data-testid="cartao-estado"[^>]*>SEM EDIÇÃO</, "V5: o vazio da OP perdeu «SEM EDIÇÃO»");
     const cheio = fatia(renderizar({ edicoes: { "R-1": R1, "PROG-1": PROG } }), ">🎫 Programada<");
     assert.doesNotMatch(texto(cheio), /Sem edições programadas/);
   });

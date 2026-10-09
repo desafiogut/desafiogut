@@ -19,7 +19,7 @@ const T_UNICO = "src/components/__tests__/utac109e-cartao-unico.test.mjs";
 const md5 = (b) => createHash("md5").update(b).digest("hex");
 
 const MUTANTES = [
-  { id: "F1", desc: "P1 desligada: a Programada ativa volta a «lance já!»", f: EDICAO, t: [T_INICIO],
+  { id: "F1", desc: "P1 desligada: a Programada ativa volta a «lance já!»", f: EDICAO, t: [T_INICIO, T_OP],
     de: 'edicao?.tipo === "programado";', para: 'edicao?.tipo === "programado" && false;' },
   { id: "F2", desc: "P1 alargada: a frase do palpite também nas Relâmpago", f: EDICAO, t: [T_INICIO],
     de: 'estado === ESTADO_EDICAO.ATIVA && edicao?.tipo === "programado"', para: 'estado === ESTADO_EDICAO.ATIVA' },
@@ -43,6 +43,20 @@ const MUTANTES = [
     de: 'export const EMAIL_SUPORTE = "desafiogut01@gmail.com";', para: 'export const EMAIL_SUPORTE = "suporte@exemplo.com";' },
   { id: "F12", desc: "um dos 4 glass pequenos desaparece (Passe Desafio)", f: INICIO, t: [T_INICIO],
     de: '    passeStat,\n', para: '' },
+  // sobreviventes do validador adversarial (SEG3), agora cobertos
+  { id: "V1", desc: "(V1) P1 desligada — medida SÓ na aba OP", f: EDICAO, t: [T_OP],
+    de: 'const ehPalpite = estado === ESTADO_EDICAO.ATIVA', para: 'const ehPalpite = false && estado === ESTADO_EDICAO.ATIVA' },
+  { id: "V2", desc: "(V2) o tile Saldo deixa de levar à Carteira", f: INICIO, t: [T_INICIO],
+    de: 'icon: "💰", to: "/carteira"', para: 'icon: "💰", to: "/ativos"' },
+  { id: "V3", desc: "(V3) a cor de «Lances Únicos» muda", f: INICIO, t: [T_INICIO],
+    de: 'value: lancesUnicos,                     color: COR.success', para: 'value: lancesUnicos,                     color: COR.amber' },
+  { id: "V4", desc: "(V4) o placeholder ganha um nome inventado", f: INICIO, t: [T_INICIO],
+    de: 'quando o recurso for lançado.\n        </p>', para: 'quando o recurso for lançado. Último: Maria.\n        </p>' },
+  { id: "V5", desc: "(V5) o vazio da OP no Início perde «SEM EDIÇÃO»", f: INICIO, t: [T_INICIO],
+    de: '            : { texto: "SEM EDIÇÃO", cor: "#6b7db8" }}', para: '            : undefined}' },
+  { id: "V14", desc: "(V14) acessos no desktop em grelha automática", f: INICIO, t: [T_INICIO],
+    de: '"repeat(2, minmax(0, 1fr))" : "repeat(4, minmax(0, 1fr))"', para: '"repeat(2, minmax(0, 1fr))" : "repeat(auto-fill, minmax(150px, 1fr))"' },
+
 ];
 
 let provados = 0;

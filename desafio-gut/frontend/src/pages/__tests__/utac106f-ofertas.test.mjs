@@ -27,9 +27,11 @@ const ALIASES = [
   { find: /^\.\/useTrocarPorSenhas\.js$/, replacement: `${STUBS_106E}/useTrocarPorSenhas.js` },
   { find: /^\.\.\/hooks\/useTrocarPorSenhas\.js$/, replacement: `${STUBS_106E}/useTrocarPorSenhas.js` },
   { find: /^react-router-dom$/, replacement: `${STUBS_106C}/rr.jsx` },
+  // UTAC109f (⚠️1 do validador) — o EM_BREVE_MODE real é `true`; o duplo do 108d deixa provar a P1 (edição ATIVA).
+  { find: /^\.\.\/lib\/leilaoLock\.js$/, replacement: resolve(AQUI, "_stubs", "leilaoLock.js") },
 ];
 
-let vite, React, renderToStaticMarkup, montar, duploDeFetch, definirContexto, OfertasProgramadas;
+let vite, React, renderToStaticMarkup, montar, duploDeFetch, definirContexto, OfertasProgramadas, definirEmBreve;
 
 before(async () => {
   const { createServer } = await import(pathToFileURL(resolve(AQUI, "..", "..", "..", "node_modules", "vite", "dist", "node", "index.js")).href);
@@ -41,6 +43,7 @@ before(async () => {
   ({ montar, duploDeFetch } = await vite.ssrLoadModule("/src/hooks/__tests__/_hook-runner.mjs"));
   ({ definirContexto } = await vite.ssrLoadModule("/src/pages/__tests__/_stubs/AppContext.jsx"));
   OfertasProgramadas = (await vite.ssrLoadModule("/src/pages/OfertasProgramadas.jsx")).default;
+  ({ definirEmBreve } = await vite.ssrLoadModule("/src/pages/__tests__/_stubs/leilaoLock.js"));
 });
 after(async () => { if (vite) await vite.close(); });
 
@@ -518,4 +521,22 @@ test("UTAC108e.1 · T3: Regra 1 na OP — nenhum texto fora de vidro (excepto bo
       assert.deepEqual(fora, [], `textos fora de vidro: ${JSON.stringify(fora)}`);
     } finally { c.dup.restaurar(); }
   }
+});
+
+// UTAC109f (P1, ⚠️1 do validador) — na ABA OP a faixa de uma Programada ATIVA diz «palpite já!», nunca
+// «lance já!»; com EM BREVE continua «EM BREVE» (bidireccional). A aba não foi tocada: a correcção é da fonte.
+test("UTAC109f · P1 na aba OP: Programada ativa → «palpite já!»; EM BREVE → «EM BREVE»", async () => {
+  definirEmBreve(false);
+  try {
+    const c = await montarEcra();
+    try {
+      assert.match(c.texto(), /Em andamento — palpite já!/, "a faixa da OP não diz «palpite já!»");
+      assert.doesNotMatch(c.texto(), /lance já!/, "a OP voltou a dizer «lance já!»");
+    } finally { c.dup.restaurar(); }
+  } finally { definirEmBreve(true); }
+  const c2 = await montarEcra();
+  try {
+    assert.doesNotMatch(c2.texto(), /palpite já!/, "com EM BREVE não há «palpite já!»");
+    assert.match(c2.texto(), /EM BREVE/);
+  } finally { c2.dup.restaurar(); }
 });

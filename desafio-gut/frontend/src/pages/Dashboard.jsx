@@ -488,7 +488,7 @@ export default function Dashboard() {
 
       {/* ── Bloco 5 · Acessos rápidos (UTAC109f) ──
           4 alvos iguais (ícone + rótulo + a mesma cor), 2×2 no telemóvel e 4 numa linha no desktop.
-          Toque ≥ 48 px (mobile-ux-design: 48 dp Android); dourado #f5a623 sobre o vidro navy = 9,07:1 (AA).
+          Toque ≥ 48 px (mobile-ux-design: 48 dp Android); dourado #f5a623 sobre o fundo do botão (8 % dourado sobre #0c1132) = 8,11:1 (AA).
           O «Suporte» é um e-mail (`<a href>`), os outros são rotas (`navigate`). */}
       <GlassCard as="section" className={cardCls} data-testid="acessos-rapidos" style={{ marginBottom: sectionGap }}>
         <h3 style={cardTitulo}>🚀 Acesso Rápido</h3>
