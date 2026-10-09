@@ -17,18 +17,19 @@ const VALOR_POR_SENHA_BRL = 2;
 // com vírgula decimal (pt-BR), como o enunciado o escreve.
 const PRECO_PASSE_DESAFIO = "R$ 2,00";
 
-// UTAC109h (R18-A/C) — DUAS cores de destaque, as do título e da frase da aba MLC
-// (`components/glass/glassTokens.js`): laranja `#ff6b35` (títulos, botão primário) e amarelo `#f5a623`
-// (subtítulo, valor, botões secundário/terciário). Saíram o ciano do PIX, o 2.º amarelo `#fbbf24`, o
-// verde e o roxo. `muted` é neutro (texto de apoio); `danger` fica SÓ para os estados de erro (R18-C).
-// Contraste sobre o vidro (`rgba(13,18,53,.88)` ≈ `#0c1131`): laranja 6,50:1 · amarelo 9,09:1 · muted 4,61:1.
+// UTAC109h.2 (decisão do operador, 2026-10-09) — UMA só cor de destaque: o amarelo `#f5a623`
+// (o dourado do botão «Dar palpite», o mesmo tom de 56 ficheiros do app). Saíram o ciano `#00d4ff`
+// do PIX, o `#fbbf24`, o verde `#10b981`, o violeta `#a78bfa` e o gradiente `#e89400`.
+// O LAYOUT é o de `1a41cf7` — o UTAC109h trocou-o por engano e foi revertido.
 const COR = {
-  primary: "#ff6b35", gold: "#f5a623", text: "#e8f0fe", muted: "#6b7db8",
-  danger: "#ef4444",
+  primary: "#f5a623", primaryDim: "rgba(245,166,35,0.15)",
+  gold: "#f5a623", text: "#e8f0fe", muted: "#6b7db8",
+  success: "#f5a623", danger: "#ef4444", blue300: "#f5a623", purple: "#f5a623",
+  pix: "#f5a623",
 };
-// Texto sobre fundo cheio: branco sobre `#ff6b35` dá 2,84:1 (falha o AA); navy `#0a0f1a` dá 6,76:1
-// sobre o laranja e 9,45:1 sobre o amarelo (UTAC107b). É o único texto usado sobre os botões cheios.
-const ON_COR = "#0a0f1a";
+// UTAC107b — texto sobre o DOURADO. Branco sobre `#f5a623` dá 2,03:1 e falha o AA
+// (mockup 107a-front, §SEG4); navy `#0a0f1a` dá 9,45:1. É o único par usado no CTA dourado.
+const ON_GOLD = "#0a0f1a";
 
 // MC99 (HARD GATE 4) — o card "🏦 Dados para Pagamento (Art. 21)", que consumia esta
 // lista, foi REMOVIDO. Medido: a informação não se perdeu —
@@ -111,31 +112,23 @@ export default function MinhaCarteira() {
   }
 
   const pad        = isMobile ? "1rem" : "2rem";
+  const cardPad    = isMobile ? "1rem" : "1.25rem";
   const sectionGap = isMobile ? "1.25rem" : "1.5rem";
 
   const cardCls = isMobile ? "p-4" : "p-5";
-  // UTAC109h (R18-A) — cabeçalho no estilo da 2.ª secção do `GlassHeader` da OP (título Orbitron 800 a
-  // laranja + subtítulo a amarelo), SEM login nem CNPJ. O título é o maior texto do 1.º vidro:
-  // 24/28 px (era 13,6/14,08 px = 1,76×/1,99×) e o valor do saldo desce para 21,6/25,6 px (era 38,4/48),
-  // para a hierarquia ser nome > valor > subtítulo (pedido do enunciado: «nome = elemento mais visível»).
-  const TAM_TITULO = isMobile ? "1.5rem" : "1.75rem";
-  const TAM_SUBTITULO = isMobile ? "0.9rem" : "1rem";
-  const TAM_VALOR = isMobile ? "1.35rem" : "1.6rem";
-  // UTAC109h (Frente B) — três tipos de botão, a mesma altura (≥ 48 px), raio e tipografia:
-  //   primário  = fundo laranja cheio + texto navy (6,76:1);
-  //   secundário = transparente + contorno e texto amarelo;
-  //   terciário = só texto amarelo (sublinhado no hover).
-  const botaoBase = {
-    width: "100%", minHeight: "48px",
-    padding: isMobile ? "0.75rem 1rem" : "0.7rem 1.2rem",
-    borderRadius: "12px", fontWeight: "800", fontSize: "0.9rem", cursor: "pointer",
+  const tituloStyle = {
+    margin: `0 0 ${isMobile ? "0.75rem" : "1rem"}`,
+    fontSize: isMobile ? "0.85rem" : "0.88rem",
+    fontWeight: "800", color: COR.blue300, letterSpacing: "0.03em",
   };
-  const botaoPrimario = { ...botaoBase, background: COR.primary, border: `1px solid ${COR.primary}`, color: ON_COR };
-  const botaoSecundario = { ...botaoBase, background: "transparent", border: `1px solid ${COR.gold}`, color: COR.gold };
-  const botaoTerciario = {
-    display: "inline-flex", alignItems: "center", minHeight: "48px", minWidth: "48px",
-    padding: 0, background: "none", border: "none", color: COR.gold,
-    fontWeight: 700, cursor: "pointer", textAlign: "left",
+  const botaoPrimario = {
+    width: "100%",
+    minHeight: "48px",
+    padding: isMobile ? "0.75rem 1rem" : "0.7rem 1.2rem",
+    background: "#f5a623",
+    border: "none", borderRadius: "12px", color: "#fff",
+    fontWeight: "800", fontSize: "0.85rem", cursor: "pointer",
+    boxShadow: "0 4px 14px rgba(245,166,35,0.35)",
   };
 
   return (
@@ -158,43 +151,28 @@ export default function MinhaCarteira() {
           {/* Saldo Disponível (R$) — modelo dual Frente B.9.
               Fonte: blob saldo-rs:${address}. PIX → +R$. /comprar-senhas → -R$.
               /lance-relampago → -centavos. */}
-          {/* MC99 (HARD GATE 2) — SEM `background` nem `borderColor` inline: .gut-glass-standard puro.
-              UTAC109h (R18-A) — 1.º VIDRO = «quanto tenho + como carrego»: cabeçalho no estilo da OP
-              (título laranja + subtítulo amarelo), valor do saldo e Depositar PIX. O que não é isso passou
-              ao 2.º vidro (R18-B). Ficam aqui, por serem do saldo/depósito: o ↻, o aviso 402 (é falta de
-              saldo → carregar), a nota do e-mail PIX (RESSALVA 5 do 107b) e o erro de leitura. */}
-          <GlassCard data-vidro="saldo" className={`${cardCls} ${isMobile ? 'mb-5' : 'mb-6'}`}>
+          {/* MC99 (HARD GATE 2) — SEM `background` nem `borderColor` inline: .gut-glass-standard puro. */}
+          <GlassCard className={`${cardCls} ${isMobile ? 'mb-5' : 'mb-6'}`}>
               <div style={{
-                display: "flex", justifyContent: "space-between", alignItems: "flex-start",
-                marginBottom: "0.75rem", gap: "0.5rem",
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+                marginBottom: "0.55rem", gap: "0.5rem",
               }}>
-                <div style={{ minWidth: 0 }}>
-                  <h3 data-testid="titulo-carteira" style={{
-                    margin: 0, fontFamily: "'Orbitron', sans-serif", fontWeight: 800, letterSpacing: "0.03em",
-                    fontSize: TAM_TITULO, color: COR.primary, lineHeight: 1.2,
-                  }}>Carteira</h3>
-                  {/* MC99 — a etiqueta diz o que o número é. UTAC109h (R18-A) — passa a SUBTÍTULO no
-                      estilo da frase da OP (amarelo, 700), sem maiúsculas. Texto inalterado. */}
-                  <div data-testid="subtitulo-carteira" style={{
-                    margin: "0.3rem 0 0", fontSize: TAM_SUBTITULO, fontWeight: 700,
-                    color: COR.gold, letterSpacing: "0.01em",
-                  }}>Saldo Disponível</div>
-                </div>
+                <h3 style={{ ...tituloStyle, margin: 0, color: COR.gold }}>Carteira</h3>
                 {/* MC99 (correcção do HARD GATE 4 — refutação do validador) — o botão
                     "↻ Atualizar saldo" vivia no card "Saldo de Senhas" e foi removido com
                     ele. Medido: NÃO tinha substituto nenhum — o auto-refresh é de 30 s
                     (AppContext: setInterval(refetchSaldo, 30000)). Vem para aqui, junta do
                     saldo a que diz respeito. A pílula «R$ OFF-CHAIN» saiu no UTAC107b (R18-E:
-                    texto técnico desnecessário). UTAC109h — botão secundário (contorno amarelo). */}
+                    texto técnico desnecessário). */}
                 <button
                   type="button"
                   onClick={() => { try { refetchSaldo?.(); } catch {} }}
                   aria-label="Atualizar o saldo on-chain"
                   title="Ler o saldo on-chain agora (normalmente actualiza sozinho a cada 30 s)"
                   style={{
-                    background: "transparent", border: `1px solid ${COR.gold}`,
-                    borderRadius: "999px", color: COR.gold, cursor: "pointer",
-                    fontSize: "1rem", lineHeight: 1,
+                    background: "transparent", border: "1px solid rgba(245,166,35,0.18)",
+                    borderRadius: "999px", color: COR.muted, cursor: "pointer",
+                    fontSize: "0.72rem", lineHeight: 1.4,
                     minWidth: "48px", minHeight: "48px",
                     display: "inline-flex", alignItems: "center", justifyContent: "center",
                     flex: "none",
@@ -204,12 +182,19 @@ export default function MinhaCarteira() {
                 </button>
               </div>
 
+              {/* MC99 — a etiqueta veio do glass de cabeçalho removido: o número
+                  grande precisa de dizer o que é. UTAC106c — o título passou a
+                  «Carteira» e a etiqueta a amarelo, a par do valor. */}
+              <div style={{
+                fontSize: "0.75rem", color: COR.gold, fontWeight: 700,
+                textTransform: "uppercase", letterSpacing: "0.06em",
+                marginBottom: "0.15rem",
+              }}>Saldo Disponível</div>
               <div
-                data-testid="valor-saldo"
                 className={saldoRsPendente ? "gut-valor-pendente" : undefined}
                 style={{
-                  fontSize: TAM_VALOR,
-                  fontWeight: 900, color: COR.gold, lineHeight: 1.1,
+                  fontSize: isMobile ? "2.4rem" : "3rem",
+                  fontWeight: 900, color: COR.gold, lineHeight: 1.05,
                   marginBottom: "0.95rem",
                 }}
               >
@@ -221,38 +206,100 @@ export default function MinhaCarteira() {
                 </span>
               </div>
 
-              {/* UTAC109h (R18-A) — «como carrego»: o único botão do 1.º vidro, primário (laranja). */}
-              <button
-                type="button"
-                onClick={() => setComprarAberto(true)}
-                style={botaoPrimario}
-                title="Depósito PIX → +R$ (crédito automático após aprovação MP)"
-              >
-                💰 Depositar PIX
-              </button>
+              {/* UTAC107b — ordem decidida pelo operador (decisão 4):
+                  Depositar PIX → Comprar Passe Desafio → Menor Lance Único → Ofertas Programadas.
+                  R18-E: a frase de apoio do saldo saiu (texto técnico) e o botão «Trocar R$ 2,00
+                  → 1 Senha» foi removido (decisão 1 — a Via A deixa de ter caminho visível aqui). */}
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+                gap: "0.6rem",
+              }}>
+                <button
+                  onClick={() => setComprarAberto(true)}
+                  style={{
+                    // UTAC109h.2 — amarelo único `#f5a623` (era ciano): o destaque do depósito usa o mesmo tom do app.
+                    ...botaoPrimario,
+                    background: "rgba(245,166,35,0.14)",
+                    border: "1px solid rgba(245,166,35,0.4)",
+                    color: COR.pix,
+                    boxShadow: "none",
+                  }}
+                  title="Depósito PIX → +R$ (crédito automático após aprovação MP)"
+                >
+                  💰 Depositar PIX
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPasseAberto(true)}
+                  style={{
+                    ...botaoPrimario,
+                    // UTAC107b (decisão 5) — dourado SÓLIDO + texto navy `#0a0f1a` = 9,45:1
+                    // (era branco sobre o gradiente = 2,03:1, reprovava o AA).
+                    background: COR.gold,
+                    color: ON_GOLD,
+                  }}
+                  title={`Comprar o Passe Desafio por ${PRECO_PASSE_DESAFIO}`}
+                >
+                  {`Comprar Passe Desafio ${PRECO_PASSE_DESAFIO}`}
+                </button>
+                {/* UTAC108c (D-1, Opção A do operador) — o botão NAVEGA SEMPRE. Tinha
+                    `disabled={!saldoReais}`: com saldo R$ 0,00 (ou ainda a carregar) o clique não fazia
+                    nada e o utilizador lia «o botão não navega». O saldo verifica-se no DESTINO (aviso
+                    «Sem saldo» no MercadoLances; o lance em si continua bloqueado no CardLance). */}
+                <button
+                  type="button"
+                  onClick={irParaMenorLanceUnico}
+                  style={{
+                    // MC48 P2 — âmbar suave (CTA de lance). UTAC106c — passa a «Menor Lance Único».
+                    ...botaoPrimario,
+                    background: "rgba(245,166,35,0.14)",
+                    border: "1px solid rgba(245,166,35,0.4)",
+                    color: COR.gold,
+                    boxShadow: "none",
+                  }}
+                  title="Ir para o Menor Lance Único"
+                >
+                  ⚡ Menor Lance Único
+                </button>
+                <button
+                  type="button"
+                  onClick={irParaOfertasProgramadas}
+                  style={{
+                    // UTAC107b — «Ofertas Programadas» com o mesmo estilo do «Menor Lance Único».
+                    ...botaoPrimario,
+                    background: "rgba(245,166,35,0.14)",
+                    border: "1px solid rgba(245,166,35,0.4)",
+                    color: COR.gold,
+                    boxShadow: "none",
+                  }}
+                  title="Abre as Ofertas Programadas (programa de fidelidade)"
+                >
+                  🎫 Ofertas Programadas
+                </button>
+              </div>
 
               {/* UTAC107b (Regra 1, decisão 6) — o aviso 402 estava FORA do vidro (solto por
                   baixo do «Indique e Ganhe»); passa para DENTRO do cartão de saldo, onde o
-                  utilizador está. Conteúdo: «⚠️ Saldo insuficiente.» + atalho «Carregar agora (PIX)».
-                  UTAC109h (R18-C) — o aviso continua VERMELHO (estado de erro); o atalho passa a botão
-                  terciário amarelo com alvo de 48 px. */}
+                  utilizador está. Conteúdo: «⚠️ Saldo insuficiente.» + atalho «Carregar agora (PIX)». */}
               {passeSemSaldo && (
                 <div role="status" style={{
-                  marginTop: "0.85rem", padding: "0.5rem 0.85rem", borderRadius: "10px",
+                  marginTop: "0.85rem", padding: "0.7rem 0.85rem", borderRadius: "10px",
                   background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.3)",
-                  display: "flex", flexWrap: "wrap", alignItems: "center", columnGap: "0.5rem",
                 }}>
                   <p style={{ margin: 0, fontSize: "0.82rem", color: COR.danger, lineHeight: 1.4, fontWeight: 700 }}>
-                    ⚠️ Saldo insuficiente.
+                    ⚠️ Saldo insuficiente.{" "}
+                    <button
+                      type="button"
+                      onClick={() => { setPasseSemSaldo(false); setToastPasse(null); setPasseAberto(false); setComprarAberto(true); }}
+                      style={{
+                        background: "none", border: "none", padding: 0, fontSize: "0.82rem",
+                        color: COR.blue300, fontWeight: 800, textDecoration: "underline", cursor: "pointer",
+                      }}
+                    >
+                      Carregar agora (PIX)
+                    </button>
                   </p>
-                  <button
-                    type="button"
-                    className="hover:underline"
-                    onClick={() => { setPasseSemSaldo(false); setToastPasse(null); setPasseAberto(false); setComprarAberto(true); }}
-                    style={{ ...botaoTerciario, fontSize: "0.82rem", fontWeight: 800 }}
-                  >
-                    Carregar agora (PIX)
-                  </button>
                 </div>
               )}
 
@@ -267,7 +314,7 @@ export default function MinhaCarteira() {
               <p style={{
                 margin: "0.75rem 0 0", fontSize: "0.68rem", color: COR.muted, lineHeight: 1.45,
               }}>
-                Depósito por PIX via Mercado Pago — <strong style={{ color: COR.gold }}>desafiogut@gmail.com</strong>{" "}
+                Depósito por PIX via Mercado Pago — <strong style={{ color: COR.blue300 }}>desafiogut@gmail.com</strong>{" "}
                 (crédito automático após a aprovação). Custo de cada senha: R$ {VALOR_POR_SENHA_BRL.toFixed(2)} por edição (Art. 20).
               </p>
 
@@ -276,58 +323,21 @@ export default function MinhaCarteira() {
                   ⚠️ Não foi possível ler o saldo R$ agora.
                 </p>
               )}
-            </GlassCard>
-
-          {/* UTAC109h (R18-B) — 2.º VIDRO: o que sai do 1.º sem se perder. Ordem do UTAC107b (decisão 4)
-              mantida para os três botões: Comprar Passe Desafio → Menor Lance Único → Ofertas Programadas.
-              Comprar Passe = primário (é o único sítio de compra do Passe); MLC e OP = secundários. */}
-          <GlassCard data-vidro="usar-saldo" className={`${cardCls} ${isMobile ? 'mb-5' : 'mb-6'}`}>
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
-                gap: "0.6rem",
-              }}>
-                <button
-                  type="button"
-                  onClick={() => setPasseAberto(true)}
-                  style={{ ...botaoPrimario, gridColumn: isMobile ? undefined : "1 / -1" }}
-                  title={`Comprar o Passe Desafio por ${PRECO_PASSE_DESAFIO}`}
-                >
-                  {`Comprar Passe Desafio ${PRECO_PASSE_DESAFIO}`}
-                </button>
-                {/* UTAC108c (D-1, Opção A do operador) — o botão NAVEGA SEMPRE. Tinha
-                    `disabled={!saldoReais}`: com saldo R$ 0,00 (ou ainda a carregar) o clique não fazia
-                    nada e o utilizador lia «o botão não navega». O saldo verifica-se no DESTINO (aviso
-                    «Sem saldo» no MercadoLances; o lance em si continua bloqueado no CardLance). */}
-                <button
-                  type="button"
-                  onClick={irParaMenorLanceUnico}
-                  style={botaoSecundario}
-                  title="Ir para o Menor Lance Único"
-                >
-                  ⚡ Menor Lance Único
-                </button>
-                <button
-                  type="button"
-                  onClick={irParaOfertasProgramadas}
-                  style={botaoSecundario}
-                  title="Abre as Ofertas Programadas (programa de fidelidade)"
-                >
-                  🎫 Ofertas Programadas
-                </button>
-              </div>
 
               {/* UTAC107g (Frente B) — as senhas on-chain (Via A) perderam o botão de troca
                   (107b) e o tile (107c). A casa delas passa a ser «Meus Ativos»; aqui fica só
-                  um aviso DISCRETO, dentro do vidro, e só com senhas > 0.
-                  UTAC109h (R18-B) — passa ao 2.º vidro e a botão terciário (amarelo, 48 px). */}
+                  um aviso DISCRETO (cor muted, sem fundo), dentro do vidro, e só com senhas > 0.
+                  Alvo de toque com 44 px de altura, mesmo sendo visualmente uma linha de texto. */}
               {senhasAntigas > 0 && (
                 <button
                   type="button"
                   data-indicador="senhas-antigas"
-                  className="hover:underline"
                   onClick={() => navigate("/ativos")}
-                  style={{ ...botaoTerciario, display: "flex", width: "100%", margin: "0.5rem 0 0", fontSize: "0.78rem" }}
+                  style={{
+                    display: "flex", alignItems: "center", width: "100%", minHeight: "44px",
+                    margin: "0.35rem 0 0", padding: 0, background: "none", border: "none",
+                    color: COR.muted, fontSize: "0.72rem", textAlign: "left", cursor: "pointer",
+                  }}
                 >
                   Você tem {senhasAntigas} {senhasAntigas === 1 ? "senha antiga" : "senhas antigas"} → ver em Meus Ativos
                 </button>

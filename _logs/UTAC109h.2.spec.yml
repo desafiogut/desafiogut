@@ -1,0 +1,48 @@
+schema: utac/1
+name: UTAC109h.2
+title: "Carteira: REVERT do layout do UTAC109h + UMA só cor de destaque (amarelo #f5a623, o do botão «Dar palpite»)"
+type: produto
+baseline: 6d62637
+motivo: >-
+  Decisão do operador depois de ver o UTAC109h em produção: «o layout mudou, nao era pra ter mudado,
+  volte ao anterior, era somente a cor, e nao deixe laranja, deixe apenas amarelo, no tom que ja temos
+  no app, como o amarelo do botao palpite, quero esse tom». O UTAC109h (commit 93e17ac) trocou o
+  LAYOUT do ecrã (título 13,6->24 px, valor 38,4->21,6 px, 1.º vidro partido em dois, 4 estilos de
+  botão -> 3) além das cores. O que se quer: layout de volta ao anterior (1a41cf7) e a cor de destaque
+  unificada no amarelo do app, sem laranja.
+frentes:
+  - id: A
+    nome: Revert do layout (MinhaCarteira.jsx e PainelIndicacao.jsx voltam a 1a41cf7)
+    entrega: [src/pages/MinhaCarteira.jsx, src/components/PainelIndicacao.jsx]
+  - id: B
+    nome: Uma só cor de destaque — amarelo #f5a623 (tom do botão «Dar palpite»)
+    entrega: [src/pages/MinhaCarteira.jsx, src/components/PainelIndicacao.jsx]
+  - id: C
+    nome: Testes (restauro dos contratos do layout anterior + guarda da cor única) e mutação
+    entrega: [src/__tests__/utac109h2-carteira.test.mjs, scripts/utac109h2-prova-mutacao.mjs]
+  - id: D
+    nome: Validador adversarial de UI
+    entrega: [_logs/UTAC109h.2_SEG4_VALIDADOR.md]
+autoriza:
+  - repor src/pages/MinhaCarteira.jsx e src/components/PainelIndicacao.jsx ao conteudo de 1a41cf7 e aplicar SO substituicoes de cor
+  - repor os contratos de teste de 1a41cf7 e apagar o teste/mutador do 109h cujo sujeito reverteu
+  - criar src/__tests__/utac109h2-carteira.test.mjs e scripts/utac109h2-prova-mutacao.mjs
+  - commit + push foreground; validador em worktree proprio (A13)
+proibe:
+  - git add -A
+  - qualquer alteracao de LAYOUT, tamanho, espacamento, ordem ou copy (era SO a cor)
+  - GlassHeader.jsx, CartaoEdicao.jsx, Dashboard.jsx (Inicio), MercadoLances.jsx/TabelaLances.jsx
+    (MLC), OfertasProgramadas.jsx (OP), backend (netlify/), gate legal, EM_BREVE_MODE
+  - package*.json, .bak-*
+  - laranja #ff6b35 em qualquer ponto do ecra
+dependencias:
+  - UTAC109h fechado (93e17ac -> 6c0b33a -> 6d62637) e em producao
+regras_activas: [E, T, G, L, S, A, P, AU, ST, HI]
+regras_extra: []
+stop_conditions_extra: []
+ressalvas:
+  - HI5 2 h por UTAC (exceder -> PARAR e declarar)
+  - o tom do amarelo e o do app (#f5a623, COR.gold do botao "Dar palpite") -> se divergir, PARAR
+  - o revert NAO pode mexer em layout: qualquer remocao de linha sem cor = PARAR
+  - gate LGPD a bloquear o browser -> protocolo do 109f (local, perfil descartavel)
+  - interpretacao do ambito escolhida sem confirmacao do operador (timeout) -> declarar no log

@@ -1,7 +1,7 @@
-// utac109h-prova-mutacao.mjs — UTAC109h. Cada mutante tem de pôr VERMELHO o teste
-// `src/__tests__/utac109h-carteira.test.mjs`. Restauro a partir de cópia em memória (nunca do HEAD:
+// utac109h2-prova-mutacao.mjs — UTAC109h.2. Cada mutante tem de pôr VERMELHO o teste
+// `src/__tests__/utac109h2-carteira.test.mjs`. Restauro a partir de cópia em memória (nunca do HEAD:
 // o trabalho pode não estar commitado) e verificação md5 no fim.
-// Uso (foreground): node scripts/utac109h-prova-mutacao.mjs [M1 M2 …]   (sem argumentos = todos)
+// Uso (foreground): node scripts/utac109h2-prova-mutacao.mjs [M1 M2 …]   (sem argumentos = todos)
 // Correr em lotes pequenos: um `timeout` externo que mate o processo salta o `finally`.
 import { readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
@@ -13,21 +13,19 @@ const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FRONT = resolve(RAIZ, "desafio-gut", "frontend");
 const CART = resolve(FRONT, "src/pages/MinhaCarteira.jsx");
 const PAINEL = resolve(FRONT, "src/components/PainelIndicacao.jsx");
-const TESTE = "src/__tests__/utac109h-carteira.test.mjs";
+const TESTE = "src/__tests__/utac109h2-carteira.test.mjs";
 
 const MUTANTES = [
-  ["M1 título volta a amarelo", CART, "fontSize: TAM_TITULO, color: COR.primary,", "fontSize: TAM_TITULO, color: COR.gold,"],
-  ["M2 PIX volta a ciano", CART, "style={botaoPrimario}\n                title=\"Depósito PIX", "style={{ ...botaoPrimario, color: \"#00d4ff\" }}\n                title=\"Depósito PIX"],
-  ["M3 botões a 44 px", CART, 'width: "100%", minHeight: "48px",', 'width: "100%", minHeight: "44px",'],
-  ["M4 Indique volta a verde-água", PAINEL, 'primary:    "#ff6b35",', 'primary:    "#00d4aa",'],
-  ["M5 título pequeno (desktop)", CART, 'const TAM_TITULO = isMobile ? "1.5rem" : "1.75rem";', 'const TAM_TITULO = isMobile ? "1.5rem" : "0.88rem";'],
-  ["M6 texto branco no primário", CART, 'const ON_COR = "#0a0f1a";', 'const ON_COR = "#ffffff";'],
-  ["M7 vermelho fora de erro", CART, "fontSize: TAM_SUBTITULO, fontWeight: 700,\n                    color: COR.gold,", "fontSize: TAM_SUBTITULO, fontWeight: 700,\n                    color: COR.danger,"],
-  ["M8 terciário sem alvo 48", CART, 'display: "inline-flex", alignItems: "center", minHeight: "48px", minWidth: "48px",', 'display: "inline-flex", alignItems: "center",'],
-  ["M9 secundário do Indique com fundo", PAINEL, 'background: "transparent", border: `1px solid ${COR.gold}`', 'background: "rgba(0,212,170,0.12)", border: `1px solid ${COR.gold}`'],
-  ["M10 Passe volta ao 1.º vidro", CART, "              {/* UTAC107b (Regra 1, decisão 6) — o aviso 402", "              <button type=\"button\" style={botaoPrimario}>Comprar Passe Desafio x</button>\n              {/* UTAC107b (Regra 1, decisão 6) — o aviso 402"],
-  ["M11 título sem Orbitron", CART, "margin: 0, fontFamily: \"'Orbitron', sans-serif\", fontWeight: 800,", "margin: 0, fontWeight: 800,"],
-  ["M12 Indique: botão do código < 48", PAINEL, 'width: "100%", minHeight: "48px",', 'width: "100%",'],
+  ["M1 PIX volta a ciano", CART, '  pix: "#f5a623",', '  pix: "#00d4ff",'],
+  ["M2 paleta retirada volta", CART, 'success: "#f5a623", danger: "#ef4444", blue300: "#f5a623", purple: "#f5a623",', 'success: "#10b981", danger: "#ef4444", blue300: "#fbbf24", purple: "#a78bfa",'],
+  ["M3 laranja volta ao destaque", CART, '  primary: "#f5a623", primaryDim: "rgba(245,166,35,0.15)",', '  primary: "#ff6b35", primaryDim: "rgba(255,107,53,0.15)",'],
+  ["M4 Indique volta a verde-água", PAINEL, '  primary:    "#f5a623",', '  primary:    "#00d4aa",'],
+  ["M5 CTA volta ao gradiente de 2 tons", CART, 'background: "#f5a623",', 'background: "linear-gradient(135deg,#f5a623,#e89400)",'],
+  ["M6 texto branco no CTA dourado", CART, 'const ON_GOLD = "#0a0f1a";', 'const ON_GOLD = "#ffffff";'],
+  ["M7 título volta ao tamanho do 109h", CART, 'fontSize: isMobile ? "0.85rem" : "0.88rem",', 'fontSize: isMobile ? "1.5rem" : "1.75rem",'],
+  ["M8 erro deixa de ser vermelho", CART, 'danger: "#ef4444",', 'danger: "#f5a623",'],
+  ["M9 secundário do Indique perde o amarelo", PAINEL, '  gold:       "#f5a623",', '  gold:       "#6b7db8",'],
+  ["M10 botões da Carteira a 44 px", CART, 'width: "100%",\n    minHeight: "48px",', 'width: "100%",\n    minHeight: "44px",'],
 ];
 
 const SEL = process.argv.slice(2);

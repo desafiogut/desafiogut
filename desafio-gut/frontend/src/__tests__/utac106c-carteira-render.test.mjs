@@ -121,9 +121,7 @@ const CONECTADO = {
 };
 
 // ═══ SEG0 — render do topo da Carteira ══════════════════════════════════════════════
-// UTAC109h (R18-A) — o título passou a LARANJA `#ff6b35` (o do título da aba MLC/OP); o subtítulo
-// continua AMARELO. A medição continua a ser na PRÓPRIA tag (não contagem global).
-test("UTAC106c+109h/RENDER · a Carteira renderiza «Carteira» em LARANJA + «Saldo Disponível» em AMARELO e o VALOR", async () => {
+test("UTAC106c/RENDER · a Carteira renderiza «Carteira» + «Saldo Disponível» em AMARELO e o VALOR", async () => {
   const { html } = await montarCarteira(CONECTADO);
   const h = html();
   // ⚠️ BURACO DE VERIFICAÇÃO FECHADO (achado do MEU próprio mutante MR1): a 1.ª versão contava
@@ -133,7 +131,7 @@ test("UTAC106c+109h/RENDER · a Carteira renderiza «Carteira» em LARANJA + «S
   // Agora mede-se a COR NA PRÓPRIA TAG do título e do subtítulo.
   const mTitulo = h.match(/<h3([^>]*)>\s*Carteira\s*<\/h3>/);
   assert.ok(mTitulo, "o título «Carteira» não está no HTML renderizado");
-  assert.match(mTitulo[1], /#ff6b35/i, `o TÍTULO não está em laranja: «${mTitulo[1]}»`);
+  assert.match(mTitulo[1], /#f5a623/i, `o TÍTULO não está em amarelo: «${mTitulo[1]}»`);
 
   const iEtiqueta = h.indexOf("Saldo Disponível");
   assert.ok(iEtiqueta > -1, "o subtítulo «Saldo Disponível» não está no HTML");
@@ -261,26 +259,28 @@ test("UTAC106c/RENDER · barra e rail: 4 principais na ordem canónica e 5 secun
 // Só com senhas > 0 (número conhecido); leva a «Meus Ativos», a casa das senhas (Via A).
 const INDICADOR = "senhas antigas → ver em Meus Ativos";
 
-// UTAC109h (R18-B) — o indicador passou do vidro do saldo para o 2.º vidro («usar o saldo») e a
-// botão TERCIÁRIO: texto amarelo `#f5a623`, sem fundo, alvo ≥ 48 px. A invariante do 107g mantém-se:
-// discreto (sem fundo) e DENTRO de um vidro (Regra 1) — agora o 2.º.
-test("UTAC107g+109h/RENDER · com senhas > 0: «Você tem 7 senhas antigas → ver em Meus Ativos», DENTRO do 2.º vidro, terciário", async () => {
+test("UTAC107g/RENDER · com senhas > 0: «Você tem 7 senhas antigas → ver em Meus Ativos», DENTRO do vidro e muted", async () => {
   const { html, botaoCom } = await montarCarteira(CONECTADO); // saldoSenhas: 7
   const b = botaoCom(INDICADOR);
   assert.ok(b, "o indicador não aparece com 7 senhas");
   assert.equal(texto(b), "Você tem 7 senhas antigas → ver em Meus Ativos");
-  assert.equal(b.props.style.color, "#f5a623", "o indicador não está no amarelo do botão terciário");
+  assert.equal(b.props.style.color, "#6b7db8", "o indicador não está na cor muted");
   assert.ok(!b.props.style.background || b.props.style.background === "none", "o indicador ganhou fundo (devia ser discreto)");
-  assert.ok(parseFloat(b.props.style.minHeight) >= 48, "alvo de toque < 48 px");
+  assert.ok(parseFloat(b.props.style.minHeight) >= 44, "alvo de toque < 44 px");
+  // dentro do cartão de saldo (Regra 1): entre o título «Carteira» e o «Indique e Ganhe»
   const h = html();
   const iInd = h.indexOf("ver em Meus Ativos");
-  // fora do vidro do saldo: depois da nota do PIX (último texto do 1.º vidro)
+  assert.ok(h.indexOf("Saldo Disponível") < iInd, "o indicador ficou antes do saldo");
+  // e no MESMO vidro do saldo: depois da nota do PIX (último texto do cartão) e antes de o
+  // GlassCard fechar — o fecho mais próximo do indicador tem de ser o desse cartão.
   const iPix = h.indexOf("Depósito por PIX via Mercado Pago");
-  assert.ok(iPix >= 0 && iPix < iInd, "o indicador ficou no 1.º vidro (R18-B: passa ao 2.º)");
-  // ⚠️ Achado do validador do 107g (⚠️1, mutante V7): mede-se a PROFUNDIDADE — entre a abertura do
-  // vidro e o indicador, o <div> do vidro tem de continuar ABERTO (aberturas − fechos ≥ 1).
-  const iVidro = h.lastIndexOf("<div", h.indexOf('data-vidro="usar-saldo"'));
-  assert.ok(iVidro >= 0 && iVidro < iInd, "controlo: não encontrei a abertura do 2.º vidro");
+  assert.ok(iPix >= 0 && iPix < iInd, "o indicador saiu do cartão de saldo (antes da nota do PIX ou fora)");
+  // ⚠️ Achado do validador (⚠️1, mutante V7): a 1.ª versão só procurava a ÚLTIMA abertura do vidro
+  // antes do indicador — mover o indicador para DEPOIS do </GlassCard> passava verde. Agora mede-se
+  // a PROFUNDIDADE: entre a abertura do vidro do saldo e o indicador, o <div> do vidro tem de
+  // continuar ABERTO (aberturas − fechos ≥ 1).
+  const iVidro = h.lastIndexOf("<div", h.lastIndexOf("gut-glass-standard", h.indexOf("Saldo Disponível")));
+  assert.ok(iVidro >= 0 && iVidro < iInd, "controlo: não encontrei a abertura do vidro do saldo");
   // Profundidade CORRIDA: se o <div> do vidro fechar em algum ponto antes do indicador (mesmo que
   // outro vidro abra a seguir), o indicador já não está NESTE vidro.
   let prof = 0, minimo = Infinity;
@@ -288,7 +288,7 @@ test("UTAC107g+109h/RENDER · com senhas > 0: «Você tem 7 senhas antigas → v
     prof += m[0] === "</div>" ? -1 : 1;
     minimo = Math.min(minimo, prof);
   }
-  assert.ok(minimo >= 1 && prof >= 1, `o indicador está FORA do 2.º vidro (prof. mínima ${minimo}) — Regra 1`);
+  assert.ok(minimo >= 1 && prof >= 1, `o indicador está FORA do vidro do saldo (prof. mínima ${minimo}) — Regra 1`);
 });
 
 test("UTAC107g/RENDER · singular: 1 senha → «Você tem 1 senha antiga → …»", async () => {
