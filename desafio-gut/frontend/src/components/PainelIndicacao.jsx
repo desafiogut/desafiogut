@@ -13,16 +13,19 @@ import { useIsMobile } from "../hooks/useIsMobile.js";
 import { GlassCard } from "@/components/ui";
 import { apiGet } from "../lib/api.js";
 
+// UTAC109h (R18-C) — o «Indique e Ganhe» vive na Carteira e segue as DUAS cores de destaque dela (as do
+// título e da frase da aba MLC): laranja `#ff6b35` + amarelo `#f5a623`. Saíram o verde-água `#00d4aa`, o
+// verde `#10b981` e o 2.º amarelo `#fbbf24`. `muted` é neutro; o vermelho do erro fica (estado de erro).
 const COR = {
-  primary:    "#00d4aa",
-  primaryDim: "rgba(0,212,170,0.15)",
+  primary:    "#ff6b35",
   gold:       "#f5a623",
   text:       "#e8f0fe",
   muted:      "#94a3b8",
-  success:    "#10b981",
-  blue300:    "#fbbf24",
-  border:     "rgba(0,212,170,0.32)",
+  danger:     "#ef4444",
+  border:     "rgba(255,107,53,0.32)",
 };
+// Texto sobre o laranja cheio: navy `#0a0f1a` = 6,76:1 (branco seria 2,84:1, falha o AA).
+const ON_COR = "#0a0f1a";
 
 export default function PainelIndicacao({ isMobile: isMobileProp }) {
   const isMobileHook = useIsMobile();
@@ -99,25 +102,18 @@ export default function PainelIndicacao({ isMobile: isMobileProp }) {
     fontSize:      isMobile ? "0.85rem" : "0.88rem",
     fontWeight:    "800", color: COR.primary, letterSpacing: "0.03em",
   };
-  const botaoPrimario = {
-    width: "100%",
+  // UTAC109h (Frente B) — o mesmo par de botões da Carteira: ≥ 48 px, raio 12, 0,9 rem 800;
+  // primário = laranja cheio + navy; secundário = transparente com contorno e texto amarelo.
+  const botaoBase = {
+    width: "100%", minHeight: "48px",
     padding: isMobile ? "0.75rem 1rem" : "0.7rem 1.2rem",
-    background: "linear-gradient(135deg,#00d4aa,#0aa37e)",
-    border: "none", borderRadius: "12px", color: "#04080f",
-    fontWeight: "800", fontSize: "0.85rem", cursor: "pointer",
-    boxShadow: "0 4px 14px rgba(0,212,170,0.35)",
+    borderRadius: "12px", fontWeight: "800", fontSize: "0.9rem", cursor: "pointer",
   };
-  const botaoSecundario = {
-    width: "100%",
-    padding: isMobile ? "0.75rem 1rem" : "0.7rem 1.2rem",
-    background: "rgba(245,166,35,0.12)",
-    border: "1px solid rgba(245,166,35,0.35)",
-    borderRadius: "12px", color: COR.gold,
-    fontWeight: "800", fontSize: "0.85rem", cursor: "pointer",
-  };
+  const botaoPrimario = { ...botaoBase, background: COR.primary, border: `1px solid ${COR.primary}`, color: ON_COR };
+  const botaoSecundario = { ...botaoBase, background: "transparent", border: `1px solid ${COR.gold}`, color: COR.gold };
   const statCardStyle = {
     background:   "rgba(3,15,36,0.6)",
-    border:       "1px solid rgba(0,212,170,0.18)",
+    border:       "1px solid rgba(255,107,53,0.18)",
     borderRadius: "12px",
     padding:      "0.85rem 1rem",
     minWidth:     0,
@@ -167,7 +163,7 @@ export default function PainelIndicacao({ isMobile: isMobileProp }) {
       <div style={{
         ...statCardStyle,
         marginBottom: "1rem",
-        background: "linear-gradient(180deg, rgba(0,212,170,0.08), rgba(0,212,170,0.02))",
+        background: "linear-gradient(180deg, rgba(255,107,53,0.08), rgba(255,107,53,0.02))",
         borderColor: COR.border,
       }}>
         <div style={{
@@ -214,7 +210,7 @@ export default function PainelIndicacao({ isMobile: isMobileProp }) {
           <div style={{ fontSize: "0.62rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700, marginBottom: "0.25rem" }}>
             ✅ Converteram
           </div>
-          <div style={{ fontSize: "1.4rem", fontWeight: 900, color: COR.success }}>
+          <div style={{ fontSize: "1.4rem", fontWeight: 900, color: COR.primary }}>
             {dados.total_convertidos}
           </div>
         </div>
@@ -238,8 +234,8 @@ export default function PainelIndicacao({ isMobile: isMobileProp }) {
             {Array.from({ length: Math.min(dados.total_convertidos, 10) }).map((_, i) => (
               <span key={i} style={{
                 fontSize: "0.72rem", padding: "0.25rem 0.55rem",
-                background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.32)",
-                borderRadius: "999px", color: COR.success, fontWeight: 700,
+                background: "rgba(245,166,35,0.12)", border: "1px solid rgba(245,166,35,0.32)",
+                borderRadius: "999px", color: COR.gold, fontWeight: 700,
               }}>
                 Indicado {i + 1}
               </span>
@@ -249,7 +245,7 @@ export default function PainelIndicacao({ isMobile: isMobileProp }) {
       )}
 
       {dados.status === "error" && (
-        <p style={{ margin: "0.75rem 0 0", fontSize: "0.72rem", color: "#ef4444" }}>
+        <p style={{ margin: "0.75rem 0 0", fontSize: "0.72rem", color: COR.danger }}>
           ⚠️ Não foi possível carregar suas estatísticas: {dados.erro}
         </p>
       )}

@@ -107,11 +107,16 @@ test("MC99/SEG1 (UTAC106b) · a rota antiga /mercado continua registada (alias)"
 });
 
 // ═══ SEG2 — Carteira limpa ══════════════════════════════════════════════════════
-test("MC99/SEG2 · a Carteira tem 2 vidros (login + saldo) e mais nenhum", () => {
+// UTAC109h (R18-B, decisão do operador) — o 1.º vidro passou a dizer só «quanto tenho + como carrego»
+// e Comprar Passe / MLC / OP / senhas antigas foram para um 2.º vidro («usar o saldo»). A invariante
+// do MC99 mantém-se: nenhum vidro além destes (login + saldo + usar-saldo), sem cabeçalho repetido.
+test("MC99+109h/SEG2 · a Carteira tem 3 vidros (login + saldo + usar o saldo) e mais nenhum", () => {
   const c = codigo(ler("src/pages/MinhaCarteira.jsx"));
   const n = (c.match(/<GlassCard/g) || []).length;
-  assert.equal(n, 2,
-    `a Carteira tem ${n} <GlassCard>; tem de ter 2 (prompt de login + Minha Carteira/saldo)`);
+  assert.equal(n, 3,
+    `a Carteira tem ${n} <GlassCard>; tem de ter 3 (prompt de login + saldo + usar o saldo)`);
+  assert.match(c, /data-vidro="saldo"/, "o vidro do saldo perdeu a marca");
+  assert.match(c, /data-vidro="usar-saldo"/, "o 2.º vidro (R18-B) desapareceu");
 });
 
 test("MC99/SEG2 · os 5 cards removidos não voltaram", () => {
