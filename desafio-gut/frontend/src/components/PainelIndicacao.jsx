@@ -14,8 +14,11 @@ import { GlassCard } from "@/components/ui";
 import { apiGet } from "../lib/api.js";
 
 // UTAC109h.2 (decisão do operador, 2026-10-09) — UMA só cor de destaque: o amarelo `#f5a623`
-// (o dourado do botão «Dar palpite»). Saíram o verde-água `#f5a623`, o gradiente `#0aa37e`,
-// o verde `#f5a623` e o `#f5a623`. O LAYOUT é o de `1a41cf7` (não foi tocado).
+// (o dourado do botão «Dar palpite»). Saíram o verde-água `#00d4aa`, o gradiente `#0aa37e`,
+// o verde `#10b981` e o `#fbbf24`. O LAYOUT é o de `1a41cf7` (não foi tocado).
+// ESCOPO: «uma só cor» vale para as DUAS peças deste ecrã (Carteira + Indique e Ganhe); as
+// modais (ComprarPasse/ComprarFichas) e os tokens globais (glassTokens/globals.css) ficam como
+// estão — fora do âmbito autorizado. O escopo do ecrã está declarado em `_logs/UTAC109h.2_SEG-1.md`.
 const COR = {
   primary:    "#f5a623",
   primaryDim: "rgba(245,166,35,0.15)",

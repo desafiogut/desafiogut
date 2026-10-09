@@ -35,6 +35,18 @@ const originais = new Map([CART, PAINEL].map((f) => [f, readFileSync(f)]));
 const antes = new Map([...originais].map(([f, b]) => [f, md5(b)]));
 process.on("SIGTERM", () => { for (const [f, b] of originais) writeFileSync(f, b); process.exit(1); });
 let falhas = 0;
+const correr = () =>
+  spawnSync(process.execPath, ["--test", TESTE], { cwd: FRONT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 280000 });
+// ⚠️ BASELINE VERDE OBRIGATÓRIA antes de mutar. Sem isto, um mutante «PROVADO» pode ser apenas a
+// baseline já vermelha — prova VACUOSA. Medido pelo validador adversarial do UTAC109h.2 (F2): num
+// worktree com fonte CRLF a baseline tinha 2 RED e os mutantes M6/M10 reportavam exactamente 2 RED.
+const base = correr();
+const baseFail = Number((base.stdout.match(/ℹ fail (\d+)/) || [])[1] ?? NaN);
+console.log(`baseline do teste: fail=${baseFail}`);
+if (baseFail !== 0) {
+  console.log("BASELINE VERMELHA — a prova de mutação seria vacuosa; PARAR (correr num worktree/checkout com a guarda verde).");
+  process.exit(2);
+}
 try {
   for (const [nome, ficheiro, de, para] of ESCOLHIDOS) {
     const orig = originais.get(ficheiro);
@@ -44,12 +56,12 @@ try {
     if (n !== 1) { console.log(`${nome}: INVÁLIDO (âncora casou ${n}×)`); falhas++; continue; }
     const mut = txt.replace(de, () => para);
     writeFileSync(ficheiro, crlf ? mut.replace(/\n/g, "\r\n") : mut);
-    const r = spawnSync(process.execPath, ["--test", TESTE], { cwd: FRONT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 280000 });
+    const r = correr();
     const fail = Number((r.stdout.match(/ℹ fail (\d+)/) || [])[1] ?? NaN);
     writeFileSync(ficheiro, orig);
-    const ok = fail > 0;
+    const ok = fail > baseFail; // estritamente pior que a baseline (que é 0)
     if (!ok) falhas++;
-    console.log(`${nome}: ${ok ? `PROVADO (${fail} RED)` : `SOBREVIVEU (fail=${fail})`}`);
+    console.log(`${nome}: ${ok ? `PROVADO (${fail} RED > baseline ${baseFail})` : `SOBREVIVEU (fail=${fail}, baseline=${baseFail})`}`);
   }
 } finally {
   for (const [f, b] of originais) writeFileSync(f, b);

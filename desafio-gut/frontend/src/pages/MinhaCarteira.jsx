@@ -21,6 +21,8 @@ const PRECO_PASSE_DESAFIO = "R$ 2,00";
 // (o dourado do botão «Dar palpite», o mesmo tom de 56 ficheiros do app). Saíram o ciano `#00d4ff`
 // do PIX, o `#fbbf24`, o verde `#10b981`, o violeta `#a78bfa` e o gradiente `#e89400`.
 // O LAYOUT é o de `1a41cf7` — o UTAC109h trocou-o por engano e foi revertido.
+// ESCOPO: «uma só cor» vale para as DUAS peças deste ecrã; as modais (ComprarPasse/ComprarFichas)
+// e os tokens globais (glassTokens/globals.css) ficam como estavam — fora do âmbito autorizado.
 const COR = {
   primary: "#f5a623", primaryDim: "rgba(245,166,35,0.15)",
   gold: "#f5a623", text: "#e8f0fe", muted: "#6b7db8",

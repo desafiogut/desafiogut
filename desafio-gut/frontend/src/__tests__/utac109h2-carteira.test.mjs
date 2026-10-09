@@ -32,8 +32,13 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const SRC = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const CART = readFileSync(resolve(SRC, "pages/MinhaCarteira.jsx"), "utf8");
-const PAINEL = readFileSync(resolve(SRC, "components/PainelIndicacao.jsx"), "utf8");
+/** Leitura tolerante ao FIM DE LINHA. O `.gitattributes` fixa LF para `*.mjs/.js/.json/…` mas **não**
+ *  para `*.jsx`; com `core.autocrlf=true` um checkout/clone/worktree limpo entrega os `.jsx` em CRLF.
+ *  Sem esta normalização, os regex multi-linha deste teste falham num worktree limpo — medido pelo
+ *  validador adversarial do UTAC109h.2 (F1): 2 falhas (testes 5 e 8) em fonte CRLF, 9/9 em LF. */
+const ler = (p) => readFileSync(resolve(SRC, p), "utf8").replace(/\r\n/g, "\n");
+const CART = ler("pages/MinhaCarteira.jsx");
+const PAINEL = ler("components/PainelIndicacao.jsx");
 
 /** Texto de CÓDIGO: fora os comentários de bloco, os comentários JSX e os `//` de fim de linha —
  *  preservando o número de linhas. (Um `grep` cru apanha os hex citados em comentários e inventa
