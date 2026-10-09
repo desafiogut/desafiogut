@@ -32,7 +32,6 @@ export default {
   "dash.edicaoAtiva": "🎯 Edição Ativa",
   // MC88.43 — sem "em Andamento": o título não pode afirmar um estado que cada
   // cartão contradiz. Quem declara o estado é getEstadoEdicao, por edição.
-  "dash.outrasEdicoes": "🗓️ Outras Edições",
   "dash.menorLanceUnico": "🏆 Menor Lance Único",
   "dash.nenhumLanceUnico": "Nenhum lance único ainda.",
 

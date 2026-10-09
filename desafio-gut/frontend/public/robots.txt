@@ -4,7 +4,6 @@
 User-agent: *
 Allow: /
 Disallow: /admin
-Disallow: /corporativo
 Disallow: /.netlify/
 
 Sitemap: https://silly-stardust-ca71bc.netlify.app/sitemap.xml
