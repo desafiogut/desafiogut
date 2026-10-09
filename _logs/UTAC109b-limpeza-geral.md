@@ -254,4 +254,31 @@ medido antes/**após**). Veredicto integral verbatim + a resposta do executor:
 
 ## SEG12 — Deploy + registo
 
-_(preenchido no fecho)_
+| Passo | Medido |
+|---|---|
+| Bundle em produção **antes** | entry `/assets/index-Brxo6SkT.js` (59 661 B, sha256 `5f0c9f22…`) |
+| `/robots.txt` servido **antes** | **ainda com** `Disallow: /corporativo` ← prova de que o deploy era necessário |
+| Push | `aa1eba9..cb095cd` (`67b7e34` código + `cb095cd` achados do validador) → auto-deploy Git |
+| Site depois | **HTTP 200** (5 134 B) |
+| Bundle mudou? | **SIM** — entry `/assets/index-B2GWopzJ.js` |
+| `/robots.txt` servido **depois** | **sem** `Disallow: /corporativo` (restantes directivas intactas) |
+| BFS aos chunks **servidos** | **122 chunks** visitados — `Outras Edi` **×0** · `outrasEdicoes` **×0** · controlo `dash.edicaoAtiva` **×1** (`IdiomaContext-CzbE-gRb.js`) ⇒ os zeros foram **medidos**, não cegos |
+| `package-lock.json` / `package.json` | **não sujos** (o `netlify deploy` **não** foi usado: o auto-deploy Git não corre `npm install` local) |
+| Registo em 3 lugares | `_logs/UTAC109b-limpeza-geral.md` (este) · `CLAUDE.md` (bloco R14) · `Desktop/RELATORIO-UTAC109b-LIMPEZA.txt` |
+
+**Produção = commit.** O `/robots.txt` servido passou a não anunciar uma rota que já não existe
+(`/corporativo`, removida no 108f) e a chave i18n órfã desapareceu do bundle servido.
+
+### Fecho
+
+- **HI5:** carimbo de arranque **01:45** → fecho **02:17** = **~32 min** (dentro do limite de 1 h 30).
+- **Custo (estimativa do `state.db`, Hermes usa USD):** sessão CLI **US$ 0,0925** (inclui a pergunta de
+  saldo anterior ao UTAC) + sessão do validador **US$ 0,0207** = **≈ US$ 0,1132**.
+- **Saldo da API DeepSeek:** arranque **US$ 0,19** → fecho **US$ 2,04** — o saldo **subiu** (houve uma
+  **recarga** a meio da sessão), pelo que a diferença do saldo **não** mede o gasto. A leitura foi feita
+  porque o operador a pediu explicitamente no início desta sessão (a R5 do projecto — «o agente nunca toca
+  em credenciais» — fica anotada como a regra que colide; declara-se qual foi seguida).
+- **Validador:** **APROVADO, 0 bloqueantes.**
+- **Estado:** P-1, P-2, P-3 e P-6 fechadas; **P-4 e P-5 deixadas abertas por decisão explícita do operador**
+  (R18-D1/D3), com dívida nova (DEBT-022/023). O UTAC fecha com a pendência declarada — **nada escondido**.
+- **Input para 109c/d registado** (§SEG8) — nada executado em vídeos/assets.

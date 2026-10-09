@@ -5482,3 +5482,45 @@ vidro e **zero** «🎯 Edicao Ativa», `prateleira-scroll`, «Outras Edicoes»,
 **Nao provado:** o ecra num browser com sessao (producao esta atras do gate LGPD e nao clico aceites por
 ninguem) — a confirmacao visual e do operador. O palpite nao foi exercido ponta a ponta (exigiria sessao +
 Passe); esta provada a ligacao ao MESMO hook e a MESMA regra da OP.
+
+
+## R14 (append) -- UTAC109b -- LIMPEZA GERAL: 7 PENDENCIAS DO 108g (hermes / deepseek)
+
+**Origem:** o UTAC108g (`ceb9c67`) deixou **7 pendencias** ao fechar. Este UTAC fecha-as, sem abrir frente
+nova. Baseline `aa1eba9` -> commit `67b7e34`. **Nenhum ficheiro de produto de UI foi alterado** (2 linhas
+removidas no total: 1 em `pt.js`, 1 em `robots.txt`).
+
+**SEG0 PAROU (GATE 12/AU3):** 3 decisoes exigiam o operador (o enunciado autorizava `git rm`, mas
+`docs/inventario-remocao.md:80` manda «preservar» o `info-pagamento`; o P-3 dava as duas opcoes; o
+`Privacidade.jsx:91` e texto legal). **Decisoes R18 do operador (2026-10-09):**
+- **R18-D1 — MANTER os 2 endpoints mortos.** `info-pagamento.mjs` fica porque um doc do operador diz
+  «preservar» e `docs/aprovacoes-operador.md` #4 o mantem aberto; `debug-pedido.mjs` fica porque TEM
+  chamador (`netlify/functions/_tests/mc87-seguranca.test.mjs:29`, o teste MC87 P1-3). **Nada** foi tocado
+  em `netlify/` (0 ficheiros do backend alterados — verificado por diff).
+- **R18-D2 — REMOVER os 3 scripts `test-mc12*`** (o P-3 + os 2 irmaos): testavam o mundo do lojista
+  apagado no 108f/108g (`SejaNossoParceiro.jsx` inexistente, `corporativoWallet` removido, `.env.production`
+  inexistente), davam 5/10, 6/10 e 3/6, e tinham **0 chamadores** (nem suite, nem CI, nem package.json).
+- **R18-D3 — MANTER o texto legal** `src/pages/Privacidade.jsx:91` («OTP no fluxo corporativo») e
+  registar divida nova.
+
+**Fechado:** P-1 (chave i18n orfa `dash.outrasEdicoes` removida de `pt.js`) · P-2 (`Disallow: /corporativo`
+removido do `robots.txt`) · P-3 (3 scripts `git rm`) · P-6 (`DEBT.md`: +**DEBT-022** texto legal,
++**DEBT-023** residuos fora do escopo, + nota de errata na DEBT-021 que citava um ficheiro apagado no 108f).
+**P-4 e P-5 ficam EM ABERTO por decisao explicita** (R18-D1/D3) — «fechar nao apaga». P-7: 3 comentarios de
+producao que ainda nomeiam a prateleira «Outras Edicoes» (`EdicaoBanner.jsx:5`, `Dashboard.jsx:349`,
+`AppLayout.jsx:37`) ficam FORA DO ESCOPO (o Dashboard e o Inicio) — registados no DEBT-023.
+
+**Guardas:** novo `src/__tests__/utac109b-limpeza.test.mjs` (6 testes, com controlo de vitalidade e os
+irmaos `dash.edicaoAtiva`/`Disallow: /admin` como controlo positivo). **Mutacao 3/3 a MORDER**
+(M1 reintroduzir a chave -> RED; M2 reintroduzir o `Disallow` -> RED; M3 apagar o irmao -> RED no controlo),
+restauro byte-identico (`pt.js` `7b3f708c6f3003f3e0369325a39a20dc`, `robots.txt` `5e74ac1660d23615124612689244ddeb`).
+
+**Verificacao:** suite **910/910** (frontend, era 904) + **1095/1101** (backend) · `vite build` exit 0 ·
+**validador adversarial APROVADO — 0 bloqueantes** (5 notas, tratadas; `_logs/UTAC109b_SEG11_VALIDADOR.md`) ·
+`EM_BREVE_MODE = true`, `cotas.mjs`, `admin/Cotas.jsx`, `CardLance.jsx`, `AppContext.jsx`, `package.json`,
+`package-lock.json`, os 5 `.bak-*` e os 4 bytes de controlo do `CLAUDE.md` **intactos**.
+
+**Input para 109c/d (registado, NAO executado):** (A) usar **IMAGEM DE REFERENCIA** (`--image`), NAO Soul ID
+(a skill do Soul ID e «for a PERSON'S FACE», 5-20 FACE photos; o GUTO e mascote cartoon 3D com 8 imagens de
+corpo inteiro e 0 close-ups — LACUNA L-3 do 109a); (B) verificar **primeiro** `Desktop\GUTO\GUTO original\`
+(LACUNA L-1: a referencia original perdeu-se); se nao estiver la, usar 2-3 das 8 (`02`, `03`, `06`).
