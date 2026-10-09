@@ -187,3 +187,32 @@ escopado é verdadeiro.
   `f509e21` (correcção do bloqueante) → **este commit** (fecho: logs, relatório, R14).
 - **Custo:** sessões lidas no `state.db` do Hermes; **saldo da API NÃO LIDO** (R5 proíbe tocar em credenciais).
   Valores no relatório do Desktop (`Desktop/RELATORIO-UTAC109h.2-CARTEIRA-REVERT.txt`).
+
+## Adenda de deploy (auto-deploy do push verificado) — 2026-10-09 14:30-14:35
+
+**Push (GATE 10, foreground):** `git push origin main` → `6d62637..e35f138  main -> main` (exit 0).
+`HEAD` == `origin/main` == `e35f138`. ⚠️ O remote voltou a avisar que o push **salta a branch protection**
+(«Changes must be made through a pull request» · «2 of 2 required status checks are expected») — declarado,
+como no fecho do 109h.
+
+**Sonda ao que é servido** (sem `netlify deploy`; site `https://silly-stardust-ca71bc.netlify.app`):
+
+| | build do 109h (antes) | **agora** |
+|---|---|---|
+| entrada | `index-mNEUnWvz.js` | **`index-D1lVo25g.js`** |
+| `PrivyRoot` | `PrivyRoot-CUXUnLA7.js` | **`PrivyRoot-KRvGKbr2.js`** |
+| chunk do ecrã | `MinhaCarteira-Bx0eszlL.js` | **`MinhaCarteira-mOLJKHrK.js`** (27 905 B) |
+| `#ff6b35` (laranja) | **2** | **0** ✅ |
+| `#f5a623` (o amarelo único) | 7 | **17** ✅ |
+| `#ef4444` (erros) | 3 | 3 (mantidos) |
+
+⚠️ **Nota de leitura (erro meu, corrigido a tempo):** eu esperava que o ciano `#00d4ff` «voltasse» com o
+revert — **não volta**, porque o revert é o layout de `1a41cf7` *mais* a unificação de cor; o ciano era uma
+das cores retiradas. O marcador correcto do estado novo é **`#ff6b35` a 0** (era 2) com o amarelo a subir de
+7 para 17. Sobrevivem `#10b981`×1 e `#fbbf24`×1 **do mesmo chunk** — são das **modais** (`ComprarPasse`/
+`ComprarFichas`), declaradas fora do âmbito em **P-109h.2-1**.
+
+⇒ A prova do deploy é o **literal dentro do chunk servido**: o laranja desapareceu do chunk da Carteira e o
+amarelo único passou a dominá-lo. (O nome do chunk não é prova — o build remoto emite nomes diferentes do
+`dist/` local — e um asset inexistente devolve 200 com o `index.html` por fallback, logo validou-se o
+CONTEÚDO.)
