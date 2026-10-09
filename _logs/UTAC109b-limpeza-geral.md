@@ -62,7 +62,7 @@ Classes: **(a)** trivial · **(b)** exige decisão — PARAR · **(c)** fora do 
 
 - **D-1 (`info-pagamento.mjs`).** O enunciado autoriza `git rm` e a medição dá **0 chamadores**, **mas**
   `docs/inventario-remocao.md:80` diz «(REQ-20, novo — sem consumidor frontend ainda; **preservar**)» e
-  `docs/aprovações-operador.md` #4 mantém-no **aberto** («candidatos a desligar: … `info-pagamento`»).
+  `docs/aprovacoes-operador.md` #4 mantém-no **aberto** («candidatos a desligar: … `info-pagamento`»).
   Removê-lo fecharia uma pendência aberta do operador sem decisão explícita.
 - **D-2 (os 3 `scripts/test-mc12*`).** O enunciado dá as duas opções («corrigir» ou «remover se
   obsoleto»); medido: os 3 falham por testarem o **mundo do lojista apagado no 108f/108g**
@@ -228,7 +228,29 @@ Razões (UTAC109a §12 L-1, §8 avisos):
 
 ## SEG11 — Validador adversarial
 
-_(preenchido no fecho)_
+**VEREDICTO: ✅ APROVADO — 0 bloqueantes** (5 notas ℹ️, nenhuma grave). Subagente independente em worktree
+próprio (`C:/Users/Moltbot/tmp-109b-val/wt` @ `67b7e34`, helper A13 — 4 junctions; `node_modules` real
+medido antes/**após**). Veredicto integral verbatim + a resposta do executor:
+**`_logs/UTAC109b_SEG11_VALIDADOR.md`**.
+
+- Reproduziu por execução: o diff do commit (8 ficheiros, **0 em `netlify/`**), a suíte canónica
+  (**910/910 + 1095/1101 VERDE**), o teste novo (**6/6**), o `vite build` (**exit 0**), as **3 mutações**
+  (M1/M2/M3 → RED, num sandbox fora do repo), os md5/bytes do log (**ao byte**), os 4 bytes de controlo do
+  `CLAUDE.md`, `EM_BREVE_MODE`, os 5 `.bak-*` e os 0 chamadores dos 3 scripts apagados.
+- **Alegações REFUTADAS: nenhuma.** As 7 pendências foram confirmadas fechadas (ou abertas por decisão
+  explícita) e nenhuma invariante declarada foi violada.
+- **Notas ℹ️ e tratamento:** **N1** (`SRC` morto no teste novo) → **corrigido**; **N2** (comentário
+  inexacto **pré-existente** no `mc8843-…test.mjs:194` — testei-o: refere um padrão que a chave removida
+  nunca teve) → **declarado + item (c) da DEBT-023** (ficheiro fora do escopo); **N3** (diacrítico
+  `aprovações` no log) → **corrigido**; **N4** (CRLF no disco dele vs LF no blob — artefacto do
+  ambiente) → **sem acção**, declarado; **N5** (placeholders no log) → **esperado**, preenchido agora.
+- **Correcções pós-veredicto (N1, N3): NÃO re-validadas** por 2.ª ronda (cosméticas — 1 linha de código
+  morto num ficheiro de teste e 1 diacrítico num `.md`). Declarado.
+- **Erros do MEU instrumento, expostos nesta ronda:** (1) o contador de mutações somava a linha `✖ <teste>`
+  **e** a linha-resumo `failing tests:` (3/3/2 em vez de 1/1/1) — o validador mediu **1** teste por mutação
+  e corrobora a errata já escrita no §SEG9; (2) o mesmo script lia `passes=0` por procurar `ok ` em vez do
+  glifo `✔` — o sinal fiável é o `exit code` + o nome do teste, como o log declara.
+
 
 ## SEG12 — Deploy + registo
 

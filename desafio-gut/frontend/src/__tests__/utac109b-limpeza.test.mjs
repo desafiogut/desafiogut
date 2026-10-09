@@ -21,7 +21,6 @@ import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const SRC = fileURLToPath(new URL("..", import.meta.url));
 const RAIZ = fileURLToPath(new URL("../..", import.meta.url)); // desafio-gut/frontend
 const ler = (rel) => readFileSync(join(RAIZ, rel), "utf8");
 
