@@ -258,7 +258,7 @@ medido antes/**após**). Veredicto integral verbatim + a resposta do executor:
 |---|---|
 | Bundle em produção **antes** | entry `/assets/index-Brxo6SkT.js` (59 661 B, sha256 `5f0c9f22…`) |
 | `/robots.txt` servido **antes** | **ainda com** `Disallow: /corporativo` ← prova de que o deploy era necessário |
-| Push | `aa1eba9..cb095cd` (`67b7e34` código + `cb095cd` achados do validador) → auto-deploy Git |
+| Push | `aa1eba9..cb095cd..6bd8e93` → `origin/main` (auto-deploy Git). **Commits do UTAC:** `67b7e34` (limpeza) → `cb095cd` (achados do validador) → `6bd8e93` (fecho: log SEG11/SEG12 + R14) — este último é o registo e cita os anteriores. |
 | Site depois | **HTTP 200** (5 134 B) |
 | Bundle mudou? | **SIM** — entry `/assets/index-B2GWopzJ.js` |
 | `/robots.txt` servido **depois** | **sem** `Disallow: /corporativo` (restantes directivas intactas) |
@@ -282,3 +282,8 @@ medido antes/**após**). Veredicto integral verbatim + a resposta do executor:
 - **Estado:** P-1, P-2, P-3 e P-6 fechadas; **P-4 e P-5 deixadas abertas por decisão explícita do operador**
   (R18-D1/D3), com dívida nova (DEBT-022/023). O UTAC fecha com a pendência declarada — **nada escondido**.
 - **Input para 109c/d registado** (§SEG8) — nada executado em vídeos/assets.
+- **Higiene do worktree (A13) — medido:** o worktree do validador (`C:/Users/Moltbot/tmp-109b-val/wt`,
+  4 junctions) foi removido com o helper (`rmdir` das junctions **primeiro**, depois
+  `git worktree remove` → exit 0). **`node_modules` real conferido antes/depois: frontend 502 · `desafio-gut`
+  570 · raiz-git 383 entradas — IGUAIS**; **0 junctions/reparse points** no repo principal. `git worktree list`
+  final: só o repo principal (+ um worktree alheio, pré-existente).
