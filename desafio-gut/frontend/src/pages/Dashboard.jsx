@@ -386,8 +386,6 @@ export default function Dashboard() {
             produto={edicaoAtiva.produto}
             arteUrl={edicaoAtiva.imagem_url}
             tempo={estAtiva.timer ?? timerDisplay}
-            tempoRotulo={estAtiva.encerrada ? "Encerrada" : "Termina em"}
-            destaque
             isMobile={isMobile}
           >
             {/* UTAC107e.2 (Frente B) — etiqueta do PRÓPRIO lance na Edição Ativa, só com a edição
@@ -430,11 +428,9 @@ export default function Dashboard() {
           produto={edicaoProgramada?.produto}
           arteUrl={edicaoProgramada?.imagem_url}
           tempo={estProgramada ? (estProgramada.timer ?? estProgramada.rotuloLongo) : undefined}
-          tempoRotulo={estProgramada?.encerrada ? "Encerrada" : "Termina em"}
           vazio={!edicaoProgramada}
           mensagemVazio="Nenhuma edição Programada em andamento"
           ajudaVazio="Próxima edição —"
-          destaque
           isMobile={isMobile}
         >
           {edicaoProgramada && estadoPal === "sem_palpite" && (
@@ -454,7 +450,7 @@ export default function Dashboard() {
                   type="button" onClick={() => palpitar(edicaoProgramada.id)} disabled={aPalpitar}
                   style={{ minHeight: "48px", padding: "0.6rem 1.1rem", borderRadius: "10px", cursor: aPalpitar ? "wait" : "pointer", border: "none", background: aPalpitar ? "rgba(107,125,184,0.35)" : COR.gold, color: "#12161f", fontWeight: 800, fontSize: "0.86rem" }}
                 >
-                  {aPalpitar ? "Enviando…" : "Palpitar"}
+                  {aPalpitar ? "Enviando…" : "Dar palpite"}
                 </button>
               </div>
               {erroPalpite && (

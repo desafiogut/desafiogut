@@ -355,7 +355,7 @@ export default function CardLance({
       ? (saldoSenhas != null && saldoSenhas < 1)
         ? "🔄 Converter R$ → senha e Lançar"
         : "🎫 Confirmar Lance (−1 senha)"
-    : "⚡ Lance Relâmpago";
+    : "Dar lance"; // UTAC109e (R18-B) — o mesmo verbo do cartão: «Dar lance» (MLC) / «Dar palpite» (OP)
 
   // MC29.1 — skeleton de conformidade (não monta o formulário on-chain).
   if (recursosCarregando || !isLeilaoAtivo) {

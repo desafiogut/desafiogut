@@ -26,7 +26,9 @@ import useAposPrimeiraPintura from "../hooks/useAposPrimeiraPintura.js";
 
 const V = "mc60"; // cache-bust dos assets imutáveis (?v=) — UTAC109d.1: mc59 -> mc60 (8 vídeos reprocessados sem as bolsas brancas)
 const N = 8;
-const SLIDES = Array.from({ length: N }, (_, i) => ({
+// UTAC109e — exportado para o cartão de edição vazio reutilizar UM slide (o GUTO animado 7) sem duplicar
+// caminhos nem o cache-bust `V`.
+export const SLIDES = Array.from({ length: N }, (_, i) => ({
   webm: `/assets/guto/carrossel/guto-${i + 1}.webm?v=${V}`,
   poster: `/assets/guto/carrossel/guto-${i + 1}.png?v=${V}`,
 }));

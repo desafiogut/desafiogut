@@ -254,31 +254,6 @@ function estadoDoCartao(est) {
   return { texto: String(est.rotulo ?? "—").toUpperCase(), cor: COR.gold };
 }
 
-/**
- * UTAC108e.1 — o formulário do lance DESACTIVADO do cartão vazio (mockup v2 B). Sem edição não há
- * para onde licitar: campo e botão aparecem, desligados. O `CardLance` (o formulário real) NÃO é
- * alterado — só não é montado enquanto não há edição.
- */
-function LanceDesativado({ isMobile }) {
-  return (
-    <div data-testid="lance-desativado" style={{ display: "grid", gap: "0.4rem" }}>
-      <label htmlFor="lance-sem-edicao" style={{ fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: COR.muted }}>
-        Seu lance (em centavos)
-      </label>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "0.6rem" }}>
-        <input
-          id="lance-sem-edicao" inputMode="numeric" disabled placeholder="Abre com a edição"
-          style={{ minHeight: "48px", minWidth: 0, padding: "0.6rem 0.75rem", borderRadius: "12px", border: "1px solid rgba(107,125,184,0.45)", background: "rgba(12,16,24,0.55)", color: COR.text, fontSize: isMobile ? "0.95rem" : "1rem", cursor: "not-allowed" }}
-        />
-        <button
-          type="button" disabled
-          style={{ minHeight: "48px", padding: "0 1.3rem", borderRadius: "12px", border: "none", background: COR.gold, color: "#0a0f1a", fontWeight: 800, opacity: 0.55, cursor: "not-allowed" }}
-        >Dar lance</button>
-      </div>
-    </div>
-  );
-}
-
 export default function MercadoLances() {
   const isMobile = useIsMobile();
   const {
@@ -392,15 +367,13 @@ export default function MercadoLances() {
                 (1:1 no telemóvel, 16:9 no desktop), nome e tempo na faixa, o lance por baixo. Sem edição
                 o cartão FICA, vazio (GUTO + «Nenhuma edição em andamento» + formulário desligado). */}
             {EM_BREVE_MODE ? (
-              <CartaoEdicao destaque vazio isMobile={isMobile} id="⚡ Relâmpago" estado={{ texto: "SEM EDIÇÃO", cor: COR.muted }}>
-                <LanceDesativado isMobile={isMobile} />
-              </CartaoEdicao>
+              <CartaoEdicao vazio acao="lance" isMobile={isMobile} id="⚡ Relâmpago" estado={{ texto: "SEM EDIÇÃO", cor: COR.muted }} />
             ) : (() => {
               const edicao = edicoes?.[EDICAO_ATIVA] ?? null;
               const est = getEstadoEdicao(edicao ?? { id: EDICAO_ATIVA }, { encerrado });
               return (
                 <CartaoEdicao
-                  destaque isMobile={isMobile} id={EDICAO_ATIVA}
+                  acao="lance" isMobile={isMobile} id={EDICAO_ATIVA}
                   estado={estadoDoCartao(est)}
                   produto={edicao?.produto} arteUrl={edicao?.imagem_url}
                   tempo={est.timer ?? est.rotulo}

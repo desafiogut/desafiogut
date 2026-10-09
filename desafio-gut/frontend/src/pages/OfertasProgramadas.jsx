@@ -36,7 +36,7 @@ import { useResgatarCartao } from "../hooks/useResgatarCartao.js";
 import ResgatarCartaoModal, { CARTAO_ID } from "../components/ResgatarCartaoModal.jsx";
 // UTAC108e.1 — o MESMO cartão de edição do «Menor Lance Único» (mockup v2, variante A «Família»):
 // só a acção muda (aqui, o palpite).
-import CartaoEdicao from "../components/CartaoEdicao.jsx";
+import CartaoEdicao, { ACOES } from "../components/CartaoEdicao.jsx";
 
 // UTAC107e.2 — endereço curto na tabela de palpites (0x1234…abcd); nunca rebenta com lixo.
 const curto = (e) => (typeof e === "string" && e.length > 12 ? `${e.slice(0, 6)}…${e.slice(-4)}` : "—");
@@ -126,17 +126,16 @@ export default function OfertasProgramadas() {
     return (
       <div key={ed.id} data-testid="op-edicao-item" style={{ flex: "0 0 100%", minWidth: 0, scrollSnapAlign: "start" }}>
         <CartaoEdicao
-          id={ed.id} isMobile={isMobile} data-estado-palpite={estado}
+          id={ed.id} acao="palpite" isMobile={isMobile} data-estado-palpite={estado}
           estado={{ texto: pil.texto, cor: pil.cor }}
           produto={ed.produto} arteUrl={ed.imagem_url}
-          tempoRotulo={est.encerrada ? "Encerrada" : "Termina em"}
           tempo={est.timer ?? est.rotuloLongo}
           style={{ height: "100%" }}
         >
           <div style={{ paddingTop: "0.6rem", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
           {estado === "sem_palpite" && (
             <div>
-              <label htmlFor={idCampo} style={{ display: "block", color: COR.text, fontSize: "0.82rem", fontWeight: 700, marginBottom: "0.35rem" }}>Seu palpite (nº de lances)</label>
+              <label htmlFor={idCampo} style={{ display: "block", color: COR.text, fontSize: "0.82rem", fontWeight: 700, marginBottom: "0.35rem" }}>{ACOES.palpite.rotulo}</label>
               <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                 <input
                   id={idCampo} type="number" inputMode="numeric" min="0" step="1"
@@ -149,7 +148,7 @@ export default function OfertasProgramadas() {
                   type="button" onClick={() => palpitar(ed.id)} disabled={aPalpitar}
                   style={{ minHeight: "48px", padding: "0.6rem 1.1rem", borderRadius: "10px", cursor: aPalpitar ? "wait" : "pointer", border: "none", background: aPalpitar ? "rgba(107,125,184,0.35)" : COR.gold, color: "#12161f", fontWeight: 800, fontSize: "0.86rem" }}
                 >
-                  {aPalpitar ? "Enviando…" : "Palpitar"}
+                  {aPalpitar ? "Enviando…" : ACOES.palpite.botao}
                 </button>
               </div>
             </div>
@@ -335,20 +334,7 @@ export default function OfertasProgramadas() {
               </p>
             </GlassCard>
             {programadas.length === 0 ? (
-              <CartaoEdicao vazio isMobile={isMobile} id="🎫 Programada" estado={{ texto: "SEM EDIÇÃO", cor: COR.muted }}>
-                <div data-testid="palpite-desativado" style={{ paddingTop: "0.6rem", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-                  <label htmlFor="palpite-sem-edicao" style={{ display: "block", color: COR.text, fontSize: "0.82rem", fontWeight: 700, marginBottom: "0.35rem" }}>Seu palpite (nº de lances)</label>
-                  <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                    <input id="palpite-sem-edicao" type="number" inputMode="numeric" disabled placeholder="Abre com a edição"
-                      style={{ flex: "1 1 120px", minHeight: "48px", padding: "0.6rem 0.75rem", borderRadius: "10px", border: "1px solid rgba(107,125,184,0.45)", background: "rgba(12,16,24,0.55)", color: COR.text, fontSize: "0.9rem", cursor: "not-allowed" }} />
-                    <button type="button" disabled
-                      style={{ minHeight: "48px", padding: "0.6rem 1.1rem", borderRadius: "10px", border: "none", background: COR.gold, color: "#12161f", fontWeight: 800, fontSize: "0.86rem", opacity: 0.55, cursor: "not-allowed" }}>
-                      Palpitar
-                    </button>
-                  </div>
-                  <p style={{ margin: "0.5rem 0 0", color: COR.muted, fontSize: "0.8rem" }}>Sem edições programadas no momento. Volte quando houver.</p>
-                </div>
-              </CartaoEdicao>
+              <CartaoEdicao vazio acao="palpite" isMobile={isMobile} id="🎫 Programada" estado={{ texto: "SEM EDIÇÃO", cor: COR.muted }} />
             ) : (
               <div
                 data-testid="op-edicoes-scroll"

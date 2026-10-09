@@ -1,21 +1,31 @@
-// CartaoEdicao.jsx — UTAC108e.1. O cartão de edição ÚNICO do «Menor Lance Único» e das «Ofertas
-// Programadas» (mockups v2 aprovados no UTAC108e: `docs/mockups-107a/mlc-op-v2/`, componente `.ed`).
+// CartaoEdicao.jsx — UTAC108e.1 / UTAC109e. O cartão de edição ÚNICO do «Menor Lance Único», das «Ofertas
+// Programadas» e dos dois vidros do Início (mockups v2 aprovados no UTAC108e: `docs/mockups-107a/mlc-op-v2/`).
 //
-// O casco é sempre o mesmo — topo (id + estado) → produto (arte real + nome) → tempo → ACÇÃO —, e a
-// única coisa que muda entre as abas é a acção, que entra como `children`: o lance no MLC, o palpite
-// na OP. Duas apresentações do mesmo casco:
-//   • `destaque` (MLC, variante B «Produto em destaque»): a arte ocupa a largura toda, 1:1 no
-//     telemóvel e 16:9 no desktop, com o nome e o tempo numa faixa por baixo;
-//   • compacto (OP, variante A «Família»): arte 64 px ao lado do nome e o GUTO ao lado do tempo.
+// UTAC109e — o cartão da edição RELÂMPAGO é o padrão (decisão do operador): UMA só apresentação para as
+// duas famílias — topo (id + estado) → ARTE da edição na largura toda (1:1 no telemóvel, 16:9 no desktop)
+// com o nome e o tempo numa faixa por baixo → ACÇÃO. A variante compacta da OP (arte 64 px + GUTO ao lado
+// do tempo, 108e.1 «A · Família») saiu. A ÚNICA diferença entre as famílias é a acção (`acao`):
+//   • "lance"   (MLC)  → «Dar lance»,   «Seu lance (em centavos)»;
+//   • "palpite" (OP)   → «Dar palpite», «Seu palpite (nº de lances)» (o palpite é um nº de lances, não R$).
+// Com edição a acção real entra como `children` (o `CardLance` no MLC, o formulário do palpite na OP).
 //
-// `vazio` (correcção do UTAC108d): SEM edição o cartão CONTINUA no ecrã, vazio — GUTO + «Nenhuma edição
-// em andamento» —, em vez de um aviso solto fora dele. Regra 1: tudo dentro do mesmo vidro.
+// `vazio` (correcção do UTAC108d): SEM edição o cartão CONTINUA no ecrã, vazio — GUTO + «Nenhuma edição em
+// andamento» — e, com `acao`, o formulário da acção aparece DESLIGADO. UTAC109e: o GUTO do vazio é o GUTO
+// ANIMADO 7 (o vídeo 7 do carrossel, reutilizado pelo `CarrosselGUTO`), no lugar do PNG estático; só existe
+// enquanto não há edição — com edição, a arte da edição toma o lugar dele. Regra 1: tudo no mesmo vidro.
 // Cores: só as de `glassTokens.js` (o dourado único é o `COR.gold`, UTAC108e.1 pendência 1).
 import { GlassCard } from "@/components/ui";
 import { COR } from "./glass/glassTokens.js";
+import CarrosselGUTO, { SLIDES } from "./CarrosselGUTO.jsx";
 
-/** O GUTO do app (o mesmo do gate de entrada). */
-export const GUTO_URL = "/assets/guto/custom/guto-bemvindo.png";
+/** UTAC109e — a acção de cada família: a única coisa que muda entre os cartões. */
+export const ACOES = Object.freeze({
+  lance: Object.freeze({ botao: "Dar lance", rotulo: "Seu lance (em centavos)" }),
+  palpite: Object.freeze({ botao: "Dar palpite", rotulo: "Seu palpite (nº de lances)" }),
+});
+
+/** UTAC109e — o GUTO animado 7 (array de módulo: referência estável para o `memo` do carrossel). */
+export const GUTO_ANIMADO_7 = Object.freeze([SLIDES[6]]);
 
 const pilula = {
   fontSize: "0.72rem", fontWeight: 800, color: COR.gold, letterSpacing: "0.02em",
@@ -30,19 +40,45 @@ const tempoEstilo = {
 };
 const tracejado = "1px dashed rgba(107,125,184,0.45)";
 
+/** UTAC109e — o formulário da acção DESLIGADO do cartão vazio: o mesmo para o lance e para o palpite. */
+function AcaoDesativada({ acao, isMobile }) {
+  const a = ACOES[acao];
+  const id = `${acao}-sem-edicao`;
+  return (
+    <div data-testid={`${acao}-desativado`} style={{ display: "grid", gap: "0.4rem" }}>
+      <label htmlFor={id} style={{ ...rotuloPequeno, fontSize: "0.75rem" }}>{a.rotulo}</label>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "0.6rem" }}>
+        <input
+          id={id} type="number" inputMode="numeric" disabled placeholder="Abre com a edição"
+          style={{ minHeight: "48px", minWidth: 0, padding: "0.6rem 0.75rem", borderRadius: "12px", border: "1px solid rgba(107,125,184,0.45)", background: "rgba(12,16,24,0.55)", color: COR.text, fontSize: isMobile ? "0.95rem" : "1rem", cursor: "not-allowed" }}
+        />
+        <button
+          type="button" disabled
+          style={{ minHeight: "48px", padding: "0 1.3rem", borderRadius: "12px", border: "none", background: COR.gold, color: "#0a0f1a", fontWeight: 800, opacity: 0.55, cursor: "not-allowed" }}
+        >{a.botao}</button>
+      </div>
+    </div>
+  );
+}
+
+/** A acção só vale se for uma chave PRÓPRIA da tabela (`Object.hasOwn`): «constructor»/«toString» não são acções. */
+const acaoValida = (acao) => typeof acao === "string" && Object.hasOwn(ACOES, acao);
+
 export default function CartaoEdicao({
-  id, estado, produto, arteUrl, tempo, tempoRotulo = "Termina em",
-  vazio = false, destaque = false, titulo,
+  id, estado, produto, arteUrl, tempo, acao,
+  vazio = false, titulo,
   mensagemVazio = "Nenhuma edição em andamento", ajudaVazio = "Volte quando houver",
   isMobile = false, children, style, ...rest
 }) {
   const nome = produto || "Prêmio a anunciar";
+  const formato = isMobile ? "1 / 1" : "16 / 9";
+  const temAcao = acaoValida(acao);
   return (
     <GlassCard
       as="article"
       data-testid="cartao-edicao"
       data-vazio={vazio ? "true" : "false"}
-      data-destaque={destaque ? "true" : "false"}
+      data-acao={temAcao ? acao : undefined}
       aria-label={vazio ? mensagemVazio : `Edição ${id}`}
       style={{ padding: isMobile ? "1rem" : "1.25rem", display: "flex", flexDirection: "column", gap: "0.75rem", minWidth: 0, ...style }}
       {...rest}
@@ -67,79 +103,43 @@ export default function CartaoEdicao({
         )}
       </div>
 
-      {destaque ? (
-        // ── MLC B: produto em destaque ──
-        <div data-testid="cartao-vitrine" style={{
-          position: "relative", borderRadius: "12px", overflow: "hidden",
-          border: vazio ? tracejado : "1px solid rgba(245,166,35,0.22)",
-        }}>
-          {vazio ? (
-            <div role="status" data-testid="cartao-vazio" style={{
-              aspectRatio: isMobile ? "1 / 1" : "16 / 9", display: "grid", placeItems: "center", alignContent: "center",
-              gap: "0.5rem", padding: "1rem", textAlign: "center", background: "rgba(5,8,24,0.55)",
-            }}>
-              <img src={GUTO_URL} alt="" width={72} height={72} style={{ width: 72, height: 72, margin: "0 auto", borderRadius: 16, objectFit: "contain" }} />
-              <b style={{ color: COR.text, fontSize: "1rem" }}>{mensagemVazio}</b>
-              {ajudaVazio && <span style={rotuloPequeno}>{ajudaVazio}</span>}
-            </div>
-          ) : (
-            <>
-              {arteUrl ? (
-                <img data-testid="cartao-arte" src={arteUrl} alt={nome}
-                  style={{ display: "block", width: "100%", aspectRatio: isMobile ? "1 / 1" : "16 / 9", objectFit: "cover" }} />
-              ) : (
-                <div aria-hidden="true" style={{ aspectRatio: isMobile ? "1 / 1" : "16 / 9", display: "grid", placeItems: "center", fontSize: "2.5rem", background: "rgba(5,8,24,0.55)" }}>🎁</div>
-              )}
-              <div style={{
-                position: "absolute", left: 0, right: 0, bottom: 0, display: "flex", alignItems: "center",
-                justifyContent: "space-between", gap: "0.6rem", padding: "0.6rem 0.75rem", background: "rgba(5,8,24,0.86)",
-              }}>
-                <span style={{ color: COR.gold, fontWeight: 800, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nome}</span>
-                {tempo && <span data-testid="cartao-tempo" style={{ ...tempoEstilo, fontSize: "1.15rem", flex: "none" }}>{tempo}</span>}
-              </div>
-            </>
-          )}
-        </div>
-      ) : (
-        // ── OP A: compacto (arte 64 px + nome; GUTO + tempo) ──
-        <>
-          <div style={{
-            display: "flex", gap: "0.75rem", alignItems: "center", padding: "0.6rem", borderRadius: "12px",
-            background: vazio ? "rgba(5,8,24,0.45)" : "rgba(245,166,35,0.07)",
-            border: vazio ? tracejado : "1px solid rgba(245,166,35,0.22)",
+      {/* o produto em destaque: a arte manda */}
+      <div data-testid="cartao-vitrine" style={{
+        position: "relative", borderRadius: "12px", overflow: "hidden",
+        border: vazio ? tracejado : "1px solid rgba(245,166,35,0.22)",
+      }}>
+        {vazio ? (
+          <div role="status" data-testid="cartao-vazio" style={{
+            aspectRatio: formato, display: "grid", placeItems: "center", alignContent: "center",
+            gap: "0.5rem", padding: "1rem", textAlign: "center", background: "rgba(5,8,24,0.55)",
           }}>
-            {!vazio && arteUrl ? (
+            <div data-testid="guto-animado-7">
+              <CarrosselGUTO size={isMobile ? 112 : 128} slides={GUTO_ANIMADO_7} />
+            </div>
+            <b style={{ color: COR.text, fontSize: "1rem" }}>{mensagemVazio}</b>
+            {ajudaVazio && <span style={rotuloPequeno}>{ajudaVazio}</span>}
+          </div>
+        ) : (
+          <>
+            {arteUrl ? (
               <img data-testid="cartao-arte" src={arteUrl} alt={nome}
-                style={{ width: 64, height: 64, borderRadius: 10, flex: "none", objectFit: "cover", display: "block" }} />
+                style={{ display: "block", width: "100%", aspectRatio: formato, objectFit: "cover" }} />
             ) : (
-              <div aria-hidden="true" style={{
-                width: 64, height: 64, borderRadius: 10, flex: "none", display: "grid", placeItems: "center", fontSize: "1.6rem",
-                background: "rgba(5,8,24,0.6)", border: vazio ? tracejado : "none",
-              }}>{vazio ? "🎫" : "🎁"}</div>
+              <div aria-hidden="true" style={{ aspectRatio: formato, display: "grid", placeItems: "center", fontSize: "2.5rem", background: "rgba(5,8,24,0.55)" }}>🎁</div>
             )}
-            <div style={{ minWidth: 0 }}>
-              <div style={rotuloPequeno}>Prêmio</div>
-              <div role={vazio ? "status" : undefined} data-testid={vazio ? "cartao-vazio" : undefined} style={{ color: vazio ? COR.text : COR.gold, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: vazio ? "normal" : "nowrap", lineHeight: 1.3 }}>
-                {vazio ? mensagemVazio : nome}
-              </div>
+            <div style={{
+              position: "absolute", left: 0, right: 0, bottom: 0, display: "flex", alignItems: "center",
+              justifyContent: "space-between", gap: "0.6rem", padding: "0.6rem 0.75rem", background: "rgba(5,8,24,0.86)",
+            }}>
+              <span style={{ color: COR.gold, fontWeight: 800, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nome}</span>
+              {tempo && <span data-testid="cartao-tempo" style={{ ...tempoEstilo, fontSize: "1.15rem", flex: "none" }}>{tempo}</span>}
             </div>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.75rem" }}>
-            <img src={GUTO_URL} alt="" width={44} height={44} style={{
-              width: 44, height: 44, flex: "none", borderRadius: 12, objectFit: "contain",
-              background: "rgba(5,8,24,0.55)", border: "1px solid rgba(255,255,255,0.08)", opacity: vazio ? 0.75 : 1,
-            }} />
-            <div>
-              <div style={rotuloPequeno}>{vazio ? "Próxima edição" : tempoRotulo}</div>
-              <div data-testid="cartao-tempo" style={{ ...tempoEstilo, fontSize: "1.25rem", color: vazio ? COR.muted : COR.gold }}>
-                {vazio ? "—" : (tempo ?? "—")}
-              </div>
-            </div>
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </div>
 
-      {/* a ACÇÃO — a única coisa que muda entre as abas */}
+      {/* a ACÇÃO — a única coisa que muda entre as famílias */}
+      {vazio && temAcao && <AcaoDesativada acao={acao} isMobile={isMobile} />}
       {children}
     </GlassCard>
   );

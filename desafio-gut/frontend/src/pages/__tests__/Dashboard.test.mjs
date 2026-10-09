@@ -548,7 +548,7 @@ describe("UTAC108h.3 · Início — apenas as duas edições", () => {
     const i = html.indexOf('data-testid="palpite-zona"');
     assert.ok(i > 0, "a zona do palpite não está no vidro da Programada");
     assert.match(texto(html), /Seu palpite \(nº de lances\)/, "falta o rótulo do palpite");
-    assert.match(texto(html), /Palpitar/, "falta o botão de palpitar");
+    assert.match(texto(html), /Dar palpite/, "falta o botão «Dar palpite» (UTAC109e, R18-C)");
     // Regra 1: o <article> do cartão que a contém continua aberto depois da zona
     const iCart = html.lastIndexOf('data-testid="cartao-edicao"', i);
     assert.ok(iCart > 0 && html.indexOf("</article>", iCart) > i, "a zona do palpite ficou FORA do vidro (Regra 1)");
@@ -560,6 +560,32 @@ describe("UTAC108h.3 · Início — apenas as duas edições", () => {
     assert.equal(vidros(html).length, 2, "os dois vidros têm de continuar a existir");
     assert.match(texto(html), /Nenhuma edição Programada em andamento/, "falta o estado vazio da Programada");
     assert.match(html, /data-vazio="true"/, "o vidro vazio não está marcado como vazio");
+  });
+
+  // UTAC109e — o GUTO animado 7 (vídeo 7 do carrossel) só existe enquanto não há edição: no vidro vazio da
+  // Programada aparece; com edição, a arte toma o lugar. O carrossel do topo (8 vídeos) não conta: é outro sítio.
+  // (`vidros()` só conta marcadores; aqui recorta-se o HTML de CADA <article> do cartão.)
+  const fatias = (html) => [...html.matchAll(/data-testid="cartao-edicao"/g)].map((m) => {
+    const ini = html.lastIndexOf("<article", m.index);
+    let prof = 0;
+    for (const t of html.slice(ini).matchAll(/<(\/?)article\b/g)) {
+      prof += t[1] ? -1 : 1;
+      if (prof === 0) return html.slice(ini, ini + t.index + "</article>".length);
+    }
+    throw new Error("cartão sem </article>");
+  });
+  test("UTAC109e · sem edição Programada: o GUTO animado 7 está DENTRO do vidro vazio", () => {
+    definirPontos({}); definirResultadoOficial(null);
+    const v = fatias(renderizar()).find((x) => x.includes('data-vazio="true"'));
+    assert.ok(v, "não há vidro vazio");
+    assert.match(v, /data-testid="guto-animado-7"[\s\S]*?guto-7\.png\?v=/, "o GUTO animado 7 não está no vidro vazio");
+  });
+
+  test("UTAC109e · com edição Programada: o GUTO animado 7 NÃO aparece em nenhum vidro", () => {
+    definirPontos({}); definirResultadoOficial(null);
+    const vs = fatias(renderizar({ edicoes: { "R-1": R1, "PROG-1": PROG } }));
+    assert.equal(vs.length, 2);
+    for (const v of vs) assert.doesNotMatch(v, /guto-animado-7|guto-7\.png/, "o GUTO animado 7 apareceu com edição");
   });
 
   test("a Programada escolhida é a ABERTA (a mesma regra da aba OP)", () => {

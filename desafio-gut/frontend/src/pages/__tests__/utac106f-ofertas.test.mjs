@@ -222,25 +222,27 @@ test("RENDER · com edição Programada a decorrer há campo + botão de palpite
   try {
     assert.ok(c.input(), "faltou o campo do palpite");
     assert.equal(c.input().props.type, "number");
-    assert.ok(c.botao("Palpitar"), "faltou o botão «Palpitar»");
+    assert.ok(c.botao("Dar palpite"), "faltou o botão «Dar palpite»");
     // UTAC107e.1 — o palpite vive DENTRO do cartão da edição (a secção «Palpite» separada saiu).
     assert.match(c.texto(), /Seu palpite \(nº de lances\)/);
     assert.match(c.texto(), /SEM PALPITE/);
   } finally { c.dup.restaurar(); }
 });
 
-test("RENDER · sem edição Programada → cartão VAZIO com o palpite desligado (108e.1; era «sem campo»)", async () => {
+test("RENDER · sem edição Programada → cartão VAZIO com o palpite desligado (108e.1; UTAC109e: formulário do cartão)", async () => {
   const c = await montarEcra(undefined, ctx({ edicoes: { "R-1": { id: "R-1", tipo: "relampago", status: "aberto", termino_em: "2026-12-31T00:00:00.000Z" } } }));
   try {
-    assert.match(c.texto(), /Sem edições programadas no momento\. Volte quando houver\./);
-    // UTAC108e.1 — sem edição o CARTÃO fica (vazio, mockup v2 A) com o palpite DESLIGADO: o campo existe
-    // mas não aceita nada (era «sem campo»). O que tem de continuar impossível é palpitar.
-    const campo = c.input();
-    assert.ok(campo, "o cartão vazio perdeu o campo (desligado) do palpite");
-    assert.equal(campo.props.disabled, true, "sem edição o campo do palpite tem de estar DESLIGADO");
-    const botao = c.botao("Palpitar");
-    assert.ok(botao && botao.props.disabled === true, "sem edição o botão «Palpitar» tem de estar DESLIGADO");
-    assert.equal(botao.props.onClick, undefined, "o botão desligado não pode ter acção");
+    // UTAC109e — o formulário desligado passou a viver DENTRO do `CartaoEdicao` (`acao="palpite"`), o mesmo do
+    // MLC; já não é filho da página ⇒ mede-se no HTML renderizado. O que tem de continuar impossível é palpitar.
+    const h = c.html();
+    assert.match(h, /data-testid="cartao-edicao"[^>]*data-vazio="true"[^>]*data-acao="palpite"/, "o cartão vazio não declara a acção «palpite»");
+    assert.match(h, /data-testid="palpite-desativado"/, "o cartão vazio perdeu o formulário (desligado) do palpite");
+    assert.match(h, /<input[^>]*id="palpite-sem-edicao"[^>]*type="number"[^>]*disabled=""/, "sem edição o campo do palpite tem de estar DESLIGADO (e numérico)");
+    assert.match(h, /<button[^>]*disabled=""[^>]*>Dar palpite<\/button>/, "sem edição o botão «Dar palpite» tem de estar DESLIGADO");
+    assert.match(h, /<label[^>]*for="palpite-sem-edicao"[^>]*>Seu palpite \(nº de lances\)<\/label>/, "rótulo do palpite perdido");
+    assert.doesNotMatch(h, /em centavos/, "o palpite é um nº de lances, não R$");
+    // nenhum botão de palpite ACTIVO (com acção) quando não há edição
+    assert.equal(c.nos().filter((n) => n.type === "button" && texto(n).includes("Dar palpite")).length, 0, "sem edição apareceu um botão de palpite com acção");
     assert.match(c.texto(), /Nenhuma edição em andamento/, "o cartão vazio não diz que não há edição");
   } finally { c.dup.restaurar(); }
 });
@@ -257,7 +259,7 @@ test("RENDER · PALPITAR envia POST com Bearer e passa a «Já palpitou»", asyn
   try {
     c.input().props.onChange({ target: { value: "120" } });
     await c.ctrl.assentar();
-    await c.clicar("Palpitar");
+    await c.clicar("Dar palpite");
 
     const post = c.dup.chamadas.find((h) => h.url.includes("registar-palpite"));
     assert.ok(post, "não houve POST para registar-palpite");
@@ -349,7 +351,7 @@ test("UTAC107e.1 · palpitar no 2.º cartão regista na edição DESSE cartão",
     const segundo = inputs.find((n) => n.props.id === "palpite-PROG-8");
     segundo.props.onChange({ target: { value: "7" } });
     await c.ctrl.assentar();
-    const botoes = c.nos().filter((n) => n.type === "button" && texto(n).includes("Palpitar"));
+    const botoes = c.nos().filter((n) => n.type === "button" && texto(n).includes("Dar palpite"));
     await botoes[1].props.onClick();
     await c.ctrl.assentar();
     assert.match(corpo, /"edicaoId":"PROG-8"/);
@@ -435,7 +437,7 @@ test("UTAC107e.1 (validador) · o erro do palpite aparece SÓ no cartão que fal
     const segundo = c.nos().find((n) => n.type === "input" && n.props.id === "palpite-PROG-8");
     segundo.props.onChange({ target: { value: "3" } });
     await c.ctrl.assentar();
-    await c.nos().filter((n) => n.type === "button" && texto(n).includes("Palpitar"))[1].props.onClick();
+    await c.nos().filter((n) => n.type === "button" && texto(n).includes("Dar palpite"))[1].props.onClick();
     await c.ctrl.assentar();
     const alertas = c.nos().filter((n) => n.props?.role === "alert");
     assert.equal(alertas.length, 1, `esperava 1 alerta, vi ${alertas.length}`);
@@ -453,9 +455,11 @@ test("UTAC108e.1 · cada edição usa o CartaoEdicao partilhado (arte real + GUT
     const i = h.indexOf('data-testid="op-edicao-item"');
     assert.ok(i > 0, "o item do carrossel desapareceu");
     const item = h.slice(i, h.indexOf("</article>", i));
-    assert.match(item, /data-testid="cartao-edicao"[^>]*data-vazio="false"[^>]*data-destaque="false"/, "não é o cartão partilhado (compacto)");
-    assert.match(item, /<img[^>]*data-testid="cartao-arte"[^>]*src="\/artes\/edicao-especial-airfryer\.jpg"/, "falta a arte real");
-    assert.match(item, /<img[^>]*src="\/assets\/guto\/custom\/guto-bemvindo\.png"/, "falta o GUTO ao lado do tempo");
+    // UTAC109e — o formato Relâmpago é o padrão: a arte na largura toda, sem o GUTO ao lado do tempo (o GUTO
+    // só existe no cartão VAZIO); a única diferença para o MLC é a acção.
+    assert.match(item, /data-testid="cartao-edicao"[^>]*data-vazio="false"[^>]*data-acao="palpite"/, "não é o cartão partilhado com a acção «palpite»");
+    assert.match(item, /<img[^>]*data-testid="cartao-arte"[^>]*src="\/artes\/edicao-especial-airfryer\.jpg"[^>]*style="[^"]*width:100%/, "falta a arte real na largura toda");
+    assert.doesNotMatch(item, /guto-bemvindo\.png|guto-animado-7/, "com edição o GUTO não pode estar no cartão (a arte toma o lugar)");
     assert.match(item, /data-estado-palpite="sem_palpite"/, "o estado do palpite deixou de chegar ao cartão");
     assert.match(item, /id="palpite-PROG-7"/, "o palpite não está dentro do cartão partilhado");
   } finally { c.dup.restaurar(); }

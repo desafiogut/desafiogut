@@ -90,7 +90,8 @@ function cartao(html) {
 describe("UTAC108e.1 · SEG1 · MLC variante B (com edição)", () => {
   test("o cartão da edição tem a ARTE em destaque (largura toda) com nome e estado", () => {
     const c = cartao(renderizar({ emBreve: false }));
-    assert.match(c, /data-destaque="true"/, "não é a variante B (destaque)");
+    // UTAC109e — o formato Relâmpago passou a ser o ÚNICO (a prop `destaque` saiu); o que distingue é a acção.
+    assert.match(c, /data-acao="lance"/, "o cartão do MLC não declara a acção «lance»");
     assert.match(c, /data-vazio="false"/);
     assert.match(c, new RegExp(`<img[^>]*data-testid="cartao-arte"[^>]*src="${ARTE.replace(/[.]/g, "\\.")}"`), "a arte real da edição não está no cartão");
     // no SSR não há `window` ⇒ `useIsMobile` = false ⇒ é o render de DESKTOP (16:9); o 1:1 do telemóvel mede-se na fonte.
@@ -101,7 +102,10 @@ describe("UTAC108e.1 · SEG1 · MLC variante B (com edição)", () => {
   });
 
   test("1:1 no telemóvel, 16:9 no desktop (o mesmo cartão)", () => {
-    assert.match(codigo(ler("components/CartaoEdicao.jsx")), /aspectRatio: isMobile \? "1 \/ 1" : "16 \/ 9"/);
+    // UTAC109e — o formato vive numa constante usada pela arte, pelo marcador 🎁 e pelo vazio.
+    const c = codigo(ler("components/CartaoEdicao.jsx"));
+    assert.match(c, /const formato = isMobile \? "1 \/ 1" : "16 \/ 9";/);
+    assert.ok((c.match(/aspectRatio: formato/g) || []).length >= 3, "a arte, o 🎁 e o vazio deixaram de partilhar o formato");
   });
 
   test("o formulário do lance (CardLance real) vive DENTRO do cartão da edição", () => {
@@ -127,7 +131,9 @@ describe("UTAC108e.1 · SEG3 · sem edição → cartão vazio (não aviso solto
   test("o cartão APARECE, vazio, com GUTO + «Nenhuma edição em andamento» + «Volte quando houver»", () => {
     const c = cartao(renderizar());
     assert.match(c, /data-vazio="true"/, "o cartão não está em estado vazio");
-    assert.match(c, /<img[^>]*src="\/assets\/guto\/custom\/guto-bemvindo\.png"/, "falta o GUTO no cartão vazio");
+    // UTAC109e — o GUTO do vazio é o GUTO ANIMADO 7 (o SSR mostra o poster até à 1.ª pintura); o PNG estático saiu.
+    assert.match(c, /data-testid="guto-animado-7"[\s\S]*?<img[^>]*src="\/assets\/guto\/carrossel\/guto-7\.png\?v=/, "falta o GUTO animado 7 no cartão vazio");
+    assert.doesNotMatch(c, /guto-bemvindo\.png/, "o GUTO estático antigo voltou ao cartão vazio");
     assert.match(texto(c), /Nenhuma edição em andamento/);
     assert.match(texto(c), /Volte quando houver/);
     assert.match(texto(c), /SEM EDIÇÃO/);
@@ -225,7 +231,7 @@ describe("UTAC108e.1 · SEG4 · pendência 3: arte da Air Fryer sem «PAGA»", (
 describe("UTAC108e.1 · coerência MLC ↔ OP (a mesma família)", () => {
   test("as duas abas usam o MESMO componente `CartaoEdicao` (só a acção muda)", () => {
     for (const p of ["pages/MercadoLances.jsx", "pages/OfertasProgramadas.jsx"]) {
-      assert.match(codigo(ler(p)), /import CartaoEdicao from "\.\.\/components\/CartaoEdicao\.jsx";/, `${p} não usa o CartaoEdicao`);
+      assert.match(codigo(ler(p)), /import CartaoEdicao(, \{ ACOES \})? from "\.\.\/components\/CartaoEdicao\.jsx";/, `${p} não usa o CartaoEdicao`);
       assert.match(codigo(ler(p)), /<CartaoEdicao\b/, `${p} não monta o CartaoEdicao`);
     }
     // a OP já não desenha um cartão próprio dentro do carrossel
