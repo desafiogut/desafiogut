@@ -1,0 +1,44 @@
+schema: utac/1
+name: UTAC109h
+title: "Carteira: 2 cores (laranja + amarelo do MLC) + botões padronizados + 1.º glass alinhado com a OP"
+type: produto
+baseline: 1a41cf7
+motivo: >-
+  A Carteira tem cores de destaque a mais (ciano, vermelho, verde-água, 2 amarelos) e botões de 4 estilos;
+  o título do 1.º vidro é pequeno (13,6 px) e o vidro tem mais do que «quanto tenho + como carrego».
+frentes:
+  - id: A
+    nome: Cores (só #ff6b35 + #f5a623 como destaque)
+    entrega: [src/pages/MinhaCarteira.jsx]
+  - id: B
+    nome: Botões (primário / secundário / terciário, ≥48 px)
+    entrega: [src/pages/MinhaCarteira.jsx]
+  - id: C
+    nome: 1.º glass (nome maior, Ponytail, padrão da OP)
+    entrega: [src/pages/MinhaCarteira.jsx]
+  - id: D
+    nome: Validador adversarial de design
+    entrega: [_logs/UTAC109h_SEG4_VALIDADOR.md]
+autoriza:
+  - alterar src/pages/MinhaCarteira.jsx e src/components/PainelIndicacao.jsx (R18-C)
+  - criar/alterar testes em src/**/__tests__/ e scripts/utac109h-*.mjs
+  - screenshots em _logs/utac109h-browser/
+  - commit + push foreground; validador em worktree próprio (A13)
+proibe:
+  - git add -A
+  - Dashboard.jsx (Início), MercadoLances.jsx/TabelaLances.jsx (MLC), OfertasProgramadas.jsx (OP)
+  - CartaoEdicao.jsx, components/glass/GlassHeader.jsx
+  - backend (netlify/), gate legal, contrato on-chain, EM_BREVE_MODE
+  - pendências do 109g (login 33 px, selo MLC, 320 px)
+  - package*.json, .bak-*
+dependencias:
+  - UTAC109g fechado (1fc7321, 12a2731, 1a41cf7)
+regras_activas: [E, T, G, L, S, A, P, AU, ST, HI]
+regras_extra: []
+stop_conditions_extra: []
+ressalvas:
+  - HI5 2 h (exceder → 109h-1 cores+botões / 109h-2 1.º glass+verificação)
+  - hex das 2 cores pouco claros → PARAR
+  - remoção que colida com conformidade → PARAR
+  - gate LGPD a bloquear o browser → protocolo do 109f (local, perfil descartável)
+  - skill de design inacessível → PARAR

@@ -5697,3 +5697,29 @@ placeholder no padrao do MeusAtivos (**LACUNA:** nao ha fonte publica de vencedo
 **Escopo:** MercadoLances, TabelaLances, components/glass, Dashboard, Carteira, backend, package*, 5 `.bak-*` intactos; `EM_BREVE_MODE = true`.
 **Registo:** `_logs/UTAC109g-op-alinhamento.md` · `_logs/UTAC109g_SEG-1_MEDICAO.md` · `_logs/UTAC109g_SEG3_VALIDADOR.md` · `_logs/utac109g-browser/` · `Desktop/RELATORIO-UTAC109g-OP.txt`.
 **Custo:** validador 141 060 tokens = 2,8-282 ¢ (56 ¢ se tudo input); sessao principal nao medida (`/cost`).
+
+
+## R14 (append) -- UTAC109h (SEG-1) -- REGRA A14: verificação de recursos antes do SEG-1 (Claude Code, Opus 5.5)
+
+**A14 — Verificação de recursos antes do SEG-1 (R18-A14, decisão do operador 2026-10-09).** Antes do SEG-1, medir a RAM livre
+(`[int]((Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory/1024)`). **Se < 1 500 MB, o SEG-1 não é válido** (baseline
+contaminado por falta de recursos). O executor escala ao operador para libertar memória antes de continuar; **se o operador não
+estiver disponível, PARAR** — não avançar com baseline inválido. Origem medida: no UTAC109h, com 220 MB livres (19 MB num pico), o
+Windows devolveu o erro 1450, o vite caiu 3×, o Chrome não arrancou em 180 s e a suíte do frontend deu **3 falhas** no `1a41cf7`
+(o 109g fechara 961/961). A limpeza delegada só pode fechar o que o executor lançou, browsers **sem** janela e sessões claude
+terminadas; árvores com janela, a sessão actual, a suíte em curso e tudo o que não se classifica ficam.
+**Estado do UTAC109h:** PARADO no SEG-1 (RAM 727 MB após a limpeza autorizada, nada fechável). Decisões R18-A..D no
+`_logs/UTAC109h_SEG-1_MEDICAO.md`.
+
+## R14 (append) -- UTAC109h (FECHO) -- Carteira: 2 cores + botoes padronizados + 1.o vidro no estilo da OP -- concluido apesar de HANDOFF (Hermes/DeepSeek)
+
+**Tipo:** CODIGO (frontend + testes). **Baseline:** `1a41cf7`. **Commits:** `93e17ac` (codigo -- Claude Code/Opus 5.5) -> **este commit** (fecho: logs, R18, relatorio).
+**Suite:** frontend VERDE **974/974** (+13) - backend VERDE **1095/1101** -- re-medida pelo executor do fecho com **1 545-1 592 MB** de RAM livre (A14 satisfeita).
+**Mutacao:** **12/12 PROVADOS** (`scripts/utac109h-prova-mutacao.mjs`), restauro md5 identico; re-corrida pelo validador no worktree proprio.
+**Decisoes do operador (R18):** **A** 1.o vidro = vidro do **saldo** com cabecalho no estilo da OP (titulo «Carteira» laranja `#ff6b35` Orbitron >= 20 px + subtitulo amarelo `#f5a623` «Saldo Disponivel»), **sem** login/CNPJ, **sem** `GlassHeader`; **B** Comprar Passe, MLC, OP e aviso das senhas antigas -> **2.o vidro**; **C** as 2 cores sao `MinhaCarteira.jsx` **+** `PainelIndicacao.jsx` e os **erros continuam vermelhos** `#ef4444` (modais fora); **D** libertar RAM antes de medir. **A14** (bloco acima): RAM livre < 1 500 MB => SEG-1 **invalido**.
+**Feito:** 1.o vidro 512 -> **263 px** (375) e 368 -> **235 px** (1280); titulo 13,6 -> **24 px** (375) / 14,08 -> **28 px** (1280) Orbitron 800 laranja; 4 estilos de botao -> **3** (primario laranja cheio com texto navy, secundario contorno amarelo, terciario so texto), todos com **>= 48 px** de altura e alvos >= 48x48; saem o ciano `#00d4ff`, o verde-agua `#00d4aa`, o verde `#10b981` e o 2.o amarelo `#fbbf24`. Contraste WCAG AA em todos os pares (o mais baixo: **4,52:1** na bolha 402 sobre fundo tingido).
+**Validador: APROVADO COM RESSALVAS, 0 bloqueantes** (subagente independente, worktree proprio no sha, A13). **Refutou 1 alegacao NA LETRA** -- «1.o vidro so ↻ + PIX» e falso: o 1.o vidro tem tambem a **nota do e-mail PIX** (exigida pela RESSALVA 5 do 107b -- o modal de deposito nao mostra o destinatario) e, nos **estados de erro**, a bolha 402 com um 3.o botao; a substancia (Passe/MLC/OP/senhas FORA do 1.o vidro) esta correcta -- errata **E2** com o texto original **a vista**. **⚠️ F1:** contradicao de RAM entre dois logs (`1 607` no log principal vs `1 488` na §-1.9 do SEG-1, este **abaixo** do limiar A14) -- resolvida por desambiguacao + **3.a medicao independente**; nenhum numero apagado. **ℹ️ F4** contraste sobre fundo tingido; **ℹ️ F6** 1280 px nao re-medido pelo validador (mas medido pelo executor). Pendencias novas: **P-109h-1..4**. Veredicto integral (prova, sem editorializar): `_logs/UTAC109h_SEG4_VALIDADOR.md`.
+**⚠️ HANDOFF (licao a registar):** o **codigo** deste UTAC foi feito por **Claude Code / Opus 5.5**, que **morreu por rate limit da API Claude (HTTP 429, reset 2026-10-12 02:00)** a meio do SEG4 -- **sem** veredicto do validador e **sem** push. O UTAC foi **retomado e fechado por Hermes/DeepSeek**: verificacao de estado, **re-corrida da suite canonica**, validador adversarial proprio (worktree A13), fecho em 3 lugares e push. **Custo do Opus: NAO MEDIDO** (nao instrumentado pelo proprio -- nao se inventa).
+**Escopo:** `MinhaCarteira.jsx`, `PainelIndicacao.jsx`, 4 testes e `scripts/utac109h-prova-mutacao.mjs`; `GlassHeader.jsx`, `CartaoEdicao.jsx`, `Dashboard.jsx` (Inicio), `MercadoLances.jsx`/`TabelaLances.jsx` (MLC), `OfertasProgramadas.jsx` (OP), `glassTokens.js`, backend, `package*` e `.bak-*` **intactos** (o validador confirmou 7/7 UNCHANGED).
+**Registo:** `_logs/UTAC109h-carteira.md` - `_logs/UTAC109h_SEG-1_MEDICAO.md` - `_logs/UTAC109h_RETOMADA_SEG-1.md` - `_logs/UTAC109h_SEG4_VALIDADOR.md` - `_logs/utac109h-browser/` - `Desktop/RELATORIO-UTAC109h-CARTEIRA.txt`.
+**Custo do fecho:** sessoes `20261009_131003_4eedf5` (cli) + `20261009_132328_a7b1f9` (validador) no `state.db`; **saldo da API NAO LIDO** (R5: o agente nao toca em credenciais).
