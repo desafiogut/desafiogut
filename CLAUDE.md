@@ -5661,3 +5661,27 @@ telemovel/APK real (o APK so recebe com AAB novo — 109j). **Escopo:** backend,
 **Escopo:** backend, package*, 5 `.bak-*`, Carteira intactos; `EM_BREVE_MODE = true`. Browser nao aberto (gate LGPD).
 **Registo:** `_logs/UTAC109e-padronizar-edicoes.md` · `_logs/UTAC109e_SEG6_VALIDADOR.md` · `Desktop/RELATORIO-UTAC109e-PADRONIZAR.txt`.
 **Custo:** validador 123 038 tokens = 2,5–246 ¢ (49 ¢ se tudo input); sessao principal nao medida (`/cost`). ≈ 1 h 40 (HI5 2 h). **Proximo:** 109f (Inicio).
+
+
+## R14 (append) -- UTAC109f -- INICIO: ORDEM FINAL + ACESSOS + GLASS FINAL + P1/P2/P4 NA FONTE (Claude Code, Opus 5.5)
+
+**Tipo:** CODIGO (frontend + testes). **Baseline:** `731ec28`. **Commits:** `f8c622e` (feat) -> correccoes do validador -> registo.
+**Suite:** frontend VERDE **947/947** (+12) · backend VERDE 1095/1101. **Mutacao 18/18** (`scripts/utac109f-prova-mutacao.mjs`).
+**Ordem final do Inicio:** carrossel (8 videos, intacto) -> 4 glass pequenos (Saldo · Passe Desafio · Lances Unicos · Total de
+Lances — **byte-iguais ao baseline**, agora com guarda sha256) -> glass MLC -> glass OP (o `CartaoEdicao` do 109e) -> acessos
+rapidos -> glass final «🏅 Vencedores».
+**Decisoes do operador (R18):** **A** glass MLC com EM BREVE = o cartao vazio da aba MLC (GUTO 7 + «Seu lance (em centavos)»
+desligado; o Inicio perde o botao para /mercado) · **B** «Perfil» -> `/configuracoes` · **C** «Suporte» -> `mailto:desafiogut01@gmail.com`
+· **D** P3 so em LOCAL (vite 127.0.0.1:3000), perfil de browser novo e descartavel (apagado no fim), sem dados pessoais; o gate
+LGPD foi aceite **em ambiente de teste** so para desbloquear a renderizacao visual.
+**Feito:** acessos Carteira/Regras/Suporte/Perfil (icone + rotulo + #f5a623, 48 px, 2x2 mobile / 4 desktop). Glass final =
+placeholder no padrao do MeusAtivos (**LACUNA:** nao ha fonte publica de vencedores; sem 🏆, sem «ver todos»). **P1** na fonte
+(`utils/edicao.js`: Programada ATIVA -> «Em andamento — palpite ja!»). **P2** na fonte (`CartaoEdicao` `VAZIO_POR_ACAO`: palpite ->
+«Sem edicoes programadas no momento.»), Inicio e aba OP sem tocar em `OfertasProgramadas.jsx`. **P4** faixa do cartao com wrap
+(A/B a 375 px: nome 15 -> 285 px). **P3** screenshots `_logs/utac109f-browser/inicio-{375,1280}.png` (0 px de overflow, 48 px).
+⚠️ Ecras nao podem importar `EM_BREVE_MODE` (guarda MC88.43): usar `getEstadoEdicao(...).emBreve`.
+**Validador: APROVADO COM RESSALVAS** (0 defeitos de comportamento); ⚠️ P1 sem teste na aba OP e tiles sem guarda -> fechados
+(nao re-validados); declarados: faixa mais alta com tempo longo, fallback `tipo:"programado"` do `edicaoAtiva`.
+**Escopo:** 4 glass pequenos, aba OP, Carteira, backend, gate legal, `EM_BREVE_MODE = true`, package*, 5 `.bak-*` intactos.
+**Registo:** `_logs/UTAC109f-inicio.md` · `_logs/UTAC109f_SEG-1_MEDICAO.md` · `_logs/UTAC109f_SEG3_VALIDADOR.md` ·
+`Desktop/RELATORIO-UTAC109f-INICIO.txt`.
