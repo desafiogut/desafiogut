@@ -5647,3 +5647,17 @@ funcional no build de producao do mesmo commit (vite preview): desktop e 375px A
 telemovel/APK real (o APK so recebe com AAB novo — 109j). **Escopo:** backend, package*, 5 `.bak-*`, MLC/OP/Carteira intactos; `EM_BREVE_MODE = true`.
 **Registo:** `_logs/UTAC109d.1-mobile.md` · `_logs/UTAC109d.1_SEG6_VALIDADOR.md` · `Desktop/RELATORIO-UTAC109d.1-MOBILE.txt`.
 **Custo:** validador 758 075 tokens = 15–1516 ¢ (303 ¢ se tudo input); sessao principal nao medida (≈ 104 ¢ se tudo input). ≈ 1 h 15 (HI5 2 h).
+
+
+## R14 (append) -- UTAC109e -- CARTAO DE EDICAO UNICO (formato Relampago) + GUTO ANIMADO 7 (Claude Code, Opus 5.5)
+
+**Tipo:** CODIGO (frontend + testes). **Baseline:** `2e40488`. **Commits:** `dcf8460` (feat) -> `0daf3af` (achados do validador) -> registo.
+**Suite:** frontend VERDE **935/935** (+18) · backend VERDE 1095/1101. **Deploy:** auto-deploy Git; entry `index-Bez_-42d.js` -> `index-DnndOoX6.js`.
+**Decisoes do operador (R18, SEG0):** **A** GUTO animado 7 no CARTAO VAZIO (o topo do Inicio fica com os 8 videos) · **B** 1 linha do `CardLance`: «⚡ Lance Relampago» -> «Dar lance» · **C** Inicio tambem «Dar palpite». Decisao 1 do enunciado (Relampago = padrao) reverte a OP «A · Familia» do 108e.1.
+**Feito:** `CartaoEdicao` com UM so formato (arte na largura toda; sai a variante compacta, `destaque`, `tempoRotulo`, `GUTO_URL`); prop `acao` + `ACOES` congelada (`lance`: «Dar lance»/«Seu lance (em centavos)»; `palpite`: «Dar palpite»/«Seu palpite (nº de lances)»), validada por `Object.hasOwn` (o teste de entrada invalida apanhou `ACOES["constructor"]`); o formulario DESLIGADO do vazio vive no cartao. MLC `acao="lance"`, OP `acao="palpite"`. GUTO 7 = `CarrosselGUTO` com `[SLIDES[6]]` (`SLIDES` exportado), so no vazio; com edicao a arte toma o lugar.
+**Testes:** novo `utac109e-cartao-unico` (16), Inicio +2, contratos 108e1/106f actualizados. **Mutacao 13/13** (`scripts/utac109e-prova-mutacao.mjs`).
+**Validador: APROVADO, 0 bloqueantes** -- V1/V2/V8 (aria-hidden, loop, topo 8 videos) fechados com teste; **declarados:** faixa da OP aberta a 375 px com «Em andamento — lance ja!» (copy de lance num cartao de palpite; nome espremido; estimado) -> **109g**; V5/V9/V11 sem teste; o vazio da OP perdeu «Sem edicoes programadas no momento…».
+**Licao de instrumento:** `\b`/`\n` em Python via heredoc chegaram ao ficheiro como 0x08 / quebra real (3x) -- varrer bytes de controlo depois de cada edicao por script.
+**Escopo:** backend, package*, 5 `.bak-*`, Carteira intactos; `EM_BREVE_MODE = true`. Browser nao aberto (gate LGPD).
+**Registo:** `_logs/UTAC109e-padronizar-edicoes.md` · `_logs/UTAC109e_SEG6_VALIDADOR.md` · `Desktop/RELATORIO-UTAC109e-PADRONIZAR.txt`.
+**Custo:** validador 123 038 tokens = 2,5–246 ¢ (49 ¢ se tudo input); sessao principal nao medida (`/cost`). ≈ 1 h 40 (HI5 2 h). **Proximo:** 109f (Inicio).
