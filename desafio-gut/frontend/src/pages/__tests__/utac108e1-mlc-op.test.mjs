@@ -242,12 +242,12 @@ describe("UTAC108e.1 · coerência MLC ↔ OP (a mesma família)", () => {
   test("as duas abas têm o mesmo cabeçalho: título Orbitron laranja + selo do tipo", () => {
     const g = codigo(ler("components/glass/GlassHeader.jsx"));
     const op = codigo(ler("pages/OfertasProgramadas.jsx"));
-    for (const [nome, c] of [["MLC/GlassHeader", g], ["OP", op]]) {
-      assert.match(c, /data-testid="titulo-aba"/, `${nome}: sem título de aba`);
-      assert.match(c, /fontFamily: "'Orbitron', sans-serif"/, `${nome}: título fora da Orbitron`);
-      assert.match(c, /data-testid="selo-modo"/, `${nome}: sem selo do tipo`);
-    }
-    assert.match(op, /🎫 Programadas/);
+    assert.match(g, /data-testid="titulo-aba"/, "GlassHeader: sem título de aba");
+    assert.match(g, /fontFamily: "'Orbitron', sans-serif"/, "GlassHeader: título fora da Orbitron");
+    assert.match(g, /data-testid="selo-modo"/, "GlassHeader: sem selo do tipo");
+    // UTAC109g (R18-A) — a OP passou a usar o MESMO `GlassHeader` (era uma cópia do cabeçalho).
+    assert.match(op, /import GlassHeader from "\.\.\/components\/glass\/GlassHeader\.jsx"/);
+    assert.match(op, /<GlassHeader[\s\S]{0,400}titulo="Ofertas Programadas"[\s\S]{0,200}selo="🎫 Programadas"/);
   });
 
   test("Regra 2: as duas tabelas no fim, mesmo vidro padrão e 3 colunas; a da OP aparece mesmo sem edição", () => {
@@ -258,6 +258,7 @@ describe("UTAC108e.1 · coerência MLC ↔ OP (a mesma família)", () => {
     const op = codigo(ler("pages/OfertasProgramadas.jsx"));
     assert.match(op, /data-testid="op-tabela-fim"[\s\S]{0,200}className="gut-glass-standard"/);
     assert.equal((op.match(/<TH>/g) || []).length, 3);
-    assert.match(op, /\{!loading && !erro && \(\s*<section data-testid="op-tabela-fim"/, "a tabela da OP voltou a depender de haver edição");
+    // UTAC109g (B1) — a tabela vive no componente local `TabelaPalpites`, desenhado SEMPRE (com ou sem edição).
+    assert.match(op, /\{!loading && !erro && \(\s*<TabelaPalpites edicao=\{edicaoTabela\}/, "a tabela da OP voltou a depender de haver edição");
   });
 });

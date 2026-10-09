@@ -1,0 +1,39 @@
+schema: utac/1
+name: UTAC109g
+title: "Ofertas Programadas: edição abaixo do 1.º glass, alinhada com o MLC + padrão «Palpites» + P1/P2/375px"
+type: produto
+baseline: fee1609
+motivo: >-
+  Alinhar a aba OP com a aba MLC (edição como 2.º glass, à mesma altura), padronizar a tabela
+  «Palpites» pela «Lances — Edição R-1», verificar P1/P2 na OP e corrigir o nome espremido a 375 px.
+frentes:
+  - id: A
+    nome: Estrutura da aba OP (edição abaixo do 1.º glass + altura do MLC)
+    entrega: [src/pages/OfertasProgramadas.jsx]
+  - id: B
+    nome: Padrão «Palpites» + P1/P2 + 375 px
+    entrega: [src/pages/OfertasProgramadas.jsx, src/components/CartaoEdicao.jsx]
+  - id: C
+    nome: Validador adversarial de design
+    entrega: [_logs/UTAC109g_SEG3_VALIDADOR.md]
+autoriza:
+  - alterar src/pages/OfertasProgramadas.jsx e src/components/CartaoEdicao.jsx (só a fonte do P4)
+  - criar/alterar testes em src/**/__tests__/ e scripts/utac109g-*.mjs
+  - screenshots em _logs/utac109g-browser/
+  - commit + push foreground; validador em worktree próprio (A13)
+proibe:
+  - git add -A
+  - MercadoLances.jsx, TabelaLances.jsx, GlassHeader.jsx (aba MLC), Dashboard.jsx (Início), Carteira
+  - backend (netlify/), gate legal, contrato on-chain, EM_BREVE_MODE
+  - reimplementar o CartaoEdicao do 109e
+  - package*.json, .bak-*
+dependencias:
+  - UTAC109f fechado (f8c622e, dec1050, fee1609)
+regras_activas: [E, T, G, L, S, A, P, AU, ST, HI]
+regras_extra: []
+stop_conditions_extra: []
+ressalvas:
+  - HI5 2 h
+  - altura OP ≠ MLC por razão estrutural → PARAR e reportar
+  - gate LGPD a bloquear o browser → protocolo do 109f (local, perfil descartável)
+  - skill de design inacessível → PARAR

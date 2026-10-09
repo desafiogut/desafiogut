@@ -110,7 +110,8 @@ test("RENDER · o ecrã real substituiu o placeholder (título + subtítulo, sem
     const t = c.texto();
     assert.match(t, /Ofertas Programadas/);
     // UTAC107e.1 — subtítulo do mockup (pt-BR), agora dentro de vidro.
-    assert.match(t, /Junte 50 pontos e troque pelo cartão da Família Quildo/);
+    // UTAC109g (R18-D) — a frase encurtou para caber numa linha a 375 px no GlassHeader partilhado.
+    assert.match(t, /Junte 50 pontos e troque pelo cartão/);
     // UTAC107e.1 — os CARTÕES das edições mostram o estado da fonte única (`getEstadoEdicao`, que com
     // `EM_BREVE_MODE` diz «EM BREVE», como no Início). A invariante é o ECRÃ: fora dos cartões, nada
     // de placeholder «EM BREVE».
@@ -397,10 +398,12 @@ test("UTAC107e.1 · tabela «Palpites — Edição <id>» é o ÚLTIMO bloco, vi
     const resto = h.slice(i);
     assert.doesNotMatch(resto.slice(resto.indexOf("</section>")), /<section|<header|<article/, "há blocos depois da tabela");
     assert.match(h.slice(h.lastIndexOf("<section", i), i + 300), /class="gut-glass-standard"/, "a tabela não usa o vidro padrão");
-    assert.match(c.texto(), /Palpites — Edição PROG-7/);
-    const ths = [...resto.matchAll(/<th[^>]*>([^<]*)<\/th>/g)].map((m) => m[1]);
-    assert.deepEqual(ths, ["#", "Participante", "Palpite"]);
-    assert.match(c.texto(), /Ainda não há palpites\./);
+    // UTAC109g (B1) — o padrão da «📋 Lances — Edição R-1»: título com 📋, selo do estado e, VAZIA,
+    // o 📭 sem tabela (como o molde). As 3 colunas com linhas provam-se no utac107e2/utac109g.
+    assert.match(c.texto(), /📋 Palpites — Edição PROG-7/);
+    assert.match(resto, /data-testid="op-tabela-estado"/);
+    assert.doesNotMatch(resto.slice(0, resto.indexOf("</section>")), /<table/, "vazia não desenha tabela");
+    assert.match(c.texto(), /📭 Ainda não há palpites\./);
   } finally { c.dup.restaurar(); }
 });
 

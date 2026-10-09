@@ -643,7 +643,7 @@ describe("UTAC109f · Início — ordem final e pendências do 109e", () => {
     definirPontos({}); definirResultadoOficial(null);
     const v = fatia(renderizar({ edicoes: { "R-1": R1, "PROG-1": PROG } }), ">🎫 Programada<");
     assert.match(v, /data-testid="cartao-faixa"[^>]*style="[^"]*flex-wrap:\s*wrap/);
-    assert.match(v, /data-testid="cartao-nome"[^>]*style="[^"]*flex:\s*1 1 9rem/);
+    assert.match(v, /data-testid="cartao-nome"[^>]*style="[^"]*flex:\s*1 1 12\.5rem/);
     assert.doesNotMatch(v, /data-testid="cartao-tempo"[^>]*style="[^"]*flex:\s*none/);
   });
 });

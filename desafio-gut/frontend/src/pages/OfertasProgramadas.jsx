@@ -37,6 +37,9 @@ import ResgatarCartaoModal, { CARTAO_ID } from "../components/ResgatarCartaoModa
 // UTAC108e.1 — o MESMO cartão de edição do «Menor Lance Único» (mockup v2, variante A «Família»):
 // só a acção muda (aqui, o palpite).
 import CartaoEdicao, { ACOES } from "../components/CartaoEdicao.jsx";
+// UTAC109g (R18-A) — o MESMO cabeçalho do «Menor Lance Único»: as duas abas espelhadas no topo, com a
+// edição à mesma altura (2.º vidro). Componente partilhado, reutilizado tal como está.
+import GlassHeader from "../components/glass/GlassHeader.jsx";
 
 // UTAC107e.2 — endereço curto na tabela de palpites (0x1234…abcd); nunca rebenta com lixo.
 const curto = (e) => (typeof e === "string" && e.length > 12 ? `${e.slice(0, 6)}…${e.slice(-4)}` : "—");
@@ -64,7 +67,8 @@ const TIPO_LABEL = { compra: "Compra de Passe", palpite: "Bónus de palpite", re
 export default function OfertasProgramadas() {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
-  const { edicoes } = useAppContext();
+  // UTAC109g (R18-A) — o 1.º glass é o MESMO `GlassHeader` do MLC: precisa dos dados de identidade/login.
+  const { edicoes, address, isConnected, userLabel, ready, abrirModal } = useAppContext();
   // ⚠️ R1 (UTAC106f, decisão do operador = opção A): o CARTÃO conta SÓ pontos de COMPRA
   // (`pontosCartao`); `pontos` é o TOTAL e `bonusPalpite` é a parte que NÃO conta (prestígio).
   const { pontos, pontosCartao, bonusPalpite, historico, palpites, pontosParaCartao, podeResgatarCartao, loading, erro, refetch: refetchPontos } = usePontos();
@@ -192,24 +196,61 @@ export default function OfertasProgramadas() {
   };
 
   return (
-    <div style={{ padding: isMobile ? "1rem" : "2rem", flex: 1, display: "flex", justifyContent: "center" }}>
-      <div style={{ maxWidth: "640px", width: "100%", display: "grid", gap: "1rem" }}>
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100%", flex: 1 }}>
 
-        {/* 1 — CABEÇALHO (UTAC107e.1: dentro de vidro — Regra 1; era um <header> solto) */}
-        {/* UTAC108e.1 — o MESMO cabeçalho do MLC (mockup v2 `.cab-aba`): título + frase + selo do tipo. */}
-        <GlassCard as="header" style={{ padding: isMobile ? "1rem" : "1.25rem", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "0.6rem" }}>
-          <div style={{ minWidth: 0 }}>
-            <h2 data-testid="titulo-aba" style={{ margin: 0, fontFamily: "'Orbitron', sans-serif", fontSize: isMobile ? "1.15rem" : "1.4rem", fontWeight: 800, color: COR.primary, letterSpacing: "0.03em" }}>
-              Ofertas Programadas
-            </h2>
-            <p style={{ margin: "0.3rem 0 0", color: COR.gold, fontWeight: 700, fontSize: isMobile ? "0.9rem" : "1rem", lineHeight: 1.5 }}>
-              Junte 50 pontos e troque pelo cartão da Família Quildo
+      {/* 1 — 1.º VIDRO. UTAC109g (R18-A): o MESMO `GlassHeader` do «Menor Lance Único» (identidade + login +
+          título/frase/selo + rodapé legal) — as duas abas espelhadas no topo. Era um cabeçalho só com o título
+          (UTAC107e.1/108e.1), mais baixo: a edição nunca ficava à altura da do MLC. */}
+      <GlassHeader
+        isMobile={isMobile}
+        isConnected={isConnected}
+        ready={ready}
+        address={address}
+        userLabel={userLabel}
+        onLogin={abrirModal}
+        encerrado={false}
+        titulo="Ofertas Programadas"
+        frase="Junte 50 pontos e troque pelo cartão"
+        selo="🎫 Programadas"
+      />
+
+      {/* UTAC109g (R18-A) — o MESMO envelope do MLC (`MercadoLances.jsx` <main>): padding 1rem / 1.5rem 2rem,
+          gap 1rem / 1.5rem, sem o limite de 640 px. Assim a edição fica à mesma distância do topo nas duas abas. */}
+      <main style={{
+        display: "grid", gridTemplateColumns: "1fr", gap: isMobile ? "1rem" : "1.5rem",
+        padding: isMobile ? "1rem" : "1.5rem 2rem", flex: 1, minWidth: 0,
+        // com `flex: 1` a grelha estica as linhas para encher a altura e os vidros ficavam com espaço vazio
+        // em baixo (medido a 375 px): as linhas ficam no topo. Não mexe na posição da edição (1.ª linha).
+        alignContent: "start",
+      }}>
+
+        {/* 2 — A EDIÇÃO, logo abaixo do 1.º vidro (UTAC109g, A1/A2). Cada edição usa o `CartaoEdicao` partilhado
+            (109e); SEM edição o cartão FICA, vazio, com o palpite desligado. Rolagem lateral com UMA edição
+            visível e `scroll-snap` (UTAC107e.1). Não depende dos pontos: aparece já, à mesma altura do MLC. */}
+        <section aria-label="Edições programadas" style={{ display: "grid", gap: isMobile ? "1rem" : "1.5rem", minWidth: 0 }}>
+          {programadas.length === 0 ? (
+            <CartaoEdicao vazio acao="palpite" isMobile={isMobile} id="🎫 Programada" estado={{ texto: "SEM EDIÇÃO", cor: COR.muted }} />
+          ) : (
+            <div
+              data-testid="op-edicoes-scroll"
+              style={{
+                display: "flex", gap: isMobile ? "0.75rem" : "1rem",
+                overflowX: "auto", overflowY: "hidden",
+                scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch", paddingBottom: "0.25rem",
+              }}
+            >
+              {programadas.map(cartaoEdicao)}
+            </div>
+          )}
+          {/* UTAC109g (R18-B) — o aviso do bónus (Google Play: o palpite NÃO muda o cartão) passou para logo
+              ABAIXO da edição; o texto não mudou. */}
+          <GlassCard style={{ padding: isMobile ? "1rem" : "1.25rem" }}>
+            <h3 style={{ margin: 0, color: COR.gold, fontWeight: 800, fontSize: "0.95rem" }}>🎫 Edições programadas</h3>
+            <p style={{ margin: "0.35rem 0 0", color: COR.muted, fontSize: "0.8rem", lineHeight: 1.5 }}>
+              Palpite quantos lances a edição vai ter. O palpite mais próximo ganha +2 pontos — é bônus, não muda o cartão.
             </p>
-          </div>
-          <span data-testid="selo-modo" style={{ flex: "none", fontSize: "0.75rem", fontWeight: 800, letterSpacing: "0.04em", color: COR.gold, border: "1px solid rgba(245,166,35,0.35)", background: "rgba(245,166,35,0.12)", borderRadius: "999px", padding: "0.25rem 0.65rem" }}>
-            🎫 Programadas
-          </span>
-        </GlassCard>
+          </GlassCard>
+        </section>
 
         {loading && (
           <GlassCard as="section" aria-label="Carregando" style={{ padding: "1.25rem" }}>
@@ -321,35 +362,6 @@ export default function OfertasProgramadas() {
           </GlassCard>
         )}
 
-        {/* 4 — EDIÇÕES PROGRAMADAS (UTAC107e.1): o palpite vive DENTRO do cartão de cada edição; rolagem
-            lateral com UMA edição visível e `scroll-snap` ao início.
-            UTAC108e.1 — cada edição usa o `CartaoEdicao` partilhado com o MLC; SEM edição o cartão FICA,
-            vazio, com o palpite desligado (mesma correcção do 108d no MLC — nada de aviso solto). */}
-        {!loading && !erro && (
-          <section aria-label="Edições programadas" style={{ display: "grid", gap: "0.75rem" }}>
-            <GlassCard style={{ padding: isMobile ? "1rem" : "1.25rem" }}>
-              <h3 style={{ margin: 0, color: COR.gold, fontWeight: 800, fontSize: "0.95rem" }}>🎫 Edições programadas</h3>
-              <p style={{ margin: "0.35rem 0 0", color: COR.muted, fontSize: "0.8rem", lineHeight: 1.5 }}>
-                Palpite quantos lances a edição vai ter. O palpite mais próximo ganha +2 pontos — é bônus, não muda o cartão.
-              </p>
-            </GlassCard>
-            {programadas.length === 0 ? (
-              <CartaoEdicao vazio acao="palpite" isMobile={isMobile} id="🎫 Programada" estado={{ texto: "SEM EDIÇÃO", cor: COR.muted }} />
-            ) : (
-              <div
-                data-testid="op-edicoes-scroll"
-                style={{
-                  display: "flex", gap: isMobile ? "0.75rem" : "1rem",
-                  overflowX: "auto", overflowY: "hidden",
-                  scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch", paddingBottom: "0.25rem",
-                }}
-              >
-                {programadas.map(cartaoEdicao)}
-              </div>
-            )}
-          </section>
-        )}
-
         {/* UTAC106h — as Regras Oficiais do programa de fidelidade ficam a um toque do ecrã onde
             os pontos se acumulam (requisito Google Play: regras publicadas no app). Só acrescenta
             o link — nenhuma outra alteração a este ecrã. */}
@@ -360,44 +372,14 @@ export default function OfertasProgramadas() {
           </Link>
         </GlassCard>
 
-        {/* 6 — TABELA «Palpites — Edição <id>» (UTAC107e.1, R18-C: estrutura). UTAC108e.1: aparece SEMPRE
-            (sem edição, só «Palpites», vazia — como a do MLC). Último vidro, padrão
-            da Regra 2 (o mesmo vidro e as 3 colunas da tabela do Menor Lance Único).
-            UTAC107e.2 (Frente C): os dados vêm do `ler-palpites`. Durante a edição o servidor NÃO manda
-            o valor — a coluna mostra 🔒; depois do fecho mostra o palpite. */}
+        {/* 6 — TABELA «📋 Palpites — Edição <id>» (último vidro). UTAC109g (B1): o MESMO padrão da
+            «📋 Lances — Edição R-1» do MLC (`TabelaLances.jsx`) — título Orbitron com o id a dourado, selo do
+            estado, «🔒 valores ocultos até o fim», vazio com 📭, lista de cartões no telemóvel e tabela no
+            desktop. Dados do `ler-palpites` (UTAC107e.2): durante a edição o valor não vem (🔒). */}
         {!loading && !erro && (
-          <section data-testid="op-tabela-fim" aria-label={edicaoTabela ? `Palpites — Edição ${edicaoTabela.id}` : "Palpites"}
-            className="gut-glass-standard" style={{ color: COR.text, padding: isMobile ? "1rem" : "1.5rem" }}>
-            <h3 style={{ margin: "0 0 0.75rem", color: COR.gold, fontWeight: 800, fontSize: isMobile ? "0.95rem" : "1.05rem", letterSpacing: "0.04em" }}>
-              {edicaoTabela ? `Palpites — Edição ${edicaoTabela.id}` : "Palpites"}
-            </h3>
-            <div className="w-full overflow-x-auto rounded-2xl">
-              <table className="w-full border-collapse text-sm">
-                <THead>
-                  <tr>
-                    <TH>#</TH>
-                    <TH>Participante</TH>
-                    <TH>Palpite</TH>
-                  </tr>
-                </THead>
-                <tbody>
-                  {tabelaPalpites.palpites.map((p, i) => (
-                    <tr key={`${p.endereco}-${i}`} data-palpite-linha>
-                      <TD>{i + 1}</TD>
-                      <TD style={{ fontFamily: "monospace" }}>{curto(p.endereco)}</TD>
-                      <TD>{tabelaPalpites.revelado && Number.isInteger(p.valor) ? `${p.valor} lances` : "🔒"}</TD>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {tabelaPalpites.palpites.length === 0 && (
-              <p style={{ margin: "0.9rem 0 0", textAlign: "center", color: COR.muted, fontSize: "0.85rem" }}>Ainda não há palpites.</p>
-            )}
-          </section>
+          <TabelaPalpites edicao={edicaoTabela} tabela={tabelaPalpites} isMobile={isMobile} />
         )}
-      </div>
-
+      </main>
       {/* UTAC106g — BALÃO de resgate do cartão (componente próprio; a lógica de rede vive no
           `useResgatarCartao`). «Confirmar resgate» debita os 50 pontos e cria o pedido no servidor. */}
       <ResgatarCartaoModal
@@ -412,5 +394,99 @@ export default function OfertasProgramadas() {
         <Toast id={1} variant={toast.variant} message={toast.message} onDismiss={() => setToast(null)} />
       )}
     </div>
+  );
+}
+
+// ── UTAC109g (B1) — «📋 Palpites — Edição <id>», moldada DIRECTAMENTE na «📋 Lances — Edição R-1» do MLC
+// (`components/TabelaLances.jsx`, que é do MLC e não se toca): mesmo vidro, mesmo título (Orbitron, id a
+// dourado), mesmo selo de estado (fonte única `getEstadoEdicao`), mesmo «Prazo», mesmo «🔒 valores ocultos
+// até o fim», mesmo vazio (📭) e o mesmo par telemóvel/desktop (lista de cartões / tabela de 3 colunas).
+// Diferenças declaradas: a ordem é a do servidor (no palpite vence o MAIS PRÓXIMO — ordenar por valor não
+// diz nada) e o vazio tem 1 linha (a 2.ª linha do molde é copy de lance; não se inventa a do palpite).
+const tabelaEstilos = {
+  titulo: { margin: 0, fontWeight: 800, letterSpacing: "0.04em", fontFamily: "'Orbitron', sans-serif", color: COR.gold },
+  badge: { padding: "0.22rem 0.75rem", borderRadius: "20px", fontSize: "0.7rem", fontWeight: 700, color: "#fff" },
+};
+
+function TabelaPalpites({ edicao, tabela, isMobile }) {
+  const id = edicao?.id ?? null;
+  const est = edicao ? getEstadoEdicao(edicao) : null;
+  const fim = edicao?.termino_em ? Date.parse(edicao.termino_em) : NaN;
+  const prazo = Number.isNaN(fim) ? "—" : new Date(fim).toLocaleString("pt-BR");
+  const linhas = Array.isArray(tabela?.palpites) ? tabela.palpites : [];
+  const valorDe = (p) => (tabela?.revelado && Number.isInteger(p?.valor) ? `${p.valor} lances` : "🔒");
+  return (
+    <section data-testid="op-tabela-fim" aria-label={id ? `Palpites — Edição ${id}` : "Palpites"}
+      className="gut-glass-standard" style={{ color: COR.text, padding: isMobile ? "1rem" : "1.5rem" }}>
+      <div style={{
+        display: "flex", justifyContent: "space-between", flexWrap: "wrap",
+        marginBottom: isMobile ? "0.75rem" : "1rem",
+        flexDirection: isMobile ? "column" : "row",
+        alignItems: isMobile ? "stretch" : "center",
+        gap: isMobile ? "0.4rem" : "0.5rem",
+      }}>
+        <h3 data-testid="op-tabela-titulo" style={{ ...tabelaEstilos.titulo, fontSize: isMobile ? "0.95rem" : "1.05rem" }}>
+          📋 Palpites{id ? <>{" — Edição "}<span style={{ color: COR.gold }}>{id}</span></> : null}
+        </h3>
+        {est && (
+          <div style={{ display: "flex", gap: "0.6rem", alignItems: "center", justifyContent: isMobile ? "space-between" : "flex-end", flexWrap: "wrap" }}>
+            {est.timer == null && (
+              <span style={{ fontSize: isMobile ? "0.7rem" : "0.78rem", color: COR.muted }}>Prazo: {prazo}</span>
+            )}
+            <span data-testid="op-tabela-estado" style={{ ...tabelaEstilos.badge, background: est.cor }}>{est.badge}</span>
+            {!tabela?.revelado && linhas.length > 0 && (
+              <span style={{ fontSize: isMobile ? "0.68rem" : "0.74rem", color: COR.muted, fontStyle: "italic" }}>
+                🔒 valores ocultos até o fim
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {linhas.length === 0 ? (
+        <div data-testid="op-tabela-vazia" style={{ color: COR.muted, textAlign: "center", padding: "2rem 1rem", display: "flex", flexDirection: "column", gap: "0.4rem", alignItems: "center" }}>
+          <span aria-hidden="true" style={{ fontSize: "1.6rem", opacity: 0.45 }}>📭</span>
+          <span style={{ fontSize: isMobile ? "0.85rem" : "0.9rem" }}>Ainda não há palpites.</span>
+        </div>
+      ) : isMobile ? (
+        <div data-testid="op-tabela-lista" style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+          {linhas.map((p, i) => (
+            <div key={`${p?.endereco}-${i}`} data-palpite-linha style={{
+              background: "rgba(10,16,42,0.55)", border: "1px solid rgba(245,166,35,0.14)", borderRadius: "12px",
+              padding: "0.75rem 0.85rem", display: "grid", gridTemplateColumns: "auto 1fr auto", alignItems: "center", columnGap: "0.75rem",
+            }}>
+              <div style={{
+                width: "32px", height: "32px", borderRadius: "50%", background: "rgba(245,166,35,0.12)",
+                border: "1px solid rgba(245,166,35,0.25)", color: COR.gold, display: "flex", alignItems: "center",
+                justifyContent: "center", fontWeight: 900, fontSize: "0.85rem", flexShrink: 0,
+              }}>{i + 1}</div>
+              <div style={{ minWidth: 0, fontSize: "0.82rem", color: COR.text, fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{curto(p?.endereco)}</div>
+              <div style={{ fontWeight: 900, fontSize: "0.9rem", fontFamily: "monospace", whiteSpace: "nowrap", textAlign: "right", color: tabela?.revelado ? COR.gold : COR.muted }}>{valorDe(p)}</div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="w-full overflow-x-auto rounded-2xl">
+          <table className="w-full border-collapse text-sm">
+            <THead>
+              <tr>
+                <TH>#</TH>
+                <TH>Participante</TH>
+                <TH>{tabela?.revelado ? "Palpite" : "Palpite 🔒"}</TH>
+              </tr>
+            </THead>
+            <tbody>
+              {linhas.map((p, i) => (
+                <tr key={`${p?.endereco}-${i}`} data-palpite-linha style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                  <TD>{i + 1}</TD>
+                  <TD style={{ fontFamily: "monospace" }}>{curto(p?.endereco)}</TD>
+                  <TD style={{ fontWeight: 700, color: tabela?.revelado ? COR.text : COR.muted }}>{valorDe(p)}</TD>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }

@@ -221,7 +221,11 @@ test("C2 — durante a edição: linhas com quem participou e o valor 🔒", asy
     assert.equal((c.tabela.match(/data-palpite-linha/g) || []).length, 2);
     const t = semTags(c.tabela);
     assert.match(t, /0xAbC1…4567/);
-    assert.equal((t.match(/🔒/g) || []).length, 2);
+    // UTAC109g (B1) — 🔒 por linha (o cabeçalho ganhou «🔒 valores ocultos até o fim», como o MLC).
+    const linhas = [...c.tabela.matchAll(/<(?:tr|div)[^>]*data-palpite-linha[^>]*>([\s\S]*?)<\/(?:tr)>|data-palpite-linha[^>]*>([\s\S]*?)(?=<div[^>]*data-palpite-linha|<\/section>)/g)];
+    assert.equal(linhas.length, 2);
+    for (const l of linhas) assert.equal(((l[1] ?? l[2]).match(/🔒/g) || []).length, 1);
+    assert.match(t, /🔒 valores ocultos até o fim/);
     assert.doesNotMatch(t, /\d+ lances/);
     assert.doesNotMatch(t, /Ainda não há palpites/);
   } finally { c.ctrl.desmontar(); c.dup.restaurar(); }

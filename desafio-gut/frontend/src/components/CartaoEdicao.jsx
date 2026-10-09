@@ -143,12 +143,14 @@ export default function CartaoEdicao({
             )}
             {/* UTAC109f (P4) — a 375 px um tempo em TEXTO («Em andamento — palpite já!») não cabe ao lado do
                 nome: com `flex: none` espremia o nome a zero. Agora o nome tem um mínimo (9rem) e, quando não
-                há espaço para os dois, o tempo desce para a linha de baixo (quebra entre palavras). */}
+                há espaço para os dois, o tempo desce para a linha de baixo (quebra entre palavras).
+                UTAC109g (R18-C) — 9rem deixava o nome com 151 px a 375 px (tempo «EM BREVE» na mesma linha); passou a
+                12,5rem (200 px): abaixo disso o tempo desce de linha e o nome fica com a largura toda. */}
             <div data-testid="cartao-faixa" style={{
               position: "absolute", left: 0, right: 0, bottom: 0, display: "flex", flexWrap: "wrap", alignItems: "center",
               justifyContent: "space-between", gap: "0.35rem 0.6rem", padding: "0.6rem 0.75rem", background: "rgba(5,8,24,0.86)",
             }}>
-              <span data-testid="cartao-nome" style={{ color: COR.gold, fontWeight: 800, flex: "1 1 9rem", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nome}</span>
+              <span data-testid="cartao-nome" style={{ color: COR.gold, fontWeight: 800, flex: "1 1 12.5rem", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nome}</span>
               {tempo && <span data-testid="cartao-tempo" style={{ ...tempoEstilo, fontSize: "1.15rem", flex: "0 1 auto", minWidth: 0, textAlign: "right", lineHeight: 1.15 }}>{tempo}</span>}
             </div>
           </>
