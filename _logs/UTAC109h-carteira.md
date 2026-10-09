@@ -155,3 +155,39 @@ o modal de depósito não mostra o destinatário); nos **estados de erro** acres
   Hermes tem a `DEEPSEEK_API_KEY`). Comando entregue ao operador no relatório do Desktop.
 - **Commits:** `93e17ac` (código, Opus 5.5) → **este commit** (fecho: logs, R18, relatório).
 - **Duração da retomada:** 13:10 → fecho (ver relatório do Desktop) — dentro do HI5 de 2 h do spec.
+
+## Adenda de deploy (auto-deploy do push verificado) — 2026-10-09 13:37-13:47
+
+**Push (GATE 10, foreground):** `git push origin main` → `1a41cf7..6c0b33a  main -> main` (exit 0).
+`git rev-parse HEAD` == `git rev-parse origin/main` == **`6c0b33a`** · `git diff origin/main..HEAD` **vazio**.
+⚠️ **O remote respondeu com aviso de BRANCH PROTECTION:** «Bypassed rule violations for refs/heads/main: Changes
+must be made through a pull request · 2 of 2 required status checks are expected». O push **passou** (o token tem
+bypass). Registado como facto — é a prática da série (os commits anteriores também estão directos no `main`), mas
+fica **declarado** que não houve PR nem status checks nesta entrega.
+
+**O push para `main` dispara o auto-deploy da integração Git do Netlify** (não há `netlify deploy` nenhum). Provado
+**sem redeployar**, por sondagem do que é servido (site `https://silly-stardust-ca71bc.netlify.app`):
+
+| | chunk servido ANTES (13:37) | chunk servido DEPOIS (13:46) |
+|---|---|---|
+| entrada | `index-JU-bvLBq.js` | **`index-mNEUnWvz.js`** |
+| `PrivyRoot` | `PrivyRoot-BLE_HXEc.js` | **`PrivyRoot-CUXUnLA7.js`** |
+| chunk do ecrã | `MinhaCarteira-XkU4GJHh.js` (27 961 B) | **`MinhaCarteira-Bx0eszlL.js`** (27 655 B) |
+| `#ff6b35` (laranja da 109h) | **0** | **2** ✅ |
+| `#00d4aa` (verde-água) | 2 | **0** ✅ |
+| `#00d4ff` (ciano do PIX) | 1 | **0** ✅ |
+| `#f5a623` | 9 | 7 |
+
+⇒ **A prova do deploy é o literal dentro do chunk SERVIDO** (a app é code-split: o `index-*.js` de entrada tem
+~59 KB e **não** contém o ecrã; o caminho é `index.html → index-*.js → PrivyRoot-*.js → MinhaCarteira-*.js`). O
+`#ff6b35` **não existia** no chunk da Carteira antes deste push (o commit `93e17ac` nunca tinha sido empurrado) e
+passou a existir — é a prova directa de que a 109h está em produção. ⚠️ **O nome do chunk NÃO é prova** (o build
+remoto emite nomes diferentes do `dist/` local) e um asset inexistente devolve **200 com o `index.html`** (fallback
+`/* → /index.html`) — daí ter validado o CONTEÚDO, não o código de resposta.
+
+**Qualificado (para não se ler mais do que se mediu):** no MESMO chunk sobrevivem
+`success:#10b981`, `blue300:#fbbf24` e `purple:#a78bfa` — pertencem a um objecto de tokens **dos MODAIS**
+(`ComprarPasseModal`/`ComprarFichasModal`/`Toast`, que partilham o chunk lazy), **fora do âmbito por R18-C**
+(declarado em §Pendências). Não são do `MinhaCarteira` nem do `PainelIndicacao` (onde as cores vivas são só
+`#ff6b35` + `#f5a623` + neutros + `#ef4444`). O `dist/` local **não** serve de referência: está **stale** (0 ×
+`ff6b35`) porque o build do Opus foi «para o scratchpad, não para o `dist/`».
