@@ -16,6 +16,7 @@ const OP = F("pages/OfertasProgramadas.jsx");
 const MLC = F("pages/MercadoLances.jsx");
 const INICIO = F("pages/Dashboard.jsx");
 const CARDLANCE = F("components/CardLance.jsx");
+const CARROSSEL = F("components/CarrosselGUTO.jsx");
 const T_UNICO = "src/components/__tests__/utac109e-cartao-unico.test.mjs";
 const T_OP = "src/pages/__tests__/utac106f-ofertas.test.mjs";
 const T_MLC = "src/pages/__tests__/utac108e1-mlc-op.test.mjs";
@@ -49,6 +50,11 @@ const MUTANTES = [
   { id: "M11", desc: "formato diverge entre famílias (o palpite sem a arte na largura toda)", f: CARTAO, t: [T_UNICO, T_OP],
     de: 'style={{ display: "block", width: "100%", aspectRatio: formato, objectFit: "cover" }} />',
     para: 'style={acao === "palpite" ? { width: 64, height: 64 } : { display: "block", width: "100%", aspectRatio: formato, objectFit: "cover" }} />' },
+  // achados V2/V8 do validador (SEG6), agora cobertos
+  { id: "M12", desc: "(V2) o <video> do carrossel perde o loop", f: CARROSSEL, t: [T_UNICO],
+    de: "            loop\n", para: "" },
+  { id: "M13", desc: "(V8) o carrossel do topo reduzido a 7 vídeos", f: CARROSSEL, t: [T_UNICO],
+    de: "const N = 8;", para: "const N = 7;" },
 ];
 
 let provados = 0;

@@ -125,6 +125,19 @@ describe("UTAC109e · o GUTO animado 7 só enquanto não há edição", () => {
     assert.doesNotMatch(c, /\/assets\/guto\//, "o cartão voltou a ter um caminho de GUTO próprio");
     assert.match(codigo(ler("components/CarrosselGUTO.jsx")), /export const SLIDES = Array\.from\(/);
   });
+
+  // Achados V1/V2/V8 do validador (SEG6): o código estava certo mas sem teste que o protegesse.
+  test("V1/V2 · o GUTO 7 é decorativo (aria-hidden) e o vídeo único repete (loop) — sem crossfade não pararia", () => {
+    const c = codigo(ler("components/CarrosselGUTO.jsx"));
+    assert.match(c, /<video\b[^>]*\bloop\b/, "o <video> do carrossel perdeu o loop (o GUTO 7 tem UM slide e pararia)");
+    assert.ok((c.match(/aria-hidden="true"/g) || []).length >= 4, "algum ramo do carrossel perdeu o aria-hidden");
+    assert.match(r({ ...VAZIO, acao: "lance" }), /data-testid="guto-animado-7"><div aria-hidden="true"/);
+  });
+
+  test("V8 · o carrossel do topo do Início continua com os 8 vídeos (não foi reduzido ao 7)", () => {
+    assert.match(codigo(ler("components/CarrosselGUTO.jsx")), /const N = 8;/);
+    assert.match(codigo(ler("pages/Dashboard.jsx")), /<CarrosselGUTO size=\{isMobile \? 116 : 176\} \/>/, "o topo deixou de usar os slides por omissão");
+  });
 });
 
 describe("UTAC109e · as páginas usam o cartão único com a acção certa (cablagem)", () => {
