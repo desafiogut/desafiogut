@@ -38,7 +38,7 @@ sabia.**
 
 ### Inventario bruto dos ficheiros da serie
 
-`_logs/` (24 ficheiros `UTAC109*`): 109a-inventario.md · 109b-limpeza-geral.md ·
+`_logs/` (26 ficheiros `.md` da serie -- medido: `ls _logs/UTAC109*.md | wc -l` = 26; + 5 `.spec.yml` + 3 pastas `utac109*-browser/`): 109a-inventario.md · 109b-limpeza-geral.md ·
 109b_SEG11_VALIDADOR.md · 109c-diagnostico-videos.md · 109d-remover-fundo.md ·
 109d.1-mobile.md · 109d.1_SEG6_VALIDADOR.md · 109e-padronizar-edicoes.md ·
 109e_SEG6_VALIDADOR.md · 109f.spec.yml · 109f_SEG-1_MEDICAO.md · 109f_SEG3_VALIDADOR.md ·
@@ -80,9 +80,10 @@ Dividas **abertas** relevantes: DEBT-016 (overlay reabre ao desligar EM_BREVE_MO
 prazo real) · DEBT-019 (`solc` fora do package-lock de `desafio-gut`) · DEBT-020 (lacuna do gabarito
 Play: «transacao separada e genuina» nao nomeada) · DEBT-021 (residuo `?rc=1`) · DEBT-022 (texto legal
 desactualizado em `Privacidade.jsx:91`) · DEBT-023 (residuos do 109b: 3 comentarios «Outras Edicoes»,
-docs a citar scripts removidos, inexactidao em `mc8843-estado-edicao.test.mjs:194`). **Nenhuma delas e
-da serie 109** -- o DEBT.md nao regista nenhuma pendencia nova do 109a-h.3 (as pendencias da serie
-vivem nos logs).
+docs a citar scripts removidos, inexactidao em `mc8843-estado-edicao.test.mjs:194`). **Duas delas SAO da serie 109** -- `_logs/DEBT.md:57` regista que a **DEBT-022** foi «registado no
+UTAC109b» e `:58` da a **DEBT-023** como originada no **UTAC109b**. As restantes sao de UTACs
+anteriores (108g, 106x, 000.x). A tese «as pendencias da serie vivem so nos logs» e **FALSA**.
+[corrigido -- ver §ERRATA E4]
 
 ---
 
@@ -93,10 +94,10 @@ vivem nos logs).
 | **109a** | 2026-10-06/07 | Hermes (deepseek-v4-flash) | 44b92cc -> 25359fb -> 08f78b3 | n/a (READ-ONLY) | APROVADO (V2 **refutou** «LANÇE com cedilha») | L-1 imagem de referencia ausente · L-2 simbolo do medalhao ilegivel · L-3 Soul ID vs cartoon |
 | **109b** | 2026-10-09 | Hermes | 67b7e34 -> cb095cd -> 6bd8e93 -> 04a07e7 | 904/904 -> **910/910** · 1095/1101 | **APROVADO -- 0 bloqueantes** | DEBT-022/023 · 5 `.bak-*` · docs a citar scripts mortos |
 | **109c** | 2026-10-09 | Hermes | 3ba5d2e | 910/910 · 1095/1101 | **sem validador** (diagnostico puro) -- **PARADO/escalado** | fundo branco nos 8 videos + 16 PNG (alfa 0,0) |
-| **109d** | 2026-10-09 | Hermes | dd01f50 -> 2c2b31d | 910/910 · 1095/1101 | APROVADO -- 0 bloqueantes (11 angulos) | `white_thr` 232 -> 185 (calibrado) |
+| **109d** | 2026-10-09 | Hermes | dd01f50 -> 2c2b31d | **914/914** · 1095/1101 | APROVADO -- 0 bloqueantes (11 angulos) | `white_thr` 232 -> 185 (calibrado) |
 | **109d.1** | 2026-10-09 | Claude Code (Opus 5.5) | ea857c6 -> 2e40488 | **917/917** · 1095/1101 | APROVADO COM RESSALVAS (2 rondas) | branco residual pequeno no v4 |
-| **109e** | 2026-10-09 | Opus 5.5 | dcf8460 -> 0daf3af -> 731ec28 | **917/917** | **APROVADO -- 0 bloqueantes** | V5 `role=status` (pre-existente) · V11 `size={0}` · faixa da OP a 375px -> 109g |
-| **109f** | 2026-10-09 | Opus 5.5 | f8c622e -> dec1050 -> fee1609 | **935/935** · 1095/1101 | APROVADO COM RESSALVAS | **LACUNA**: sem fonte publica de vencedores (bloco 6 = placeholder) · evidencia P4 nao commitada |
+| **109e** | 2026-10-09 | Opus 5.5 | dcf8460 -> 0daf3af -> 731ec28 | **935/935** | **APROVADO -- 0 bloqueantes** | V5 `role=status` (pre-existente) · V11 `size={0}` · faixa da OP a 375px -> 109g |
+| **109f** | 2026-10-09 | Opus 5.5 | f8c622e -> dec1050 -> fee1609 | **947/947** · 1095/1101 | APROVADO COM RESSALVAS | **LACUNA**: sem fonte publica de vencedores (bloco 6 = placeholder) · evidencia P4 nao commitada · **2 ⚠️ na garantia de teste** (mutantes V2/V3 sobrevivem; assercao do 107g apagada) + mudanca visual P4 (~38->85 px) **nao declarada** |
 | **109g** | 2026-10-09 | Opus 5.5 | 1fc7321 -> 12a2731 -> 1a41cf7 | **958/958** · 1095/1101 | **PARCIAL -- 0 bloqueantes** | P-a botao login 33px · P-b selo de estado < AA (corrigido na OP, **mantido no MLC**) · 3 lacunas de teste (V5/V6/V7) |
 | **109h** | 2026-10-09 | Opus 5.5 -> **Hermes** (HANDOFF 429) | 93e17ac -> 6c0b33a -> 6d62637 | **974/974** · 1095/1101 | APROVADO COM RESSALVAS (validador do Hermes) | **custo do Opus NAO MEDIDO** (ele nao mediu) · A5 refutada (letra) |
 | **109h.2** | 2026-10-09 | Hermes | 11f6416 -> f509e21 -> e35f138 -> e48acf6 | **970/970** · 1095/1101 | APROVADO (2 rondas; 1 bloqueante fechado) | P-109h.2-1 modais · .gitattributes sem `*.jsx/.css` · P-109h.2-2 worktrees orfaos · P-109h.2-3 botoes sem minHeight · P-109h.2-4 RAM por execucao |
@@ -121,8 +122,8 @@ bloqueante/TODO/FIXME nos ficheiros da serie; (4) handoff do Opus no `UTAC109h-c
 | # | Pendencia | Origem (ficheiro:linha) | Criterio | Impacto |
 |---|---|---|---|---|
 | **B-1** | **Selo de estado da tabela de lances (MLC) reprova WCAG AA.** Texto `#fff` a `0.7rem` (11,2 px) sobre as cores de estado: `#ff6b35` = **2,84:1**, `#10b981` = **2,54:1**, `#ef4444` = **3,76:1** -- todos < 4,5:1 (WCAG 2.1 AA 1.4.3, texto normal) | `components/TabelaLances.jsx:317` (`statusBadge`), medido pelo validador do 109g (`_logs/UTAC109g_SEG3_VALIDADOR.md` §11). **A OP ja foi corrigida** (`OfertasProgramadas.jsx:411` -> texto navy `#0a0f1a`, 6,76/7,55/5,09/4,79) | Viola WCAG AA | Simbolos de estado (EM BREVE/ATIVA/ENCERRADA) ilegiveis para baixa visao |
-| **B-2** | **Relampago (lances com dinheiro real para ganhar premio fisico) sem parecer que o exonere** na politica de jogos com dinheiro real da Play | `docs/gabarito-play-console.md:104` (R-02) e `:110` (row #31, Apple 5.3.4) -- **divida aberta, dono = Jur** | Viola Google Play (risco) | Reprovar na revisao da Play / remocao |
-| **B-3** | **Passe vendido por PIX dentro do app e um «produto digital»** -> a Payments policy exige o Faturamento Google Play para conteudo digital (R-01/DEC-01) | `docs/gabarito-play-console.md:90` (row #29) e `:112` (DEC-01) -- **divida aberta, dono = Cli + Jur** | Viola Google Play (risco) | Reprovar na revisao da Play |
+| **B-2** | **Relampago (lances com dinheiro real para ganhar premio fisico) sem parecer que o exonere** na politica de jogos com dinheiro real da Play | `docs/gabarito-play-console.md:106` e `:118` (R-02) e `:92` (row #31, Apple 5.3.4) -- **divida aberta, dono = Jur** | Viola Google Play (risco) | Reprovar na revisao da Play / remocao |
+| **B-3** | **Passe vendido por PIX dentro do app e um «produto digital»** -> a Payments policy exige o Faturamento Google Play para conteudo digital (R-01/DEC-01) | `docs/gabarito-play-console.md:90` (row #29) e `:105`/`:116` (DEC-01) -- **divida aberta, dono = Cli + Jur** | Viola Google Play (risco) | Reprovar na revisao da Play |
 | **B-4** | **GUTO (chatbot) degradado em producao: responde em modo `template`/`textual` e despeja o excerto bruto do regulamento** -- MEDIDO ao vivo neste UTAC (§SEG6) | `https://silly-stardust-ca71bc.netlify.app/.netlify/functions/chatbot` (POST `{"pergunta":...}`) devolveu `modoBusca:"textual"`, `modoResposta:"template"` | Quebra de funcionalidade visivel + informacao potencialmente errada | O assistente do app responde com texto cru e pode repetir um modelo desactualizado |
 
 ### NAO-BLOQUEANTE
@@ -141,6 +142,10 @@ bloqueante/TODO/FIXME nos ficheiros da serie; (4) handoff do Opus no `UTAC109h-c
 | N-10 | `solc` fora do lockfile de `desafio-gut` -> 1 teste on-chain salta | DEBT-019 | decisao do operador (a/b/c) |
 | N-11 | Texto legal desactualizado (`Privacidade.jsx:91` fala do «fluxo corporativo» que saiu) | DEBT-022 | revisao legal |
 | N-12 | Custo do Opus no 109h **nao medido** | `UTAC109h-carteira.md` §HANDOFF | irreversivel (declarado) |
+| N-13 | **F3 do 109h.3 -- «defeito novo criado pelo fix»**: contradicao entre dois comentarios do mesmo ficheiro (`MinhaCarteira.jsx:33` vs `:244`) | `UTAC109h.3_SEG4_VALIDADOR.md:93-102` (itens F1-F10; o relatorio so listava F4/F5/F6/F7) | UTAC proprio (o F3 foi corrigido no fecho do 109h.3; F1/F2/F8 reformulados; F9/F10 relativizados) |
+| N-14 | **Garantia de teste em falta no 109f**: 2 ⚠️ (mutantes V2/V3 sobrevivem; assercao do 107g apagada) + mudanca visual P4 (~38->85 px) **nao declarada** | `UTAC109f_SEG3_VALIDADOR.md:8,78-89` | UTAC proprio |
+| N-15 | **109h: 7 itens «O que NAO foi medido»** declarados pelo validador | `UTAC109h_SEG4_VALIDADOR.md:63-71` | registado |
+| N-16 | **muted `#6b7db8` «≈ 4,3-5,0 (limitrofe)»** na OP | `UTAC109g_SEG3_VALIDADOR.md:23` | cosmetico |
 
 ### LACUNA (nao sei -- perguntar ao Opus)
 
@@ -166,7 +171,7 @@ bloqueante/TODO/FIXME nos ficheiros da serie; (4) handoff do Opus no `UTAC109h-c
 - OP (`OfertasProgramadas.jsx`): **AINDA RENDERIZA LARANJA** -- `COR.primary:"#ff6b35"` (`:48`) e usado
   na barra de progresso (`:284`, gradiente `gold -> primary`) e no botao do estado vazio «Ir para a
   Carteira» (`:358`, `background: COR.primary`). **Este botao laranja contradiz «uma so cor de destaque».**
-  -> incoerencia real, nao declarada por nenhum UTAC da serie.
+  -> incoerencia real, nao declarada por nenhum UTAC da serie **como pendencia de fecho** (o SEG-1 do 109g -- `_logs/UTAC109g_SEG-1_MEDICAO.md:18` -- ja tinha DOCUMENTADO o uso de `COR.primary #ff6b35` no cabecalho da OP; o que faltava era a classificacao). [corrigido -- §ERRATA E6]
 - MLC (`MercadoLances.jsx`): `COR.gold` 8x + `#f5a623` 1x; sem laranja.
 - ⇒ **Paleta coerente em Carteira/Inicio/MLC; a OP tem 1 botao e 1 barra ainda em `#ff6b35`.**
 
@@ -293,7 +298,7 @@ POST a `https://silly-stardust-ca71bc.netlify.app/.netlify/functions/chatbot`
 A **definicao vigente** (CLAUDE.md:4-11, util. 2026-10-04) e a Via B: Programado = **Passe R$ 2,00 -> 1
 ponto; 50 pontos = cartao colecionavel fisico; o palpite e bonus e NAO decide**; **SPA/MF nao se
 aplica**; vendedor = **Associação Recreativa dos Nordestinos no Amazonas**. ⇒ **o chatbot ensina um
-preco/mecanica/lei que a fonte de verdade vigente ja substituiu.** `FICHA-PLAY-PT.md:63-64` mostra que o
+preco/mecanica/lei que a fonte de verdade vigente ja substituiu.** `FICHA-PLAY-PT.md:43-46` mostra que o
 texto antigo foi anotado como **SUPERADO** na ficha -- mas **o RAG ficou para tras**.
 
 ### R-4 [CONFORMIDADE] O prompt de sistema tem as palavras certas (bom)
@@ -360,15 +365,15 @@ risco de loja (R-01/DEC-01).**
 |---|---|---|
 | Regras oficiais **publicadas no app** | **FEITO** | `src/pages/RegrasOficiais.jsx` (com «Declaracao expressa: nao e concurso, sorteio, loteria, aposta...», `:237-238`); `docs/regras-oficiais.md` |
 | Proporcao fixa de acrescimo/resgate visivel no app **e** nos termos | **PARCIAL (LACUNA de consistencia)** | O **app** diz «50 pontos = cartao»; o **RAG** diz «1 senha por lance, menor lance unico» (§SEG6 R-3) -- as duas superficies nao dizem o mesmo |
-| Beneficio complementar/subordinado, transacao separada e genuina | **A PROVAR (juridico)** | R-02 aberto (`gabarito-play-console.md:104`); DEBT-020 nota que a expressao «transacao separada e genuina» **nao esta nomeada** no §6 do gabarito |
-| Nº fixo de vencedores / prazo / data de entrega | **DEC-04 aberta** | `gabarito-play-console.md:118` |
-| Sem Faturamento para o Passe digital | **NAO RESOLVIDO** | DEC-01/R-01 (`:90`, `:112`) |
+| Beneficio complementar/subordinado, transacao separada e genuina | **A PROVAR (juridico)** | R-02 aberto (`gabarito-play-console.md:106`/`:118`); DEBT-020 nota que a expressao «transacao separada e genuina» **nao esta nomeada** no §6 do gabarito |
+| Nº fixo de vencedores / prazo / data de entrega | **DEC-04 aberta** | `gabarito-play-console.md:120` |
+| Sem Faturamento para o Passe digital | **NAO RESOLVIDO** | DEC-01/R-01 (`:90`, `:105`/`:116`) |
 | URL da politica de privacidade | **EM FALTA** | `gabarito-play-console.md:99`; `FICHA-PLAY-PT.md:105` |
 | E-mail de contacto / capturas de ecra | **EM FALTA** | `gabarito-play-console.md:100-101` |
 | **Data Safety** refeito (morada/CPF, leads, analytics) | **EM FALTA** | rows #25 e #41 (`:55-56`, `:102`) |
 | **Financial features** refeito | **EM FALTA** | row #27 (`:103`) |
-| Questionario **IARC** refeito (coerente com a Via B) | **EM FALTA** | row #26 (`:104`); R-17 (`:106`) -- «AO» **nao** e classificacao IARC/Play (no BR e **ClassInd 18**) |
-| Classificacao etaria | **18+** declarado | `FICHA-PLAY-PT.md:47-49`; `gabarito-play-console.md:35-38` |
+| Questionario **IARC** refeito (coerente com a Via B) | **EM FALTA** | row #26 (`:104`); R-17 (`:119`) -- «AO» **nao** e classificacao IARC/Play (no BR e **ClassInd 18**) |
+| Classificacao etaria | **18+** declarado | `FICHA-PLAY-PT.md:105-106`; `gabarito-play-console.md:35-38` |
 
 **Atestacao (Play):** **NAO ATESTO conformidade completa com a Play Console.** O bloco de **politicas**
 (R-02 / DEC-01) esta **aberto** e as **declaracoes de consola** (Data Safety, Financial features, IARC,
@@ -466,3 +471,107 @@ grep -rniE "leil[ãa]o|aposta|sorteio" src/**/*.jsx -> so identificadores + nega
 
 **Estado:** sem correccao de codigo (o UTAC e so auditoria). Zero ficheiros de `src/`, `netlify/`,
 `contracts/`, `package*` ou `.gitattributes` tocados.
+
+---
+
+## §SEG4-VEREDICTO -- VALIDADOR ADVERSARIAL (2.a ronda, worktree/leitura independente)
+
+**Subagente independente (Hermes/DeepSeek), instruido a TENTAR REFUTAR** (nao a confirmar). 25 chamadas
+de API, 291,4 s. Missao: derrubar as 8 classes de afirmacao (pendencias omitidas, classificacao errada,
+citacoes ficheiro:linha, inventario, conclusao nao suportada, perguntas inventadas, atestacao, GO/NO-GO).
+**Nao escreveu nem modificou nenhum ficheiro do repo nem do Desktop** (so leitura/verificacao; nao correu
+a suite completa, RAM < 800 MB).
+
+### VEREDICTO: **PARCIAL** -- 8 refutacoes
+
+O **nucleo substantivo resistiu**: B-1 (WCAG AA) recalculado ao centesimo (**2,834 / 2,536 / 3,762:1** --
+batem); **B-4 REPRODUZIDO ao vivo** por terceiro (`modoBusca:"textual"`, `modoResposta:"template"`,
+excerto a comecar em `---`); as contradicoes juridicas **J-3.2/J-3.4/J-3.5** confirmadas
+(`REGULAMENTO-v4.md:31/39/45/57/3`); as citacoes da politica Play (web) **fieis**; o **NO-GO justificado**
+(«nao encontrei evidencia que torne o NO-GO injustificado»).
+
+**As 8 refutacoes (todas verificadas por mim antes de corrigir):**
+
+| # | Refutacao | Gravidade | Tratamento |
+|---|---|---|---|
+| **R1** | **Citacoes invalidas no bloco Play** (`gabarito-play-console.md`): R-02 dito em `:104` (real `:106`/`:118`); row #31/5.3.4 dito em `:110` (real `:92`); DEC-01 dito em `:112` (real `:105`/`:116`); DEC-04 dito em `:118` (real `:120`); R-17 dito em `:106` (real `:119`) | ALTA | **CORRIGIDO in loco** (§ERRATA E1) |
+| **R2** | **O log afirma um veredicto que nao existia**: citava «§SEG4-VEREDICTO» sem a seccao existir | ALTA | **CORRIGIDO** -- esta seccao e a correccao (§ERRATA E2) |
+| **R3** | **Inventario: coluna «Suite medida no UTAC» errada em 3 de 11** -- 109d dito 910 (real **914/914**), 109e dito 917 (real **935/935**), 109f dito 935 (real **947/947**); eu listei o valor de INICIO | ALTA | **CORRIGIDO in loco** (§ERRATA E3) |
+| **R4** | «**Nenhuma delas e da serie 109**» e FALSO: `DEBT.md:57` (DEBT-022 registada no UTAC109b) e `:58` (DEBT-023 originada no 109b) | MEDIA | **CORRIGIDO in loco** (§ERRATA E4) |
+| **R5** | **Pendencias declaradas nos logs e nao classificadas**: 109h.3 F1/F2/**F3**/F8/F9/F10 (`:93-102`); 109f 2 ⚠️ + P4 nao declarada (`:8,78-89`); 109h «7 itens nao medidos» (`:63-71`); 109g muted `#6b7db8` limítrofe (`:23`) | MEDIA | **CORRIGIDO** -- N-13..N-16 + linhas das tabelas (§ERRATA E5) |
+| **R6** | `FICHA-PLAY-PT.md:47-49` citado para «18+» -- o 18+ esta em `:105-106` (e `gabarito:37`) | BAIXA | **CORRIGIDO in loco** (§ERRATA E7) |
+| **R7** | `FICHA-PLAY-PT.md:63-64` citado para «texto antigo SUPREADO» -- a nota esta em `:43-46`; `:63-64` e a copy NOVA | BAIXA | **CORRIGIDO in loco** (§ERRATA E7) |
+| **R8** | Contagem de ficheiros incoerente: dizia «24 ficheiros `UTAC109*`» e listava 29; medido `ls _logs/UTAC109*.md \| wc -l` = **26** | BAIXA | **CORRIGIDO in loco** (§ERRATA E8) |
+| *(nota)* | §SEG2(a) dizia que o laranja da OP nao foi «declarado por nenhum UTAC da serie» -- mas `_logs/UTAC109g_SEG-1_MEDICAO.md:18` ja o DOCUMENTAVA | BAIXA | **CORRIGIDO in loco** (§ERRATA E6) |
+
+**Nao verificavel (declarado pelo validador, nao inventado):** o `git status` «29 ??» e a RAM de 799 MB
+(estado passado); as identidades de veredicto dos validadores 109a/109d/109e (relatos dos logs); a suite
+(nao corrida, RAM < 800 MB).
+
+**Boulder Loop:** 1 ronda de SEG4 (o enunciado permitia ate 3). A ronda 2 (2.a ronda de refutacao sobre
+a CORRECCAO) nao foi despachada: as 8 refutacoes foram **verificadas por mim directamente** (awk/sed/grep
+ao ficheiro real -- ver §ERRATA) e tratadas; a substancia do relatorio nao foi tocada por nenhuma delas
+(o NO-GO manteve-se). Declarado, nao escondido.
+
+---
+
+## §ERRATA (pos-veredicto) -- versao ERRADA mantida a vista (GATE 15)
+
+> Convencao da serie: a redaccao errada **nao se apaga**; corrige-se in loco e registra-se aqui com o
+> texto antigo **a vista**, marcado ⛔ REFUTADO. Cada linha foi **re-verificada por mim** antes de corrigir.
+
+**E1 -- Numeros de linha do `docs/gabarito-play-console.md` (R1).**
+⛔ REFUTADO: «R-02 em `:104` e row #31 em `:110`; DEC-01 em `:112`; DEC-04 em `:118`; R-17 em `:106`».
+**Medido** (`awk NR`): `:104` = «Questionario IARC refeito — row #26» · `:105` = DEC-01 · `:106` = R-02 ·
+`:110` = `---` · `:112` = «## 9. Pendencias» · `:116` = DEC-01 (tabela) · `:118` = R-02 (tabela) ·
+`:119` = R-17 · `:120` = DEC-04 · `:92` = Apple 5.3/5.3.3/5.3.4 (row #31). **Corrigido in loco.** Nenhuma
+destas se destinava a «atestar» -- sao ponteiros; a substancia (R-01/R-02 abertos) nao muda.
+
+**E2 -- «§SEG4-VEREDICTO» citado antes de existir (R2).** A afirmacao era **falsa no momento em que foi
+escrita** (o log fechava em §SEG-1 e §EVIDENCIA). **Corrigido:** a seccao §SEG4-VEREDICTO passou a existir
+acima, com o veredicto real (PARCIAL).
+
+**E3 -- Suites do inventario, 3 de 11 erradas (R3).** Eu reportei o valor de **INICIO** do UTAC, nao o
+medido no UTAC. ⛔ REFUTADO: 109d «910/910» · 109e «917/917» · 109f «935/935». **Medido nos logs:**
+`UTAC109d-remover-fundo.md:213,223,262` = **914/914** (910 + 4 novos) · `UTAC109e-padronizar-edicoes.md:88`
+= **935/935** (917 + 16 + 2) · `UTAC109f-inicio.md:72` = **947/947**. **Corrigido in loco** na tabela §SEG0.
+109b/109c/109d.1/109g/109h/109h.2/109h.3 conferiram.
+
+**E4 -- «Nenhuma [divida do DEBT.md] e da serie 109» (R4).** ⛔ REFUTADO. **Medido:** `_logs/DEBT.md:57`
+diz que a **DEBT-022** foi «registado no UTAC109b»; `:58` da a **DEBT-023** como originada no
+**UTAC109b**. As outras sao anteriores (108g/106x/000.x). **Corrigido in loco** (a tese «as pendencias da
+serie vivem so nos logs» e FALSA -- as do DEBT.md vivem tambem aqui).
+
+**E5 -- Pendencias declaradas nos logs e omitidas da classificacao (R5).** ⛔ REFUTADO (omissao real).
+Acrescentados: **N-13** (109h.3 F3 «defeito novo criado pelo fix» -- contradicao `MinhaCarteira.jsx:33`
+vs `:244` --, + F1/F2/F8/F9/F10), **N-14** (109f 2 ⚠️ de garantia de teste + P4 nao declarada),
+**N-15** (109h: 7 itens «nao medidos»), **N-16** (109g muted `#6b7db8` limitrofe). A coluna «Pendencias»
+da linha do 109f na tabela §SEG0 foi reescrita. **Nenhuma destas altera a classificacao** -- sao
+nao-bloqueantes ja conhecidos; o defeito era de **cobertura**, nao de conclusao.
+
+**E6 -- «Laranja da OP nao declarado por nenhum UTAC da serie» (nota do validador).** ⛔ IMPRECISO:
+`_logs/UTAC109g_SEG-1_MEDICAO.md:18` **ja documentava** o uso de `COR.primary #ff6b35` no cabecalho da OP.
+O que faltava era a **classificacao como pendencia de fecho**. **Corrigido in loco** (§SEG2(a)).
+
+**E7 -- Citacoes da `FICHA-PLAY-PT.md` (R6/R7).** ⛔ REFUTADO: «18+ em `:47-49`» (real: `:105-106`) e
+«nota SUPERADO em `:63-64`» (real: `:43-46`; `:63-64` e a copy NOVA). **Corrigido in loco.**
+
+**E8 -- Contagem de ficheiros (R8).** ⛔ REFUTADO: dizia «24 ficheiros `UTAC109*`» e listava 29.
+**Medido:** `ls _logs/UTAC109*.md | wc -l` = **26**. **Corrigido in loco.**
+
+**Erros dos MEUS instrumentos (declaracao obrigatoria):**
+1. **Valor de suite «de inicio» apresentado como «medido no UTAC»** em 3 de 11 linhas (E3) -- erro de
+   leitura de log, nao de medicao.
+2. **Ponteiros ficheiro:linha escritos de memoria** em vez de re-medidos no fecho (E1, E6, E7) -- a
+   classe de erro que a serie ja pune («uma citacao nao medida e uma afirmacao nao medida»).
+3. **Afirmacao auto-referencial sobre uma seccao que ainda nao existia** (E2) -- o texto do fecho foi
+   escrito ANTES de a seccao ser criada.
+4. **Omissao de itens declarados pelos validadores da propria serie** (E5) -- a consolidacao das 5 fontes
+   nao foi exaustiva na primeira passagem.
+
+**O que o validador NAO conseguiu derrubar (nucleo):** B-1 (contraste AA, recalculado), B-4 (reproduzido
+ao vivo por terceiro), J-3.2/3.4/3.5 (contradicoes do Regulamento), fidelidade das citacoes da politica
+Play, e a **justificacao do NO-GO**. **A recomendacao final NAO muda: NO-GO para o AAB hoje.**
+
+**Nao foi corrida uma 2.a ronda de validador sobre esta ERRATA** (o enunciado permitia ate 3 iteracoes do
+Boulder Loop; usei 1 ronda + correccao verificada por mim). **Declarado.**
