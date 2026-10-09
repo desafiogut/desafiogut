@@ -10,7 +10,7 @@
 // claro dos vídeos v2 não é apanhado a 232; a 185 o aço escuro dos eletrodomésticos fica idêntico).
 //
 // O que este guarda protege (e o que morde se for revertido):
-//   V = "mc59"     — os assets são servidos `immutable, max-age=1 ano`; sem subir a constante o
+//   V = "mc60"     — (era mc59 no UTAC109d; subiu no UTAC109d.1) os assets são servidos `immutable, max-age=1 ano`; sem subir a constante o
 //                    browser continuaria a servir os vídeos ANTIGOS (cache-bust vencido).
 //   8 webm + 8 png — os dois formatos existem, não vazios, e os posters continuam RGBA (colour type 6).
 
@@ -34,11 +34,11 @@ test("controlo positivo: componente e pasta de assets existem e lêem-se", () =>
   assert.ok(existsSync(join(RAIZ, CAR)), `${CAR} desapareceu`);
 });
 
-test("cache-bust: a constante V foi subida para mc59 (senão o browser serve os vídeos antigos)", () => {
+test("cache-bust: a constante V foi subida para mc60 (UTAC109d.1) (senão o browser serve os vídeos antigos)", () => {
   const src = lerTexto(COMP);
   const m = src.match(/const V = "([^"]+)"/);
   assert.ok(m, "não encontrei a constante V no componente");
-  assert.equal(m[1], "mc59", `V = "${m[1]}" — os assets têm cache immutable de 1 ano; tem de ser mc59`);
+  assert.equal(m[1], "mc60", `V = "${m[1]}" — os assets têm cache immutable de 1 ano; tem de ser mc60`);
   assert.equal(src.includes("?v=${V}"), true, "os URLs deixaram de usar a constante V");
   // o componente continua a montar os 8 slides a partir dos assets (a troca não cortou nada)
   assert.match(src, /guto-\$\{i \+ 1\}\.webm\?v=\$\{V\}/);

@@ -24,7 +24,7 @@ import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useReducedMotion } from "framer-motion";
 import useAposPrimeiraPintura from "../hooks/useAposPrimeiraPintura.js";
 
-const V = "mc59"; // cache-bust dos assets imutáveis (?v=) — UTAC109d: subiu de mc58 (troca dos 8 vídeos)
+const V = "mc60"; // cache-bust dos assets imutáveis (?v=) — UTAC109d.1: mc59 -> mc60 (8 vídeos reprocessados sem as bolsas brancas)
 const N = 8;
 const SLIDES = Array.from({ length: N }, (_, i) => ({
   webm: `/assets/guto/carrossel/guto-${i + 1}.webm?v=${V}`,
@@ -52,8 +52,11 @@ function CarrosselGUTO({ size = 176, slides = SLIDES }) {
   };
 
   // Garante que o vídeo ATIVO está a tocar (o próximo fica pausado no 1º frame).
+  // UTAC109d.1 — `pronto` nas deps: no 1.º carregamento os <video> só montam DEPOIS
+  // de `pronto` virar true (MC88.36); sem esta dep o efeito já tinha corrido sem
+  // vídeos e nunca mais chamava play() → GUTO parado em t=0 (medido: paused, rs=4).
   useEffect(() => {
-    if (reduce) return;
+    if (reduce || !pronto) return;
     const v = videoRefs.current[cur];
     if (v) {
       try {
@@ -62,7 +65,7 @@ function CarrosselGUTO({ size = 176, slides = SLIDES }) {
         /* noop */
       }
     }
-  }, [cur, reduce]);
+  }, [cur, reduce, pronto]);
 
   useEffect(() => () => clearTimeout(fadeTimer.current), []);
 
