@@ -157,7 +157,20 @@ validado (`d2c8bea`) e exigiria nova ronda de validação — vai para UTAC pró
 | Deploy | **NÃO** feito por mim (proibido neste UTAC). ⚠️ o `push` para `main` dispara o **auto-deploy da
 integração Git do Netlify** — comportamento já declarado no UTAC109h; não é uma acção minha. O deploy
 formal fica para o 110l/AAB |
-| Custo de API | sessoes registadas no `state.db`; **saldo não lido** (R5: o agente não toca em credenciais) |
+| Custo de API | **medido no `state.db`** (ver §5.1) |
+
+### §5.1 · Custo de API (lido do `state.db`, tabela `sessions`)
+
+| Sessão | Papel | Chamadas | Input | Output | Cache read | Reasoning | Estimado (USD) |
+|---|---|---|---|---|---|---|---|
+| `20261012_162002_d2e053` | executor (CLI) | 68 | 96 434 | 73 051 | 6 588 032 | 36 017 | **0,05240** |
+| `20261012_164429_e3dc6a` | validador adversarial (subagente) | 50 | 56 557 | 41 349 | 2 842 368 | 23 087 | **0,02745** |
+| | **TOTAL UTAC110a** | **118** | 152 991 | 114 400 | 9 430 400 | 59 104 | **≈ 0,07985** |
+
+`cost_status = "estimated"` (`cost_source = official_docs_snapshot`) — é uma **estimativa** por tabela de preços
+versionada, **não** uma factura. **Saldo restante: NÃO LIDO** (R5: o agente não toca em credenciais do
+operador). O `actual_cost_usd` na base está a 0,0/`NULL`, ou seja, **não há custo real conciliado** —
+não se inventa.
 
 ---
 
