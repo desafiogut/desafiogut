@@ -5813,3 +5813,28 @@ functions. Instrumento: 1.a versao do verificador indexava o disco (achou um `ch
 `_logs/UTAC110b-plano-melhoria.md` · `_logs/UTAC110b_SEG2_VERIFICACAO.md` · `_logs/UTAC110b_SEG3_VALIDADOR.md` ·
 `Desktop/RELATORIO-UTAC110b-GUTO.txt`.
 **Custo:** validador 132 915 tokens = 2,7–266 ¢ (53 ¢ se tudo input); sessao principal nao medida (`/cost`). **Proximo:** 110c.
+
+## R14 (append) -- UTAC110b.1 -- ARQUITECTURA DO GUTO: AUDITORIA + PROPOSTA (Claude Code, Opus 5.5)
+
+**Tipo:** diagnostico. **ZERO codigo, env, indice ou deploy alterados.** Baseline `ae72248`. A14: 888/882/892 -> PARADO;
+710/736/746 depois de o operador fechar as janelas; **1883/1886/1897** depois de fechar so processos SEM janela (Edge em
+segundo plano + app Claude Desktop no tabuleiro); sessao actual e WhatsApp intactos. Suite **979/979 · 1095/1101**.
+**Arquitectura medida:** o GUTO pensa com o DeepSeek (`chatbot.mjs:1310-1369`) e consulta **tres** fontes de conhecimento + dados vivos:
+(1) Blob `rag` = 3 excertos (6.640 car.), lidos por vector HF (`rag.mjs:216`, o UNICO uso de HF em runtime) ou por palavras;
+(2) dados vivos pelo intent router (Blobs + Supabase), **sem nenhum intent da Via B**; (3) ⛔ **o proprio system prompt**
+(`guto-perfis.mjs:100-162`: `REGRA_LINGUAGEM` + `REGRA_REGULAMENTO` + `ARTIGOS_V4`), que afirma o modelo ANTIGO (senhas,
+«torneio de habilidade», Portaria SPA/MF 1.207/2024) -- **achado do validador, nao visto no 110b nem na 1.a versao deste**.
+Com `TOP_K=3` sobre 3 excertos a busca semantica nao escolhe nada (so ordena; a textual pode devolver 2 de 3).
+**Sonda do operador:** HF 401 e LLM 401 = as duas chaves invalidas (fecha C1 do 110b). **Premissa corrigida pela doc oficial:**
+`deepseek-v4-flash` e nome LEGADO ainda ACEITE (servido pelo V4.1-Flash) -- nao e a causa; nome actual `deepseek-flash`;
+default do codigo `deepseek-chat` nao documentado (LACUNA); thinking ligado por omissao => `max_tokens 512` pode dar `""`.
+DeepSeek oficial nao lista embeddings.
+**Respostas:** HF_API_TOKEN -> nao e preciso se o conhecimento for para o prompt (recomendado); modelo -> `deepseek-flash`;
+banco -> armazenamento serve, conteudo nao; para o conhecimento, deixar de ter indice.
+**Proposta (opcao A):** conhecimento Via B no repo, inteiro no prompt (o padrao ja existe: `ARTIGOS_V4`); sai HF + Blob `rag`
++ 2 scripts de build. ⛔ Passo 3b obrigatorio: reescrever os blocos do system prompt ANTES de religar o LLM (+ teste `mc963`).
+Custo ~US$ 0,5-3 por 1.000 perguntas. 110c dividido em 110c-1 (codigo/testes) e 110c-2 (ligar/verificar).
+**Validador adversarial: PARCIAL, 1 bloqueante** (F1 = fonte 3) -> ERRATA E1-E7 nos 2 documentos, texto errado a vista;
+correccoes NAO re-validadas. **Registo:** `_logs/UTAC110b.1_SEG-1_MEDICAO.md` · `_logs/UTAC110b.1-guto-arquitectura.md` ·
+`_logs/UTAC110b.1-proposta-sistema.md` · `_logs/UTAC110b.1_SEG4_VALIDADOR.md` · `Desktop/RELATORIO-UTAC110b.1-GUTO.txt`.
+**Custo:** validador 376 812 tokens = 7,5–754 ¢ (151 ¢ se tudo input); sessao principal nao medida (`/cost`).
