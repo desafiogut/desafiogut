@@ -312,9 +312,14 @@ const estilos = {
     flexWrap: "wrap",
   },
   titulo: { margin: 0, fontWeight: "800", letterSpacing: "0.04em", fontFamily: "'Orbitron', sans-serif", color: "#f5a623" },
+  // UTAC110a — o branco do molde REPROVAVA o WCAG AA nas cores de estado: 2,84 (EM BREVE) · 2,54
+  // (ATIVA) · 3,76 (ENCERRADA) — todas < 4,5:1, e INDISPONÍVEL dava 4,00. O texto passa a ser o navy
+  // do app (#0a0f1a), a MESMA correcção já em produção no selo da OP (UTAC109g,
+  // `OfertasProgramadas.jsx`): 6,76 · 7,55 · 5,09 (4,79 em INDISPONÍVEL). O fundo do selo é o
+  // `est.cor` OPACO — o mesmo par nos dois ecrãs, sem tingimento pelo vidro.
   statusBadge: {
     padding: "0.22rem 0.75rem", borderRadius: "20px",
-    fontSize: "0.7rem", fontWeight: "700", color: "#fff",
+    fontSize: "0.7rem", fontWeight: "700", color: "#0a0f1a",
   },
   tr: { borderBottom: "1px solid rgba(255,255,255,0.04)" },
 };
