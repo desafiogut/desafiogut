@@ -1,0 +1,45 @@
+schema: utac/1
+name: UTAC110b
+title: "Diagnóstico do GUTO (B-4) + plano de melhoria do RAG para o 110c"
+type: diagnostico
+baseline: e64bf28
+motivo: >-
+  O 109i (2de0ead) mediu B-4: o GUTO em produção responde em modoBusca=textual +
+  modoResposta=template, despeja o chunk cru (começa com "---") e descreve o modelo
+  antigo (1 senha por lance, SPA/MF 1.207/2024). Medir a causa raiz e propor o plano.
+frentes:
+  - id: A
+    nome: Diagnóstico (chave · código · índice · comentário)
+    entrega: [_logs/UTAC110b-guto-diagnostico.md]
+  - id: B
+    nome: Plano de melhoria em 3 níveis + tabela de decisão
+    entrega: [_logs/UTAC110b-plano-melhoria.md]
+autoriza:
+  - ler qualquer ficheiro do repo
+  - listar NOMES das env vars do Netlify (nunca valores — R5/S*)
+  - 1 chamada real ao endpoint do GUTO em produção
+  - ler o índice RAG (Blob rag) e comparar com docs/chatbot/regulamento.md
+  - correr a suíte existente (só leitura)
+  - criar _logs/UTAC110b_* , Desktop/RELATORIO-UTAC110b-GUTO.txt, bloco R14 no CLAUDE.md
+  - git add individual + commit/push em foreground
+  - despachar validador adversarial em worktree próprio (A13)
+proibe:
+  - editar código (chatbot.mjs, rag.mjs, guto-perfis.mjs, scripts/…)
+  - editar env vars / ler valores de credenciais
+  - correr build-rag-index.mjs / alterar o índice RAG
+  - deploy (qualquer)
+  - git add -A
+  - decidir entre reconstruir ou desligar o RAG (decisão do operador)
+dependencias:
+  - UTAC109i fechado (B-4, §SEG6 R-1..R-4)
+  - UTAC110a fechado (HEAD e64bf28)
+  - A14 — RAM livre ≥ 1 500 MB (medida 3×)
+regras_activas: [E, T, G, L, S, A, P, AU, ST, HI]
+regras_extra: [A14, HI5, HI8]
+stop_conditions_extra: []
+ressalvas:
+  - A14: as 3 leituras < 1 500 MB → PARAR e reportar
+  - HI5: > 2 h → dividir em 110b-1 (diagnóstico) e 110b-2 (plano)
+  - se o GUTO responder BEM → reclassificar B-4, não inventar
+  - tentação de corrigir → PARAR e deixar para o 110c
+  - validador REFUTA algo que exige código → escalar, não corrigir
