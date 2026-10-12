@@ -5785,3 +5785,31 @@ terminadas; árvores com janela, a sessão actual, a suíte em curso e tudo o qu
 **Custo:** medido no `state.db` -- executor `20261012_162002_d2e053` (68 chamadas; in 96.434 / out 73.051 / cache_read 6.588.032 / reasoning 36.017) + validador `20261012_164429_e3dc6a` (50 chamadas; in 56.557 / out 41.349 / cache_read 2.842.368) = **118 chamadas, estimado US$ 0,07985** (`cost_status = estimated`, tabela de precos versionada -- **nao e factura**). **SALDO restante NAO LIDO** (R5: o agente nao toca em credenciais); `actual_cost_usd` a 0,0/NULL => **sem custo real conciliado** -- nao se inventa.
 **Pendencia nova:** **P-110a-1** (reforcar o A2: ler `#6b7db8` de `utils/edicao.js` em vez de o copiar) -- registada no `_logs/DEBT.md` como **DEBT-024** (severidade **baixa**, estado **aberta**, UTAC proprio -- ex.: 110a.1).
 **Padrao registado na skill:** o caso deste UTAC (teste de contraste **nao-circular** com metade **bidirecional** + atribuicao das falhas da mutacao por `test at <path>`) ficou como referencia da skill `adversarial-change-verification`: `references/contraste-wcag-e-atribuicao-de-mutacao.md`. **Nao** foi possivel meter o ponteiro no corpo do `SKILL.md`: ele tem **100.483 chars** e o guard de `skill_manage` recusa patches a partir de 100.000 -- **limitacao pre-existente da skill**, nao deste UTAC. Declarado.
+
+## R14 (append) -- UTAC110b -- DIAGNOSTICO DO GUTO (B-4) + PLANO DE MELHORIA (Claude Code, Opus 5.5)
+
+**Tipo:** diagnostico (skill UTAC, tipo `diagnostico`). **ZERO codigo, env, indice ou deploy alterados.** Baseline `e64bf28`.
+**A14:** 375/361/374 MB -> 741/672/717 -> PARADO 2x; o operador autorizou «feche o que for necessario» -> fechados 31 processos de
+servidores MCP NAO usados (browsers e Hermes intactos) -> 1603/1609/1623 MB. Suite **979/979 · 1095/1101** (= baseline).
+**B-4 reproduzido** (mesmos scores do 109i). **Causa MULTIPLA medida:** (C1) as 5 env vars do GUTO (`HF_API_TOKEN`, `LLM_API_KEY`,
+`LLM_BASE_URL`, `LLM_MODEL`, `CHATBOT_ATIVO`) existem e nao estao vazias em `production`, mas HF e DeepSeek falham -- motivo exacto
+= **LACUNA L-1** (R5; `netlify logs` nao mostra o `console.warn`, nem o `console.info`); **scope das vars NAO medido**. (C2) degradacao
+silenciosa. (C3) **indice vivo = fonte de `acad017`** (re-chunking exacto ✓✓✓; HEAD ✓✗✗) -> o `rag:1` ainda diz premio em dinheiro
+«80%»/«valor integral», contra o Art. 14 corrigido em `70a36eb` -- **LATENTE**: com o LLM em baixo o template so mostra 400 car. e o
+«80%» esta na posicao 1541; sai quando o LLM voltar. (C4) **a propria FONTE descreve o modelo antigo** (0x «Passe»/«pontos»; 1x
+«1 senha por lance», «1.207/2024») -> reindexar NAO basta. (C5) comentarios que mentem (`rag.mjs:9-10,145-146,154,248`;
+`build-rag-index.mjs:5-6,10,19`). Ainda: o indice vivo foi feito por `mc964-gerar-chunks.mjs` + `blobs:set`, nao pelo
+`build-rag-index.mjs` (dois builds divergentes); `rag.mjs` tem **0 testes**; o `---` vem de `docs/RAG-GUTO-v2.md:17`.
+**Plano:** 3 niveis; **recomendado Nivel 2** (reescrever a fonte para a Via B com texto APROVADO pelo operador + 5 fraquezas do 109i
++ falhas visiveis + testes de recuperacao); Nivel 3 (pgvector) desproporcionado para 3 chunks. ⛔ **ORDEM OBRIGATORIA no 110c:
+NUNCA religar o LLM (chave/redeploy) antes de reindexar a fonte corrigida** -- hoje o LLM em baixo e o que esconde o «80%».
+Pre-condicao P0: sonda de 2 min corrida PELO OPERADOR com as proprias chaves + confirmar scope «Functions». Mitigacao interina
+opcional (decisao do operador): `CHATBOT_ATIVO=off`.
+**Validador adversarial: APROVADO COM RESSALVAS** (nucleo reproduzido por terceiro; 3 ⚠️: «80% a sair hoje» refutado -> latente;
+ordem 1.1-antes-de-1.2 perigosa -> corrigida; «chave ausente descartada» excedia o medido -> corrigido) -- ERRATA E1-E9 no
+diagnostico, texto errado a vista; correccoes NAO re-validadas. L-2 fechada pelo validador: publicado = `d2c8bea`, sem diff nas
+functions. Instrumento: 1.a versao do verificador indexava o disco (achou um `chatbot.mjs` nao versionado) -> `git ls-files`.
+**Registo:** `_logs/UTAC110b.spec.yml` · `_logs/UTAC110b_SEG-1_MEDICAO.md` · `_logs/UTAC110b-guto-diagnostico.md` ·
+`_logs/UTAC110b-plano-melhoria.md` · `_logs/UTAC110b_SEG2_VERIFICACAO.md` · `_logs/UTAC110b_SEG3_VALIDADOR.md` ·
+`Desktop/RELATORIO-UTAC110b-GUTO.txt`.
+**Custo:** validador 132 915 tokens = 2,7–266 ¢ (53 ¢ se tudo input); sessao principal nao medida (`/cost`). **Proximo:** 110c.

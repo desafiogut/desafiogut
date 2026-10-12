@@ -62,7 +62,7 @@ produção o pedido à HF falha com excepção.** A latência total de 5 s exclu
 | `CHATBOT_ATIVO` | `chatbot.mjs:1258` | ✅ | ✅ |
 | `OPENAI_API_KEY` | só nos **comentários** de `build-rag-index.mjs:10` e `rag.mjs:248` | ❌ | — (não é usada pelo código) |
 
-⇒ **Causa (a) «chave AUSENTE» está DESCARTADA.** O que resta é «chave presente mas rejeitada / sem
+⇒ **Causa (a) «chave AUSENTE» está DESCARTADA.** *⚠️ PARCIALMENTE REFUTADO — ver ERRATA E3: o scope das variáveis não foi medido.* O que resta é «chave presente mas rejeitada / sem
 saldo / modelo indisponível no fornecedor».
 
 ### Sondas anónimas (sem credenciais) — `scratchpad/sonda110b.mjs`
@@ -109,10 +109,12 @@ A diferença (`git diff acad017 HEAD -- docs/RAG-GUTO-v2.md`, linhas 90-93) é o
 
 ⚠️ **O GUTO vivo pode dizer a um consumidor que o prémio é convertível em dinheiro**, o que o regulamento
 corrigido (MC-SORTEIO-01a) proíbe. Gravidade de conformidade **superior** à do texto colado.
+*⚠️ REFUTADO quanto a «HOJE» — ver ERRATA E1: com o LLM em baixo o template só mostra 400 car. e o «80%» está na
+posição 1541 do `rag:1`; o risco é **LATENTE** e materializa-se **no instante em que o LLM voltar**.*
 
 **Quem construiu o índice:** não foi `scripts/build-rag-index.mjs` (esse lê `docs/chatbot/regulamento.md`
 **sem** remover comentários, `:78-86`, e gravaria `fonte:"docs/chatbot/regulamento.md"`, `:130`). Foi
-`scripts/mc964-gerar-chunks.mjs` (remove `<!-- -->` em `:32`, default `docs/RAG-GUTO-v2.md` em `:23`) + upload
+`scripts/mc964-gerar-chunks.mjs` (remove `<!-- -->` em `:32`, default `docs/RAG-GUTO-v2.md` em `:22`) + upload
 manual com `netlify blobs:set`. ⇒ **Há DOIS caminhos de build divergentes no repo.**
 
 **Origem do `---`:** a fonte começa com um comentário HTML seguido de `---`
@@ -172,3 +174,40 @@ reescrita para a Via B — **é conteúdo de produto (decisão do operador, AU3)
 ## §8 · Prova de escopo (zero alterações)
 Ver `_logs/UTAC110b_SEG2_VERIFICACAO.md`. Os ficheiros de código foram lidos, não escritos; o índice foi
 lido (`blobs:list`/`blobs:get`), não escrito; nenhuma env var foi escrita; nenhum deploy.
+
+---
+
+## ERRATA (pós-validador adversarial, SEG3 — `_logs/UTAC110b_SEG3_VALIDADOR.md`)
+
+Veredicto: **APROVADO COM RESSALVAS**. Núcleo reproduzido por terceiro (D1, D5 com a mesma matriz ✓✓✓/✓✗✗, D6, D7,
+D8, D9, D10, S1). As frases erradas acima **ficam à vista** (GATE 15); a correcção está aqui.
+
+- **E1 (⚠️, refuta §4 e P3):** «o GUTO vivo **pode dizer HOJE** que o prémio é convertível em dinheiro» — **falso
+  quanto a hoje**. Medido: em `rag:1` (texto normalizado) «optar por dinheiro» está na posição **1473** e «80%» na
+  **1541**; o template corta a **400** car. (`chatbot.mjs:49`). A 2.ª chamada do validador perguntou directamente
+  pelo prémio em dinheiro e o «80%» **não** saiu. ⇒ risco **LATENTE**: sai **quando o LLM voltar** (o LLM lê o chunk
+  inteiro). Consequência: a **ordem** do 110c passa a obrigatória (ver E2).
+- **E2 (⚠️, plano):** o plano permitia repor a chave do LLM (1.1) antes de reindexar (1.2). Corrigido: **ordem
+  obrigatória 1.3 → 1.4 → 1.2 → 1.1** e, no Nível 2, a 2.0 antes de qualquer religação do LLM.
+- **E3 (⚠️, refuta §3 em parte):** «chave AUSENTE DESCARTADA» excede o medido: vi **nomes** e «não-vazio» no
+  contexto `production`, **não os scopes**. Uma variável sem scope `functions` chega ao código como `undefined` e o
+  `chamarLLM` lança «LLM_API_KEY ausente» (`chatbot.mjs:1314`) — mesma resposta `template`. Correcção: a causa (a)
+  **não está descartada**; está «chave presente no contexto, scope NÃO medido». Entra na sonda P0 do plano.
+  Omitido também: `rag.mjs:206-209` lê `NETLIFY`, `AWS_LAMBDA_FUNCTION_NAME`, `HF_FORCE_REMOTE` (decidem HF vs Xenova).
+- **E4 (parcial, §2):** além de HTTP não-ok/resposta inválida/timeout, chegam a `"textual"` também um **erro de
+  rede do `fetch`** e o **ramo Xenova** (se nenhuma das 3 variáveis de ambiente estiver definida no runtime, o
+  `import` dinâmico falha no Lambda). «O pedido à HF falha» é **provável, não provado**.
+- **E5 (ℹ️):** origem do `---` mal citada — a fonte do índice é `docs/RAG-GUTO-v2.md`, com o `---` em **`:17`**
+  (depois do comentário HTML), não `docs/chatbot/regulamento.md:1-2`. A conclusão mantém-se.
+- **E6 (ℹ️):** comentário mentiroso **adicional** não apanhado: `rag.mjs:154` diz que `HF_API_TOKEN` «força HTTP»
+  — não força (só `ehProducaoLambda()`/`opts.backend` decidem, `rag.mjs:206-216`). Entra no 1.3/2.1.
+- **E7 (ℹ️):** **L-2 fechada pelo validador**: o deploy publicado é `d2c8bea` (19:46Z) e não há diff em
+  `netlify/functions` entre ele e `c1d080d`; os 4 deploys seguintes estão em `error` (no content change).
+- **E8 (ℹ️, números):** `mc964:23` → **`:22`** (corrigido no texto); `chamarLLM` termina em `:1369`; o `warn` do LLM
+  está em **`:1488`**; «B-4 não é intermitente» não prova nada sobre o estado HF/LLM (o score textual é
+  determinístico) — só prova que o índice não mudou; o `netlify logs` não mostrou **nem** o `console.info` ⇒ o
+  instrumento está cego em geral (D4); o argumento do campo `fonte` (D9) é fraco (`--fonte` gravaria o mesmo) — a
+  conclusão aguenta-se pelo **conteúdo** (comentários removidos), não pelo campo.
+- **E9 (ℹ️):** §8 citava `_logs/UTAC110b_SEG2_VERIFICACAO.md`, que não existia — criado no fecho.
+
+**Correcções pós-veredicto NÃO re-validadas** (sem 2.ª ronda) — declarado.

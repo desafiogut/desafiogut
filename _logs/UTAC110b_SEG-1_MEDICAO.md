@@ -1,6 +1,8 @@
 # UTAC110b — SEG-1 · MEDIÇÃO
 
-> **Estado do UTAC:** ⛔ **PARADO no SEG-1** — gate **A14 REPROVADO** (§1). Nenhuma linha de código tocada,
+> **Estado final (actualizado no fecho):** ✅ SEG-1 **SEGUIR** depois do A14 (§1c/§4). O texto do arranque fica abaixo, como foi escrito.
+>
+> **Estado do UTAC (no arranque):** ⛔ **PARADO no SEG-1** — gate **A14 REPROVADO** (§1). Nenhuma linha de código tocada,
 > nenhuma chamada a produção, nenhuma env var lida. Spec: `_logs/UTAC110b.spec.yml` (skill UTAC, tipo `diagnostico`).
 
 ## §1 · A14 — RAM livre (3 leituras, `FreePhysicalMemory/1024`) · ⛔ REPROVADO
@@ -41,7 +43,7 @@ O executor **não lançou** nenhum destes processos neste UTAC ⇒ pela A14 não
 
 - `_logs/UTAC109i-auditoria.md` §SEG6 (R-1 a R-4) — fonte das 5 fraquezas e de B-4.
 - Memória do projecto: o índice RAG vive no Netlify Blob store `rag` (fora do repo); só muda com
-  `scripts/build-rag-index.mjs --yes` + `OPENAI_API_KEY`/`NETLIFY_AUTH_TOKEN`/`NETLIFY_SITE_ID` (operador).
+  `scripts/build-rag-index.mjs --yes` + `OPENAI_API_KEY`/`NETLIFY_AUTH_TOKEN`/`NETLIFY_SITE_ID` (operador). *⚠️ Mito corrigido no diagnóstico: o índice vivo foi construído com `mc964-gerar-chunks.mjs` + `blobs:set`, e nem o `build-rag-index.mjs` usa `OPENAI_API_KEY` no código (só no comentário).*
 
 ## ⚠️ Conflitos / perguntas ao operador (AU3)
 1. **A14:** fechar janelas/processos para libertar RAM (≥ 1 500 MB) e mandar retomar? (Os 17 `node`

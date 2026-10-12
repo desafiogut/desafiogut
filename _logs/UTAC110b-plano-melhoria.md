@@ -6,7 +6,7 @@
 
 ## Pré-condição comum (antes de qualquer nível)
 
-**P0 — Fechar a LACUNA L-1 (o motivo exacto de C1).** É o operador que faz, porque os valores são credenciais (R5).
+**P0 — Fechar a LACUNA L-1 (o motivo exacto de C1).** Inclui confirmar no painel do Netlify que as 4 variáveis (`HF_API_TOKEN`, `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`) têm o **scope «Functions»** (ERRATA E3 — o scope não foi medido; sem ele a variável chega como `undefined`). É o operador que faz, porque os valores são credenciais (R5).
 Sonda sugerida (o operador corre-a na **própria shell** e define ele as variáveis; imprime só status/primeiros bytes):
 
 ```js
@@ -22,7 +22,7 @@ const ll=await fetch(`${base}/chat/completions`,{method:"POST",headers:{"Content
   messages:[{role:"user",content:"oi"}],max_tokens:5})});
 console.log("LLM",ll.status,(await ll.text()).slice(0,120));
 ```
-Leitura: `401/403` ⇒ chave inválida/revogada → **rotar**; `402` ⇒ sem saldo → **carregar**; `404/410` no HF ⇒ o
+Leitura (**diagnóstico apenas — a rotação só se aplica DEPOIS da reindexação, ver ⛔ ORDEM no Nível 1**): `401/403` ⇒ chave inválida/revogada → **rotar**; `402` ⇒ sem saldo → **carregar**; `404/410` no HF ⇒ o
 modelo saiu do fornecedor `hf-inference` → **mudar de endpoint/modelo** (Nível 2, acção 2.6); `200` ⇒ o problema
 está noutro lado (rede da Lambda) → re-diagnosticar. **Custo:** 2 min do operador. **Risco:** nenhum (só leitura).
 
@@ -32,11 +32,16 @@ está noutro lado (rede da Lambda) → re-diagnosticar. **Custo:** 2 min do oper
 
 Objectivo: o GUTO **conversa** (LLM ligado), com **conteúdo correcto à data da última fonte** e sem `---`.
 
+> ⛔ **ORDEM OBRIGATÓRIA (achado ⚠️-2 do validador):** **NUNCA** repor a chave do LLM nem fazer redeploy **antes**
+> de o índice vivo estar reindexado com a fonte corrigida (1.2, e no Nível 2 também a 2.0). Hoje o LLM em baixo é o
+> que **esconde** o «80%» e o modelo antigo (o template só mostra 400 car.). Ligar o LLM primeiro põe-nos no ar.
+> Executar por esta ordem: **1.3 → 1.4 → 1.2 → 1.1**. (A tabela abaixo mantém a numeração original; a ordem é esta.)
+
 | # | acção | onde | custo | risco |
 |---|---|---|---|---|
 | 1.1 | Repor a(s) chave(s) que a P0 apontar (`LLM_API_KEY` e/ou `HF_API_TOKEN`) + **redeploy** (as functions só lêem env no arranque) | Netlify env (operador) | 10-15 min | baixo; mitigação: rotar sem apagar a antiga até a sonda dar 200 |
-| 1.2 | **Reindexar** a fonte actual (`70a36eb`) pelo caminho REAL (`scripts/mc964-gerar-chunks.mjs` + `netlify blobs:set`) — tira o «80 %» do Art. 14 do índice vivo | `scripts/mc964-gerar-chunks.mjs:23,32`; Blob `rag` | 15-20 min | médio: escrever em produção; mitigação: guardar os 4 blobs actuais (`blobs:get`) antes; reverter = `blobs:set` dos antigos |
-| 1.3 | Corrigir os comentários que mentem (só texto, zero comportamento) | `fn/_lib/rag.mjs:9-10`, `:145-146`, `:248`; `scripts/build-rag-index.mjs:5-6,10,19` | 15 min | nulo; mitigação: diff só de comentários |
+| 1.2 | **Reindexar** a fonte actual (`70a36eb`) pelo caminho REAL (`scripts/mc964-gerar-chunks.mjs` + `netlify blobs:set`) — tira o «80 %» do Art. 14 do índice vivo | `scripts/mc964-gerar-chunks.mjs:22,32`; Blob `rag` | 15-20 min | médio: escrever em produção; mitigação: guardar os 4 blobs actuais (`blobs:get`) antes; reverter = `blobs:set` dos antigos |
+| 1.3 | Corrigir os comentários que mentem (só texto, zero comportamento) | `fn/_lib/rag.mjs:9-10`, `:145-146`, `:154`, `:248`; `scripts/build-rag-index.mjs:5-6,10,19` | 15 min | nulo; mitigação: diff só de comentários |
 | 1.4 | Tirar o `---` da 1.ª linha do chunk 0: remover o separador inicial na fonte derivada **ou** fazer o `mc964` aparar `---` iniciais | `docs/RAG-GUTO-v2.md` (início) / `scripts/mc964-gerar-chunks.mjs:32` | 10 min | baixo; o `mc967` compara as 2 fontes — actualizar as duas pelo `mc967-unificar-fontes.mjs` |
 
 **Critérios de sucesso (medidos em produção, 1 chamada cada):**
@@ -114,7 +119,11 @@ GUTO passar a precisar de vários documentos. **Com 3 chunks, pgvector é despro
 3. **1.3 + 2.6 + 2.8** — comentários e falhas visíveis (não mudam o que o utilizador vê; tiram as armadilhas).
 4. **2.3 + 2.4 + 2.7** — chunking por secção, limiar, testes de recuperação (A/B antes de reindexar).
 5. **2.2 + 2.5** — cache e build único com guarda de sincronia.
-6. **1.1** (chaves) **+ 1.2** (reindexar a fonte nova) **+ redeploy**, e verificação em produção com 3 perguntas.
+6. **1.2** (reindexar a fonte nova) e **verificar o índice vivo** (`blobs:get`: 0× «80%», 0× «1 senha por lance»)
+   — **só depois** **1.1** (chaves) **+ redeploy**, e verificação em produção com 3 perguntas. *(Ordem corrigida pelo
+   achado ⚠️-2 do validador; a versão anterior punha 1.1 antes de 1.2.)* Nota (ℹ️ do validador): o deploy publicado é
+   `d2c8bea` e os 4 deploys seguintes estão em `error` («no content change», commits só de docs) — o redeploy do
+   110c tem de ser confirmado pelo `commit_ref` do deploy publicado.
 
 ## Riscos transversais e mitigação
 
@@ -129,7 +138,8 @@ GUTO passar a precisar de vários documentos. **Com 3 chunks, pgvector é despro
 
 ## Recomendação do executor
 **Nível 2.** Justificação medida: (1) o Nível 1 deixa o GUTO a ensinar o modelo antigo (C4); (2) há uma afirmação
-de conformidade **errada a sair hoje** (prémio convertível em dinheiro, C3); (3) as falhas são silenciosas (C2) e o
+de conformidade **errada a sair hoje** *(⚠️ REFUTADO — ERRATA E1: é LATENTE, sai quando o LLM voltar; razão
+ainda mais forte para não religar o LLM antes de reindexar)* (prémio convertível em dinheiro, C3); (3) as falhas são silenciosas (C2) e o
 `rag.mjs` não tem testes (E1) — corrigir sem rede repete o problema; (4) o Nível 3 é desproporcionado para 3 chunks.
 **Mitigação interina possível, se o 110c demorar:** `CHATBOT_ATIVO=off` (o endpoint devolve 503, `chatbot.mjs:1378-1380`)
 — tira a informação errada do ar. **É uma decisão do operador; este UTAC não a toma.**
