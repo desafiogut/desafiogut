@@ -142,6 +142,20 @@ da OP.
 copiar. **Não foi feito aqui de propósito**: alterar o teste neste ponto invalidaria o próprio sha
 validado (`d2c8bea`) e exigiria nova ronda de validação — vai para UTAC próprio.
 
+### §4.1 · Ressalva de ambiente do validador (A13 — remoção do worktree)
+
+O validador reportou, com prova: o helper fez o `rmdir` das **4 junctions** com sucesso
+(**`node_modules` REAL intacto** — contagens verificadas **380 / 568 / 498 / 414** entradas; confrontado pelo
+executor depois: raiz **380**, `frontend` **498**), mas o `git worktree remove` falhou com **`EPERM`** — lock
+transitório do Explorer/SearchIndexer sobre o **Desktop**. **O helper recusou forçar** (comportamento
+correcto pela invariante da A13). Depois de o registo desaparecer do `git worktree list`, o resto foi
+removido com `Remove-Item` **só após provar 0 reparse points** na árvore (guarda exportado `listarReparse()`)
+— **nunca se seguiu uma junction**. `DESAFIOGUT-wt-110a` já não existe; confirmado pelo executor.
+
+⚠️ **Lição de ambiente (recorrente):** worktrees criados **no Desktop** sofrem locks do Explorer/Indexador e
+o `git worktree remove` pode dar `EPERM`. Isso **não** autoriza forçar o delete: a ordem correcta é
+`rmdir` das junctions → provar 0 reparse points → só então remover o resto.
+
 ---
 
 ## §5 · SEG4 — FECHO
