@@ -6116,3 +6116,64 @@ nao existe UMA resposta de modelo para inspeccionar). **Proximo passo: do OPERAD
 conta dona da chave do Netlify (comparando **prefixos**), confirmar que a conta esta **ACTIVA**, e
 carregar saldo LA (ou criar chave nova na conta que tem saldo + redeploy). Depois eu re-corro as 5
 perguntas e so entao se mede `modoResposta:"llm"`. **Nao escalar para novo UTAC sem decisao do operador.**
+
+## R14 (append) -- UTAC110c-2d -- GUTO FUNCIONAL EM PRODUCAO. **B-4 FECHADO** (Hermes/DeepSeek)
+
+**Tipo:** verificacao em producao. **ZERO codigo, env vars ou deploy alterados por mim.** Baseline
+`a0ab217`. O operador trocou a `LLM_API_KEY` no Netlify pela chave de uma conta COM saldo (a antiga, de
+conta sem saldo, causava o `HTTP 402` que bloqueou 3 rondas) e fez redeploy.
+
+**PRE-CONDICOES verificadas ANTES de testar:** (1) a cauda mascarada do `LLM_API_KEY` mudou de `DDLD`
+para **`DDDD`**; (2) o deploy `6acdc63b609891bbd25e68e4` esta `ready` **e** `published` (05:53:09Z,
+branch `main`). A mudanca `DDLD`->`DDDD` **valida retroactivamente o metodo da impressao digital**: a
+mesma leitura que serviu para provar que a var NAO mudava (ronda 2c) mudou exactamente como previsto
+quando ela mudou de facto. **Serve nos dois sentidos.**
+
+**AS 5 PERGUNTAS: TODOS OS CRITERIOS CUMPRIDOS.** `modoResposta: "llm"` em **5/5** (era `template` em
+10/10 nas rondas anteriores) · zero 402 · **cita artigo do Regulamento em 5/5** (Art. 1o, 6o, 8o, 9o,
+14o, 17o, 18o, 47o) · vocabulario Via B presente · **ZERO termos proibidos** · respostas 249-369 chars,
+3-4 frases.
+
+**O GUTO NAO INVENTOU NADA:** conferi 9 afirmacoes, uma a uma, contra o texto do Regulamento -- todas
+literais (Art. 1o programa de fidelidade gamificado / Grupo Uniao e Trabalho; Art. 6o R\$ 2,00 preco
+fixo; Art. 8o 10 pontos; Art. 9o 50 pontos -> cartao da Familia Quildo; Art. 14o menor lance unico;
+Art. 17o pontos ganhos por actividade; Art. 18o 1 ponto = R\$ 0,01; Art. 47o ECOQUILDO = R\$ 1,00).
+**Este teste so e possivel porque o Regulamento foi LIMPO das marcas no 110c-1b** -- se ainda tivesse
+`1\text{ ponto} = R\$ 0,01`, o GUTO estaria agora a repetir o valor defeituoso ao utilizador.
+
+**ERRO DO MEU PROPRIO INSTRUMENTO (declarado, com prova):** o contador de frases usava `/[.!?](\s|$)/g`,
+que conta o ponto da abreviatura **«Art.»** como fim de frase -- e como as respostas CITAM artigos, cada
+citacao inflacionava a contagem. Deu-me **FAIL falso em 4 de 5** (6,6,6,8). **Nao refiz as chamadas**:
+recontei os textos gravados com as duas logicas lado a lado -> **5->4, 6->4, 6->3, 6->4, 8->4 = 5/5**. Um
+contador ingenuo transformava uma resposta correcta numa falha de conformidade.
+
+**Validador adversarial: APROVADO COM RESSALVAS, 0 bloqueantes** (`_logs/UTAC110c-2d_SEG3_VALIDADOR.md`,
+20 657 B). Tentou derrubar e **nao conseguiu**; reforcou: **20/20 `llm` em 19 perguntas distintas**
+(extendeu as minhas 5 com 14, e diz que **com 5 teria dado PARCIAL por amostra insuficiente**);
+conferiu **cada** afirmacao factual das 19 respostas (**18 artigos distintos, todos correctos**, incl.
+Art. 51o/33o/41o/24o/30o/38o que eu nao testei); **7 perguntas-armadilha do modelo antigo** («senha»,
+«Portaria SPA/MF», «leilao», «torneio», «sorteio», «premio em dinheiro», «cota de ouro para lojista») ->
+**recusou ou corrigiu em 7/7**; recontou as frases a mao (3,5,4,4,5) e **confirmou a armadilha do meu
+contador** (o ingenuo dava-lhe 3 fails falsos). **Limite declarado: 19 perguntas provam «zero invencoes
+nesta amostra», nao «o GUTO nunca inventa».**
+
+**PENDENCIAS registadas (UTAC proprio; nenhuma bloqueia o B-4):** **P1** alerta automatico sobre
+`llm_http_*` e sobre a taxa de `modoResposta:"template"` -- **e a licao real do B-4**: o GUTO esteve 3
+rondas a responder uma frase fixa **sem avisar ninguem**. **P2** o contexto `dev` do Netlify ainda tem a
+chave ANTIGA => reproduz o 402 fora de producao. **P3** ⚠️ `netlify env:list` **SEM `--context
+production` imprime os VALORES REAIS** dos segredos -- armadilha de R5 em que **o proprio validador caiu
+e declarou** (imprimiu `ADMIN_TOKEN` e `APP_AWS_SECRET_ACCESS_KEY` para o seu transcript em
+`hermes/cache/delegation/live/deleg_3080b2e6/task-0.log`); eu usei sempre `--context production` e
+imprimi so classes. **P4** `package-lock.json` sujo no repo principal (artefacto conhecido do
+`netlify deploy`, nao afecta producao). **P5** o guarda **nao restringe ao Regulamento**: «capital da
+Franca?» -> «Paris!» (nada falso, mas decide-se se se reforca o prompt).
+
+**Correccao de uma afirmacao minha:** escrevi «nada foi alterado»; **e impreciso** -- e exacto no
+worktree e no commit, mas o repo principal tem o `package-lock.json` sujo (mtime entre os meus dois
+commits; os `netlify deploy` desta ronda foram os do operador). A forma correcta e **«zero alteracoes
+MINHAS no worktree/commit»**. Fica com o texto antigo A VISTA.
+
+**Custo: US\$ 0,06 reais** (saldo 1,48 -> 1,42), medido **pelo delta de saldo** e nao pela estimativa do
+`state.db` -- que eu medi **sobrestimar ~2,6x**. **Registo:** `_logs/UTAC110c-2d-verificacao-b4.md` -
+`_logs/UTAC110c-2d_SEG0_saida.txt` - `_logs/UTAC110c-2d_recontagem-frases.txt` -
+`_logs/UTAC110c-2d_SEG3_VALIDADOR.md`.

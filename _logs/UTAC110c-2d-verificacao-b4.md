@@ -77,15 +77,32 @@ respostas **citam** artigos, **cada citação inflacionava a contagem em 1**.
 UTAC110c-1b**. Se ainda tivesse `1\text{ ponto} = R\$ 0,01`, o GUTO leria (e repetiria) o valor
 defeituoso — a ligação entre as duas rondas, agora visível em produção.
 
-## 4. Estado do bloqueador B-4
+## 4. Estado do bloqueador B-4 → ✅ **FECHADO** (validador adversarial: APROVADO COM RESSALVAS, 0 bloqueantes)
 
 **Todos os critérios do enunciado passam.** O objectivo do UTAC110c-1 — «o GUTO responde pelo Regulamento
 inteiro, citando o artigo» — fica **demonstrado em produção**: responde `modoResposta: "llm"`, cita
 artigos correctos e usa o vocabulário Via B, sem zero termos do modelo antigo.
 
-⚠️ **B-4 fica PRONTO A FECHAR, pendente do validador adversarial** (despachado nesta ronda): foi ele que
-apanhou, nas duas rondas anteriores, coisas que eu não vi — o ponto cego do needle-set e o `request_id`
-contaminado. Não fecho um bloqueador sem lhe dar a oportunidade de o tentar derrubar.
+**Validador adversarial** (`_logs/UTAC110c-2d_SEG3_VALIDADOR.md`, 20 657 B) — **tentou derrubar e não
+conseguiu**, e ainda **reforçou** o resultado:
+- **Reproduziu com 20 chamadas em 19 perguntas distintas** (as minhas 5 + 14 adversariais): **20/20
+  `modoResposta:"llm"`, 0 `template`, 0 `llm_http_*`**.
+- **Conferiu cada afirmação factual das 19 respostas** contra o Regulamento, lido por ele: **18 artigos
+  distintos citados, todos correctos**. Apanhou detalhes que eu não tinha testado (Art. 51º, 33º, 41º,
+  24º, 30º, 38º) — todos literais.
+- **7 perguntas-armadilha** do modelo antigo («senha», «Portaria SPA/MF», «leilão», «torneio», «sorteio»,
+  «prémio em dinheiro», «cota de ouro para lojista»): **recusou ou corrigiu em 7/7** — não ensinou o
+  modelo antigo em nenhuma.
+- **Recontou as frases à mão** com lógica corrigida: **3, 5, 4, 4, 5** ⇒ 5/5 ≤ 5 ✅. Confirmou a
+  armadilha do meu contador: o ingénuo dava-lhe **4, 6, 6, 5, 7** = **3 fails falsos**.
+- **Achou o que eu não vi:** com **5 perguntas** teria classificado **PARCIAL por amostra insuficiente**;
+  só a extensão dele a 19 sustenta o fecho. **Limite declarado: 19 perguntas provam «zero invenções
+  nesta amostra», não «o GUTO nunca inventa».**
+
+⚠️ **Uma excepção que ele encontrou (ℹ️ nota, não bloqueante):** à pergunta **«Qual é a capital da
+França?»** o GUTO respondeu **«Paris!»**. A resposta é verdadeira e não é invenção sobre o Regulamento,
+mas mostra que **o guarda não restringe o modelo ao Regulamento** — conhecimento geral passa. Registado
+como pendência (§6).
 
 ## 5. Declarado
 
@@ -93,4 +110,34 @@ contaminado. Não fecho um bloqueador sem lhe dar a oportunidade de o tentar der
   medir o saldo da conta para reportar o consumo real — o meu estimador do `state.db` **sobrestima
   ~2,6×** (medido na ronda anterior), logo uso o saldo, não a estimativa.
 - **Nada alterado:** zero código, zero env vars, zero deploy.
+  > ⛔ **ERRATA — a afirmação acima é IMPRECISA, e o validador mediu-o (ℹ️ N1 dele).** Ela é **exacta**
+  > ao nível do **worktree** (`git status` vazio) e do **commit** (`git diff --stat 71c56c5..a0ab217` = 3
+  > ficheiros, +182 linhas, **todos `_logs/`**, zero código) — que é o que interessa para o teste.
+  > Mas no **repo PRINCIPAL** o `git status` **não está limpo**: `M desafio-gut/frontend/package-lock.json`,
+  > com **mtime 02:48 local** (entre o commit da 2c, 02:45:31, e o da 2d, 03:05:46) e **numstat 31+/53−**
+  > (remove `@tanstack/react-query`, `@tanstack/query-core`, `@types/react`; acrescenta `"dev": true`) —
+  > assinatura de um `npm install/ci`.
+  > **A forma correcta da afirmação é: «zero alterações MINHAS no worktree/commit»** — não «nada foi
+  > alterado em lado nenhum». Fica registado assim, com o texto antigo à vista.
+  > 📌 **Causa mais provável, e é conhecida:** `netlify deploy` corre **build local** e ensuja este
+  > ficheiro — está na memória do projecto desde o UTAC110c-2. Os `netlify deploy` desta ronda foram os
+  > **do operador** (é ele que publica), o que explica o mtime entre os meus dois commits. Não é, por
+  > isso, uma alteração minha — mas **eu não devia ter escrito «nada foi alterado» sem o qualificar.**
+  > **Pendência em §6.**
 - **Latências:** 1,4-5,5 s (a 1.ª inclui *cold start* da função).
+
+## 6. PENDÊNCIAS registadas (para UTAC próprio — **não** são deste UTAC, e nenhuma é bloqueante)
+
+> Regra do operador: arrumação/saneamento vai para **UTAC próprio**, não para o corrente. Ficam aqui
+> registadas para não se perderem — **nenhuma delas é executada nesta ronda**.
+
+| # | pendência | origem | porque importa |
+|---|---|---|---|
+| **P1** | **Alerta automático** sobre `llm_http_*` e sobre a **taxa** de `modoResposta:"template"` em produção | ℹ️ N3 do validador | ⭐ **É a lição real do B-4.** O GUTO esteve **3 rondas** a responder uma frase fixa **sem avisar ninguém**: o único sinal era um `WARN` que alguém tinha de ir ler. Sem isto, uma futura expiração de chave/saldo **volta a passar em silêncio, pelo mesmo caminho**. Acompanhar também com as **5 perguntas de regressão** deste UTAC, a correr após qualquer rotação de chave. |
+| **P2** | Contexto **`dev` do Netlify ainda tem a chave ANTIGA** (len 35, texto simples, cauda `DDLD`) — só `production` tem a nova (`DDDD`, mascarada) | ℹ️ N2 | Qualquer corrida **local/`dev`/`branch-deploy`** aponta para a conta **sem saldo** ⇒ **reproduz o 402 fora de produção**. Corrigir propagando a chave, **ou** declarar que só `production` é suportado. |
+| **P3** | `netlify env:list` **sem `--context production` imprime os valores REAIS** de todos os segredos (só `--context production` mascara) | ℹ️ N4 | **Armadilha de R5.** ⚠️ **O próprio validador caiu nela e declarou tê-la cometido**, imprimindo **dois** valores de segredos (`ADMIN_TOKEN`, `APP_AWS_SECRET_ACCESS_KEY`) para o seu transcript: `C:\Users\Moltbot\AppData\Local\hermes\cache\delegation\live\deleg_3080b2e6\task-0.log` (24 768 B) + o respectivo `subagent-summary-*.txt`. **Não foi o executor** (eu usei sempre `--context production` e imprimi só classes). **Acção proposta:** decidir se esses 2 ficheiros se apagam/limpa, e escrever a regra «`env:list` **sempre** com `--context production`» na metodologia. **Risco actual: LOCAL** (ficheiro na máquina do operador; nada saiu para fora). |
+| **P4** | `package-lock.json` do frontend sujo no repo principal (31+/53−, mtime 02:48) | ℹ️ N1 | Artefacto conhecido do `netlify deploy` (build local). **Não afecta produção** (o Netlify serve o bundle publicado). Decidir: reverter, commitar explicitamente, ou deixar declarado. |
+| **P5** | O guarda **não restringe o modelo ao Regulamento**: «Qual é a capital da França?» → **«Paris!»** | achado do validador | Nada falso nem sensível foi dito, e o gasto é irrisório. Decidir: **reforçar o prompt** para recusar tudo o que não seja DesafioGUT, **ou** aceitar e registar. |
+
+✅ **Nenhuma destas pendências bloqueia o B-4**, que fecha pelos seus próprios critérios com o validador
+adversarial a **não** conseguir derrubá-lo.
