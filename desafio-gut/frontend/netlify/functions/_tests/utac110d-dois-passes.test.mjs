@@ -106,6 +106,12 @@ beforeEach(() => {
   cliente = novoCliente();
   alertas.length = 0;
   S.tabelas.saldo_rs.push({ cliente_id: A, payload: { centavos: 500 }, atualizado_em: "x" });
+  // UTAC110e — a compra dos Passes passou a creditar 1 ECOQUILDO e a actualizar o lastro em R$. A migração
+  // `20261014_utac110e_eco_quildo.sql` cria a linha única `id = 1`; o teste semeia-a como a produção a tem
+  // (sem ela o handler responde 502 `creditar_eco_quildo_falhou` / `lastro:LASTRO_AUSENTE`).
+  // ⚠️ Fixture ADITIVA: as asserções deste UTAC vivem em `_tests/utac110e-eco-quildo.test.mjs` — as
+  //    asserções deste ficheiro ficam intactas (GATE 15: não se reescreve UTAC fechado).
+  S.tabelas.eco_quildo_lastro.push({ id: 1, total_emitido: 0, total_usado: 0, reserva_rs_centavos: 0, atualizado_em: "x" });
 });
 const saldo = () => S.tabelas.saldo_rs.find((l) => l.cliente_id === A)?.payload?.centavos;
 const linha = () => S.tabelas.pontos.find((l) => l.endereco === A);

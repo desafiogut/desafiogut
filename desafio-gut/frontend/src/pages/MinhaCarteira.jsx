@@ -6,6 +6,7 @@ import { GlassCard } from "@/components/ui";
 import { useComprarPasse } from "../hooks/useComprarPasse.js";
 // UTAC110d-front — os dois saldos (pontos de fidelidade + créditos de lance) vêm do `ler-pontos`.
 import { usePontos } from "../hooks/usePontos.js";
+import { useEcoQuildo } from "../hooks/useEcoQuildo.js";
 import { passeDoTipo } from "../lib/passes.js";
 import ComprarPasseModal from "../components/ComprarPasseModal.jsx";
 import Toast from "../widgets/toast/Toast.jsx";
@@ -100,6 +101,11 @@ export default function MinhaCarteira() {
     pontosCartao, pontosParaCartao, creditosLance,
     loading: pontosCarregando, erro: pontosErro, refetch: refetchPontos,
   } = usePontos();
+  // UTAC110e (Frente D) — 3.º saldo: ECOQUILDO (moeda social, Arts. 47º-51º). Só leitura: NÃO se
+  // compra, NÃO se converte em dinheiro, NÃO se transfere (Art. 49º); usa-se só no site oficial.
+  const {
+    saldo: saldoEco, loading: ecoCarregando, erro: ecoErro, refetch: refetchEco,
+  } = useEcoQuildo();
   const [tipoEmCurso, setTipoEmCurso] = useState(null);
   const [erroPasse, setErroPasse] = useState("");
   // UTAC106e — feedback da compra: toast do repo + atalho «Carregar agora» no caso 402.
@@ -132,7 +138,9 @@ export default function MinhaCarteira() {
   const saldosIlegiveis = pontosCarregando || Boolean(pontosErro);
   const metaCartao = Number.isSafeInteger(pontosParaCartao) && pontosParaCartao > 0 ? pontosParaCartao : 50;
   const progressoCartao = saldosIlegiveis ? 0 : Math.min(100, Math.round((pontosCartao / metaCartao) * 100));
-  const textoSaldo = (n) => (pontosCarregando ? "…" : pontosErro ? "—" : String(n));
+  // UTAC110e — a mesma leitura honesta serve o ECOQUILDO: passa-se o estado do hook dele.
+  const textoSaldo = (n, carregando = pontosCarregando, erro = pontosErro) =>
+    (carregando ? "…" : erro || n == null ? "—" : String(n));
 
   async function escolherPasse(tipo) {
     if (tipoEmCurso) return;
@@ -145,6 +153,8 @@ export default function MinhaCarteira() {
         setPasseSemSaldo(false);
         setToastPasse({ variant: "success", message: passeDoTipo(tipo)?.sucesso ?? "Passe comprado" });
         try { await refetchPontos?.(); } catch { /* releitura é best-effort */ }
+        // UTAC110e (D3) — cada Passe comprado dá 1 ECOQUILDO (R18-110e-1): relê-se também.
+        try { await refetchEco?.(); } catch { /* releitura é best-effort */ }
       } else if (r?.status === 402 || r?.code === "saldo_insuficiente") {
         setPasseSemSaldo(true);
         setErroPasse("Saldo insuficiente. Deposite via PIX e tente de novo.");
@@ -258,7 +268,9 @@ export default function MinhaCarteira() {
                   do saldo (Regra 1): pontos de fidelidade (rumo ao cartão, X / 50 + barra) e
                   créditos de lance (cada lance no Menor Lance Único consome 1). */}
               <div data-saldos-passe="" style={{
-                display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem", marginBottom: "0.95rem",
+                // UTAC110e — 3 saldos: lado a lado no desktop; empilhados no telemóvel (3 colunas
+                // a 375 px apertariam o texto dos rótulos).
+                display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: "0.6rem", marginBottom: "0.95rem",
               }}>
                 <div data-saldo="fidelidade" style={{
                   padding: "0.65rem 0.75rem", borderRadius: "12px",
@@ -295,10 +307,29 @@ export default function MinhaCarteira() {
                     {!saldosIlegiveis && creditosLance === 1 ? "disponível" : "disponíveis"}
                   </div>
                 </div>
+                {/* UTAC110e (Frente D2) — ECOQUILDO: SÓ leitura. Sem botão de compra (Art. 49º: não
+                    se compra, não se converte em dinheiro, não se transfere); usa-se no site oficial. */}
+                <div data-saldo="eco-quildo" style={{
+                  padding: "0.65rem 0.75rem", borderRadius: "12px",
+                  background: "rgba(245,166,35,0.06)", border: "1px solid rgba(245,166,35,0.25)",
+                }}>
+                  <div style={{ fontSize: "0.7rem", color: COR.text, fontWeight: 700 }}>🪙 ECOQUILDO</div>
+                  <div style={{ fontSize: "1.25rem", fontWeight: 900, color: COR.gold, lineHeight: 1.2 }}>
+                    {textoSaldo(saldoEco, ecoCarregando, ecoErro)}
+                  </div>
+                  <div style={{ fontSize: "0.68rem", color: COR.text, opacity: 0.85, marginTop: "0.25rem" }}>
+                    Usável no site oficial
+                  </div>
+                </div>
               </div>
               {pontosErro && (
                 <p style={{ margin: "-0.5rem 0 0.8rem", fontSize: "0.72rem", color: COR.danger, lineHeight: 1.4 }}>
                   ⚠️ Não foi possível ler seus pontos e créditos agora.
+                </p>
+              )}
+              {ecoErro && (
+                <p data-erro-eco-quildo="" style={{ margin: "-0.5rem 0 0.8rem", fontSize: "0.72rem", color: COR.danger, lineHeight: 1.4 }}>
+                  ⚠️ {ecoErro === "Sessão expirada" ? "Sessão expirada." : "Não foi possível ler seu ECOQUILDO agora."}
                 </p>
               )}
 

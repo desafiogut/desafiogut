@@ -40,6 +40,32 @@ const ESQUEMA = {
   saldo_rs: { colunas: ["cliente_id", "payload", "atualizado_em"], notNull: ["cliente_id"], unicos: [["cliente_id"]], uuid: [], defaults: () => ({}), checks: [] },
   saldo_rs_creditos: { colunas: ["pedido_id", "payload", "criado_em"], notNull: ["pedido_id"], unicos: [["pedido_id"]], uuid: [], defaults: () => ({ criado_em: new Date().toISOString() }), checks: [] },
   saldo_rs_debitos: { colunas: ["operacao_id", "payload", "criado_em"], notNull: ["operacao_id"], unicos: [["operacao_id"]], uuid: [], defaults: () => ({ criado_em: new Date().toISOString() }), checks: [] },
+  // UTAC110e — migração `20261014_utac110e_eco_quildo.sql`: ECOQUILDO (saldo >= 0, histórico array) e o
+  // lastro contabilístico de LINHA ÚNICA (`id = 1`, contadores >= 0). Fiel aos CHECKs de produção.
+  eco_quildo: {
+    colunas: ["endereco", "saldo", "historico", "atualizado_em"],
+    notNull: ["endereco"],
+    unicos: [["endereco"]],
+    uuid: [],
+    defaults: () => ({ saldo: 0, historico: [], atualizado_em: new Date().toISOString() }),
+    checks: [
+      (l) => Number.isInteger(l.saldo) && l.saldo >= 0,
+      (l) => Array.isArray(l.historico),
+    ],
+  },
+  eco_quildo_lastro: {
+    colunas: ["id", "total_emitido", "total_usado", "reserva_rs_centavos", "atualizado_em"],
+    notNull: ["id"],
+    unicos: [["id"]],
+    uuid: [],
+    defaults: () => ({ total_emitido: 0, total_usado: 0, reserva_rs_centavos: 0, atualizado_em: new Date().toISOString() }),
+    checks: [
+      (l) => l.id === 1,
+      (l) => Number.isInteger(l.total_emitido) && l.total_emitido >= 0,
+      (l) => Number.isInteger(l.total_usado) && l.total_usado >= 0,
+      (l) => Number.isInteger(l.reserva_rs_centavos) && l.reserva_rs_centavos >= 0,
+    ],
+  },
 };
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const erro = (code, message) => ({ data: null, error: { code, message, details: null, hint: null } });
@@ -119,6 +145,10 @@ export function criarSupabase() {
         else { tabelas[tab].push(nova); linhas = [nova]; }
       } else if (st.op === "update") {
         for (const c of Object.keys(st.dados)) if (!esq.colunas.includes(c)) return erro("42703", `column "${c}" does not exist`);
+        // UTAC110e — gancho simétrico ao `antesDeInserir`, para provar o CAS dos ledgers novos
+        // (`eco_quildo`/`eco_quildo_lastro`): simula um escritor concorrente ANTES de a linha ser lida.
+        // Consome-se uma só vez, como o `antesDeInserir`. Inerte (null) por omissão.
+        if (g.antesDeActualizar) { const h = g.antesDeActualizar; g.antesDeActualizar = null; h(tabelas[tab]); }
         linhas = tabelas[tab].filter(casa);
         // Atómico como o Postgres: valida TODAS as linhas (CHECK + UNIQUE contra as outras e entre si) antes de aplicar.
         const cands = linhas.map((l) => ({ ...l, ...st.dados }));
