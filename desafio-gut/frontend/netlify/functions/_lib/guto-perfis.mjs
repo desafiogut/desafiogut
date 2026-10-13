@@ -25,6 +25,12 @@
 // cita quando cai no RAG vem do índice de embeddings (Blob store `rag`), que só
 // muda quando `scripts/build-rag-index.mjs` for corrido sobre o regulamento
 // corrigido. Ver desafio-gut/docs/MC88.44-EMAIL-DIAGNOSTICO.txt §1.
+// ⭐ UTAC110c-1 (2026-10-12) — O REGULAMENTO INTEGRAL PASSA A VIR NO PROMPT.
+// O texto vive em `./guto-regulamento.mjs` (ficheiro derivado de `docs/GUTO-REGULAMENTO.md`)
+// porque as Netlify Functions são empacotadas pelo esbuild a partir de `netlify/functions/`:
+// um `readFileSync("../../../../docs/…")` funcionaria nos testes e daria ENOENT em Lambda.
+import { REGULAMENTO_TEXTO } from "./guto-regulamento.mjs";
+
 export const EMAIL_SUPORTE = "desafiogut01@gmail.com";
 
 // ── System prompts por perfil (usados como `system` na chamada ao LLM) ───────
@@ -50,10 +56,13 @@ PERFIL: VISITANTE (não autenticado). Sê acolhedor e convida a criar conta para
 participar das edições. Não reveles dados internos nem comandos de administração.`,
 
   // Comum: amigável e didático, emojis leves (= tom base do GUTO).
+  // ⭐ UTAC110c-1: «senhas» saiu (modelo antigo). O Regulamento 5.0 não tem senhas — o produto
+  // digital é o Passe Desafio e o que se acumula são pontos de fidelidade. Sem esta correcção o
+  // prompt do perfil contradizia o documento que segue no fim do mesmo prompt.
   comum: `${SYS_BASE}
 
-PERFIL: UTILIZADOR COMUM (autenticado). Amigável e didático. Ajuda com lances,
-senhas e regras. Não reveles comandos de administração.`,
+PERFIL: UTILIZADOR COMUM (autenticado). Amigável e didático. Ajuda com lances, passes,
+pontos de fidelidade e regras. Não reveles comandos de administração.`,
 
   // Corporativo (Lojista): profissional, direto, SEM emojis.
   corporativo: `Você é o GUTO, assistente do DESAFIOGUT a falar com um LOJISTA (perfil corporativo).
@@ -71,15 +80,21 @@ regulamento e nos dados fornecidos.`,
 // MC29.1 — modo de conformidade (app das lojas, leilão indisponível na
 // plataforma). Transparente: o GUTO NUNCA nega o leilão — informa que está na
 // versão Web e ajuda com a loja. Sobrepõe-se ao tom do perfil.
+//
+// ⭐ UTAC110c-1: o texto interior passou a Via B — saíram «torneio» e «senhas» (modelo antigo,
+// que o Regulamento 5.0 não conhece). A REGRA testada pelo `mcsorteio01a` fica INTACTA: continua
+// a haver a frase «Sobre prazos de entrega, trocas e devoluções, NÃO prometa …» com o
+// EMAIL_SUPORTE — é isso que impede o LLM de inventar prazos (oferta ao consumidor, CDC art. 30).
 const PROMPT_CONFORMIDADE = `Você é o GUTO, assistente do DESAFIOGUT nesta versão do app (loja de e-commerce).
-Nesta versão as edições NÃO estão disponíveis — eles funcionam na versão Web (PWA),
+Nesta versão as Ofertas NÃO estão disponíveis — elas funcionam na versão Web (PWA),
 acessível pelo navegador em desafiogut.com.
 
 Regras:
 - Frases curtas, simpáticas, no máximo 2-3 por resposta.
-- Se perguntarem sobre o torneio, lances, carteira, saldo ou senhas: informe com
-  honestidade que isso está disponível na versão Web (desafiogut.com) e ofereça
-  ajuda com a loja. NUNCA diga que o torneio não existe — diga apenas onde encontrá-lo.
+- Se perguntarem sobre as Ofertas (Relâmpago ou Programada), lances, carteira, passes ou
+  pontos de fidelidade: informe com honestidade que isso está disponível na versão Web
+  (desafiogut.com) e ofereça ajuda com a loja. NUNCA diga que as Ofertas não existem — diga
+  apenas onde encontrá-las.
 - Ajude com dúvidas sobre os produtos. Sobre prazos de entrega, trocas e devoluções, NÃO prometa prazos nem condições: encaminhe para o suporte em ${EMAIL_SUPORTE}.
 - Não invente regras nem dados. Não trate comandos de administração.`;
 
@@ -88,77 +103,140 @@ Regras:
  * MC29.1: se `conformidade` for true, devolve o prompt de loja (independente do
  * perfil) — usado quando o leilão não está ativo na plataforma do utilizador.
  */
-// MC96.2 — REGRA DE LINGUAGEM, obrigatória em TODOS os perfis.
+// ⭐ UTAC110c-1 (2026-10-12) — REESCRITA PARA O MODELO «VIA B» (Regulamento Oficial 5.0).
 //
-// Porque existe (medido, não suposto): a 2026-09-25, em produção, o GUTO respondia
-// «o DESAFIOGUT é tipo um leilão sim, mas diferente…» e «posso te explicar como funcionam os
-// leilões por aqui». Substituir as strings da PERSONA NÃO chegou — e não podia chegar: quem
-// escreve a resposta é o LLM, que lê os chunks do RAG (onde o «leilão» vive, fora do
-// repositório) e espelha esse vocabulário. A única defesa eficaz DENTRO do repositório é uma
-// regra explícita no prompt do sistema. Sem ela, o objectivo #10 do MC96 não se cumpre naquilo
-// que o testador vê — que é onde conta.
+// O que sai e porquê (causa medida no UTAC110b/110b.1): o texto anterior ensinava o modelo
+// ANTIGO — «torneio de habilidade», «Portaria SPA/MF 1.207/2024» — que o NORTE DO PRODUTO
+// Via B superou (programa de fidelidade gamificado; SPA/MF NÃO se aplica). O GUTO respondia
+// com uma moldura legal que já não descreve o produto; com o regulamento v5 no prompt, a
+// moldura antiga passou a CONTRADIZER a fonte.
+//
+// A LISTA DE PALAVRAS PROIBIDAS mantém-se INTEIRA (`leilão`, `jogo de azar`, `aposta`, `bet`,
+// `sorte`): é o objectivo do MC96.2 — o erro que a produção mostrou a 2026-09-25 — e continua
+// a valer. O que muda é só o VOCABULÁRIO DE SUBSTITUIÇÃO.
+//
+// ⚠️ O RAG FOI RETIRADO. A justificação histórica do MC96.2 dizia que «o 'leilão' vive nos
+// chunks do RAG, fora do repositório»; isso deixou de ser verdade — o índice foi removido e a
+// única fonte que o GUTO lê é o Regulamento Oficial, que está neste prompt. A defesa continua a
+// ser esta regra explícita.
 export const REGRA_LINGUAGEM = `
 
-REGRA DE LINGUAGEM (obrigatória — Portaria SPA/MF 1.207/2024):
-- O DesafioGUT é um TORNEIO DE HABILIDADE com ranking acumulado. NUNCA o chames leilão.
+REGRA DE LINGUAGEM (obrigatória):
+- O DesafioGUT é um PROGRAMA DE FIDELIDADE GAMIFICADO. NUNCA o chames leilão.
 - PALAVRAS PROIBIDAS: "leilão", "leilões", "jogo de azar", "aposta", "bet", "sorte". Isto vale
-  para ti E para quem escreve: se o utilizador disser "leilão", corrige com naturalidade ("é um
-  torneio de habilidade") e continua com o termo correcto — não repitas a palavra dele.
-- USA sempre: "torneio de habilidade", "edição", "lance", "menor lance único", "estratégia",
-  "saldo", "senha".
+  para ti E para quem escreve: se o utilizador disser "leilão", corrige com naturalidade
+  ("é um programa de fidelidade, não é leilão") e continua com o termo correcto — não repitas
+  a palavra dele.
+- USA sempre: "programa de fidelidade", "competição de habilidade", "Oferta Relâmpago",
+  "Oferta Programada", "Passe Desafio", "pontos de fidelidade", "lance", "palpite", "ECOQUILDO".
+- NUNCA enquadres a Oferta Relâmpago em autorização governamental, em regulação de apostas ou em
+  "quota fixa": o DesafioGUT NÃO depende de nenhuma dessas autorizações. Não fales disso nem para
+  o justificar — o Regulamento, que tens no fim, não o diz.
 - Vale MESMO que os textos que recebes usem outro termo: a forma de falar é tua.`;
 
-// MC96.3 — LIGAÇÃO AO REGULAMENTO v4.
+// ⭐ UTAC110c-1 (2026-10-12) — REESCRITO PARA O MODELO «VIA B» E PARA O REGULAMENTO 5.0.
 //
-// Medido no SEG-1: `Art.N = 0` em `chatbot.mjs` e em `guto-perfis.mjs` — o GUTO não citava
-// artigo nenhum. As respostas sobre regras vinham dos chunks do RAG (que o operador ainda não
-// ingeriu na versão v2), logo o GUTO respondia "de memória" e sem âncora normativa.
+// O que era e porque já não serve: o MC96.3 copiou 10 artigos do `docs/REGULAMENTO-v4.md` porque
+// o GUTO **não tinha acesso ao documento** — esse resumo era a única âncora normativa que ele
+// tinha. Isso deixou de ser verdade: desde este UTAC o **Regulamento INTEIRO vai no prompt**
+// (`REGULAMENTO_TEXTO`), e é ELE a fonte. O antigo bloco ensinava «senhas», «Programado (consome
+// SENHAS)» e «Portaria SPA/MF 1.207/2024» — modelo superado pelo NORTE DO PRODUTO Via B.
 //
-// ⚠️ Os textos abaixo foram COPIADOS de `docs/REGULAMENTO-v4.md` (medido, não suposto). Se o
-// v4 mudar, estes factos têm de mudar com ele — é o que o teste bidireccional verifica.
+// O que este mapa passa a SER: uma **ÂNCORA DE CITAÇÃO** — um índice curto artigo → frase, para o
+// modelo citar depressa. **NÃO é conhecimento independente**: cada âncora tem de ser um excerto
+// VERBATIM do artigo correspondente, e `_tests/mc963-guto-regulamento.test.mjs` verifica-o artigo
+// a artigo contra `docs/GUTO-REGULAMENTO.md`. Se um dia divergirem, o teste cai — não se descobre
+// em produção.
+//
+// ⚠️ O NOME `ARTIGOS_V4` é HISTÓRICO e mantém-se de propósito: é citado pelos guardas da série
+// (`mc962`, `mc963`). O conteúdo é do Regulamento **5.0** — o nome NÃO é uma afirmação de versão.
+// (Renomear a export obrigaria a mexer em guardas que não fazem parte do escopo deste UTAC.)
+//
+// ⚠️ As âncoras escrevem os VALORES na forma correcta (`R$ 2,00`), não na forma **defeituosa** que
+// o PDF oficial imprime (`R\$ 2,00`, `1\text{ ponto}`). Ver a secção **ERRATA DA FONTE** no topo
+// de `docs/GUTO-REGULAMENTO.md`: é um defeito do documento de origem, declarado, não uma
+// divergência destas âncoras. O teste compara-as com a fonte **já sem esse defeito**
+// (`semEscapesDaFonte`, abaixo).
 export const ARTIGOS_V4 = {
-  "5":  "O interessado deverá se cadastrar gratuitamente para participar do DesafioGUT.",
-  "6":  "O(a) cadastrado(a) deverá ser obrigatoriamente maior de idade e receberá um código único, intransferível e exclusivo de acesso para realizar lances.",
-  // ⚠️ Corrigido pelo teste bidireccional: o Art. 7 NÃO usa a expressão «torneio de habilidade»
-  // (essa está nos Arts. 1º e 38º). O Art. 7º define a MECÂNICA: a pergunta «QUANTO VOCÊ OFERTA
-  // POR... este produto ou serviço?», o menor lance único, e o resultado determinado pela
-  // ESTRATÉGIA do participante — não por aleatoriedade.
-  "7":  "O DesafioGUT funciona por aplicativo, pela pergunta \"QUANTO VOCÊ OFERTA POR... este produto ou serviço?\". Vence quem realizar o menor lance único, sendo o resultado determinado pela estratégia do participante e não por mecanismos de aleatoriedade.",
-  "8":  "O(a) participante poderá ofertar lances por meio de: (i) saldo em dinheiro, na modalidade Relâmpago; (ii) senhas, na modalidade Programado.",
-  "20": "As senhas, quando utilizadas na modalidade Programado, têm custo unitário de R$ 2,00 (dois reais).",
-  "26": "O participante poderá ofertar qualquer valor de lance a partir de R$ 0,01 (um centavo), sempre com o máximo de 2 (duas) casas decimais.",
-  "27": "O participante ganhador é aquele identificado pelo sistema como autor do menor lance único.",
-  // Art. 38º — o artigo que sustenta a TESE JURÍDICA (e que o briefing do MC NÃO listava).
-  // É aqui que o v4 diz «torneio de habilidade nos termos da Portaria SPA/MF nº 1.207/2024» e
-  // nega expressamente «aposta de quota fixa, jogo de azar, loteria». Sem ele, o GUTO cita
-  // factos de mecânica mas não a base legal — que é o que a defesa do modelo exige.
-  "38": "O DesafioGUT constitui torneio de habilidade nos termos da Portaria SPA/MF nº 1.207/2024, sendo o resultado determinado majoritariamente pela estratégia do participante. Não se trata de aposta de quota fixa, jogo de azar, loteria ou qualquer modalidade sujeita a autorização específica.",
-  "1":  "Atividade comercial operada como torneio de habilidade no aplicativo DesafioGUT.",
+  "1":  "O DesafioGUT é um programa de fidelidade gamificado operado pela Associação Recreativa dos Nordestinos no Amazonas",
+  "6":  "O Passe Desafio é o produto digital adquirido pelo utilizador, com preço fixo de R$ 2,00 (dois reais), nas modalidades Passe Relâmpago e Passe Programado.",
+  "8":  "Cada Passe Desafio adquirido concede ao utilizador 10 (dez) pontos de fidelidade.",
+  "9":  "A cada 50 (cinquenta) pontos de fidelidade acumulados, o utilizador poderá adquirir 1 (um) cartão colecionável físico da Família Quildo.",
+  "12": "A Oferta Relâmpago é patrocinada pelos patrocinadores que adquirem as Cotas Bronze e Cotas Prata",
+  "14": "A Oferta Relâmpago é uma competição de habilidade: vence o participante que apresentar o menor valor em pontos de lance que ninguém mais escolheu (menor lance único).",
+  "17": "Os pontos de lance não são comprados com dinheiro real — são ganhos por atividade no aplicativo.",
+  "18": "à razão de 1 ponto = R$ 0,01 (um centavo)",
+  "24": "A Oferta Programada é patrocinada pelos patrocinadores que adquirem as Cotas Ouro e Cotas Diamante",
+  "27": "Vence o palpite que ficar mais próximo do número real de lances apurado pela Associação.",
+  "33": "O palpite vencedor concede, como bónus de fidelidade, +2 (dois) pontos de fidelidade ao participante.",
+  "34": "Os pontos de bónus do palpite não contam para o resgate do cartão colecionável",
+  "37": "1 (um) Passe Desafio = 10 (dez) pontos de fidelidade",
+  "47": "O ECOQUILDO é uma moeda social interna do Grupo União e Trabalho, com lastro em reais à razão de 1 ECOQUILDO = R$ 1,00 (um real).",
+  "52": "será realizada exclusivamente por meio do sistema de faturamento do Google Play (Google Play Billing)",
 };
 
+/**
+ * Remove o DEFEITO DE ORIGEM do Regulamento (ver **ERRATA DA FONTE** no topo de
+ * `docs/GUTO-REGULAMENTO.md`): o PDF oficial imprime `R\$` onde quer dizer `R$` e `N\text{ X}`
+ * onde quer dizer `N X` (9 escapes, nos artigos dos valores).
+ *
+ * Serve para CONFERIR âncoras/afirmações contra a fonte sem que o defeito do documento as faça
+ * parecer divergentes. **O texto transcrito NÃO é alterado** — é com o escape que ele vai no
+ * prompt, tal como está impresso no documento oficial.
+ *
+ * @param {string} t
+ * @returns {string}
+ */
+export const semEscapesDaFonte = (t) =>
+  // ⚠️ O limite `{0,200}` NÃO é decorativo: sem ele, uma ocorrência de `\text{` SEM fechar chave
+  // (ex.: citada em prosa, como aconteceu na ERRATA deste próprio ficheiro) engolia tudo até ao
+  // próximo `}` — 4 646 caracteres, medidos — e transformava o Art. 18 num texto mutilado. Foi um
+  // erro de instrumento, apanhado pelo teste, não em produção.
+  String(t).replace(/\\text\{([^}]{0,200})\}/g, "$1").replace(/\\\$/g, "$");
+
+// ⭐ UTAC110c-1 (2026-10-12) — REESCRITA PARA O MODELO «VIA B» (Regulamento Oficial 5.0).
+//
+// O bloco anterior dizia «REGULAMENTO (v4 — a versão que vai a cartório)» e ensinava, como
+// FACTOS: «base legal: torneio de habilidade nos termos da Portaria SPA/MF nº 1.207/2024»,
+// «Programado (consome SENHAS)», «Senha: R$ 2,00 cada», «saldo em dinheiro (Art. 8º)».
+// **Tudo isso é o modelo ANTIGO**, superado pelo NORTE DO PRODUTO Via B — e, a partir de agora,
+// directamente CONTRADITÓRIO com o documento que segue no prompt. Um prompt que contradiz a
+// própria fonte produz exactamente o defeito que este UTAC veio corrigir.
+//
+// A mudança de fundo: este bloco deixou de trazer os factos em prosa. O **Regulamento INTEIRO**
+// segue no fim do prompt (`REGULAMENTO_TEXTO`) e é a ÚNICA fonte. Aqui ficam as **instruções de
+// uso** dele e o índice de âncoras para citação.
 export const REGRA_REGULAMENTO = `
 
-REGULAMENTO (v4 — a versão que vai a cartório):
-Quando responderes sobre regras, CITA o artigo que fundamenta a resposta, assim: «segundo o
-Art. 26º do Regulamento». Factos verificados que deves usar (não inventes números nem artigos):
-- Cadastro: GRATUITO, e é obrigatório ser maior de idade (Arts. 5º e 6º).
-- A mecânica: a pergunta «QUANTO VOCÊ OFERTA POR... este produto ou serviço?» e o menor lance
-  único, decidido pela ESTRATÉGIA do participante — não por aleatoriedade (Art. 7º).
-- A base legal: é um TORNEIO DE HABILIDADE nos termos da Portaria SPA/MF nº 1.207/2024, e NÃO
-  uma aposta de quota fixa, jogo de azar ou loteria (Art. 38º).
-- Duas modalidades: Relâmpago (debita SALDO em dinheiro) e Programado (consome SENHAS) (Art. 8º).
-- Senha: R$ 2,00 cada, e SÓ na modalidade Programado — o Relâmpago NÃO gasta senhas (Art. 20º).
-- Lance: qualquer valor A PARTIR de R$ 0,01, com no máximo 2 casas decimais (Art. 26º).
-- Vence o MENOR LANCE ÚNICO (Art. 27º).
-- Dúvidas oficiais: contato@grupouniaoetrabalho.com.br (Art. 36º).
-NUNCA cites um artigo que não esteja aqui e nunca inventes o número de um artigo.
+REGULAMENTO OFICIAL (versão 5.0) — COMO USAR:
+O texto INTEGRAL do Regulamento Oficial do DesafioGUT segue no fim deste prompt. É a TUA ÚNICA
+FONTE sobre regras, produtos e mecânica — não tens outra e não precisas de outra.
+- Quando responderes sobre regras, CITA o artigo que fundamenta a resposta, assim: «segundo o
+  Art. 26º do Regulamento».
+- NUNCA cites um artigo que não esteja no texto abaixo e nunca inventes o número de um artigo.
+- Se a resposta NÃO estiver no Regulamento, di-lo com naturalidade e dá uma saída
+  (${EMAIL_SUPORTE}) — não inventes regras, valores nem prazos.
+- Responde CURTO: a regra que interessa, o artigo, e a saída. Não despejes capítulos.
 
-ARTIGOS (texto do Regulamento v4, para citação literal):
+MODELO DE HOJE (Via B): o produto digital é o Passe Desafio (R$ 2,00) — Passe Relâmpago (1 lance)
+e Passe Programado (1 palpite). Cada Passe dá 10 pontos de fidelidade; 50 pontos = 1 cartão
+colecionável físico. Há também a moeda social ECOQUILDO. Descreve SÓ o que o Regulamento diz:
+não acrescentes produtos, créditos ou preços que ele não tenha.
+
+⚠️ DEFEITO CONHECIDO DA FONTE (ver a secção «ERRATA DA FONTE» no texto do Regulamento): o
+documento oficial imprime por engano as marcas «R\\$» e «N\\text{ X}». LÊ-SE «R$» e «N X». Usa
+sempre os valores em reais — nunca repitas «R\\$» nem «\\text{» ao utilizador.
+
+ÂNCORAS DE CITAÇÃO (índice curto; o que MANDA é o texto do Regulamento no fim):
 ${Object.entries(ARTIGOS_V4).map(([n, t]) => `- Art. ${n}º — ${t}`).join("\n")}`;
 
 export function obterPromptSystem(perfil, { conformidade = false } = {}) {
   const base = conformidade ? PROMPT_CONFORMIDADE : (PROMPT_SYSTEMS[perfil] || PROMPT_SYSTEMS.visitante);
-  return base + REGRA_LINGUAGEM + REGRA_REGULAMENTO; // MC96.2 + MC96.3
+  // UTAC110c-1 — o GUTO deixou de ter um índice de 3 excertos (RAG, Blob `rag`) e passou a levar o
+  // Regulamento INTEIRO. Ordem: persona → regras de linguagem → instruções de uso → o documento
+  // (por último, e por isso o bloco mais próximo da pergunta: é a fonte que o modelo deve citar).
+  // MC96.2 + MC96.3 mantêm-se identificáveis no histórico; o conteúdo é Via B / Regulamento 5.0.
+  return base + REGRA_LINGUAGEM + REGRA_REGULAMENTO + "\n\n" + REGULAMENTO_TEXTO;
 }
 
 // ── Helpers de formatação ────────────────────────────────────────────────────
@@ -316,20 +394,26 @@ export const respostasPorPerfil = {
     admin: (p) => `Troco de ${g(p.endereco)}: ${g(p.saldoTroco, "0")} ativas; ${g(p.expiramEmBreve, "0")} a expirar em 5 dias.`,
   },
 
-  // MC17.1 — contratar cota comercial (lojista). Valores oficiais (REQ-04..07).
+  // ⭐ UTAC110c-1 — MODELO VIA B. As antigas «cotas comerciais para lojista» (Bronze R$ 2.640,
+  // Prata R$ 5.600, Ouro R$ 11.000, Diamante R$ 18.000, com senhas de troco do excedente) já não
+  // existem: o lojista saiu do app (UTAC108f) e o Regulamento 5.0 estabelece que as Cotas são
+  // adquiridas por **PATROCINADORES**, com condições definidas em **contrato privado de patrocínio
+  // que NÃO integra o Regulamento** (Arts. 12º e 24º). O GUTO não pode citar valores que o
+  // Regulamento não fixa — antes citava-os (tabela de preços completa), e passava a contradizer a
+  // fonte que agora tem no prompt. Passa a remeter ao contrato e à coordenação.
   comprar_cotas: {
-    visitante: () => "Para anunciar e obter senhas, torna-te parceiro. Cria uma conta! 😊",
-    comum: () => "A contratação de cotas é para lojistas. Posso ajudar com os teus lances! 🙂",
-    corporativo: () => "Contrate a sua cota comercial em Carteira do Lojista: Bronze R$ 2.640, Prata R$ 5.600, Ouro R$ 11.000 ou Diamante R$ 18.000. Pagamento por PIX com confirmação da coordenação. As senhas para licitar vêm do excedente da cota.",
-    admin: () => "Contratação de cota: o lojista solicita no Painel (Adesão/PIX) e a coordenação confirma. As senhas vêm do excedente da cota (não há compra avulsa).",
+    visitante: () => "O patrocínio das Ofertas é falado com a coordenação. Cria a tua conta e fala com a gente! 😊",
+    comum: () => "O patrocínio das Ofertas é falado com a coordenação. Posso ajudar-te com os teus lances e passes! 🙂",
+    corporativo: () => `O patrocínio das Ofertas é contratado directamente com a coordenação: as condições das Cotas (valores, prazos, visibilidade e obrigações) constam de contrato privado de patrocínio e NÃO integram o Regulamento (Arts. 12º e 24º). Contacto: ${EMAIL_SUPORTE}.`,
+    admin: () => `Patrocínio por contrato privado entre a Associação e cada patrocinador (Arts. 12º e 24º do Regulamento) — as condições NÃO integram o Regulamento e o GUTO não as cita. Cota Bronze/Prata -> Oferta Relâmpago; Cota Ouro/Diamante -> Oferta Programada.`,
   },
 
-  // MC17.1 — preços/pacotes das cotas comerciais.
+  // MC17.1 — preços/pacotes das cotas comerciais. (Via B desde o UTAC110c-1 — ver acima.)
   pacotes_cotas: {
-    visitante: () => "Temos 4 cotas: Bronze, Prata, Ouro e Diamante. Cria uma conta para contratar! 😊",
-    comum: () => "As cotas comerciais são para lojistas: Bronze, Prata, Ouro e Diamante. 🙂",
-    corporativo: () => "Cotas comerciais: Bronze R$ 2.640 (produto mín. R$ 660), Prata R$ 5.600 (R$ 1.350), Ouro R$ 11.000 (R$ 2.250), Diamante R$ 18.000 (R$ 4.500). Produto abaixo do mínimo gera senhas de troco (R$ 2 cada, válidas 30 dias).",
-    admin: () => "Cotas (contrato/produto-mín): Bronze 2640/660, Prata 5600/1350, Ouro 11000/2250, Diamante 18000/4500. Excedente do produto -> senhas de troco (30d, FIFO).",
+    visitante: () => "O patrocínio das Ofertas é falado com a coordenação. Cria uma conta para participar! 😊",
+    comum: () => "O patrocínio das Ofertas é falado com a coordenação. 🙂",
+    corporativo: () => `São duas famílias de Cota: Bronze e Prata patrocinam a Oferta Relâmpago; Ouro e Diamante patrocinam a Oferta Programada (Arts. 12º e 24º do Regulamento). Valores e demais condições são definidos em contrato privado de patrocínio, fora do Regulamento — pede a tabela à coordenação (${EMAIL_SUPORTE}).`,
+    admin: () => "Cotas: Bronze/Prata -> patrocínio da Oferta Relâmpago; Ouro/Diamante -> patrocínio da Oferta Programada. Valores e condições só no contrato privado — não estão no Regulamento e o GUTO não os cita.",
   },
 
   // MC17.1 — relatório de compras/senhas para o admin.

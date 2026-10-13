@@ -1,13 +1,26 @@
-// mc963-guto-regulamento-v4.test.mjs — MC96.3, Frente A.
+// mc963-guto-regulamento-v4.test.mjs — GUTO: o prompt corresponde ao REGULAMENTO OFICIAL.
 //
-// Medido no SEG-1: `Art.N = 0` em `chatbot.mjs` e `guto-perfis.mjs` — o GUTO não citava artigo
-// nenhum. As perguntas sobre regras eram respondidas "de memória", sem âncora normativa.
+// ⚠️ O NOME DO FICHEIRO É HISTÓRICO («v4»). O CONTEÚDO é do **Regulamento Oficial 5.0** desde o
+// UTAC110c-1 (2026-10-12). O ficheiro manteve o nome para não partir a série; renomear testes
+// fechados não é escopo de uma correcção (GATE 15) — declara-se em vez de se fazer.
 //
-// HARD GATE 7 — BIDIRECCIONAL, e é aqui que o teste ganha o direito ao nome:
-//   (a) o prompt instrui a citar o artigo e traz os factos;
-//   (b) cada facto do prompt CORRESPONDE ao texto real do `docs/REGULAMENTO-v4.md` (lido, não
-//       copiado) — é isto que impede o prompt de "saber" um regulamento que não existe;
-//   (c) alterar o v4 TEM de matar o teste (mutação sobre o DOCUMENTO, não sobre o código).
+// HISTÓRIA (o que este teste era, e porque mudou):
+//   MC96.3 — `Art.N = 0` em `chatbot.mjs` e `guto-perfis.mjs`: o GUTO não citava artigo nenhum.
+//   A resposta vinha dos chunks do RAG. Criou-se um resumo de 10 artigos do v4 (`ARTIGOS_V4`) e
+//   este teste verificava-o contra `docs/REGULAMENTO-v4.md`.
+//   UTAC110c-1 — o GUTO passou a levar o **Regulamento INTEIRO** no prompt e o resumo passou a
+//   ser um **índice de ÂNCORAS para citação**. O que este teste vigia mudou com ele:
+//   (a) os 4 perfis (e o modo de conformidade) levam a instrução de citar o artigo;
+//   (b) cada âncora de `ARTIGOS_V4` é um excerto **VERBATIM** do artigo correspondente do
+//       documento — é isto que impede o prompt de "saber" um regulamento que não existe;
+//   (c) o módulo que o RUNTIME importa (`_lib/guto-regulamento.mjs`) é **byte a byte** igual a
+//       `docs/GUTO-REGULAMENTO.md` — sem isto, o documento e o prompt podiam divergir em silêncio;
+//   (d) o documento tem a estrutura declarada: 12 capítulos e 72 artigos (1..72, sem lacunas);
+//   (e) a ERRATA DA FONTE continua verdadeira (o defeito de origem ainda lá está).
+//   (f) BIDIRECCIONAL — o verificador RECUSA uma âncora que não conste do artigo.
+//
+// ⚠️ O CWD da suíte do backend é `netlify/functions` ⇒ subir 4 níveis para chegar à raiz do repo
+// (medido: com 3 níveis lê-se `Desktop/docs/...`, que não existe).
 //
 // node --test --experimental-test-module-mocks _tests/mc963-guto-regulamento-v4.test.mjs
 
@@ -15,29 +28,35 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { existsSync } from "node:fs";
-import { obterPromptSystem, REGRA_REGULAMENTO, ARTIGOS_V4 } from "../_lib/guto-perfis.mjs";
+import {
+  obterPromptSystem, REGRA_REGULAMENTO, ARTIGOS_V4, semEscapesDaFonte,
+} from "../_lib/guto-perfis.mjs";
+import {
+  REGULAMENTO_TEXTO, REGULAMENTO_VERSAO, REGULAMENTO_FONTE,
+} from "../_lib/guto-regulamento.mjs";
 
-// ⚠️ O 1.º caminho estava ERRADO por um nível: de `netlify/functions` até `DESAFIOGUT/docs`
-// são QUATRO "..", não três (functions → netlify → frontend → desafio-gut → DESAFIOGUT).
-// Falhou com ENOENT, e o reporter por omissão só disse "test failed" — daí os candidatos
-// explícitos: um caminho errado tem de dar uma falha LEGÍVEL, não um ENOENT opaco.
-const CANDIDATOS = [
-  resolve(process.cwd(), "..", "..", "..", "..", "docs", "REGULAMENTO-v4.md"),
-  resolve(process.cwd(), "..", "..", "..", "docs", "REGULAMENTO-v4.md"),
-  resolve(process.cwd(), "..", "..", "docs", "REGULAMENTO-v4.md"),
-];
-const CAMINHO = CANDIDATOS.find((p) => existsSync(p));
-assert.ok(CAMINHO, `não encontrei o REGULAMENTO-v4.md. Tentei:\n  ${CANDIDATOS.join("\n  ")}`);
-const V4 = readFileSync(CAMINHO, "utf8");
+const RAIZ = resolve(process.cwd(), "..", "..", "..", "..");
 const PERFIS = ["visitante", "comum", "corporativo", "admin"];
 
-/** Extrai o texto de um artigo do v4 (formato real: "Art. Nº - ..."). */
+const DOC = readFileSync(resolve(RAIZ, REGULAMENTO_FONTE), "utf8");
+/** O documento com o defeito de origem neutralizado (ver ERRATA DA FONTE). */
+const DOC_OK = semEscapesDaFonte(DOC);
+const DOC_UMA = DOC_OK.replace(/\s+/g, " ");
+
+/** Texto de um artigo do documento, normalizado (espaços colapsados). */
 function artigo(n) {
-  // ⚠️ O formato do v4 usa o ordinal "º" (`Art. 20º -`). Um regex sem o "º" não encontra NADA
-  // e devolveria "" — e um teste que compara com "" passa sempre. Medido, não suposto.
-  const m = V4.match(new RegExp(`Art\\.\\s*${n}\\u00ba\\s*-\\s*([\\s\\S]*?)(?=\\n\\s*Art\\.\\s*\\d|\\n\\s*##|$)`, "i"));
-  return m ? m[1].replace(/\s+/g, " ").trim() : null;
+  const m = DOC_UMA.match(new RegExp(`Art\\. ${n}º\\s*[—–-]\\s*([\\s\\S]*?)(?=Art\\. \\d+º|$)`));
+  return m ? m[1].trim() : null;
+}
+
+/**
+ * Verificador de (b), ISOLADO de propósito: é o mesmo objecto testado em (f) com um valor falso.
+ * @throws se o artigo não existir ou não contiver o texto.
+ */
+function exigirAncora(n, texto) {
+  const t = artigo(n);
+  if (!t) throw new Error(`Art. ${n}º ausente do documento`);
+  if (!t.includes(texto)) throw new Error(`Art. ${n}º não contém «${texto}»`);
 }
 
 // ── (a) o prompt ────────────────────────────────────────────────────────────
@@ -49,122 +68,93 @@ test("(a) TODOS os perfis levam a regra do regulamento e a instrução de citar 
     assert.match(p, /CITA o artigo/i, `${perfil}: falta a instrução de citar`);
   }
   assert.ok(obterPromptSystem("visitante", { conformidade: true }).includes(REGRA_REGULAMENTO),
-    "o modo de conformidade também tem de citar o regulamento");
+    "o modo de conformidade também tem de levar o regulamento");
 });
 
-test("(a2) a regra proíbe inventar artigos", () => {
-  assert.match(REGRA_REGULAMENTO, /NUNCA cites um artigo que não esteja aqui/i);
+test("(a2) a regra proíbe inventar artigos e manda usar o texto integral", () => {
+  assert.match(REGRA_REGULAMENTO, /NUNCA cites um artigo que não esteja/i);
   assert.match(REGRA_REGULAMENTO, /nunca inventes o número de um artigo/i);
+  assert.match(REGRA_REGULAMENTO, /texto INTEGRAL do Regulamento Oficial/i);
 });
 
-// ── (b) BIDIRECCIONAL: o prompt corresponde ao DOCUMENTO ────────────────────
-
-// Cada entrada: n.º do artigo no v4 -> fragmentos que TÊM de existir no artigo E no prompt.
-const FATOS = [
-  ["5",  ["cadastrar gratuitamente"]],
-  ["6",  ["maior de idade", "código único"]],
-  ["7",  ["QUANTO VOCÊ OFERTA", "menor lance único", "estratégia"]],
-  ["38", ["torneio de habilidade", "Portaria SPA/MF"]],
-  ["8",  ["saldo em dinheiro", "Relâmpago", "Programado"]],
-  ["20", ["R$ 2,00", "Programado"]],
-  ["26", ["R$ 0,01", "duas"]],
-  ["27", ["menor lance único"]],
-];
-
-test("(b) cada artigo existe no v4 e o texto corresponde ao que o prompt afirma", () => {
-  for (const [n, fragmentos] of FATOS) {
-    const txt = artigo(n);
-    assert.ok(txt && txt.length > 20, `Art. ${n}: NÃO encontrado no docs/REGULAMENTO-v4.md`);
-    for (const f of fragmentos) {
-      const alvo = f.replace("duas", "2 (duas)").replace("R$ 2,00", "R$ 2,00");
-      const noDoc = txt.toLowerCase().includes(f.toLowerCase()) ||
-                    txt.toLowerCase().includes(alvo.toLowerCase());
-      assert.ok(noDoc, `Art. ${n} do v4 não contém «${f}» — o prompt afirma-o e o documento não o diz`);
-    }
+test("(a3) o Regulamento INTEIRO chega ao prompt (não um resumo, não um índice)", () => {
+  for (const perfil of PERFIS) {
+    const p = obterPromptSystem(perfil, {});
+    assert.ok(p.includes(REGULAMENTO_TEXTO),
+      `${perfil}: o prompt não leva o texto integral do Regulamento`);
   }
 });
 
-test("(b2) ARTIGOS_V4 (o que o prompt usa) bate com o documento, artigo a artigo", () => {
-  for (const [n, afirmacao] of Object.entries(ARTIGOS_V4)) {
-    const txt = artigo(n);
-    assert.ok(txt, `Art. ${n}: ausente do v4`);
-    // as palavras-chave da afirmação têm de aparecer no artigo real
-    const chaves = afirmacao.toLowerCase()
-      .replace(/[()º,.]/g, " ").split(/\s+/)
-      .filter((w) => w.length > 5 && !["poderá", "deverá", "através", "receberá", "participante", "qualquer"].includes(w));
-    const faltam = chaves.filter((w) => !txt.toLowerCase().includes(w));
-    assert.ok(faltam.length <= 2,
-      `Art. ${n}: a afirmação do prompt diverge do documento (palavras ausentes: ${faltam.join(", ")})`);
-    // ⚠️ NÚMEROS, explicitamente. A 1.ª versão filtrava palavras com <=5 caracteres e por isso
-    // DESCARTava «R$ 0,01», «0,05», «um», «cinco» — a verificação ficava VACUOSA nos valores, que
-    // são o cerne jurídico. O mutante M2 (trocar R$ 0,01 por R$ 0,05 no prompt) SOBREVIVEU por
-    // isso. Um filtro de ruído que come o sinal não é um filtro: é um buraco.
-    // ⚠️ Incluir os ORDINAIS escritos («2 (duas) casas»): a 1.ª versão procurava só \b\d+\b e o
-    // mutante A1 («1 (uma) casas») passava — o «1» solto existe no documento por outros motivos.
-    const numeros = afirmacao.match(/R\$\s*[\d.,]+|\b\d+\s*\([^)]+\)|\b\d+\b/g) || [];
-    for (const num of numeros) {
-      const limpo = num.replace(/\s+/g, " ");
-      assert.ok(txt.replace(/\s+/g, " ").includes(limpo),
-        `Art. ${n}: o valor «${limpo}» do prompt NÃO consta do documento`);
-    }
+// ── (b) BIDIRECCIONAL: as âncoras correspondem ao DOCUMENTO ─────────────────
+
+test("(b) cada âncora de ARTIGOS_V4 é um excerto VERBATIM do artigo correspondente", () => {
+  const entradas = Object.entries(ARTIGOS_V4);
+  assert.ok(entradas.length >= 10, `esperava >=10 âncoras, vi ${entradas.length}`);
+  for (const [n, texto] of entradas) exigirAncora(n, texto);
+});
+
+test("(b2) os valores críticos estão ancorados nos artigos certos", () => {
+  for (const [n, frag] of [
+    ["6", "R$ 2,00"], ["8", "10 (dez) pontos"], ["9", "50 (cinquenta) pontos"],
+    ["18", "R$ 0,01"], ["33", "+2 (dois) pontos"], ["47", "R$ 1,00"],
+  ]) {
+    assert.ok(artigo(n), `Art. ${n}º ausente`);
+    assert.ok(artigo(n).includes(frag), `Art. ${n}º não contém «${frag}»`);
   }
 });
 
-test("(b3) o Art. 20 diz que a senha é SÓ no Programado — o erro que já nos custou um MC", () => {
-  const txt = artigo("20");
-  assert.match(txt, /quando utilizadas na modalidade Programado/i,
-    "o Art. 20 tem de condicionar o custo da senha à modalidade Programado");
+// ── (c) o módulo do RUNTIME espelha o documento ─────────────────────────────
+
+test("(c) `_lib/guto-regulamento.mjs` é o documento tal e qual (controlo de vitalidade incluído)", () => {
+  assert.ok(DOC.length > 15_000, `o documento parece vazio (${DOC.length} chars) — medição inválida`);
+  assert.equal(REGULAMENTO_TEXTO, DOC,
+    "o módulo que o runtime importa DIVERGIU de " + REGULAMENTO_FONTE +
+    " — regenerar (ver cabeçalho do módulo)");
+  assert.equal(REGULAMENTO_VERSAO, "5.0");
 });
 
-// ── (c) a mutação sobre o DOCUMENTO ─────────────────────────────────────────
+test("(c2) o módulo exporta o texto com os escapes do documento intactos (não os 'corrige')", () => {
+  // O texto que vai no prompt é o que está impresso no documento oficial. Se alguém "limpar" os
+  // escapes SÓ no módulo, as duas cópias divergem e (c) cai — este teste diz PORQUÊ.
+  assert.match(REGULAMENTO_TEXTO, /R\\\$ 2,00/, "o escape do Art. 6º desapareceu do módulo");
+  assert.match(REGULAMENTO_TEXTO, /1\\text\{ ponto\}/, "o escape do Art. 18º desapareceu do módulo");
+});
 
-test("(c0) ⚠️ OS NÚMEROS DO TEXTO VIVO (o que vai ao LLM) também batem no documento", () => {
-  // A auditoria adversarial mostrou que ARTIGOS_V4 estava MORTO e que só ele era verificado: o
-  // texto que REALMENTE vai ao LLM é REGRA_REGULAMENTO, e os seus números não eram conferidos.
-  // Mutante A1 («2 (duas) casas» -> «1 (uma) casas») passava em VERDE. Agora não passa.
-  // ⚠️ `[\d.,]+` apanhava a VÍRGULA da frase («R$ 0,01,» não consta do doc -> falso positivo).
-  const vivos = REGRA_REGULAMENTO.match(/R\$\s*\d+(?:[.,]\d+)*|\b\d+\s*\((?:uma|duas|três|cinco|vinte)\)/g) || [];
-  assert.ok(vivos.length > 0, "não encontrei valores no texto vivo — a verificação seria vacuosa");
-  const doc = V4.replace(/\s+/g, " ");
-  for (const v of vivos) {
-    const limpo = v.replace(/\s+/g, " ").trim();
-    assert.ok(doc.includes(limpo), `o texto VIVO afirma «${limpo}» e o documento não o diz`);
+// ── (d) estrutura do documento ─────────────────────────────────────────────
+
+test("(d) o documento tem 12 capítulos e os 72 artigos, sem lacunas", () => {
+  const caps = DOC_UMA.match(/CAPÍTULO [IVX]+/g) || [];
+  assert.equal(new Set(caps).size, 12, `capítulos: ${new Set(caps).size}`);
+  const arts = new Set([...DOC_UMA.matchAll(/Art\. (\d+)º/g)].map((m) => Number(m[1])));
+  const falta = [];
+  for (let i = 1; i <= 72; i++) if (!arts.has(i)) falta.push(i);
+  assert.deepEqual(falta, [], `artigos em falta no documento: ${falta.join(", ")}`);
+  assert.ok(arts.has(72), "o Art. 72º (disposições finais) tem de existir");
+});
+
+// ── (e) a ERRATA DA FONTE continua verdadeira ──────────────────────────────
+
+test("(e) os 9 escapes do defeito de origem continuam no CORPO do documento (a ERRATA não mente)", () => {
+  // ⚠️ Contar no CORPO, não no ficheiro todo: a própria ERRATA cita os escapes (é o objecto dela),
+  // e contá-los dava 24 em vez de 9 — medido. A ERRATA documenta; o defeito é do corpo.
+  const CORPO = DOC.slice(DOC.indexOf("CAPÍTULO I"));
+  const escapes = CORPO.match(/\\text\{|\\\$/g) || [];
+  assert.equal(escapes.length, 9,
+    `o corpo passou a ter ${escapes.length} escapes — corrigir a ERRATA em ${REGULAMENTO_FONTE}`);
+  const errata = DOC.slice(0, DOC.indexOf("CAPÍTULO I"));
+  assert.match(errata, /ERRATA DA FONTE/);
+  for (const frag of ["R\\$ 2,00", "1\\text{ ponto} = R\\$ 0,01", "1\\text{ ECOQUILDO} = R\\$ 1,00"]) {
+    assert.ok(errata.includes(frag), `a ERRATA não documenta «${frag}»`);
   }
 });
 
-test("(c0a) ⚠️ OS VALORES CRÍTICOS estão no SEU artigo, não em qualquer parte do documento", () => {
-  // A auditoria adversarial mostrou que a verificação «o número existe no documento» era fraca:
-  // o mutante A1 («2 (duas) casas» -> «1 (uma) casas») passava, porque «1 (uma)» existe no v4
-  // noutro artigo (o Art. 33, das indicações). Presença num documento de 40 artigos não é
-  // correspondência. Aqui cada valor fica AMARRADO ao artigo que o fundamenta.
-  const AMARRAS = [
-    ["20", ["R$ 2,00", "Programado"]],
-    ["26", ["R$ 0,01", "2 (duas) casas"]],
-    ["27", ["menor lance único"]],
-    ["38", ["torneio de habilidade", "Portaria SPA/MF"]],
-    ["8",  ["Relâmpago", "Programado"]],
-  ];
-  for (const [n, frases] of AMARRAS) {
-    const txt = artigo(n);
-    assert.ok(txt, `Art. ${n} ausente`);
-    for (const f of frases) {
-      assert.ok(txt.toLowerCase().includes(f.toLowerCase()),
-        `o v4 Art. ${n} não contém «${f}» — o prompt amarra-o lá`);
-      assert.ok(REGRA_REGULAMENTO.toLowerCase().includes(f.toLowerCase()),
-        `o prompt vivo perdeu «${f}» (Art. ${n})`);
-    }
-  }
-});
+// ── (f) a metade que faz o teste valer: o verificador MORDE ────────────────
 
-test("(c0b) ARTIGOS_V4 NÃO é código morto: alimenta mesmo o prompt", () => {
-  const p = obterPromptSystem("comum", {});
-  for (const [n, txt] of Object.entries(ARTIGOS_V4)) {
-    assert.ok(p.includes(txt), `Art. ${n}: o texto de ARTIGOS_V4 não chega ao prompt (seria código morto)`);
-  }
-});
-
-test("(c) o teste realmente lê o documento (não uma cópia): o v4 tem >= 40 artigos", () => {
-  const arts = V4.match(/Art\.\s*\d+\u00ba/g) || [];
-  assert.ok(new Set(arts).size >= 40, `o v4 devia ter >=40 artigos, vi ${new Set(arts).size}`);
-  assert.match(V4, /Portaria SPA\/MF/i, "o v4 invoca a Portaria que sustenta a tese");
+test("(f) BIDIRECCIONAL: o verificador RECUSA uma âncora que o artigo não diz", () => {
+  assert.doesNotThrow(() => exigirAncora("6", ARTIGOS_V4["6"]), "o caso válido tem de passar");
+  assert.throws(() => exigirAncora("6", "O Passe Desafio custa R$ 5,00 (cinco reais)"),
+    /não contém/, "uma âncora falsa tem de ser recusada");
+  assert.throws(() => exigirAncora("34", "Os pontos do palpite CONTAM para o cartão"),
+    /não contém/, "uma âncora com o sentido invertido tem de ser recusada");
+  assert.throws(() => exigirAncora("999", "seja o que for"), /ausente/);
 });

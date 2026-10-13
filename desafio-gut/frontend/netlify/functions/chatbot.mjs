@@ -1,15 +1,20 @@
-// Endpoint /chatbot — Mega Comando 9 / Item 2 (IA Cognitiva RAG).
+// Endpoint /chatbot — assistente GUTO do DESAFIOGUT.
 //
-// POST handler: recebe { pergunta }, gera embedding, busca top-3 chunks no
-// índice RAG (Blob store `rag`), monta prompt com contexto + pergunta e
-// chama um LLM compatível com OpenAI Chat Completions (default: DeepSeek
-// V4 Flash). Retorna { resposta, fontes }.
+// ⭐ UTAC110c-1 (2026-10-12) — ARQUITECTURA ACTUAL: o GUTO leva o **Regulamento Oficial INTEIRO**
+// no system prompt (`_lib/guto-perfis.mjs` → `REGULAMENTO_TEXTO`, derivado de
+// `docs/GUTO-REGULAMENTO.md`) e responde a partir dele, citando o artigo.
+// **Já NÃO existe índice RAG** (`_lib/rag.mjs`, Blob `rag`, embeddings HuggingFace, os scripts
+// `build-rag-index.mjs` / `mc964-gerar-chunks.mjs`): o HuggingFace dava 401 em produção, o índice
+// tinha 3 excertos e trazia o vocabulário do modelo antigo. História completa no comentário do
+// pipeline, abaixo.
+//
+// POST handler: recebe { pergunta }, detecta o perfil, passa pelo router de intents (que responde
+// antes do LLM quando a intenção é conhecida) e chama um LLM compatível com OpenAI Chat
+// Completions (default: DeepSeek). Retorna { resposta, fontes, modoBusca, modoResposta, perfil }.
 //
 // Variáveis de ambiente:
 //   CHATBOT_ATIVO    on|off (default on) — desligado retorna 503
-//   OPENAI_API_KEY   embeddings (text-embedding-3-small)
-//   OPENAI_BASE_URL  opcional (default https://api.openai.com/v1)
-//   LLM_API_KEY      chat completions (DeepSeek/OpenAI/Anthropic-compat)
+//   LLM_API_KEY      chat completions (DeepSeek/OpenAI/Anthropic-compat) — OBRIGATÓRIA para o LLM
 //   LLM_BASE_URL     default https://api.deepseek.com/v1
 //   LLM_MODEL        default deepseek-chat
 //
@@ -18,7 +23,10 @@
 import { getStore } from "@netlify/blobs";
 import { jsonResponse, jsonError, parseJsonBody, ValidationError } from "./_lib/validate.mjs";
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
-import { gerarEmbedding, buscarChunksRelevantes, buscarChunksTextual, montarContexto } from "./_lib/rag.mjs";
+// ⭐ UTAC110c-1 (2026-10-12) — O RAG FOI RETIRADO. Saíram daqui as 4 funções de `_lib/rag.mjs`
+// (`gerarEmbedding`, `buscarChunksRelevantes`, `buscarChunksTextual`, `montarContexto`) e o Blob
+// `rag`. O GUTO passou a levar o **Regulamento INTEIRO** no system prompt (`_lib/guto-perfis.mjs`
+// → `REGULAMENTO_TEXTO`), que é a fonte de verdade — sem índice intermediário para onde divergir.
 import { autenticarAdmin } from "./_lib/admin-auth.mjs";
 import { verificarUserSession } from "./_lib/jwt.mjs";
 import { getAdminAddresses } from "./_lib/admin-helpers.mjs";
@@ -39,14 +47,14 @@ import { registrarDecisao, buscarDecisaoSemelhante } from "./_lib/log-operaciona
 import { lerTroco, resumoTrocoAdmin } from "./_lib/troco-senhas.mjs";
 import { respostaPreflight } from "./_lib/cors.mjs";
 
-const STORE_NAME      = "rag";
+// ⭐ UTAC110c-1 — as constantes do Blob do índice RAG (`STORE_NAME` e `TOP_K`) SAÍRAM com o RAG:
+// já não há índice nem top-K de excertos. O que o GUTO lê sobre regras é o Regulamento inteiro,
+// no prompt.
 const RATE_LIMIT_RPM  = 10;
 const PERGUNTA_MAX    = 500;
-const TOP_K           = 3;
 
-// MC88.20 (P1) — orçamento do excerto no fallback SEM LLM. Um chunk, não três:
-// o formato antigo (3 × 600 chars + cabeçalhos de relevância) era o "dar texto".
-const LIMITE_TRECHO_TEMPLATE = 400;
+// ⭐ UTAC110c-1 — `LIMITE_TRECHO_TEMPLATE` também saiu: existia para cortar o excerto do Blob
+// `rag` no fallback sem LLM. Sem índice, o fallback é a frase de saída do perfil.
 
 // MC88.20 (P3) — o `PROMPT_SYSTEM` genérico que vivia aqui foi REMOVIDO. Duplicava
 // o SYS_BASE de _lib/guto-perfis.mjs (segunda fonte de verdade para o tom do GUTO)
@@ -531,8 +539,9 @@ const COMANDOS_ALFA = {
   sessoes:       "Sessões admin ativas.",
   revogar:       "Revoga uma sessão por jti. Uso: ALFA:revogar <jti>",
   ajuda:         "Listar comandos ALFA disponíveis.",
-  reindexar_rag: "O índice RAG é construído fora do repositório pelo operador. "
-    + "Execute `build-rag-index.mjs` localmente.",
+  // ⭐ UTAC110c-1 — `reindexar_rag` FOI REMOVIDO: já não existe índice RAG nem script de build
+  // (`build-rag-index.mjs` foi apagado). O comando cai agora em «comando desconhecido», que é o
+  // correcto — não há nada a reindexar.
   limpar_cache: "O cache Redis não está configurado (REDIS_URL ausente). "
     + "As consultas vão sempre à fonte.",
 };
@@ -1259,13 +1268,8 @@ function chatbotAtivo() {
   return raw === "on" || raw === "true" || raw === "1";
 }
 
-function abrirStore() {
-  try { return getStore({ name: STORE_NAME, consistency: "strong" }); }
-  catch (err) {
-    console.warn("[chatbot] Blobs rag indisponível:", err?.message);
-    return null;
-  }
-}
+// ⭐ UTAC110c-1 — `abrirStore()` (Blob `rag`) FOI REMOVIDO com o RAG. Não há índice a abrir:
+// o conhecimento do GUTO vive no system prompt, dentro do bundle da function.
 
 // ── MC96.1 — CONTEXTO CONVERSACIONAL ────────────────────────────────────────
 //
@@ -1314,9 +1318,14 @@ export async function chamarLLM(pergunta, contexto, opts = {}) {  // export: tes
   if (!apiKey) throw new Error("LLM_API_KEY ausente");
 
   const url  = `${baseUrl}/chat/completions`;
+  // ⭐ UTAC110c-1 — `contexto` deixou de ser o excerto do índice RAG (o RAG saiu; o conhecimento
+  // vive no `systemPrompt`, via `obterPromptSystem` → `REGULAMENTO_TEXTO`). O parâmetro MANTÉM-SE
+  // — a assinatura é usada pelos testes e continua a enquadrar contexto extra quando existir —
+  // mas o ramo sem contexto deixou de dizer «sem contexto encontrado»: era **falso**. O contexto
+  // existe e é o Regulamento, que segue no system prompt.
   const userContent = contexto
     ? `Contexto extraído do regulamento DESAFIOGUT:\n\n${contexto}\n\nPergunta do usuário: ${pergunta}`
-    : `Pergunta do usuário (sem contexto encontrado): ${pergunta}`;
+    : `Pergunta do usuário: ${pergunta}`;
 
   // MC88.20 (P3) — sem fallback: um systemPrompt em falta é bug de call-site, e
   // degradar em silêncio custaria a personalidade do perfil sem ninguém dar por isso.
@@ -1336,7 +1345,11 @@ export async function chamarLLM(pergunta, contexto, opts = {}) {  // export: tes
       { role: "user",   content: userContent  },
     ],
     temperature: 0.7,
-    max_tokens:  512,
+    // ⭐ UTAC110c-1 (Frente D) — 512 → 4000. O GUTO passou a ter o Regulamento INTEIRO no prompt
+    // (~19,4 k chars) e a instrução de CITAR o artigo: respostas de regras pedem 2-3 parágrafos
+    // com citação, e 512 tokens cortavam a resposta a meio (o utilizador via a frase truncada).
+    // O prompt de entrada (~24 k chars ≈ 7 k tokens) cabe folgado no contexto do DeepSeek.
+    max_tokens:  4000,
     stream:      false,
   });
 
@@ -1437,46 +1450,29 @@ export default async (req) => {
     // fail-soft: qualquer erro no router NÃO deve quebrar o GUTO — cai no RAG.
   }
 
-  // MC9.1 — Pipeline em camadas com fallback gracioso:
-  //   1. Tenta busca SEMÂNTICA (HF Inference API embedding + cosineSimilarity)
-  //   2. Se gerarEmbedding falhar → busca TEXTUAL (TF-IDF leve, sem deps externas)
-  //   3. Se LLM disponível → resposta gerada com contexto
-  //      Senão → resposta TEMPLATE com os top-K chunks como markdown
-  // Resultado: chatbot SEMPRE responde algo útil, mesmo sem credentials.
-  const store = abrirStore();
-  let chunks = [];
-  let modoBusca = "semantica";
-
-  // 1. Embedding semântico (HF API se em Lambda, Xenova se local).
-  try {
-    const embedding = await gerarEmbedding(pergunta);
-    if (store) {
-      chunks = await buscarChunksRelevantes(store, embedding, TOP_K);
-    }
-  } catch (err) {
-    console.warn("[chatbot] embedding semântico falhou, fallback para textual:", err?.message);
-    modoBusca = "textual";
-  }
-
-  // 2. Fallback textual quando semântica falhou ou retornou vazio.
-  if (chunks.length === 0 && store) {
-    try {
-      chunks = await buscarChunksTextual(store, pergunta, TOP_K);
-      modoBusca = modoBusca === "semantica" ? "semantica-vazia-fallback-textual" : "textual";
-    } catch (err) {
-      console.warn("[chatbot] buscarChunksTextual falhou:", err?.message);
-    }
-  }
-
-  const contexto = montarContexto(chunks);
-
-  // 3. Tenta LLM; se falhar OU LLM_API_KEY ausente, monta resposta template.
+  // ⭐ UTAC110c-1 — PIPELINE SIMPLIFICADO (o RAG saiu daqui).
+  //
+  // ANTES (MC9.1): RAG em camadas — embedding HF → busca por cosseno no Blob `rag` → fallback
+  // textual TF-IDF → `montarContexto` → LLM (ou resposta template com os top-K excertos).
+  // AGORA: o **Regulamento INTEIRO** vai no system prompt (`obterPromptSystem` → `REGULAMENTO_TEXTO`)
+  // e o LLM responde a partir dele, citando o artigo.
+  //
+  // PORQUE SAIU (medido no UTAC110b/110b.1, não suposto):
+  //   1. o HuggingFace respondia **401** em produção (chave inválida) ⇒ `modoBusca:"textual"` sempre;
+  //   2. o índice tinha **3 excertos / 6.640 chars** — e a resposta viva usava só 2 deles;
+  //   3. os excertos carregavam vocabulário do **modelo antigo**, que o LLM espelhava ao utilizador
+  //      (a causa-raiz do «o DESAFIOGUT é tipo um leilão sim», de 2026-09-25);
+  //   4. dois scripts de build divergentes construíam índices diferentes do mesmo documento.
+  // Um prompt com o documento inteiro elimina as quatro de uma vez — e não há índice para divergir.
+  //
+  // O QUE SE MANTÉM: o GUTO responde SEMPRE algo. Sem LLM (ou com 401 da chave), cai no
+  // `fallback_sem_llm` do perfil, que dá a saída para o suporte em vez de despejar texto bruto.
   let resposta;
   let modoResposta = "llm";
   try {
-    // MC96.1 — o histórico vem do cliente e é normalizado em `montarHistorico` (dentro do
-    // chamarLLM). Campo OPCIONAL: sem ele o comportamento é o de antes.
-    resposta = await chamarLLM(pergunta, contexto, {
+    // MC96.1 — o histórico vem do cliente e é normalizado em `montarHistorico` (dentro de
+    // `chamarLLM`). Campo OPCIONAL: sem ele o comportamento é o de antes.
+    resposta = await chamarLLM(pergunta, "", {
       systemPrompt: obterPromptSystem(perfil, { conformidade: modoConformidade }),
       historico: body.historico,
     });
@@ -1487,28 +1483,22 @@ export default async (req) => {
     if (err?.code === "systemprompt_ausente") throw err;
     console.warn("[chatbot] LLM indisponível, usando resposta template:", err?.message);
     modoResposta = "template";
-    // MC88.20 (P1) — o texto passou para _lib/guto-perfis.mjs, por PERFIL. Aqui fica
-    // só o orçamento: UM excerto (o de maior score), limitado. Antes eram os 3 chunks
-    // a 600 chars cada (~1.800) com cabeçalhos de relevância — o "dar texto" relatado.
-    const melhor = chunks[0]?.texto ? String(chunks[0].texto).replace(/\s+/g, " ").trim() : "";
-    const trecho = melhor.length > LIMITE_TRECHO_TEMPLATE
-      ? `${melhor.slice(0, LIMITE_TRECHO_TEMPLATE)}…`
-      : melhor;
-    resposta = obterResposta("fallback_sem_llm", perfil, { trecho });
+    resposta = obterResposta("fallback_sem_llm", perfil, { trecho: "" });
   }
 
-  // MC15.5 — enquadra a resposta RAG conforme o perfil (visitante recebe convite;
-  // demais perfis recebem a resposta tal qual, já no tom do system prompt do perfil).
+  // MC15.5 — enquadra a resposta conforme o perfil (visitante recebe convite; demais perfis
+  // recebem a resposta tal qual, já no tom do system prompt do perfil).
   const respostaFinal = obterResposta("fallback_rag", perfil, { respostaRAG: resposta });
 
-  const fontes = chunks.map((c) => ({ id: c.id, score: Number(c.score.toFixed(4)) }));
   console.info("[chatbot] resposta gerada", {
     perguntaLen: pergunta.length,
-    chunks: chunks.length,
-    scoreTop: fontes[0]?.score,
-    modoBusca,
     modoResposta,
     perfil,
   });
-  return jsonResponse({ resposta: respostaFinal, fontes, modoBusca, modoResposta, perfil });
+  // ⚠️ `fontes` e `modoBusca` FICAM no corpo da resposta (HI9 — não partir o cliente):
+  // `ChatbotWidget.jsx:410` faz `data.fontes || []` e só renderiza o bloco quando
+  // `fontes.length > 0` — uma lista vazia esconde a secção sem rebentar nada. Retirar as chaves
+  // obrigaria a mexer no frontend, que não está no AUTORIZA deste UTAC.
+  // `modoBusca: "regulamento"` diz, sem ambiguidade, de onde vem a resposta.
+  return jsonResponse({ resposta: respostaFinal, fontes: [], modoBusca: "regulamento", modoResposta, perfil });
 };

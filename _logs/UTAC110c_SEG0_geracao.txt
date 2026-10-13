@@ -1,0 +1,11 @@
+ERRATA conferida: 9 escapes, todos os 5 padroes com a contagem esperada
+OK  -> C:\Users\Moltbot\Desktop\DESAFIOGUT\docs\GUTO-REGULAMENTO.md
+    bytes           = 20427
+    chars           = 19459
+    chars do corpo  = 17109  (sem cabecalho)
+    capitulos       = 12
+    artigos         = 72 (1..72, sem lacunas)
+    CRLF presentes  = 0
+OK  -> C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\netlify\functions\_lib\guto-regulamento.mjs
+    bytes          = 22255
+    CRLF presentes = 0

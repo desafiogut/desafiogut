@@ -108,14 +108,21 @@ test("(a) NÃO há «leilão» na prosa do GUTO (só em comentários e NA PRÓPR
   assert.deepEqual(achados, [], `a persona ainda diz «leilão»:\n  ${achados.join("\n  ")}`);
 });
 
-test("(b) a persona fala em torneio/edições", () => {
+test("(b) a persona fala em programa de fidelidade + competição de habilidade + edições", () => {
   const limpo = semComentarios(GUTO);
-  // ⚠️ Exige-se «torneio» (medido: 2 ocorrências), NÃO a frase oficial completa «torneio de
-  // habilidade»: essa vive no Regulamento v4 (Portaria SPA/MF 1.207/2024) e a ligação do GUTO
-  // ao v4 é o MC96.3. Pôr aqui a exigência forte seria estender o escopo deste MC.
-  assert.match(limpo, /torneio/i, "falta «torneio» (o vocabulário de substituição)");
+  // ⭐ UTAC110c-1 (2026-10-12) — ACTUALIZADO PRESERVANDO A INVARIANTE.
+  // A invariante deste teste é «a persona usa o vocabulário de SUBSTITUIÇÃO correcto». Em 2026-09
+  // esse vocabulário era «torneio de habilidade» (Portaria SPA/MF 1.207/2024). O NORTE DO PRODUTO
+  // Via B superou-o: o termo do Regulamento 5.0 é «competição de habilidade» (Art. 14º) e o produto
+  // é um «programa de fidelidade gamificado» (Art. 1º). O que se exige mudou COM a fonte; o que o
+  // teste defende — não ficar com meia substituição, nem com o termo errado — não mudou.
+  // ⚠️ A versão anterior exigia `/torneio/i` e ficou vermelha no UTAC110c-1: era o teste a fixar o
+  // modelo ANTIGO, não o código a regredir. A asserção foi reescrita, NÃO apagada.
+  assert.match(limpo, /programa de fidelidade/i, "falta «programa de fidelidade» (o produto)");
+  assert.match(limpo, /competição de habilidade/i, "falta «competição de habilidade» (o termo oficial)");
   assert.match(limpo, /edições/i, "falta «edições» (o vocabulário de substituição)");
   assert.match(limpo, /participar das edições/i, "o CTA tem de dizer «participar das edições»");
+  assert.doesNotMatch(limpo, /torneio/i, "o termo antigo «torneio» não pode voltar");
 });
 
 test("os comentários que DOCUMENTAM a decisão MC29.1 continuam lá (histórico, não persona)", () => {
@@ -152,7 +159,10 @@ test("(c) TODOS os prompts (4 perfis + conformidade) levam a regra de linguagem"
     const p = obterPromptSystem(perfil, {});
     assert.ok(p.includes(REGRA_LINGUAGEM), `${perfil}: o prompt não leva a regra`);
     assert.match(p, /NUNCA o chames leilão/, `${perfil}: falta a proibição explícita`);
-    assert.match(p, /torneio de habilidade/i, `${perfil}: falta o termo correcto`);
+    // ⭐ UTAC110c-1 — o «termo correcto» passou de «torneio de habilidade» (modelo antigo) para
+    // «competição de habilidade» (Regulamento 5.0, Art. 14º). Invariante preservada: o prompt TEM
+    // de trazer o termo correcto, seja ele qual for — o que não pode é ficar sem nenhum.
+    assert.match(p, /competição de habilidade/i, `${perfil}: falta o termo correcto`);
     assert.match(p, /se o utilizador disser "leilão"/i, `${perfil}: falta a instrução de corrigir quem diz «leilão»`);
   }
   const conf = obterPromptSystem("visitante", { conformidade: true });
