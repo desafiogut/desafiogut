@@ -1,0 +1,26 @@
+PASS  1. os 8 entregáveis do repo existem  — 8/8
+PASS  2. os 4 ficheiros removidos continuam removidos  — 4/4
+PASS  3. as duas cópias do Regulamento são idênticas  — doc 19459 chars · módulo 19459 chars · versão 5.0
+PASS  4. nenhum prompt ensina o modelo antigo  — 5 prompts × 5 padrões
+PASS  5. controlo de vitalidade: os 5 prompts têm > 20 000 chars  — visitante=24270 comum=24266 corporativo=23822 admin=23769 conformidade=24309
+PASS  6. o Regulamento INTEIRO está dentro de cada prompt  — 12 capítulos/72 artigos em todos
+[jwt] JWT_SECRET ausente — assinarPedido/verificarPedido vão falhar
+PASS  7. max_tokens = 4000 no corpo real do pedido  — max_tokens=4000
+PASS  8. o pedido real leva o Regulamento inteiro
+PASS  9. a mensagem do utilizador já não diz «sem contexto encontrado»
+PASS  10. as 15 âncoras são excertos verbatim dos artigos  — 15/15
+PASS  11. controlo positivo: os matchers mordem
+PASS  12. controlo de vitalidade: varri > 20 ficheiros de runtime  — 165 ficheiros
+PASS  13. zero HF e zero Blob `rag` em runtime  — 165 ficheiros varridos
+PASS  14. HEAD == origin/main  — f6652007 / f6652007
+PASS  15. nada do UTAC por commitar (só os untracked pré-existentes)  — limpo
+PASS  16. bloco R14 do UTAC110c-1 no CLAUDE.md
+PASS  17. bytes de controlo do CLAUDE.md intactos (2×0x00 + 2×0x1F)
+PASS  18. utac110c-guto-via-b.test.mjs passa isolado  — pass=7 fail=0
+PASS  18. mc963-guto-regulamento-v4.test.mjs passa isolado  — pass=10 fail=0
+PASS  18. mc962-fallback-vocabulario.test.mjs passa isolado  — pass=10 fail=0
+PASS  19. CONTROLO NEGATIVO: o detector morde o texto antigo (senão o teste 4 seria vacuoso)  — 5/5 padrões
+PASS  20. CONTROLO NEGATIVO cruzado: no prompt REAL nenhum padrão morde
+
+──────────────────────────────────────────────────────────────────────
+RESULTADO: 22 PASS / 0 FAIL

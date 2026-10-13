@@ -5838,3 +5838,65 @@ Custo ~US$ 0,5-3 por 1.000 perguntas. 110c dividido em 110c-1 (codigo/testes) e 
 correccoes NAO re-validadas. **Registo:** `_logs/UTAC110b.1_SEG-1_MEDICAO.md` · `_logs/UTAC110b.1-guto-arquitectura.md` ·
 `_logs/UTAC110b.1-proposta-sistema.md` · `_logs/UTAC110b.1_SEG4_VALIDADOR.md` · `Desktop/RELATORIO-UTAC110b.1-GUTO.txt`.
 **Custo:** validador 376 812 tokens = 7,5–754 ¢ (151 ¢ se tudo input); sessao principal nao medida (`/cost`).
+
+## R14 (append) -- UTAC110c-1 -- GUTO: REGULAMENTO 5.0 INTEIRO NO PROMPT (Via B) + RAG REMOVIDO (Hermes/DeepSeek)
+
+**Tipo:** codigo + conhecimento. Baseline `c1a8aa9` -> commit **`f665200`** (empurrado). Codigo de producao tocado:
+`_lib/guto-perfis.mjs`, `chatbot.mjs`, novo `_lib/guto-regulamento.mjs`; **apagados** `_lib/rag.mjs`,
+`scripts/build-rag-index.mjs`, `scripts/mc964-gerar-chunks.mjs`, `desafio-gut/frontend/scripts/test-mc9.1.mjs`.
+**Fecha o bloqueante F1** do validador do 110b.1 (o system prompt ensinava o modelo antigo). **NAO** pos a chave
+DeepSeek nem fez deploy de producao -- por desenho: e o **110c-2**.
+
+**O que mudou, fonte a fonte.** Havia TRES fontes de conhecimento do GUTO e as tres traziam o modelo antigo:
+(1) a persona; (2) o resumo `ARTIGOS_V4` (10 artigos do v4); (3) o indice RAG (Blob `rag`, 3 excertos / 6.640 chars,
+com o HuggingFace a devolver **401** em producao, logo sempre `modoBusca:"textual"`). Agora ha **UMA**: o
+**Regulamento Oficial 5.0 INTEIRO** no system prompt (`obterPromptSystem` = base + `REGRA_LINGUAGEM` +
+`REGRA_REGULAMENTO` + `REGULAMENTO_TEXTO`). Vocabulario: «programa de fidelidade gamificado», «competicao de
+habilidade» (Art. 14), «Passe Desafio», «pontos de fidelidade», «ECOQUILDO». A lista de PALAVRAS PROIBIDAS
+(`leilao`, `jogo de azar`, `aposta`, `bet`, `sorte`) mantem-se INTACTA -- era o objectivo do MC96.2. `ARTIGOS_V4`
+deixou de ser resumo e passou a **indice de 15 ancoras verbatim** para citacao (nome historico mantido: e citado
+pelos guardas da serie). Os intents `comprar_cotas`/`pacotes_cotas` deixaram de citar a tabela de precos de lojista:
+o Regulamento nao fixa valores de Cota -- remetem para o **contrato privado de patrocinio** (Arts. 12/24).
+
+**Conhecimento no repo.** Novo `docs/GUTO-REGULAMENTO.md`: transcricao do PDF oficial (12 capitulos, 72 artigos
+1..72 sem lacunas, 17 109 chars de corpo, LF), do **texto nativo** do PDF (pymupdf), com as quebras de linha
+reagrupadas e o U+200B removido -- normalizacao **provada por assercao** a cada geracao. O runtime importa
+`_lib/guto-regulamento.mjs`, que embute o MESMO texto: o esbuild so empacota `netlify/functions/`, logo um
+`readFileSync` de `docs/` daria ENOENT em Lambda. Um teste compara as duas copias **byte a byte**.
+
+**Achado material (pendencia do CLIENTE).** O **PDF oficial imprime os escapes com que foi gerado** -- le-se
+impresso «a razao de `1\text{ ponto} = R\$ 0,01` (um centavo)», nos Arts. 6, 18, 37 e 47 (os artigos dos VALORES).
+Sao **9 escapes**. Confirmado por TRES instrumentos (pymupdf, o conversor do `read_file`, e renderizacao a 150 dpi
+lida a olho) -- e do documento, nao do extractor. A transcricao **nao corrige** o escape (fidelidade a fonte de
+verdade) e leva no topo uma **ERRATA DA FONTE** com a tabela `impresso -> valor pretendido -> artigo`. **O PDF tem
+de ser corrigido na origem (RTD/Cartorio): um documento registado nao deve imprimir `\text{` nem `R\$`.**
+
+**Contrato HTTP preservado (HI9).** A resposta mantem `{resposta, fontes, modoBusca, modoResposta, perfil}` com
+`fontes: []` e `modoBusca: "regulamento"`: o `ChatbotWidget.jsx:410/728` faz `data.fontes || []` e so mostra o bloco
+com `fontes.length > 0`, logo a lista vazia esconde a seccao sem partir o cliente. `max_tokens` **512 -> 4000**
+(respostas com citacao de artigo eram cortadas a meio). Prompt final por perfil: 23,6-24,1 k chars (~7 k tokens).
+
+**Provado.** Suite canonica (2 corridas, iguais): **frontend 979/979 - backend 1103/1109 - VERDE** (baseline
+1095/1101; +8 testes). Martelo de mutacao `_tests/utac110c-prova-mutacao.mjs`: **8/8 mutantes mordem**, cada um no
+teste certo, com a linha mutada impressa e restauro **sha256 identico**. Testes: `mc963` reescrito (10/10),
+`_tests/utac110c-guto-via-b.test.mjs` NOVO (7/7 -- os 7 pedidos no enunciado), `mc962` com **2 assercoes reescritas
+preservando a invariante** (exigiam «torneio»: era o teste a fixar o defeito). Contagens do `node_modules` real
+antes/depois do worktree do validador: **383/570/502/416 == 383/570/502/416**.
+
+**A14 VIOLADA DE PROPOSITO -- desvio DECLARADO (decisao R18-110c-1).** RAM livre **1 043-1 289 MB** em 10 medicoes
+(A14 exige >= 1 500). O unico que libertaria o suficiente seria o Claude Desktop do operador (~950 MB), que **nao e
+do executor**; a categoria autorizada pela A14 (o que o executor lancou / browsers sem janela / sessoes claude
+TERMINADAS) estava **vazia**. Posto ao operador sem resposta no prazo, seguido com desvio declarado e **re-medicao
+antes do fecho**; uma suite vermelha nesta ronda seria **NAO MEDI**, nao regressao. Sem sinal de esgotamento.
+
+**Residuo declarado (fora do AUTORIZA -- GATE 3, para UTAC proprio):** `_lib/admin-alertas.mjs:74-77` (alerta
+`rag_sem_metadado` com `fonte: "build-rag-index.mjs"`, script que ja nao existe); `package.json` (frontend)
+`build:rag` a apontar para o script apagado; `docs/RAG-GUTO-v2.md`, `docs/chatbot/regulamento.md`,
+`scripts/mc967-unificar-fontes.mjs` + `_tests/mc967-fontes-rag` (vigiam um indice que ninguem constroi); os intents
+de «senhas» (`meu_saldo`, `relatorio_compras`, `_lib/troco-senhas.mjs`); o texto do perfil `corporativo`
+(«cotas comerciais ... Painel Lojista»); `artigosUI.test.mjs` e `glossario.test.mjs` (UI/i18n com «torneio de
+habilidade»/«senhas» no dicionario PT). `docs/REGULAMENTO-v4.md` e `-v3.md` **ficam** (historicos, GATE 4).
+
+**Registo:** `_logs/UTAC110c_SEG-1_MEDICAO.md` - `_logs/UTAC110c-guto-reescrita.md` -
+`_logs/UTAC110c_SEG4_MUTACAO.txt` - `_logs/UTAC110c_SEG0_geracao.txt` - `_logs/UTAC110c_SEG5_VALIDADOR.md` -
+`Desktop/RELATORIO-UTAC110c-1-GUTO.txt`. **Proximo:** 110c-2 (por a chave DeepSeek + verificar em producao).
