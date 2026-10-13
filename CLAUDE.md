@@ -5999,3 +5999,61 @@ de ser do executor e passa a decisao registada do operador. O hiato literal-vs-i
 ANTES de agir (3 opcoes medidas, em `_logs/UTAC110c-1b_SEG-1_MEDICAO.md` §-1.e), o desvio foi visivel, e
 a ratificacao e a decisao do operador. A inversao do teste `mc963 (e)` esta anotada como ratificada na
 propria cabeca do teste.
+
+## R14 (append) -- UTAC110c-2 -- VERIFICACAO EM PRODUCAO: GUTO EM FALLBACK POR SALDO (B-4 ABERTO) (Hermes/DeepSeek)
+
+**Tipo:** verificacao. **ZERO codigo, env vars ou deploy alterados.** Baseline `b1de277` (= origin/main
+no arranque) -> commit de registo `cd61bfd`. Suíte canonica **979/979 - 1104/1110 - VERDE**, com **A14
+CUMPRIDA** (RAM 1 621/1 622/1 628 MB).
+
+**O que se foi verificar.** O operador pos a chave DeepSeek nova, corrigiu `LLM_MODEL` para
+`deepseek-flash`, confirmou `CHATBOT_ATIVO=on` e fez redeploy. A pergunta era: o GUTO esta funcional em
+producao? Config do Netlify conferida **por NOMES** (R5): as 4 variaveis existem, `CHATBOT_ATIVO=on`,
+`LLM_MODEL=deepseek-flash`, `LLM_BASE_URL=api.deepseek.com/v1`. O CLI **mascara** o `LLM_API_KEY`
+(padrao `SSSSSSSSSSSSSSSSDDLD`) => o comprimento/formato NAO sao verificaveis por ai, e nao o foram por
+outra via (R5).
+
+**RESULTADO: 5/5 chamadas REAIS com `modoResposta: "template"` -- o GUTO NAO usa o LLM.** HTTP 200 nas
+5, latencia 0,9-4,2 s, `modoBusca: "regulamento"`, `fontes: []`, sempre a MESMA resposta de 171 chars
+(o `fallback_sem_llm` do perfil visitante, `guto-perfis.mjs:443`). **B-4 NAO FECHOU.**
+
+**Causa, dita pelo fornecedor nos logs de producao** (`netlify logs --source functions --function
+chatbot`): `llm_http_402: {"error":{"message":"Insufficient Balance","code":"invalid_request_error"}}`.
+**HTTP 402 = SALDO INSUFICIENTE na conta DeepSeek.** Provas de alcance: (1) **402 vem DEPOIS da
+autenticacao** => **a chave esta CERTA** (errada daria 401); (2) `chatbot.mjs:1318` faz *throw local* se a
+chave faltar, logo ver 402 prova que a chave existe e nao esta vazia; (3) `modoBusca:"regulamento"` so
+existe desde `f665200` (`git log -S`) => o codigo do 110c-1 esta **deployado**; (4) `modoResposta =
+"template"` tem **uma unica** ocorrencia no codigo (`chatbot.mjs:1485`, dentro do `catch` de
+`chamarLLM`, que so re-lanca em `systemprompt_ausente`) => e o comportamento **projectado**, nao um bug.
+**A correccao NAO e codigo: e carregar saldo.** Escalar para o 110c-2b (ajustar o prompt) seria tratar
+facturacao com cosmetica de prompt.
+
+**NAO fica provado (declarado, nao inventado):** (a) que `deepseek-flash` e aceite -- a DeepSeek pode
+validar o saldo ANTES do nome do modelo; (b) que o Regulamento chega ao modelo e produz resposta citada
+-- o LLM **nunca correu**, logo esta ronda **nao** confirma o objectivo principal do 110c-1 em producao.
+Os «certos» do SEG1/SEG2 (171 chars, <=5 frases, zero termos proibidos) medem a **frase de fallback** e
+sao **vacuamente verdadeiros**: ficam declarados como tal, para nao parecerem prova do prompt.
+
+**Validador adversarial: APROVADO COM RESSALVAS, 0 bloqueantes contra o diagnostico**
+(`_logs/UTAC110c-2_SEG3_VALIDADOR.md`, 13 056 B). Fez as **suas proprias 5 chamadas** (perguntas
+diferentes: inclui «O que e o ECOQUILDO?» e «Qual o valor da cota de ouro?») -> 5/5 template, e leu os
+logs com as **suas** invocacoes: cada uma gerou um `WARN` com **`request_id` UNICO emitido pela
+DeepSeek** => **refuta a hipotese de cache/stub** (respostas identicas porque o template e fixo, nao
+porque a chamada nao foi feita). Confirmou o caminho unico do `template`, o `throw` local da chave
+ausente, o fallback **seguro** (`guto-perfis.mjs:438-447`: frase natural + saida para o suporte, sem
+despejar chunk nem inventar valores) e que `modoBusca:"regulamento"` e posterior a `f665200`. Nota
+util que ele deixa: o **prompt CONTEM a palavra «leilao»** -- mas no bloco de PALAVRAS PROIBIDAS
+(`guto-perfis.mjs:126`), ou seja e a regra que a proibe; quem medir «termos proibidos» no **prompt** em
+vez da **resposta** tera falso-positivo.
+
+**Desvios e residuo declarados:** (1) `package-lock.json` do FRONTEND sujo (31/53) -- efeito conhecido
+do `netlify deploy --prod`, que corre build LOCAL; **nao tocado** (o UTAC e so-verificacao); (2) o
+criterio do enunciado «`git grep rag.mjs` deve estar vazio» e **falso como escrito** -- zero imports/usos
+em **runtime**; os hits sao comentarios, os testes-guarda, docs historicos e o `graphify-out` gerado
+(C4/C5 do inventario do 110c-2); (3) `HF_API_TOKEN` **ainda existe no Netlify** (residuo morto do RAG).
+
+**Registo:** `_logs/UTAC110c-2_SEG-1_MEDICAO.md` - `_logs/UTAC110c-2-verificacao-producao.md` -
+`_logs/UTAC110c-2_SEG0_saida.txt` - `_logs/UTAC110c-2_SEG3_VALIDADOR.md` -
+`Desktop/RELATORIO-UTAC110c-2-GUTO.txt`. **Proximo passo (do OPERADOR):** carregar saldo DeepSeek ->
+re-correr as mesmas 5 perguntas (~5 s) -> so entao medir `modoResposta:"llm"`, citacao de artigo e o
+nome do modelo. **So com isso o B-4 pode fechar.**
