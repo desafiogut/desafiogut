@@ -1,0 +1,75 @@
+==============================================================================
+Q1: O que é o DesafioGUT?
+------------------------------------------------------------------------------
+HTTP 200 | latência 5454 ms | erro: nenhum
+perfil=visitante | modoBusca=regulamento | modoResposta=llm | fontes=[]
+chars=256 | frases≈5 | cita artigo: SIM
+PROIBIDOS: nenhum
+Via B presente: pontos de fidelidade, ECOQUILDO, programa de fidelidade
+RESPOSTA:
+Olha! O DesafioGUT é um programa de fidelidade gamificado do Grupo União e Trabalho, lá de Manaus — segundo o Art. 1º do Regulamento. Tem a Oferta Relâmpago e a Oferta Programada, com pontos de fidelidade e o ECOQUILDO. Quer criar tua conta pra participar?
+==============================================================================
+Q2: Quanto custa o Passe Desafio?
+------------------------------------------------------------------------------
+HTTP 200 | latência 1453 ms | erro: nenhum
+perfil=visitante | modoBusca=regulamento | modoResposta=llm | fontes=[]
+chars=294 | frases≈6 | cita artigo: SIM
+PROIBIDOS: nenhum
+Via B presente: Passe, pontos de fidelidade
+RESPOSTA:
+Boa pergunta! O Passe Desafio custa R$ 2,00, com preço fixo — tá no Art. 6º do Regulamento.
+
+Tem duas modalidades: Passe Relâmpago (1 lance) e Passe Programado (1 palpite), e cada um te dá 10 pontos de fidelidade. Quer saber como juntar os pontos? Cria uma conta para participar das edições! 😊
+==============================================================================
+Q3: Como consigo o cartão colecionável?
+------------------------------------------------------------------------------
+HTTP 200 | latência 1674 ms | erro: nenhum
+perfil=visitante | modoBusca=regulamento | modoResposta=llm | fontes=[]
+chars=249 | frases≈6 | cita artigo: SIM
+PROIBIDOS: nenhum
+Via B presente: Passe, pontos de fidelidade, cartão colecionável
+RESPOSTA:
+Boa! É simples: a cada 50 pontos de fidelidade acumulados, podes adquirir 1 cartão colecionável da Família Quildo — segundo o Art. 9º do Regulamento. E cada Passe Desafio te dá 10 pontos (Art. 8º).
+
+Cria a tua conta no app pra começares a juntar! 😄
+==============================================================================
+Q4: O que é o ECOQUILDO?
+------------------------------------------------------------------------------
+HTTP 200 | latência 1881 ms | erro: nenhum
+perfil=visitante | modoBusca=regulamento | modoResposta=llm | fontes=[]
+chars=261 | frases≈6 | cita artigo: SIM
+PROIBIDOS: nenhum
+Via B presente: Passe, ECOQUILDO
+RESPOSTA:
+Olha! O ECOQUILDO é a moeda social interna do Grupo União e Trabalho — 1 ECOQUILDO vale R$ 1,00, segundo o Art. 47º.
+
+Dá para usar no site oficial ou para pegar novos Passes no app. E tu ganha 1 ECOQUILDO só de te cadastrar! Quer criar tua conta pra começar? 😊
+==============================================================================
+Q5: Como funciona o Menor Lance Único?
+------------------------------------------------------------------------------
+HTTP 200 | latência 2308 ms | erro: nenhum
+perfil=visitante | modoBusca=regulamento | modoResposta=llm | fontes=[]
+chars=369 | frases≈8 | cita artigo: SIM
+PROIBIDOS: nenhum
+Via B presente: Menor Lance
+RESPOSTA:
+Boa pergunta! Na Oferta Relâmpago ganha quem fizer o **menor lance que ninguém mais escolheu** — ou seja, o menor valor único (Art. 14º).
+
+Os pontos de lance não se compram com dinheiro: ganham-se com atividade no app (Art. 17º). E quem vence leva o produto pelo valor do lance, a 1 ponto = R$ 0,01 (Art. 18º).
+
+Queres criar a tua conta pra entrar na próxima edição? 😊
+
+==============================================================================
+AVALIAÇÃO DOS CRITÉRIOS
+==============================================================================
+PASS  1. modoResposta == 'llm' em todas  — 5/5
+PASS  2. sem HTTP 402 (nem no corpo nem no erro)  — nenhum
+PASS  3. cita artigo do regulamento  — 5/5
+PASS  4. vocabulário Via B presente em todas  — Q1:3 Q2:2 Q3:3 Q4:2 Q5:1
+PASS  5. ZERO termos proibidos  — nenhum
+FAIL  6. respostas ≤ 5 frases  — Q2(6) Q3(6) Q4(6) Q5(8)
+
+latências: 5454ms 1453ms 1674ms 1881ms 2308ms
+chars: 256 294 249 261 369
+
+>>> HA CRITÉRIOS POR CUMPRIR

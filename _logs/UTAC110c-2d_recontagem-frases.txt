@@ -1,0 +1,11 @@
+Q | frases(ANTIGO) | frases(CORRIGIDO) | ≤5?
+1 |              5 |                4 | PASS
+2 |              6 |                4 | PASS
+3 |              6 |                3 | PASS
+4 |              6 |                4 | PASS
+5 |              8 |                4 | PASS
+
+com o contador CORRIGIDO: 5/5 com <= 5 frases
+(o contador antigo dava FAIL em 4 de 5 porque somava o ponto de «Art.» como fim de frase)
+
+respostas extraidas: 5
