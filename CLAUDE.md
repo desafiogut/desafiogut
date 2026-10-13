@@ -5900,3 +5900,66 @@ habilidade»/«senhas» no dicionario PT). `docs/REGULAMENTO-v4.md` e `-v3.md` *
 **Registo:** `_logs/UTAC110c_SEG-1_MEDICAO.md` - `_logs/UTAC110c-guto-reescrita.md` -
 `_logs/UTAC110c_SEG4_MUTACAO.txt` - `_logs/UTAC110c_SEG0_geracao.txt` - `_logs/UTAC110c_SEG5_VALIDADOR.md` -
 `Desktop/RELATORIO-UTAC110c-1-GUTO.txt`. **Proximo:** 110c-2 (por a chave DeepSeek + verificar em producao).
+
+## R14 (append) -- UTAC110c-1b -- GUTO: MARCAS DE FORMATACAO LIMPAS DO REGULAMENTO (+ ponto cego fechado) (Hermes/DeepSeek)
+
+**Tipo:** correccao de conteudo + testes. Havia 3 commits nesta ronda, todos empurrados:
+`f665200` (110c-1) -> `0504fc3` (fecho do 110c-1) -> `2f9ea82` (limpeza) -> **`0a6f527`** (ponto cego).
+Baseline do 1b: `f665200`. **A14: CUMPRIDA** (o operador fechou as aplicacoes; RAM passou de ~1 150 MB
+para **1 840/1 858/1 921/1 910 MB**). **O desvio de A14 do 110c-1 fica RESOLVIDO por medicao nova:** a
+suite re-corrida a **1 628 MB** deu os MESMOS numeros (979/979 - 1103/1109 - VERDE), logo deixa de ser
+«verde com ressalva» e passa a medicao valida.
+
+**O problema.** O PDF oficial do cliente **imprime as marcas de formatacao com que foi gerado** (barra
+invertida antes do cifrao e a sequencia `text{...}`), nos Arts. 6o, 18o, 37o e 47o -- os artigos dos
+VALORES. O 110c-1 transcreveu-o FIELMENTE, o que deixava o GUTO apto a responder «1\text{ ponto} =
+R\$ 0,01». O 1b limpa SO as marcas: `docs/GUTO-REGULAMENTO.md` **19 459 -> 19 400 chars** (delta
+**-59**, limite +-500), **ZERO marcas em todo o ficheiro**, **12 capitulos e 72 artigos (1..72)** e
+todos os valores intactos. **Prova de que o conteudo juridico nao mudou:** `limpo ==
+transformacao(corpo_original)` por assercao que **ABORTA a geracao** -- a limpeza e EXACTAMENTE a
+transformacao declarada, nem uma letra a mais. A copia derivada `_lib/guto-regulamento.mjs` foi
+regenerada e um teste compara-a **byte a byte** com o ficheiro do repo.
+
+**CONFLITO DO ENUNCIADO (GATE 12), resolvido com criterio.** O 1b pede «ZERO ocorrencias de
+`\text{`/`R\$` no ficheiro limpo» E «NAO alterar a ERRATA DA FONTE» -- impossivel enquanto a ERRATA
+citava as marcas literalmente. As 3 opcoes foram medidas; escolhida a que satisfaz o critério
+**medível** (zero literais em TODO o ficheiro, que e o que protege o GUTO) mantendo a **FUNCAO** da
+ERRATA: descreve o defeito **em palavras** e guarda a tabela `artigo -> o que o PDF imprime -> valor
+correcto` + a pendencia do cliente. Uma frase teve de sair por ter deixado de ser verdadeira («A
+transcricao NAO corrige o escape») -- um registo que mente e pior do que um registo que muda, e o
+teste `mc963` guarda isso. **Pendencia mantida:** o PDF do cliente tem de ser corrigido na origem
+(RTD/Cartorio).
+
+**⛔ Validador adversarial do 110c-1: APROVADO COM RESSALVAS, 0 BLOQUEANTES** (`_logs/UTAC110c_SEG5_VALIDADOR.md`,
+12 065 B). Reproduziu por execucao propria as 8 alegacoes centrais (sha256 das duas copias coincidente,
+Regulamento integral nos 5 prompts, `max_tokens 4000` no corpo REAL do pedido, RAG/HF/Blob/scripts
+removidos, suite VERDE). Traz **um achado grave que este UTAC FECHOU**: o needle-set do teste (1)/(5)
+era **CEGO a «Painel Lojista» e «cotas comerciais»** -- provou-o alimentando o verificador com um
+prompt antigo so com esses termos e obtendo **0 violacoes**, enquanto o prompt do perfil `corporativo`
+os contem (`guto-perfis.mjs:68-71`). Correccao sem enfraquecer o teste: 3 needles novos, comparacao
+**EXACTA** contra um **RESIDUO_DECLARADO** medido (so o perfil corporativo, ja declarado ao operador) e
+teste (1b) que garante que a excepcao continua a ser so essa -- qualquer termo antigo NOVO, ou qualquer
+destes fora do corporativo, fica RED. «Cotas» sozinho NAO e needle: as Cotas Bronze/Prata/Ouro/Diamante
+EXISTEM no Regulamento 5.0. Outros achados do validador ficam DECLARADOS para o 110c-2: «senha» sobrevive
+na prosa de >= 7 intents alem dos 3 declarados; `package.json:build:rag` aponta para ficheiro apagado
+(script quebrado); `chatbot.mjs:99` ainda dispara em «cotas comerciais»; `_lib/admin-alertas.mjs:74-77`.
+
+**Testes INVERTIDOS, nao apagados.** `mc963 (c2)` e `(e)` exigiam os escapes e passam a exigir **ZERO
+marcas** + os valores legiveis (Art. 6o/18o/47o). A invariante de fundo mantem-se -- «o prompt nao pode
+afirmar um regulamento que nao existe» -- e o defeito a combater passou a ser o inverso: antes era
+PERDER o escape, agora e REINTRODUZI-LO. **Martelo: 10/10 mutantes mordem**, cada um no teste certo,
+restauro sha256 identico; `M9` repoe a marca no Art. 6o (RED em (c) e (e)) e `M10` mete «Painel
+Lojista» no prompt do perfil `comum` (RED em (1)) -- o mutante do ponto cego. Nenhum guarda novo nasceu
+sem mutante. `guto-perfis.mjs` fica **SEM DIFF** depois do martelo.
+
+**Suite com A14 cumprida:** frontend **979/979** - backend **1104/1110** (baseline 1101; +1 do teste 1b)
+- **VERDE**. Erros dos meus proprios instrumentos, declarados no `_log` da limpeza: contagem de escapes
+que deu 0 por o `\\text` do heredoc virar TAB (construir o padrao com `chr(92)`); corte do cabecalho do
+modulo pela PRIMEIRA ocorrencia (a marca esta dentro do comentario da receita) que deixou o texto fora
+do template literal; e o bash a comer um fragmento da mensagem do commit por causa dos backticks.
+
+**Registo:** `_logs/UTAC110c-1b_SEG-1_MEDICAO.md` - `_logs/UTAC110c-1b-limpeza.md` -
+`_logs/UTAC110c-1b_SEG1_MUTACAO.txt` - `_logs/UTAC110c-1b_SEG1_suite.txt` -
+`_logs/UTAC110c_SEG5_VALIDADOR.md`. **Pendente:** validador adversarial do 1b (despachado) e a
+actualizacao do relatorio do Desktop. **Proximo:** 110c-2 (chave DeepSeek + verificacao em producao +
+arrumar o residuo declarado).
