@@ -13,6 +13,7 @@ let chamadasDebitoRs = 0;
 let chamadasCompromete = 0;
 let chamadasAddLance = 0;
 let chamadasSaldoOnChain = 0;
+let chamadasConsumoCredito = 0; // UTAC110d
 
 const mem = new Map();
 const fakeStore = {
@@ -51,6 +52,13 @@ mock.module("../_lib/saldoRs.mjs", {
     },
   },
 });
+// UTAC110d (R18-110d-3): o relâmpago consome 1 crédito de lance (débito R$ atrás da flag desligada).
+mock.module("../_lib/ledger-lance.mjs", {
+  namedExports: {
+    consumirCreditoLance: async () => { chamadasConsumoCredito += 1; return { ok: true, criado: true, creditos: 0 }; },
+    reverterMovimentoLance: async () => ({ ok: true, revertido: true }),
+  },
+});
 mock.module("../_lib/cors.mjs", {
   namedExports: { respostaPreflight: () => null, CABECALHOS_CORS: { "access-control-allow-origin": "*" } },
 });
@@ -69,6 +77,7 @@ function zerar() {
   chamadasCompromete = 0;
   chamadasAddLance = 0;
   chamadasSaldoOnChain = 0;
+  chamadasConsumoCredito = 0;
 }
 
 function pedido(edicaoId, valorCentavos = 37) {
@@ -82,6 +91,7 @@ function pedido(edicaoId, valorCentavos = 37) {
 
 function nadaConsumido() {
   assert.equal(chamadasDebitoRs, 0, "não pode debitar R$");
+  assert.equal(chamadasConsumoCredito, 0, "não pode consumir crédito de lance");
   assert.equal(chamadasSaldoOnChain, 0, "não pode chegar ao gate de senhas");
   assert.equal(chamadasCompromete, 0, "não pode comprometer on-chain");
   assert.equal(chamadasAddLance, 0, "não pode gravar o lance");
@@ -105,7 +115,9 @@ test("especial antes da abertura: 409 edicao_nao_iniciada, nada consumido", asyn
 // decisão: a especial é RELÂMPAGO e o lance debita SALDO R$ (a partir de R$ 0,01). O
 // teste passa a medir o contrário — e é isso que protege contra a regressão ao caminho
 // de senha.
-test("especial dentro da janela: 201, paga SALDO R$ (a partir de R$ 0,01) e NÃO senha", async () => {
+// UTAC110d (R18-110d-3): o custo do lance relâmpago passou de saldo R$ a 1 CRÉDITO de lance. A
+// invariante do MC94.4.1 mantém-se: a especial é relâmpago e NUNCA consome senha.
+test("especial dentro da janela: 201, consome 1 CRÉDITO de lance e NÃO senha", async () => {
   zerar();
   const agora = Date.now();
   mockEdicao = { ...seed.EDICAO_ESPECIAL_AIRFRYER, inicio_em: iso(agora - 60_000), termino_em: iso(agora + 60_000) };
@@ -117,7 +129,8 @@ test("especial dentro da janela: 201, paga SALDO R$ (a partir de R$ 0,01) e NÃO
   // o sentido correcto. Asserimos o SENTIDO, não a forma exacta: era a forma que a minha
   // 1.ª versão media, e teria falhado num caso correcto.
   assert.ok(!data.senhaConsumida, "não pode haver consumo de senha na especial");
-  assert.equal(chamadasDebitoRs, 1, "a especial debita SALDO R$");
+  assert.equal(chamadasDebitoRs, 0, "o débito R$ está atrás da flag desligada");
+  assert.equal(chamadasConsumoCredito, 1, "a especial consome 1 crédito de lance");
   assert.equal(chamadasSaldoOnChain, 0, "sem senha: não há leitura on-chain de senhas");
   assert.equal(chamadasCompromete, 1);
   assert.equal(chamadasAddLance, 1);
@@ -168,5 +181,5 @@ test("controlo: R-1 sem metadata continua a passar (compat intacta)", async () =
   const resp = await handler(pedido("R-1"));
   assert.equal(resp.status, 201);
   assert.equal((await resp.json()).modo, "relampago");
-  assert.equal(chamadasDebitoRs, 1);
+  assert.equal(chamadasConsumoCredito, 1);
 });

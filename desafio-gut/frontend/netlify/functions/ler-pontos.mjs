@@ -8,6 +8,8 @@
 //
 // 200 { ok, pontos, pontosCartao, bonusPalpite, pontosParaCartao, podeResgatarCartao, historico, palpites }
 //   ⚠️ R1 (UTAC106f): `pontos` é o TOTAL; `pontosCartao` é o que CONTA para o cartão (só compra/resgate).
+//   UTAC110d (aditivo): + `fidelidade: {total, historico}` e `lance: {creditos, pontos, historico}` —
+//   os dois ledgers SEPARADOS. Os campos acima ficam iguais (a UI actual consome-os).
 // 401 token_ausente|token_invalido · 405 metodo_invalido · 503 sistema_pausado|store_indisponivel
 //
 // Padrão herdado POR LEITURA de `comprar-passe-pontos.mjs` (Bearer → endereco; erros snake_case).
@@ -50,6 +52,7 @@ export default async (req) => {
   }
 
   const pontos = Number(registo?.pontos ?? 0);
+  const historico = Array.isArray(registo?.historico) ? registo.historico : [];
   // ⚠️ R1 (UTAC106f, decisão do operador = opção A): o CARTÃO conta SÓ pontos de COMPRA.
   // `pontos` é o TOTAL (compra + bónus de palpite) e serve para mostrar o bónus; a BARRA e o LIMIAR
   // do cartão usam `pontosCartao`. Sem isto, 48 de compra + 2 de bónus = 50 desbloqueava o cartão.
@@ -61,7 +64,14 @@ export default async (req) => {
     bonusPalpite: pontos - pontosCartao,
     pontosParaCartao: PONTOS_POR_CARTAO,
     podeResgatarCartao: pontosCartao >= PONTOS_POR_CARTAO,
-    historico: Array.isArray(registo?.historico) ? registo.historico : [],
+    historico,
+    // UTAC110d — os dois ledgers, lidos da MESMA linha (`lerPontos` faz `select("*")`).
+    fidelidade: { total: pontos, historico },
+    lance: {
+      creditos: Number(registo?.creditos_lance ?? 0),
+      pontos: Number(registo?.pontos_lance ?? 0),
+      historico: Array.isArray(registo?.historico_lance) ? registo.historico_lance : [],
+    },
     palpites: palpites.map((p) => ({
       edicaoId: p.edicao_id, valor: p.valor, criadoEm: p.criado_em,
       apurado: p.apurado === true, resultado: p.resultado ?? null,

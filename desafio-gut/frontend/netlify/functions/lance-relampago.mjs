@@ -4,7 +4,7 @@
 //
 // Resposta 200: { ..., idempotent: true }    — lance já processado (idempotência)
 // Resposta 201: { ok, lanceId, ... }          — lance novo criado
-// Resposta 400: saldo_insuficiente | params_invalidos
+// Resposta 400: saldo_insuficiente | params_invalidos | sem_creditos_lance (UTAC110d)
 // Resposta 401: token_ausente | token_expirado | token_invalido
 // Resposta 403: endereco_nao_corresponde
 // Resposta 409: edicao_nao_iniciada | edicao_encerrada   (MC94.1 — janela da edição)
@@ -30,6 +30,7 @@ import { buscarEdicao } from "./_lib/edicoes-core.mjs"; // MC91.11 — tipo da e
 import { verificarJanelaLance, EDICAO_ESPECIAL_RE } from "./_lib/edicao-janela.mjs"; // MC94.1 — janela
 import { registrarConsumoSenha, BLOB_SENHAS_CONSUMO } from "./_lib/senhas-programado.mjs"; // MC91.11 — ledger
 import { keccak256, AbiCoder } from "ethers";
+import { consumirCreditoLance, reverterMovimentoLance } from "./_lib/ledger-lance.mjs"; // UTAC110d
 import { respostaPreflight } from "./_lib/cors.mjs";
 
 const LANCE_MIN_CENTAVOS = 1;
@@ -37,6 +38,11 @@ const LANCE_MAX_CENTAVOS = 999999;
 const EDICAO_PADRAO      = "R-1";
 const BLOB_LANCES        = "lances-relampago";
 const BLOB_IDEM          = "lance-idem";
+
+// UTAC110d — decisão do operador R18-110d-3: o lance relâmpago deixa de debitar o saldo R$ e passa a
+// consumir 1 CRÉDITO de lance (dado pelo Passe Relâmpago). O débito R$ NÃO foi removido (está na
+// mainnet): fica atrás desta flag, DESLIGADA. `true` repõe o comportamento anterior byte a byte.
+const DEBITO_SALDO_LANCE_ATIVO = false;
 
 function abrirStore(name) {
   try { return getStore({ name, consistency: "strong" }); }
@@ -185,6 +191,8 @@ export default async (req) => {
   }
 
   const ehProgramado = tipoEdicao === "programado";
+  const lanceId = randomUUID();
+  let refCreditoLance = null; // UTAC110d — preenchido só quando se consome um crédito de lance
 
   // ── 6. Consumo do pagamento (programado = senha; flash = saldo R$) ────────
   let debito;
@@ -222,6 +230,25 @@ export default async (req) => {
         consumidasAgora: consumo.consumidas,
       },
     };
+  } else if (!DEBITO_SALDO_LANCE_ATIVO) {
+    // 6c'. UTAC110d — Flash (e desconhecido): consome 1 CRÉDITO de lance. Não toca no saldo R$
+    // nem nos pontos de fidelidade nem nos pontos de lance (R18-110d-2).
+    refCreditoLance = `lance:${lanceId}`;
+    let consumo;
+    try { consumo = await consumirCreditoLance(endereco, refCreditoLance); }
+    catch { consumo = { ok: false, code: "ERRO_DB" }; }
+    if (!consumo.ok) {
+      if (consumo.code === "CREDITOS_INSUFICIENTES") {
+        return jsonError(400, "sem_creditos_lance",
+          "Sem créditos de lance suficientes — compre um Passe Relâmpago para dar um lance.",
+          { creditosLance: consumo.creditos ?? 0 });
+      }
+      return jsonError(502, "consumo_credito_falhou", "não foi possível consumir o crédito de lance", { motivo: consumo.code });
+    }
+    debito = {
+      ok: true,
+      resultado: { saldoAntesCentavos: null, saldoDepoisCentavos: null, creditosLanceRestantes: consumo.creditos },
+    };
   } else {
     // 6c. Flash (e desconhecido): debita saldo R$ — comportamento INTOCADO.
     debito = await debitarSaldoRs({ endereco, valorCentavos, motivo: `lance-${edicaoId}` });
@@ -231,7 +258,6 @@ export default async (req) => {
     }
   }
 
-  const lanceId = randomUUID();
   const registro = {
     lanceId, edicaoId, endereco, valorCentavos, nomeExibicao,
     saldoAntesCentavos:  debito.resultado.saldoAntesCentavos ?? null,
@@ -262,6 +288,11 @@ export default async (req) => {
     } catch (err) {
       // Em mainnet a falha é FATAL: não gravar lance sem o commitment correspondente.
       console.error("[lance-relampago] blindagem (commit/KPB) falhou:", err?.message);
+      // UTAC110d — o lance não foi registado ⇒ o crédito consumido volta (reversão integral).
+      if (refCreditoLance) {
+        const rev = await reverterMovimentoLance(endereco, refCreditoLance).catch(() => ({ ok: false }));
+        if (!rev.ok) console.error("[lance-relampago] devolver o crédito de lance falhou");
+      }
       return jsonError(502, "blindagem_falhou", "não foi possível registar o lance blindado");
     }
   } else {
@@ -326,6 +357,8 @@ export default async (req) => {
     saldoRsAntesCentavos:  debito.resultado.saldoAntesCentavos ?? null,
     saldoRsDepoisCentavos: debito.resultado.saldoDepoisCentavos ?? null,
     saldoOnChain: debito.resultado.saldoOnChain ?? null,
+    creditoLanceConsumido: refCreditoLance !== null,
+    creditosLanceRestantes: debito.resultado.creditosLanceRestantes ?? null,
     processadoEm: registro.processadoEm,
     commitmentHash: registro.commitmentHash ?? null,
   }, 201);

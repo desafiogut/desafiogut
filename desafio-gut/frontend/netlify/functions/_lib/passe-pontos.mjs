@@ -450,3 +450,21 @@ export async function registarResgate(endereco, { cartaoId, morada, idempotencyK
 
   return { ok: true, idempotent: pedido.criado === false, resgate: pedido.resgate, pontos: debito.pontos };
 }
+
+// ══════════════════════════════════════════════════════════════════════════════════════
+// UTAC110d — DOIS PASSES (Regulamento 5.0, Arts. 13º e 25º). ADITIVO: nada acima mudou.
+//
+// Passe Relâmpago  → 10 pontos de fidelidade + 1 CRÉDITO de lance (ledger em `ledger-lance.mjs`).
+// Passe Programado → 10 pontos de fidelidade + direito a palpite.
+// Decisão R18-110d-4: os 10 pontos valem SÓ para compras NOVAS (não retroactivo) — as entradas
+// antigas do histórico continuam com 1 ponto. `PONTOS_POR_PASSE = 1` fica para o endpoint genérico
+// `comprar-passe-pontos.mjs` (deprecated, mantido para os clientes actuais).
+// O tipo do Passe fica gravado na `ref` (prefixo), sem mudar o formato da entrada do histórico;
+// o movimento é `tipo:"compra"`, logo CONTA para o cartão (`pontosDeCompra`).
+// ══════════════════════════════════════════════════════════════════════════════════════
+
+export const PONTOS_FIDELIDADE_POR_PASSE = 10;
+export const TIPOS_PASSE = Object.freeze(["relampago", "programado"]);
+
+/** `ref` da compra de um Passe tipado: `passe-<tipo>:<chave>`. */
+export const refPasse = (tipoPasse, idempotencyKey) => `passe-${tipoPasse}:${idempotencyKey}`;

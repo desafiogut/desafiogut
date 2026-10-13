@@ -1,4 +1,7 @@
 // POST /.netlify/functions/comprar-passe-pontos — UTAC106d-v2. Compra do Passe Via B (R$ 2,00 → 1 ponto).
+// ⚠️ DEPRECATED (UTAC110d): substituído por `comprar-passe-relampago.mjs` e `comprar-passe-programado.mjs`
+//    (10 pontos + benefício do tipo). FICA a funcionar sem mudança (1 ponto) porque a UI actual
+//    (`useComprarPasse.js`) ainda o chama — remover só depois de os clientes migrarem (110d-front).
 //
 // ⚠️ ADITIVO. Endpoint NOVO e SEPARADO de `comprar-passe.mjs` (Via A) — que fica intacto.
 // Header: Authorization: Bearer ***   ·   Body: { idempotencyKey } (ou header `x-idempotency-key`)
