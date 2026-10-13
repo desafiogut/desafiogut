@@ -106,6 +106,14 @@ MODULO: valores legiveis? [true, true, true, true] | ERRATA presente? true
    divergiu» — falso: as cópias eram idênticas. Foi a minha própria asserção que o apanhou.
 4. **Delta +499 na 1.ª tentativa.** A ERRATA nova era longa e ficou **colada ao limite** de ±500 do
    enunciado; encurtada para **−59**, perto do «ideal ~200».
+5. **O bash comeu um fragmento da mensagem do commit.** Escrevi a mensagem com `git commit -m "..."`
+   entre **aspas duplas** e usei **backticks** para marcar código
+   (`` `limpo == transformacao(corpo_original)` ``) — o bash interpretou-os como *command
+   substitution*, tentou executar o conteúdo e deixou a frase sem o fragmento. A mensagem continua
+   **legível e correcta em substância** («a limpeza é EXACTAMENTE a transformação declarada, nem uma
+   letra a mais»), mas o snippet perdeu-se. **Lição:** nunca pôr backticks numa mensagem de commit
+   passada por `-m` no bash — usar `-F <ficheiro>` ou escrever o código sem backticks. O commit
+   `2f9ea82` **não foi emendado** (já estava empurrado): a correcção é esta errata.
 
 **Nota de método:** os quatro foram apanhados por asserções/testes escritos **antes** de publicar o
 resultado. É a diferença entre «medi» e «acho que medi».

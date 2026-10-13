@@ -46,7 +46,31 @@ const MODELO_ANTIGO = [
   { nome: "1.207/2024", re: /1\.207\s*\/\s*2024/ },
   { nome: "torneio (de habilidade)", re: /torneio/i },
   { nome: "senha/senhas", re: /\bsenhas?\b/i },
+  // ⭐ acrescentados ao abrigo do achado ⚠️ do validador adversarial do UTAC110c-1: o needle-set
+  // original era CEGO a estes termos, e o prompt do perfil `corporativo` tinha-os (ponto cego
+  // provado por execução). «Cotas» NÃO entra como needle: as Cotas Bronze/Prata/Ouro/Diamante
+  // EXISTEM no Regulamento 5.0 — o termo antigo é o composto «cotas comerciais».
+  { nome: "Painel Lojista", re: /Painel Lojista/i },
+  { nome: "cotas comerciais", re: /cotas comerciais/i },
+  { nome: "Carteira do Lojista", re: /Carteira do Lojista/i },
 ];
+
+/**
+ * ⚠️ RESÍDUO DECLARADO — a ÚNICA excepção tolerada, e é **medida**.
+ *
+ * O perfil `corporativo` ficou no modelo antigo («cotas comerciais», «Painel Lojista») e a
+ * declaração do UTAC110c-1 registou-o como resíduo para arrumação no UTAC110c-2 (o 110c-1b proíbe
+ * tocar no system prompt). Este teste **obriga a que a excepção seja EXACTAMENTE esta**: se
+ * aparecer um termo antigo A MAIS, ou se um destes aparecer em QUALQUER outro perfil, fica RED.
+ *
+ * Sem esta lista o teste seria ou cego (antes) ou vermelho por um resíduo conhecido e aceite
+ * (agora). Com ela, o ponto cego fecha-se nos 4 outros perfis e o resíduo fica **à vista**,
+ * contado — é o oposto de o esconder.
+ */
+const RESIDUO_DECLARADO = {
+  corporativo: ["Painel Lojista", "cotas comerciais"],
+};
+const residuoEsperado = (perfil) => RESIDUO_DECLARADO[perfil] || [];
 
 /** @returns {string[]} nomes dos marcadores do modelo antigo presentes em `t`. */
 function violacoesDeModeloAntigo(t) {
@@ -54,19 +78,38 @@ function violacoesDeModeloAntigo(t) {
 }
 
 test("(1) o system prompt NÃO ensina o modelo antigo — nos 4 perfis e na conformidade", () => {
+  // ⚠️ A COMPARAÇÃO É EXACTA, de propósito: `violacoes == resíduo declarado`. Uma comparação «não
+  // pode ter MAIS do que X» deixaria passar termos novos; esta falha se aparecer um termo antigo
+  // que ninguém declarou — foi o que o validador do 110c-1 provou que faltava aqui.
   for (const [nome, prompt] of PROMPTS) {
-    assert.deepEqual(violacoesDeModeloAntigo(prompt), [],
-      `${nome}: o prompt ainda fala em ${violacoesDeModeloAntigo(prompt).join(", ")}`);
+    const vistas = violacoesDeModeloAntigo(prompt).sort();
+    const toleradas = residuoEsperado(nome).sort();
+    assert.deepEqual(vistas, toleradas,
+      vistas.length > toleradas.length
+        ? `${nome}: apareceu modelo antigo NÃO declarado -> ${vistas.filter((v) => !toleradas.includes(v)).join(", ")}`
+        : `${nome}: resíduo declarado já não existe -> corrigir RESIDUO_DECLARADO (${toleradas.join(", ")})`);
   }
+});
+
+test("(1b) o resíduo declarado é o perfil `corporativo` e é o ÚNICO — com rasto para o 110c-2", () => {
+  const comResiduo = PROMPTS.filter(([nome]) => residuoEsperado(nome).length > 0).map(([n]) => n);
+  assert.deepEqual(comResiduo, ["corporativo"],
+    "a excepção ao teste (1) tem de ser exactamente o perfil corporativo, já declarado ao operador");
 });
 
 test("(5) BIDIRECCIONAL: o mesmo verificador RECUSA o prompt ANTIGO (senão (1) não prova nada)", () => {
   const ANTIGO = `REGRA DE LINGUAGEM (obrigatória — Portaria SPA/MF 1.207/2024):
 - O DesafioGUT é um TORNEIO DE HABILIDADE com ranking acumulado. NUNCA o chames leilão.
 - USA sempre: "torneio de habilidade", "edição", "lance", "estratégia", "saldo", "senha".
-- Programado (consome SENHAS); Senha: R$ 2,00 cada.`;
+- Programado (consome SENHAS); Senha: R$ 2,00 cada.
+- Foca em planos, cotas comerciais, banners e no Painel Lojista.`;
   const v = violacoesDeModeloAntigo(ANTIGO);
-  assert.ok(v.length >= 4, `o verificador não mordeu o prompt antigo — viu só ${v.length}: ${v.join(", ")}`);
+  // ⭐ `>= 7` e não `>= 4`: os 5 needles originais MAIS os 2 que o validador do 110c-1 provou que
+  // faltavam («cotas comerciais», «Painel Lojista»). Exigir os 7 é o que garante que a extensão
+  // do needle-set morde — sem isto, acrescentá-los seria decorativo.
+  assert.ok(v.length >= 7, `o verificador não mordeu o prompt antigo — viu só ${v.length}: ${v.join(", ")}`);
+  assert.ok(v.includes("Painel Lojista") && v.includes("cotas comerciais"),
+    `o needle-set alargado não morde os termos do perfil corporativo: ${v.join(", ")}`);
   // e o positivo continua a passar pelo MESMO verificador
   assert.deepEqual(violacoesDeModeloAntigo(obterPromptSystem("comum", {})), []);
 });

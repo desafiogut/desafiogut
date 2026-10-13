@@ -1,12 +1,12 @@
-MARTELO DE MUTAÇÃO — UTAC110c-1 · 9 mutantes
+MARTELO DE MUTAÇÃO — UTAC110c-1 · 10 mutantes
 cwd: C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\netlify\functions
 
 ✅ M1 — repõe o modelo antigo na regra de linguagem
    ficheiro alvo : _tests/utac110c-guto-via-b.test.mjs
    mutante entrou: true  (sha fab6551d27bd → 11d2e860a0c9)
    linha mutada  : REGRA DE LINGUAGEM (obrigatória — Portaria SPA/MF 1.207/2024):
-   alvo antes    : pass=7 fail=0
-   alvo depois   : pass=5 fail=2
+   alvo antes    : pass=8 fail=0
+   alvo depois   : pass=6 fail=2
    RED em        : (1) o system prompt NÃO ensina o modelo antigo — nos 4 perfis e na conformidade | (5) BIDIRECCIONAL: o mesmo verificador RECUSA o prompt ANTIGO | (1) o system prompt NÃO ensina o modelo antigo — nos 4 perfis e na conformidade | (5) BIDIRECCIONAL: o mesmo verificador RECUSA o prompt ANTIGO
    restaurado    : sha256 idêntico (fab6551d27bd)
 
@@ -14,8 +14,8 @@ cwd: C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\netlify\functions
    ficheiro alvo : _tests/utac110c-guto-via-b.test.mjs
    mutante entrou: true  (sha 519993b3bce4 → cce594bb2fde)
    linha mutada  : max_tokens:  512,
-   alvo antes    : pass=7 fail=0
-   alvo depois   : pass=6 fail=1
+   alvo antes    : pass=8 fail=0
+   alvo depois   : pass=7 fail=1
    RED em        : (4) max_tokens = 4000 no corpo REAL enviado ao LLM | (4) max_tokens = 4000 no corpo REAL enviado ao LLM
    restaurado    : sha256 idêntico (519993b3bce4)
 
@@ -23,8 +23,8 @@ cwd: C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\netlify\functions
    ficheiro alvo : _tests/utac110c-guto-via-b.test.mjs
    mutante entrou: true  (sha fab6551d27bd → 3908f1c0a86a)
    linha mutada  : return base + REGRA_LINGUAGEM + REGRA_REGULAMENTO;
-   alvo antes    : pass=7 fail=0
-   alvo depois   : pass=5 fail=2
+   alvo antes    : pass=8 fail=0
+   alvo depois   : pass=6 fail=2
    RED em        : (3) o Regulamento INTEIRO é injectado no prompt | (4) max_tokens = 4000 no corpo REAL enviado ao LLM | (3) o Regulamento INTEIRO é injectado no prompt | (4) max_tokens = 4000 no corpo REAL enviado ao LLM
    restaurado    : sha256 idêntico (fab6551d27bd)
 
@@ -50,8 +50,8 @@ cwd: C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\netlify\functions
    ficheiro alvo : _tests/utac110c-guto-via-b.test.mjs
    mutante entrou: true  (sha 519993b3bce4 → ff39bf37536a)
    linha mutada  : import { respostaPreflight } from "./_lib/cors.mjs";
-   alvo antes    : pass=7 fail=0
-   alvo depois   : pass=6 fail=1
+   alvo antes    : pass=8 fail=0
+   alvo depois   : pass=7 fail=1
    RED em        : (7) ZERO referências ao Blob `rag`, e os 2 scripts de build apagados | (7) ZERO referências ao Blob `rag`, e os 2 scripts de build apagados
    restaurado    : sha256 idêntico (519993b3bce4)
 
@@ -59,8 +59,8 @@ cwd: C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\netlify\functions
    ficheiro alvo : _tests/utac110c-guto-via-b.test.mjs
    mutante entrou: true  (sha 519993b3bce4 → 3dead21c5762)
    linha mutada  : import { respostaPreflight } from "./_lib/cors.mjs";
-   alvo antes    : pass=7 fail=0
-   alvo depois   : pass=5 fail=2
+   alvo antes    : pass=8 fail=0
+   alvo depois   : pass=6 fail=2
    RED em        : (4) max_tokens = 4000 no corpo REAL enviado ao LLM | (6) ZERO referências ao HuggingFace em código de runtime, e `_lib/rag.mjs` apagado | (4) max_tokens = 4000 no corpo REAL enviado ao LLM | (6) ZERO referências ao HuggingFace em código de runtime, e `_lib/rag.mjs` apagado
    restaurado    : sha256 idêntico (519993b3bce4)
 
@@ -82,16 +82,26 @@ cwd: C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\netlify\functions
    RED em        : (c) `_lib/guto-regulamento.mjs` é o documento tal e qual | (e) ZERO marcas de formatação no ficheiro, com a ERRATA a documentar o defeito | (c) `_lib/guto-regulamento.mjs` é o documento tal e qual | (e) ZERO marcas de formatação no ficheiro, com a ERRATA a documentar o defeito
    restaurado    : sha256 idêntico (b75a3a4b8eb8)
 
+✅ M10 — mete modelo antigo NÃO declarado no prompt do perfil comum (ponto cego do needle-set)
+   ficheiro alvo : _tests/utac110c-guto-via-b.test.mjs
+   mutante entrou: true  (sha fab6551d27bd → 3d2614c5ae69)
+   linha mutada  : PERFIL: UTILIZADOR COMUM (autenticado). Amigável e didático. Ajuda com lances, passes, cotas comerciais, Painel Lojista,
+   alvo antes    : pass=8 fail=0
+   alvo depois   : pass=6 fail=2
+   RED em        : (1) o system prompt NÃO ensina o modelo antigo — nos 4 perfis e na conformidade | (5) BIDIRECCIONAL: o mesmo verificador RECUSA o prompt ANTIGO | (1) o system prompt NÃO ensina o modelo antigo — nos 4 perfis e na conformidade | (5) BIDIRECCIONAL: o mesmo verificador RECUSA o prompt ANTIGO
+   restaurado    : sha256 idêntico (fab6551d27bd)
+
 ──────────────────────────────────────────────────────────────────────────────
 RESUMO
-  M1  MORDE  pass=5 fail=2  restauro=idêntico  repõe o modelo antigo na regra de linguagem
-  M2  MORDE  pass=6 fail=1  restauro=idêntico  volta a cortar a resposta a meio (max_tokens 512)
-  M3  MORDE  pass=5 fail=2  restauro=idêntico  tira o Regulamento do prompt (volta a responder «de memória»)
+  M1  MORDE  pass=6 fail=2  restauro=idêntico  repõe o modelo antigo na regra de linguagem
+  M2  MORDE  pass=7 fail=1  restauro=idêntico  volta a cortar a resposta a meio (max_tokens 512)
+  M3  MORDE  pass=6 fail=2  restauro=idêntico  tira o Regulamento do prompt (volta a responder «de memória»)
   M4  MORDE  pass=8 fail=2  restauro=idêntico  âncora com um preço que o Regulamento não diz
   M5  MORDE  pass=9 fail=1  restauro=idêntico  o módulo do runtime divergir do documento (índice de 10 → 5 pontos)
-  M6  MORDE  pass=6 fail=1  restauro=idêntico  reabre o Blob do índice RAG
-  M7  MORDE  pass=5 fail=2  restauro=idêntico  reintroduz o HuggingFace em runtime (e o import apagado)
+  M6  MORDE  pass=7 fail=1  restauro=idêntico  reabre o Blob do índice RAG
+  M7  MORDE  pass=6 fail=2  restauro=idêntico  reintroduz o HuggingFace em runtime (e o import apagado)
   M8  MORDE  pass=9 fail=1  restauro=idêntico  tira a proibição de inventar artigos
   M9  MORDE  pass=8 fail=2  restauro=idêntico  repõe a marca de formatação no Regulamento (o GUTO leria o valor defeituoso)
+  M10  MORDE  pass=6 fail=2  restauro=idêntico  mete modelo antigo NÃO declarado no prompt do perfil comum (ponto cego do needle-set)
 
-mutantes que mordem: 9/9   anulados: 0
+mutantes que mordem: 10/10   anulados: 0

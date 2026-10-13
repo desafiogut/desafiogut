@@ -93,6 +93,15 @@ const MUTANTES = [
     substituto: "com preço fixo de R" + String.fromCharCode(92) + "$ 2,00 (dois reais)",
     porque: "repõe a marca de formatação no Regulamento (o GUTO leria o valor defeituoso)",
   },
+  {
+    // ⭐ UTAC110c-1b — guarda do ACHADO ⚠️ do validador do 110c-1: o needle-set do teste (1) era
+    // CEGO a «Painel Lojista»/«cotas comerciais». Este mutante mete «Painel Lojista» no prompt do
+    // perfil `comum` (que NÃO tem resíduo declarado) — se sobrevivesse, o ponto cego continuava lá.
+    n: "M10", ficheiro: GUTO, alvo: T_VIA_B,
+    ancora: "PERFIL: UTILIZADOR COMUM (autenticado). Amigável e didático. Ajuda com lances, passes,",
+    substituto: "PERFIL: UTILIZADOR COMUM (autenticado). Amigável e didático. Ajuda com lances, passes, cotas comerciais, Painel Lojista,",
+    porque: "mete modelo antigo NÃO declarado no prompt do perfil comum (ponto cego do needle-set)",
+  },
 ];
 
 function correr(alvo) {
