@@ -17,6 +17,11 @@ ALTER TABLE public.pontos
   ADD COLUMN IF NOT EXISTS pontos_lance    integer NOT NULL DEFAULT 0,
   ADD COLUMN IF NOT EXISTS historico_lance jsonb   NOT NULL DEFAULT '[]'::jsonb;
 
+-- Re-executável (SEG4 W6): os CHECK saem antes de entrar (ADD CONSTRAINT não tem IF NOT EXISTS).
+ALTER TABLE public.pontos
+  DROP CONSTRAINT IF EXISTS pontos_creditos_lance_nao_negativos_check,
+  DROP CONSTRAINT IF EXISTS pontos_pontos_lance_nao_negativos_check,
+  DROP CONSTRAINT IF EXISTS pontos_historico_lance_array_check;
 ALTER TABLE public.pontos
   ADD CONSTRAINT pontos_creditos_lance_nao_negativos_check CHECK (creditos_lance >= 0),
   ADD CONSTRAINT pontos_pontos_lance_nao_negativos_check   CHECK (pontos_lance >= 0),

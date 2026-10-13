@@ -189,6 +189,27 @@ test("A7 CAS: outro escritor muda os créditos entre a leitura e a escrita → r
   assert.deepEqual(linha().historico_lance.map((h) => h.ref), ["c1", "concorrente", "lance:1"]);
 });
 
+test("A7b CAS cobre pontos_lance: um escritor concorrente que só muda os pontos de lance é respeitado", async () => {
+  await L.creditarCreditoLance(A, "c1");
+  S.g.antesDeActualizar = (rows) => { rows[0].pontos_lance += 4; rows[0].historico_lance.push({ ref: "login:x", delta: 4, campo: "pontos_lance" }); };
+  const r = await L.consumirCreditoLance(A, "lance:1");
+  assert.equal(r.ok, true);
+  assert.equal(linha().pontos_lance, 4, "os pontos de lance do concorrente não se perdem");
+  assert.deepEqual(linha().historico_lance.map((h) => h.ref), ["c1", "login:x", "lance:1"]);
+});
+
+test("A7c ABA (SEG4 W3): crédito+consumo concorrentes deixam os contadores iguais — o histórico NÃO se perde", async () => {
+  await L.creditarCreditoLance(A, "c1");
+  S.g.antesDeActualizar = (rows) => {
+    rows[0].historico_lance.push({ ref: "c2", delta: 1, campo: "creditos_lance" }, { ref: "outro", delta: -1, campo: "creditos_lance" });
+    rows[0].atualizado_em = "outro-escritor"; // contadores iguais, versão diferente
+  };
+  const r = await L.consumirCreditoLance(A, "lance:1");
+  assert.equal(r.ok, true);
+  assert.deepEqual(linha().historico_lance.map((h) => h.ref), ["c1", "c2", "outro", "lance:1"]);
+  assert.equal((await L.creditarCreditoLance(A, "c2")).criado, false, "a entrada c2 sobreviveu ⇒ nada de crédito grátis");
+});
+
 test("A8 reverter: devolve o crédito e remove a entrada (o retry volta a consumir)", async () => {
   await L.creditarCreditoLance(A, "c1");
   await L.consumirCreditoLance(A, "lance:1");

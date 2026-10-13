@@ -30,6 +30,10 @@ const MUTANTES = [
   ["M8 sem desfazer os pontos quando o crédito falha", "_lib/comprar-passe-tipado.mjs", "const rev = await reverterMovimento(endereco, ref);", "const rev = { ok: false };"],
   ["M9 CAS sem o contador de créditos", "_lib/ledger-lance.mjs", "      ({ data, error } = await supabase.from(TABELA).update(payload)\n        .eq(\"endereco\", e).eq(\"creditos_lance\", creditos)", "      ({ data, error } = await supabase.from(TABELA).update(payload)\n        .eq(\"endereco\", e)"],
   ["M10 ler-pontos troca créditos por pontos", "ler-pontos.mjs", "creditos: Number(registo?.creditos_lance ?? 0),", "creditos: Number(registo?.pontos_lance ?? 0),"],
+  ["M12 ref do consumo constante (V1)", "lance-relampago.mjs", "refCreditoLance = idempotencyKey ? `lance:${idempotencyKey}` : `lance:${lanceId}`;", "refCreditoLance = `lance:${endereco}`;"],
+  ["M13 CAS sem pontos_lance (V2)", "_lib/ledger-lance.mjs", ".eq(\"endereco\", e).eq(\"creditos_lance\", creditos).eq(\"pontos_lance\", pontos)\n        .eq(\"atualizado_em\", atual.atualizado_em).select(\"endereco\"));", ".eq(\"endereco\", e).eq(\"creditos_lance\", creditos)\n        .eq(\"atualizado_em\", atual.atualizado_em).select(\"endereco\"));"],
+  ["M14 CAS sem a versão (ABA, W3)", "_lib/ledger-lance.mjs", "        .eq(\"atualizado_em\", atual.atualizado_em).select(\"endereco\"));\n      if (!error && Array.isArray(data) && data.length === 0) continue; // CAS perdeu", "        .select(\"endereco\"));\n      if (!error && Array.isArray(data) && data.length === 0) continue; // CAS perdeu"],
+  ["M15 consumo repetido não dá 409 (W5)", "lance-relampago.mjs", "    if (consumo.criado === false) {", "    if (false) {"],
   ["M11 o retry de compra a meio não completa o crédito", "_lib/comprar-passe-tipado.mjs", "if (st.completa) creditosLance = st.led.creditos;", "if (true) creditosLance = st.led.creditos;"],
 ];
 

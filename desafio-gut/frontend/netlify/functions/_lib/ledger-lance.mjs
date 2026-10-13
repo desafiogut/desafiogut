@@ -17,7 +17,9 @@
 //   - escrita devolve `{ok:false, code}`, leitura LANÇA em erro do Supabase
 //   - CAS (lê → grava só se os contadores não mudaram) + idempotência por `ref`
 //   - 23505 no INSERT da 1.ª linha → relê e repete
-// ⚠️ Este ledger escreve SÓ as suas 3 colunas: o `aplicarMovimento` de fidelidade escreve SÓ
+// ⚠️ CAS = os DOIS contadores + `atualizado_em` (SEG4 W3): só contadores sofria de ABA — um crédito e um
+//    consumo concorrentes deixam os contadores iguais e o UPDATE apagava as entradas deles do histórico.
+// ⚠️ Este ledger escreve SÓ as suas 3 colunas (+ `atualizado_em`): o `aplicarMovimento` de fidelidade escreve SÓ
 //    `pontos`/`historico`. Nenhum dos dois reescreve as colunas do outro ⇒ sem lost update cruzado.
 
 import { getSupabase } from "./supabase-client.mjs";
@@ -38,7 +40,7 @@ const ENDERECO_RE = /^0x[0-9a-f]{40}$/;
 const UNIQUE_VIOLATION = "23505";
 const MAX_TENTATIVAS = 5;
 const REF_MAX = 200;
-const COLUNAS = "endereco,creditos_lance,pontos_lance,historico_lance";
+const COLUNAS = "endereco,creditos_lance,pontos_lance,historico_lance,atualizado_em";
 
 const normalizar = (e) => String(e ?? "").toLowerCase();
 const refValida = (r) => typeof r === "string" && r.length > 0 && r.length <= REF_MAX;
@@ -89,7 +91,7 @@ async function aplicar(endereco, campo, delta, motivo, ref) {
     }
     const entrada = { data: new Date().toISOString(), campo, motivo, delta, ref };
     const historico = [...hist, entrada];
-    const payload = { [campo]: novo, historico_lance: historico };
+    const payload = { [campo]: novo, historico_lance: historico, atualizado_em: new Date().toISOString() };
 
     let data, error;
     if (atual == null) {
@@ -98,7 +100,8 @@ async function aplicar(endereco, campo, delta, motivo, ref) {
       if (error && error.code === UNIQUE_VIOLATION) continue;
     } else {
       ({ data, error } = await supabase.from(TABELA).update(payload)
-        .eq("endereco", e).eq("creditos_lance", creditos).eq("pontos_lance", pontos).select("endereco"));
+        .eq("endereco", e).eq("creditos_lance", creditos).eq("pontos_lance", pontos)
+        .eq("atualizado_em", atual.atualizado_em).select("endereco"));
       if (!error && Array.isArray(data) && data.length === 0) continue; // CAS perdeu → relê
     }
     if (error) return { ok: false, code: "ERRO_DB" };
@@ -155,8 +158,9 @@ export async function reverterMovimentoLance(endereco, ref) {
     const novo = (campo === CAMPO_CREDITOS ? creditos : pontos) - Number(alvo.delta ?? 0);
     if (novo < 0) return { ok: false, code: "REVERSAO_INVALIDA" };
     const { data, error } = await supabase.from(TABELA)
-      .update({ [campo]: novo, historico_lance: hist.filter((h) => h?.ref !== ref) })
-      .eq("endereco", e).eq("creditos_lance", creditos).eq("pontos_lance", pontos).select("endereco");
+      .update({ [campo]: novo, historico_lance: hist.filter((h) => h?.ref !== ref), atualizado_em: new Date().toISOString() })
+      .eq("endereco", e).eq("creditos_lance", creditos).eq("pontos_lance", pontos)
+      .eq("atualizado_em", atual.atualizado_em).select("endereco");
     if (!error && Array.isArray(data) && data.length === 0) continue;
     if (error) return { ok: false, code: "ERRO_DB" };
     return { ok: true, revertido: true };

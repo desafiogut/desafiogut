@@ -233,7 +233,9 @@ export default async (req) => {
   } else if (!DEBITO_SALDO_LANCE_ATIVO) {
     // 6c'. UTAC110d — Flash (e desconhecido): consome 1 CRÉDITO de lance. Não toca no saldo R$
     // nem nos pontos de fidelidade nem nos pontos de lance (R18-110d-2).
-    refCreditoLance = `lance:${lanceId}`;
+    // SEG4 W5/V1: com `idempotencyKey`, a ref deriva DELA — dois pedidos concorrentes com a mesma
+    // chave tentam o MESMO consumo e o 2.º recebe `criado:false` (409, sem 2.º crédito nem 2.º lance).
+    refCreditoLance = idempotencyKey ? `lance:${idempotencyKey}` : `lance:${lanceId}`;
     let consumo;
     try { consumo = await consumirCreditoLance(endereco, refCreditoLance); }
     catch { consumo = { ok: false, code: "ERRO_DB" }; }
@@ -244,6 +246,10 @@ export default async (req) => {
           { creditosLance: consumo.creditos ?? 0 });
       }
       return jsonError(502, "consumo_credito_falhou", "não foi possível consumir o crédito de lance", { motivo: consumo.code });
+    }
+    if (consumo.criado === false) {
+      refCreditoLance = null; // o consumo é do outro pedido — nunca o devolver daqui
+      return jsonError(409, "lance_em_processamento", "este lance já está a ser processado (mesma idempotencyKey)");
     }
     debito = {
       ok: true,

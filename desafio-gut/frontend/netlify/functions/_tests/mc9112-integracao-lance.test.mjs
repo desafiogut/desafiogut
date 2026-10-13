@@ -67,6 +67,7 @@ mock.module("../_lib/ledger-lance.mjs", {
   namedExports: {
     consumirCreditoLance: async (e, ref) => {
       chamadasConsumoCredito += 1;
+      if (refsConsumidas.includes(ref)) return { ok: true, criado: false, creditos: mockCreditos }; // idempotente por ref, como o real
       if (mockCreditos < 1) return { ok: false, code: "CREDITOS_INSUFICIENTES", creditos: mockCreditos };
       mockCreditos -= 1; refsConsumidas.push(ref);
       return { ok: true, criado: true, creditos: mockCreditos };
@@ -196,6 +197,27 @@ test("UTAC110d: a blindagem falha -> 502 e o credito consumido VOLTA", async () 
   assert.equal(chamadasConsumoCredito, 1);
   assert.equal(chamadasReversao, 1, "o credito tem de ser devolvido");
   assert.equal(mockCreditos, 3, "creditos de volta ao valor inicial");
+});
+
+test("UTAC110d (SEG4 V1): 2 lances sem chave consomem 2 creditos distintos", async () => {
+  zerar();
+  mockEdicao = { id: "R-1", tipo: "relampago" };
+  assert.equal((await handler(fakeReq(bodyLance("R-1", 50)))).status, 201);
+  assert.equal((await handler(fakeReq(bodyLance("R-1", 51)))).status, 201);
+  assert.equal(mockCreditos, 1, "3 - 2");
+  assert.equal(new Set(refsConsumidas).size, 2);
+});
+
+test("UTAC110d (SEG4 W5): mesma idempotencyKey ja consumida -> 409, sem 2.o credito nem 2.o lance", async () => {
+  zerar();
+  mockEdicao = { id: "R-1", tipo: "relampago" };
+  refsConsumidas.push("lance:chave-x"); // o outro pedido concorrente ja consumiu
+  const resp = await handler(fakeReq({ ...bodyLance("R-1", 50), idempotencyKey: "chave-x" }));
+  assert.equal(resp.status, 409);
+  assert.equal((await resp.json()).error.code, "lance_em_processamento");
+  assert.equal(mockCreditos, 3);
+  assert.equal(chamadasAddLance, 0);
+  assert.equal(chamadasReversao, 0, "nunca devolve o credito do outro pedido");
 });
 
 test("edicao sem metadata (R-1 sintetica): tratada como relampago (credito de lance)", async () => {
