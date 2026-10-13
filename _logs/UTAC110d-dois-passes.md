@@ -99,3 +99,25 @@ crédito **sem cobrar**. 5 cliques simultâneos → cobra 1× e credita 1× (tes
 6. **W4 (SEG4):** falha dupla (crédito + reversão dos pontos) deixa 10 pontos grátis — só alerta Sentry; reconciliação = UTAC próprio.
 7. **ABA no ledger de FIDELIDADE** (`aplicarMovimento`, CAS só em `pontos`) — pré-existente, mesma classe do W3; não tocado.
 8. Fora do AUTORIZA, não tocado: `_logs/DEBT.md` (as pendências acima ficam aqui até haver autorização).
+
+## PUBLICAÇÃO (UTAC110d-push, 2026-10-13, Claude Code / Opus 5.5) — autorizada pelo operador
+1. **Migração `20261013_utac110d_ledger_lance.sql` aplicada em PRODUÇÃO** (`vjslwowwrpcawijdiksm`, via MCP
+   `apply_migration`, nome `utac110d_ledger_lance`). Medido depois: `creditos_lance` integer default 0 NOT NULL ·
+   `pontos_lance` integer default 0 NOT NULL · `historico_lance` jsonb default `'[]'` NOT NULL; 3 CHECK presentes;
+   2 linhas existentes com os defaults e `sum(pontos)=2` intacto.
+2. **Push** `b677e92..f147c3a` (4 commits: cfe9faa, 183e703, 275a43b, f147c3a) — HEAD == origin/main.
+   ⚠️ O remote voltou a registar «Bypassed rule violations» (PR obrigatório + 2 checks) — declarado.
+3. **Auto-deploy** `6acdeda4f715c16b1b6ae3d1` · state `ready` · commit_ref `f147c3a` · published 08:39:34Z
+   (~170 s após o push). Entrada `index-Doouk0gY.js` → `index-Bwhkokb3.js`.
+4. **Endpoints em produção (sem token):** `GET ler-pontos` → **401** JSON `token_ausente` (token falso → 401
+   `token_invalido`); `POST comprar-passe-relampago` → **401** JSON; `POST comprar-passe-programado` → 401;
+   `POST lance-relampago` → 401; `GET` nos endpoints POST → 405 JSON; `health` 200; home 200. **Zero 502.**
+   ⚠️ Erro do MEU instrumento (declarado): a 1.ª sonda mandou corpo num GET (`curl -X GET -d '{}'`) e obteve
+   502 `Request with GET/HEAD method cannot have body` — é recusa do runtime ao pedido mal formado, não da função;
+   refeita sem corpo → 401/405.
+5. **Bundle servido (BFS, 124 chunks):** «Escolha o seu Passe Desafio» e «Créditos de lance» em
+   `MinhaCarteira-DpwKIFpi.js`; `comprar-passe-relampago`/`-programado` em `usePontos-BaIc-sg4.js`; «Adquira um Passe
+   Relâmpago» em `CardLance-Duu3Xmtu.js`; `comprar-passe-pontos` em **0** chunks.
+NÃO medido: o fluxo com sessão real (compra/lance com token) — exige o token do operador; o 1.º uso real é a medição.
+ℹ️ A versão gravada em `supabase_migrations` é a do momento da aplicação (o nome do ficheiro diz 20261013) —
+mesma deriva de nomes já registada no MC105a.1.

@@ -6200,3 +6200,7 @@ MINHAS no worktree/commit»**. Fica com o texto antigo A VISTA.
 **⛔ Para publicar:** aplicar a migracao `20261013` em producao -> push (leva o backend do 110d + este front).
 **Registo:** `_logs/UTAC110d-front_SEG-1_MEDICAO.md` · `_logs/UTAC110d-front-ui.md` · `_logs/UTAC110d-front_SEG5_VALIDADOR.md` · `Desktop/RELATORIO-UTAC110d-front.txt`.
 **Custo:** validador 397 764 tokens = 8,0-796 ¢ (159 ¢ se tudo input); sessao principal nao medida (`/cost`).
+
+## R14 (append) -- UTAC110d-push -- 110d + 110d-front PUBLICADOS; migracao 20261013 aplicada em producao (Claude Code, Opus 5.5)
+
+Autorizado pelo operador. **Migracao** `utac110d_ledger_lance` aplicada em producao via MCP (`vjslwowwrpcawijdiksm`): `creditos_lance`/`pontos_lance` int default 0, `historico_lance` jsonb `'[]'`, 3 CHECK; 2 linhas preservadas. **Push** `b677e92..f147c3a` (cfe9faa, 183e703, 275a43b, f147c3a; branch protection contornada pelo remote -- declarado). **Deploy** `6acdeda4f715c16b1b6ae3d1` ready, commit_ref `f147c3a`, entry `index-Bwhkokb3.js`. **Producao:** ler-pontos 401 JSON, comprar-passe-relampago/programado e lance-relampago 401 JSON sem token, zero 502; bundle com a UI nova e 0 referencias a `comprar-passe-pontos`. Erro de instrumento declarado: GET com corpo deu 502 do runtime (refeito sem corpo). **Nao medido:** compra/lance com sessao real (1.o uso real = medicao). Registo: `_logs/UTAC110d-dois-passes.md` · `_logs/UTAC110d-front-ui.md` (seccao PUBLICACAO).
