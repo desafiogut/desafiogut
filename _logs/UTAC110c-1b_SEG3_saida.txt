@@ -1,0 +1,16 @@
+PASS  1. ZERO marcas de formatação em docs/GUTO-REGULAMENTO.md  — 0 marcas · 19400 chars · 0 backslashes
+PASS  2. ZERO marcas no export REGULAMENTO_TEXTO  — 0 marcas · 19400 chars
+PASS  3. as duas cópias continuam idênticas
+PASS  4. 12 capítulos e 72 artigos (1..72, sem lacunas)  — 12 caps · 72 arts
+PASS  5. os 4 valores dos Arts. 6º/18º/37º/47º estão legíveis  — 4/4
+PASS  6. a ERRATA DA FONTE continua a documentar o defeito
+PASS  7. a ERRATA já não afirma que a transcrição mantém o escape
+PASS  8. os needles do ponto cego estão no teste  — 3/3
+PASS  9. CONTROLO NEGATIVO: os needles MORDEM o texto antigo  — 2/2 no perfil corporativo + 1/1 no seu próprio texto
+PASS  10. o resíduo está SÓ no perfil corporativo e é o declarado  — corporativo=Painel Lojista,cotas comerciais
+PASS  11. «Cotas» sozinho NÃO é needle (as Cotas existem no Regulamento 5.0)
+PASS  12. HEAD == origin/main  — 1b4d893d
+PASS  13. o PDF do cliente e o system prompt NÃO foram tocados nesta ronda  — só _tests/, docs/GUTO-REGULAMENTO.md, _lib/guto-regulamento.mjs, _logs/, CLAUDE.md
+
+──────────────────────────────────────────────────────────────────────
+RESULTADO: 13 PASS / 0 FAIL
