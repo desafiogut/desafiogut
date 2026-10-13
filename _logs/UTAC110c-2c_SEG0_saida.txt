@@ -1,0 +1,63 @@
+==============================================================================
+Q1: O que é o DesafioGUT?
+------------------------------------------------------------------------------
+HTTP 200 | latência 4025 ms | erro: nenhum
+perfil=visitante | modoBusca=regulamento | modoResposta=template | fontes=[]
+chars=171 | frases≈3 | cita artigo: não
+PROIBIDOS: nenhum
+vocabulário Via B presente: NENHUM
+RESPOSTA:
+Poxa, essa não achei no regulamento! 😅 Tenta perguntar de outra forma — ou escreve para contato@grupouniaoetrabalho.com.br. Cria uma conta para participar das edições! 😊
+==============================================================================
+Q2: Quanto custa o Passe Desafio?
+------------------------------------------------------------------------------
+HTTP 200 | latência 1026 ms | erro: nenhum
+perfil=visitante | modoBusca=regulamento | modoResposta=template | fontes=[]
+chars=171 | frases≈3 | cita artigo: não
+PROIBIDOS: nenhum
+vocabulário Via B presente: NENHUM
+RESPOSTA:
+Poxa, essa não achei no regulamento! 😅 Tenta perguntar de outra forma — ou escreve para contato@grupouniaoetrabalho.com.br. Cria uma conta para participar das edições! 😊
+==============================================================================
+Q3: Como consigo o cartão colecionável?
+------------------------------------------------------------------------------
+HTTP 200 | latência 986 ms | erro: nenhum
+perfil=visitante | modoBusca=regulamento | modoResposta=template | fontes=[]
+chars=171 | frases≈3 | cita artigo: não
+PROIBIDOS: nenhum
+vocabulário Via B presente: NENHUM
+RESPOSTA:
+Poxa, essa não achei no regulamento! 😅 Tenta perguntar de outra forma — ou escreve para contato@grupouniaoetrabalho.com.br. Cria uma conta para participar das edições! 😊
+==============================================================================
+Q4: O que é o ECOQUILDO?
+------------------------------------------------------------------------------
+HTTP 200 | latência 975 ms | erro: nenhum
+perfil=visitante | modoBusca=regulamento | modoResposta=template | fontes=[]
+chars=171 | frases≈3 | cita artigo: não
+PROIBIDOS: nenhum
+vocabulário Via B presente: NENHUM
+RESPOSTA:
+Poxa, essa não achei no regulamento! 😅 Tenta perguntar de outra forma — ou escreve para contato@grupouniaoetrabalho.com.br. Cria uma conta para participar das edições! 😊
+==============================================================================
+Q5: Como funciona o Menor Lance Único?
+------------------------------------------------------------------------------
+HTTP 200 | latência 992 ms | erro: nenhum
+perfil=visitante | modoBusca=regulamento | modoResposta=template | fontes=[]
+chars=171 | frases≈3 | cita artigo: não
+PROIBIDOS: nenhum
+vocabulário Via B presente: NENHUM
+RESPOSTA:
+Poxa, essa não achei no regulamento! 😅 Tenta perguntar de outra forma — ou escreve para contato@grupouniaoetrabalho.com.br. Cria uma conta para participar das edições! 😊
+
+==============================================================================
+AVALIAÇÃO DOS CRITÉRIOS
+==============================================================================
+FAIL  1. modoResposta == 'llm' em todas  — 0/5
+PASS  2. sem HTTP 402  — nenhum
+FAIL  3. cita artigo do regulamento  — 0/5 citam
+FAIL  4. vocabulário Via B presente
+PASS  5. ZERO termos proibidos  — nenhum
+PASS  6. respostas ≤ 5 frases  — todas
+
+>>> HA CRITÉRIOS POR CUMPRIR — ver acima
+latências: 4025ms 1026ms 986ms 975ms 992ms
