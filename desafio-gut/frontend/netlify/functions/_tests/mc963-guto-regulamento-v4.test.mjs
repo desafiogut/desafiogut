@@ -145,6 +145,11 @@ test("(d) o documento tem 12 capítulos e os 72 artigos, sem lacunas", () => {
 test("(e) ZERO marcas de formatação no ficheiro, com a ERRATA a documentar o defeito", () => {
   // ⚠️ ATÉ ao UTAC110c-1 (inclusive) este teste contava **9** escapes no CORPO e exigia-os lá.
   // O UTAC110c-1b inverteu-o: o corpo é o texto que o GUTO lê, logo não pode conter as marcas.
+  // ✅ **RATIFICADO PELO OPERADOR (R18-110c-1b-1, 2026-10-13)**, depois de o validador adversarial
+  // julgar a mudança legítima. NÃO é uma decisão do executor: o conflito do enunciado (§7 «zero
+  // ocorrências no ficheiro» vs §11 «não alterar a ERRATA») foi declarado ANTES de agir, com 3 opções
+  // medidas em `_logs/UTAC110c-1b_SEG-1_MEDICAO.md §-1.e`. A notação que o teste agora vigia é a
+  // ratificada.
   // Conta-se no FICHEIRO INTEIRO (não só no corpo): a ERRATA passou a descrever o defeito em
   // PALAVRAS, sem o reproduzir — foi a forma de satisfazer os dois critérios do enunciado
   // («zero ocorrências no ficheiro limpo» E «manter a ERRATA»), que colidiam enquanto a ERRATA

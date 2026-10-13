@@ -5981,3 +5981,21 @@ artigo, junto com o docstring ja falso de `semEscapesDaFonte` em `guto-perfis.mj
 **Verificacao ad-hoc do 1b:** 13 PASS / 0 FAIL com controlo negativo (`_logs/UTAC110c-1b_SEG3_VERIFICACAO.md`).
 **Suíte final:** frontend 979/979 - backend 1104/1110 - VERDE, com RAM >= 1 500 MB (A14 cumprida).
 **Nada disto toca o PDF do cliente nem o system prompt** -- ambos declarados pendentes.
+
+### R18-110c-1b-1 -- OPERADOR RATIFICA, POR ESCRITO, a mudanca de notacao da ERRATA DA FONTE
+
+**Decisao do operador (2026-10-13), verbatim:** «Ratifico por escrito a mudanca de notacao da ERRATA
+(UTAC110c-1b). A alteracao e legitima porque: 1. A ERRATA entra no system prompt do GUTO; 2. Manter as
+marcas na ERRATA seria manter o defeito que o UTAC existe para remover; 3. O validador mediu (nao
+opinou) que a mudanca e necessaria; 4. E reversivel num commit.»
+
+**O que isto fecha.** Era a UNICA ressalva de processo em aberto nos dois veredictos desta ronda: o §2/§11
+do enunciado do 1b dizia «NAO alterar a ERRATA DA FONTE» e o executor reescreveu-a noutra notacao para
+satisfazer o criterio MEDIVEL do §7 (ZERO ocorrencias de marca em TODO o ficheiro). O validador
+adversarial do 1b julgou-a LEGITIMA e o operador ratifica agora **por escrito** -- logo a decisao deixa
+de ser do executor e passa a decisao registada do operador. O hiato literal-vs-intencao fica fechado.
+
+**Nota para quem vier depois:** o executor NAO decidiu sozinho. O conflito do enunciado foi declarado
+ANTES de agir (3 opcoes medidas, em `_logs/UTAC110c-1b_SEG-1_MEDICAO.md` §-1.e), o desvio foi visivel, e
+a ratificacao e a decisao do operador. A inversao do teste `mc963 (e)` esta anotada como ratificada na
+propria cabeca do teste.
