@@ -31,6 +31,7 @@ const curto = (s) => s.slice(0, 12);
 const GUTO = "_lib/guto-perfis.mjs";
 const MOD = "_lib/guto-regulamento.mjs";
 const CHAT = "chatbot.mjs";
+const DOC = "../../../../docs/GUTO-REGULAMENTO.md";   // UTAC110c-1b: o ficheiro do Regulamento
 const T_VIA_B = "_tests/utac110c-guto-via-b.test.mjs";
 const T_MC963 = "_tests/mc963-guto-regulamento-v4.test.mjs";
 
@@ -83,6 +84,14 @@ const MUTANTES = [
     ancora: "NUNCA cites um artigo que não esteja no texto abaixo e nunca inventes o número de um artigo.",
     substituto: "",
     porque: "tira a proibição de inventar artigos",
+  },
+  {
+    // ⭐ UTAC110c-1b — guarda NOVO (as marcas de formatação). Sem mutante, um teste que nasce
+    // verde neste UTAC não provava nada (T1): este repõe o escape do Art. 6º no ficheiro do repo.
+    n: "M9", ficheiro: DOC, alvo: T_MC963,
+    ancora: "com preço fixo de R$ 2,00 (dois reais)",
+    substituto: "com preço fixo de R" + String.fromCharCode(92) + "$ 2,00 (dois reais)",
+    porque: "repõe a marca de formatação no Regulamento (o GUTO leria o valor defeituoso)",
   },
 ];
 

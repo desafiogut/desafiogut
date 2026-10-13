@@ -16,7 +16,9 @@
 //   (c) o módulo que o RUNTIME importa (`_lib/guto-regulamento.mjs`) é **byte a byte** igual a
 //       `docs/GUTO-REGULAMENTO.md` — sem isto, o documento e o prompt podiam divergir em silêncio;
 //   (d) o documento tem a estrutura declarada: 12 capítulos e 72 artigos (1..72, sem lacunas);
-//   (e) a ERRATA DA FONTE continua verdadeira (o defeito de origem ainda lá está).
+//   (e) o ficheiro está LIMPO das marcas de formatação e a ERRATA DA FONTE continua a documentar
+//       o defeito do PDF oficial (descrito em palavras — UTAC110c-1b: o corpo é o texto que o
+//       GUTO lê, logo não pode conter «1\text{ ponto} = R\$ 0,01»);
 //   (f) BIDIRECCIONAL — o verificador RECUSA uma âncora que não conste do artigo.
 //
 // ⚠️ O CWD da suíte do backend é `netlify/functions` ⇒ subir 4 níveis para chegar à raiz do repo
@@ -113,11 +115,17 @@ test("(c) `_lib/guto-regulamento.mjs` é o documento tal e qual (controlo de vit
   assert.equal(REGULAMENTO_VERSAO, "5.0");
 });
 
-test("(c2) o módulo exporta o texto com os escapes do documento intactos (não os 'corrige')", () => {
-  // O texto que vai no prompt é o que está impresso no documento oficial. Se alguém "limpar" os
-  // escapes SÓ no módulo, as duas cópias divergem e (c) cai — este teste diz PORQUÊ.
-  assert.match(REGULAMENTO_TEXTO, /R\\\$ 2,00/, "o escape do Art. 6º desapareceu do módulo");
-  assert.match(REGULAMENTO_TEXTO, /1\\text\{ ponto\}/, "o escape do Art. 18º desapareceu do módulo");
+test("(c2) o texto que vai no prompt está LIMPO das marcas de formatação (UTAC110c-1b)", () => {
+  // ⚠️ ANTES do UTAC110c-1b este teste exigia o CONTRÁRIO: que os escapes se MANTIVESSEM, por
+  // «fidelidade ao documento oficial». O 1b inverteu-o, e com razão: o GUTO não pode ler
+  // «1\text{ ponto} = R\$ 0,01» e responder isso ao utilizador. A invariante que fica é melhor:
+  // **ZERO marcas** no texto que vai ao modelo, e o **valor legível** presente. O PDF do cliente
+  // continua defeituoso — isso é documentado na ERRATA, não propagado para o prompt.
+  assert.doesNotMatch(REGULAMENTO_TEXTO, /\\text\{/, "sobrou a marca `text{` no texto do prompt");
+  assert.doesNotMatch(REGULAMENTO_TEXTO, /\\\$/, "sobrou barra invertida antes do cifrão");
+  assert.match(REGULAMENTO_TEXTO, /preço fixo de R\$ 2,00/, "o Art. 6º tem de trazer o valor legível");
+  assert.match(REGULAMENTO_TEXTO, /1 ponto = R\$ 0,01/, "o Art. 18º tem de trazer o valor legível");
+  assert.match(REGULAMENTO_TEXTO, /1 ECOQUILDO = R\$ 1,00/, "o Art. 47º tem de trazer o valor legível");
 });
 
 // ── (d) estrutura do documento ─────────────────────────────────────────────
@@ -132,20 +140,25 @@ test("(d) o documento tem 12 capítulos e os 72 artigos, sem lacunas", () => {
   assert.ok(arts.has(72), "o Art. 72º (disposições finais) tem de existir");
 });
 
-// ── (e) a ERRATA DA FONTE continua verdadeira ──────────────────────────────
+// ── (e) ZERO marcas de formatação, e a ERRATA a documentar o defeito ───────
 
-test("(e) os 9 escapes do defeito de origem continuam no CORPO do documento (a ERRATA não mente)", () => {
-  // ⚠️ Contar no CORPO, não no ficheiro todo: a própria ERRATA cita os escapes (é o objecto dela),
-  // e contá-los dava 24 em vez de 9 — medido. A ERRATA documenta; o defeito é do corpo.
-  const CORPO = DOC.slice(DOC.indexOf("CAPÍTULO I"));
-  const escapes = CORPO.match(/\\text\{|\\\$/g) || [];
-  assert.equal(escapes.length, 9,
-    `o corpo passou a ter ${escapes.length} escapes — corrigir a ERRATA em ${REGULAMENTO_FONTE}`);
+test("(e) ZERO marcas de formatação no ficheiro, com a ERRATA a documentar o defeito", () => {
+  // ⚠️ ATÉ ao UTAC110c-1 (inclusive) este teste contava **9** escapes no CORPO e exigia-os lá.
+  // O UTAC110c-1b inverteu-o: o corpo é o texto que o GUTO lê, logo não pode conter as marcas.
+  // Conta-se no FICHEIRO INTEIRO (não só no corpo): a ERRATA passou a descrever o defeito em
+  // PALAVRAS, sem o reproduzir — foi a forma de satisfazer os dois critérios do enunciado
+  // («zero ocorrências no ficheiro limpo» E «manter a ERRATA»), que colidiam enquanto a ERRATA
+  // citava os escapes literalmente.
+  const marcas = DOC.match(/\\text\{|\\\$/g) || [];
+  assert.equal(marcas.length, 0,
+    `ficaram ${marcas.length} marcas de formatação em ${REGULAMENTO_FONTE}`);
   const errata = DOC.slice(0, DOC.indexOf("CAPÍTULO I"));
-  assert.match(errata, /ERRATA DA FONTE/);
-  for (const frag of ["R\\$ 2,00", "1\\text{ ponto} = R\\$ 0,01", "1\\text{ ECOQUILDO} = R\\$ 1,00"]) {
-    assert.ok(errata.includes(frag), `a ERRATA não documenta «${frag}»`);
-  }
+  assert.match(errata, /ERRATA DA FONTE/, "a ERRATA tem de ficar (documenta o defeito do PDF)");
+  assert.match(errata, /barra invertida/i, "a ERRATA descreve o defeito em palavras");
+  assert.match(errata, /Art\. 6º/);
+  assert.match(errata, /Art\. 47º/);
+  // e a ERRATA já NÃO pode afirmar que a transcrição mantém o escape (era verdade até ao 1b)
+  assert.doesNotMatch(errata, /NÃO corrige o escape/);
 });
 
 // ── (f) a metade que faz o teste valer: o verificador MORDE ────────────────

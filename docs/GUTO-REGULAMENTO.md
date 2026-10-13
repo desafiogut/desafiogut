@@ -16,27 +16,24 @@
 
 ## ⚠️ ERRATA DA FONTE — **anotação desta transcrição, NÃO é texto do Regulamento**
 
-O PDF oficial **imprime literalmente os escapes de origem** com que foi gerado. Estão no
-**documento visível**, não são artefacto de extracção: medido pela **renderização da página a
-150 dpi** (lê-se impresso «à razão de 1\text{ ponto} = R\$ 0,01») e confirmado por **dois
-extractores independentes**. Ocorrem **9 escapes**, sempre nos artigos dos **valores**:
+> **UTAC110c-1b.** O CORPO abaixo está LIMPO (é o texto que o GUTO lê). Esta ERRATA mantém-se,
+> noutra notação, para **documentar o defeito do PDF oficial** — pendência do cliente.
 
-| impresso no documento oficial | valor pretendido | artigo |
+O PDF oficial **imprime as marcas de formatação com que foi gerado**: uma **barra invertida** antes do
+**cifrão** e a sequência **`text{` … `}`**, também precedida de barra invertida. Está no documento
+**visível** (confirmado por renderização a 150 dpi e por dois extractores independentes). São **9
+marcas**, nos artigos dos valores:
+
+| artigo | o PDF oficial imprime | valor correcto |
 |---|---|---|
-| `R\$ 2,00` | **R$ 2,00** | Art. 6º |
-| `1\text{ ponto} = R\$ 0,01` | **1 ponto = R$ 0,01** | Art. 18º |
-| `1\text{ (um) Passe Desafio} = 10\text{ (dez) pontos de fidelidade}` | **1 Passe Desafio = 10 pontos de fidelidade** | Art. 37º |
-| `50\text{ (cinquenta) pontos de fidelidade} = 1\text{ (um) cartão colecionável físico}` | **50 pontos = 1 cartão colecionável** | Art. 37º |
-| `1\text{ ECOQUILDO} = R\$ 1,00` | **1 ECOQUILDO = R$ 1,00** | Art. 47º |
+| Art. 6º | `R` + barra invertida + `$` + ` 2,00` | **R$ 2,00** |
+| Art. 18º | `1` + barra invertida + `text{` + ` ponto}` + ` = R` + barra invertida + `$` + ` 0,01` | **1 ponto = R$ 0,01** |
+| Art. 37º | `1` + barra invertida + `text{ (um) Passe Desafio}` = `10` + barra invertida + `text{ (dez) pontos de fidelidade}` | **1 Passe Desafio = 10 pontos** |
+| Art. 37º | `50` + barra invertida + `text{ (cinquenta) pontos de fidelidade}` = `1` + barra invertida + `text{ (um) cartão colecionável físico}` | **50 pontos = 1 cartão** |
+| Art. 47º | `1` + barra invertida + `text{ ECOQUILDO}` = `R` + barra invertida + `$` + ` 1,00` | **1 ECOQUILDO = R$ 1,00** |
 
-**A transcrição abaixo NÃO corrige o escape** — mantém-no tal como está impresso, por fidelidade
-à fonte de verdade (o conteúdo não se edita). **Ao responder a um utilizador, usa a coluna «valor
-pretendido».** Onde o Regulamento imprime `R\$`, o preço é em reais; onde imprime `N\text{ X}`,
-lê-se `N X`.
-
-**Pendência para o operador:** o documento registado no RTD não deve imprimir as marcas
-`\text{...}` nem `R\$`. O PDF oficial tem de ser corrigido na origem; esta transcrição e o
-prompt do GUTO seguem-no enquanto isso não acontecer.
+Onde o PDF mostra essas marcas, o valor é o da última coluna. **Pendência (RTD/Cartório):** o
+documento registado não deve imprimir marcas de formatação no lugar dos valores.
 
 ---
 
@@ -64,7 +61,7 @@ Art. 5º — Poderão participar do DesafioGUT pessoas físicas e jurídicas, ma
 
 CAPÍTULO II — DOS PASSES DESAFIO
 
-Art. 6º — O Passe Desafio é o produto digital adquirido pelo utilizador, com preço fixo de R\$ 2,00 (dois reais), nas modalidades Passe Relâmpago e Passe Programado.
+Art. 6º — O Passe Desafio é o produto digital adquirido pelo utilizador, com preço fixo de R$ 2,00 (dois reais), nas modalidades Passe Relâmpago e Passe Programado.
 
 Art. 7º — A aquisição do Passe Desafio é uma transação separada e genuína para fornecimento de produtos digitais independentes do programa de fidelidade. O benefício de participação é complementar e subordinado a essa aquisição.
 
@@ -120,7 +117,7 @@ Art. 17º — Os pontos de lance não são comprados com dinheiro real — são 
 
 Secção IV — Da Aquisição do Produto
 
-Art. 18º — O vencedor do Menor Lance Único adquire o produto patrocinado pelo patrocinador (Cota Bronze ou Prata) pelo valor do seu lance, à razão de 1\text{ ponto} = R\$ 0,01 (um centavo).
+Art. 18º — O vencedor do Menor Lance Único adquire o produto patrocinado pelo patrocinador (Cota Bronze ou Prata) pelo valor do seu lance, à razão de 1 ponto = R$ 0,01 (um centavo).
 
 Art. 19º — O pagamento do produto pelo vencedor é realizado via PIX (código/QR Code gerado pelo aplicativo) para a conta institucional do Grupo União e Trabalho (CNPJ 23.040.066/0001-00), caracterizando uma compra de bem físico, fora do âmbito de aplicação do Google Play Billing.
 
@@ -200,9 +197,9 @@ Art. 36º — O programa de fidelidade funciona por acumulação de pontos de fi
 
 Art. 37º — As proporções fixas de acúmulo e resgate são:
 
-- 1\text{ (um) Passe Desafio} = 10\text{ (dez) pontos de fidelidade};
+- 1 (um) Passe Desafio = 10 (dez) pontos de fidelidade;
 
-- 50\text{ (cinquenta) pontos de fidelidade} = 1\text{ (um) cartão colecionável físico}.
+- 50 (cinquenta) pontos de fidelidade = 1 (um) cartão colecionável físico.
 
 Art. 38º — Os pontos de fidelidade são atribuídos por critério objetivo, fixo e divulgado: a acumulação de compras de Passes. Não existe sorteio, apuração aleatória, julgamento subjetivo ou número limitado de contemplados. Todo o utilizador que atingir 50 pontos de fidelidade tem direito ao cartão.
 
@@ -240,7 +237,7 @@ Art. 46º — Caso o adquirente resida fora de Manaus/AM, poderá optar por rece
 
 CAPÍTULO VII — DA MOEDA SOCIAL ECOQUILDO
 
-Art. 47º — O ECOQUILDO é uma moeda social interna do Grupo União e Trabalho, com lastro em reais à razão de 1\text{ ECOQUILDO} = R\$ 1,00 (um real).
+Art. 47º — O ECOQUILDO é uma moeda social interna do Grupo União e Trabalho, com lastro em reais à razão de 1 ECOQUILDO = R$ 1,00 (um real).
 
 Art. 48º — O ECOQUILDO é concedido ao utilizador como benefício da aquisição do Passe Desafio, e pode ser utilizado para:
 

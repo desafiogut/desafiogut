@@ -1,0 +1,97 @@
+MARTELO DE MUTAÇÃO — UTAC110c-1 · 9 mutantes
+cwd: C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\netlify\functions
+
+✅ M1 — repõe o modelo antigo na regra de linguagem
+   ficheiro alvo : _tests/utac110c-guto-via-b.test.mjs
+   mutante entrou: true  (sha fab6551d27bd → 11d2e860a0c9)
+   linha mutada  : REGRA DE LINGUAGEM (obrigatória — Portaria SPA/MF 1.207/2024):
+   alvo antes    : pass=7 fail=0
+   alvo depois   : pass=5 fail=2
+   RED em        : (1) o system prompt NÃO ensina o modelo antigo — nos 4 perfis e na conformidade | (5) BIDIRECCIONAL: o mesmo verificador RECUSA o prompt ANTIGO | (1) o system prompt NÃO ensina o modelo antigo — nos 4 perfis e na conformidade | (5) BIDIRECCIONAL: o mesmo verificador RECUSA o prompt ANTIGO
+   restaurado    : sha256 idêntico (fab6551d27bd)
+
+✅ M2 — volta a cortar a resposta a meio (max_tokens 512)
+   ficheiro alvo : _tests/utac110c-guto-via-b.test.mjs
+   mutante entrou: true  (sha 519993b3bce4 → cce594bb2fde)
+   linha mutada  : max_tokens:  512,
+   alvo antes    : pass=7 fail=0
+   alvo depois   : pass=6 fail=1
+   RED em        : (4) max_tokens = 4000 no corpo REAL enviado ao LLM | (4) max_tokens = 4000 no corpo REAL enviado ao LLM
+   restaurado    : sha256 idêntico (519993b3bce4)
+
+✅ M3 — tira o Regulamento do prompt (volta a responder «de memória»)
+   ficheiro alvo : _tests/utac110c-guto-via-b.test.mjs
+   mutante entrou: true  (sha fab6551d27bd → 3908f1c0a86a)
+   linha mutada  : return base + REGRA_LINGUAGEM + REGRA_REGULAMENTO;
+   alvo antes    : pass=7 fail=0
+   alvo depois   : pass=5 fail=2
+   RED em        : (3) o Regulamento INTEIRO é injectado no prompt | (4) max_tokens = 4000 no corpo REAL enviado ao LLM | (3) o Regulamento INTEIRO é injectado no prompt | (4) max_tokens = 4000 no corpo REAL enviado ao LLM
+   restaurado    : sha256 idêntico (fab6551d27bd)
+
+✅ M4 — âncora com um preço que o Regulamento não diz
+   ficheiro alvo : _tests/mc963-guto-regulamento-v4.test.mjs
+   mutante entrou: true  (sha fab6551d27bd → 6ccbf6908255)
+   linha mutada  : "6":  "O Passe Desafio é o produto digital adquirido pelo utilizador, com preço fixo de R$ 5,00 (dois reais), nas modalidades Passe Relâmpago e Passe 
+   alvo antes    : pass=10 fail=0
+   alvo depois   : pass=8 fail=2
+   RED em        : (b) cada âncora de ARTIGOS_V4 é um excerto VERBATIM do artigo correspondente | (f) BIDIRECCIONAL: o verificador RECUSA uma âncora que o artigo não diz | (b) cada âncora de ARTIGOS_V4 é um excerto VERBATIM do artigo correspondente | (f) BIDIRECCIONAL: o verificador RECUSA uma âncora que o artigo não diz
+   restaurado    : sha256 idêntico (fab6551d27bd)
+
+✅ M5 — o módulo do runtime divergir do documento (índice de 10 → 5 pontos)
+   ficheiro alvo : _tests/mc963-guto-regulamento-v4.test.mjs
+   mutante entrou: true  (sha bb864f8ae8da → 15d4c4c4c920)
+   linha mutada  : Art. 8º — Cada Passe Desafio adquirido concede ao utilizador 5 (cinco) pontos de fidelidade. Esta proporção é fixa e igual para todos os utilizadores.
+   alvo antes    : pass=10 fail=0
+   alvo depois   : pass=9 fail=1
+   RED em        : (c) `_lib/guto-regulamento.mjs` é o documento tal e qual | (c) `_lib/guto-regulamento.mjs` é o documento tal e qual
+   restaurado    : sha256 idêntico (bb864f8ae8da)
+
+✅ M6 — reabre o Blob do índice RAG
+   ficheiro alvo : _tests/utac110c-guto-via-b.test.mjs
+   mutante entrou: true  (sha 519993b3bce4 → ff39bf37536a)
+   linha mutada  : import { respostaPreflight } from "./_lib/cors.mjs";
+   alvo antes    : pass=7 fail=0
+   alvo depois   : pass=6 fail=1
+   RED em        : (7) ZERO referências ao Blob `rag`, e os 2 scripts de build apagados | (7) ZERO referências ao Blob `rag`, e os 2 scripts de build apagados
+   restaurado    : sha256 idêntico (519993b3bce4)
+
+✅ M7 — reintroduz o HuggingFace em runtime (e o import apagado)
+   ficheiro alvo : _tests/utac110c-guto-via-b.test.mjs
+   mutante entrou: true  (sha 519993b3bce4 → 3dead21c5762)
+   linha mutada  : import { respostaPreflight } from "./_lib/cors.mjs";
+   alvo antes    : pass=7 fail=0
+   alvo depois   : pass=5 fail=2
+   RED em        : (4) max_tokens = 4000 no corpo REAL enviado ao LLM | (6) ZERO referências ao HuggingFace em código de runtime, e `_lib/rag.mjs` apagado | (4) max_tokens = 4000 no corpo REAL enviado ao LLM | (6) ZERO referências ao HuggingFace em código de runtime, e `_lib/rag.mjs` apagado
+   restaurado    : sha256 idêntico (519993b3bce4)
+
+✅ M8 — tira a proibição de inventar artigos
+   ficheiro alvo : _tests/mc963-guto-regulamento-v4.test.mjs
+   mutante entrou: true  (sha fab6551d27bd → 0d31711269d0)
+   linha mutada  : (instrução removida)
+   alvo antes    : pass=10 fail=0
+   alvo depois   : pass=9 fail=1
+   RED em        : (a2) a regra proíbe inventar artigos e manda usar o texto integral | (a2) a regra proíbe inventar artigos e manda usar o texto integral
+   restaurado    : sha256 idêntico (fab6551d27bd)
+
+✅ M9 — repõe a marca de formatação no Regulamento (o GUTO leria o valor defeituoso)
+   ficheiro alvo : _tests/mc963-guto-regulamento-v4.test.mjs
+   mutante entrou: true  (sha b75a3a4b8eb8 → b3765c0dce76)
+   linha mutada  : Art. 6º — O Passe Desafio é o produto digital adquirido pelo utilizador, com preço fixo de R\$ 2,00 (dois reais), nas modalidades Passe Relâmpago e Pa
+   alvo antes    : pass=10 fail=0
+   alvo depois   : pass=8 fail=2
+   RED em        : (c) `_lib/guto-regulamento.mjs` é o documento tal e qual | (e) ZERO marcas de formatação no ficheiro, com a ERRATA a documentar o defeito | (c) `_lib/guto-regulamento.mjs` é o documento tal e qual | (e) ZERO marcas de formatação no ficheiro, com a ERRATA a documentar o defeito
+   restaurado    : sha256 idêntico (b75a3a4b8eb8)
+
+──────────────────────────────────────────────────────────────────────────────
+RESUMO
+  M1  MORDE  pass=5 fail=2  restauro=idêntico  repõe o modelo antigo na regra de linguagem
+  M2  MORDE  pass=6 fail=1  restauro=idêntico  volta a cortar a resposta a meio (max_tokens 512)
+  M3  MORDE  pass=5 fail=2  restauro=idêntico  tira o Regulamento do prompt (volta a responder «de memória»)
+  M4  MORDE  pass=8 fail=2  restauro=idêntico  âncora com um preço que o Regulamento não diz
+  M5  MORDE  pass=9 fail=1  restauro=idêntico  o módulo do runtime divergir do documento (índice de 10 → 5 pontos)
+  M6  MORDE  pass=6 fail=1  restauro=idêntico  reabre o Blob do índice RAG
+  M7  MORDE  pass=5 fail=2  restauro=idêntico  reintroduz o HuggingFace em runtime (e o import apagado)
+  M8  MORDE  pass=9 fail=1  restauro=idêntico  tira a proibição de inventar artigos
+  M9  MORDE  pass=8 fail=2  restauro=idêntico  repõe a marca de formatação no Regulamento (o GUTO leria o valor defeituoso)
+
+mutantes que mordem: 9/9   anulados: 0
