@@ -72,6 +72,9 @@ export default function CardLance({
     refetchSaldoRs, saldoRsCentavos,
     refetchSaldo,
     userLabel,
+    // UTAC110d-front — sem token user-session o `usePontos` ainda não leu: conta como «a carregar»
+    // (antes mostrava «Sem créditos…» por instantes, enganador — ℹ️ do validador).
+    authToken,
   } = useAppContext();
 
   // MC91.11 — conversão automática R$ → senha (programado sem senha on-chain).
@@ -112,7 +115,7 @@ export default function CardLance({
   // R$ no servidor; o que o bloqueia agora é não ter créditos de lance (fail-closed: a carregar,
   // em erro ou com 0 → botão desligado + mensagem).
   const creditos = estadoCreditosLance({
-    isConnected, creditos: creditosLance, loading: creditosCarregando, erro: creditosErro,
+    isConnected, creditos: creditosLance, loading: creditosCarregando || (isConnected && !authToken), erro: creditosErro,
   });
   const semCreditosFlash = !isProgramado && isConnected && !creditos.podeLancar;
 

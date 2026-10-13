@@ -332,3 +332,33 @@ test("E · a OP e a Carteira usam o MESMO número de cartão (`pontosCartao`); o
   const cartao = readFileSync(resolve(SRC, "components", "CartaoEdicao.jsx"), "utf8");
   assert.match(cartao, /palpite: Object\.freeze\(\{ botao: "Dar palpite"/, "o botão da OP deixou de ser «Dar palpite»");
 });
+
+// ═══ Fecho das ressalvas do validador (SEG5) ════════════════════════════════════════
+test("SEG5/V2 · a Carteira passa ao balão os pontos de CARTÃO (não o total) — «Seus pontos de cartão: 30 / 50»", async () => {
+  definirContexto(contexto(novoEndereco()));
+  const dup = duploDeFetch((url) => (LER_PONTOS.test(url)
+    ? { status: 200, json: { ok: true, pontos: 37, pontosCartao: 30, lance: { creditos: 2 } } }
+    : { status: 404, json: {} }));
+  try {
+    const c = montar(MinhaCarteira, []);
+    await c.assentar();
+    const abrir = arvore(c.resultado()).find((n) => n.type === "button" && textoDe(n).includes("Comprar Passe Desafio"));
+    await abrir.props.onClick();
+    await c.assentar();
+    const modal = arvore(c.resultado()).find((n) => typeof n.type === "function" && n.type.name === "ComprarPasseModal");
+    assert.equal(modal.props.pontosCartao, 30, "o balão recebeu outro número que não os pontos de cartão");
+    const t = semTags(renderToStaticMarkup(React.createElement(React.Fragment, null, c.resultado())));
+    assert.match(t, /Seus pontos de cartão: 30 \/ 50/);
+    assert.doesNotMatch(t, /Seus pontos de cartão: 37/);
+  } finally { dup.restaurar(); }
+});
+
+test("SEG5/ℹ️ · sem `authToken` ainda (sessão por cunhar) o CardLance diz «Carregando», não «Sem créditos»", async () => {
+  const x = await cardLance({ creditos: 5, ctx: { authToken: null } });
+  try {
+    await x.escrever("5");
+    assert.equal(x.botaoLance().props.disabled, true, "sem token o lance não pode abrir");
+    assert.match(x.html(), /data-creditos-lance="carregando"/);
+    assert.doesNotMatch(x.html(), /data-creditos-lance="sem_creditos"/, "mostrou «Sem créditos» enquanto a sessão nasce");
+  } finally { x.fim(); }
+});

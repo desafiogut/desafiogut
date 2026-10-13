@@ -264,7 +264,7 @@ export default function MinhaCarteira() {
                   padding: "0.65rem 0.75rem", borderRadius: "12px",
                   background: "rgba(245,166,35,0.06)", border: "1px solid rgba(245,166,35,0.25)",
                 }}>
-                  <div style={{ fontSize: "0.7rem", color: COR.muted, fontWeight: 700 }}>🎟️ Pontos de fidelidade</div>
+                  <div style={{ fontSize: "0.7rem", color: COR.text, fontWeight: 700 }}>🎟️ Pontos de fidelidade</div>
                   <div style={{ fontSize: "1.25rem", fontWeight: 900, color: COR.gold, lineHeight: 1.2 }}>
                     {textoSaldo(pontosCartao)} / {metaCartao}
                   </div>
@@ -287,11 +287,11 @@ export default function MinhaCarteira() {
                   padding: "0.65rem 0.75rem", borderRadius: "12px",
                   background: "rgba(245,166,35,0.06)", border: "1px solid rgba(245,166,35,0.25)",
                 }}>
-                  <div style={{ fontSize: "0.7rem", color: COR.muted, fontWeight: 700 }}>⚡ Créditos de lance</div>
+                  <div style={{ fontSize: "0.7rem", color: COR.text, fontWeight: 700 }}>⚡ Créditos de lance</div>
                   <div style={{ fontSize: "1.25rem", fontWeight: 900, color: COR.gold, lineHeight: 1.2 }}>
                     {textoSaldo(creditosLance)}
                   </div>
-                  <div style={{ fontSize: "0.68rem", color: COR.muted, marginTop: "0.25rem" }}>
+                  <div style={{ fontSize: "0.68rem", color: COR.text, opacity: 0.85, marginTop: "0.25rem" }}>
                     {!saldosIlegiveis && creditosLance === 1 ? "disponível" : "disponíveis"}
                   </div>
                 </div>

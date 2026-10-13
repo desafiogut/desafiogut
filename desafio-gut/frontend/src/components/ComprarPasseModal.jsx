@@ -69,7 +69,7 @@ export default function ComprarPasseModal({
                 </h3>
                 <strong style={{ color: COR.gold, fontSize: "0.95rem", whiteSpace: "nowrap" }}>{PRECO_PASSE}</strong>
               </div>
-              <p style={{ margin: "0.3rem 0 0.7rem", color: COR.muted, fontSize: "0.82rem", lineHeight: 1.45 }}>
+              <p style={{ margin: "0.3rem 0 0.7rem", color: COR.text, opacity: 0.85, fontSize: "0.82rem", lineHeight: 1.45 }}>
                 {p.beneficio}
               </p>
               <button
