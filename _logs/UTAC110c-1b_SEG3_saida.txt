@@ -9,7 +9,7 @@ PASS  8. os needles do ponto cego estão no teste  — 3/3
 PASS  9. CONTROLO NEGATIVO: os needles MORDEM o texto antigo  — 2/2 no perfil corporativo + 1/1 no seu próprio texto
 PASS  10. o resíduo está SÓ no perfil corporativo e é o declarado  — corporativo=Painel Lojista,cotas comerciais
 PASS  11. «Cotas» sozinho NÃO é needle (as Cotas existem no Regulamento 5.0)
-PASS  12. HEAD == origin/main  — 1b4d893d
+PASS  12. HEAD == origin/main  — 74ce32b9
 PASS  13. o PDF do cliente e o system prompt NÃO foram tocados nesta ronda  — só _tests/, docs/GUTO-REGULAMENTO.md, _lib/guto-regulamento.mjs, _logs/, CLAUDE.md
 
 ──────────────────────────────────────────────────────────────────────
