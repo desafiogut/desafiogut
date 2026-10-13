@@ -1,0 +1,53 @@
+==============================================================================
+Q1: O que é o DesafioGUT?
+------------------------------------------------------------------------------
+HTTP 200 | latencia 4190 ms | erro: nenhum
+perfil=visitante | modoBusca=regulamento | modoResposta=template | fontes=[]
+chars=171 | frases~=3 | PROIBIDOS: nenhum | obrigatorios presentes: NENHUM
+RESPOSTA BRUTA:
+Poxa, essa não achei no regulamento! 😅 Tenta perguntar de outra forma — ou escreve para contato@grupouniaoetrabalho.com.br. Cria uma conta para participar das edições! 😊
+==============================================================================
+Q2: Quanto custa o Passe Desafio?
+------------------------------------------------------------------------------
+HTTP 200 | latencia 1075 ms | erro: nenhum
+perfil=visitante | modoBusca=regulamento | modoResposta=template | fontes=[]
+chars=171 | frases~=3 | PROIBIDOS: nenhum | obrigatorios presentes: NENHUM
+RESPOSTA BRUTA:
+Poxa, essa não achei no regulamento! 😅 Tenta perguntar de outra forma — ou escreve para contato@grupouniaoetrabalho.com.br. Cria uma conta para participar das edições! 😊
+==============================================================================
+Q3: Como consigo o cartão colecionável?
+------------------------------------------------------------------------------
+HTTP 200 | latencia 991 ms | erro: nenhum
+perfil=visitante | modoBusca=regulamento | modoResposta=template | fontes=[]
+chars=171 | frases~=3 | PROIBIDOS: nenhum | obrigatorios presentes: NENHUM
+RESPOSTA BRUTA:
+Poxa, essa não achei no regulamento! 😅 Tenta perguntar de outra forma — ou escreve para contato@grupouniaoetrabalho.com.br. Cria uma conta para participar das edições! 😊
+==============================================================================
+Q4: O que é o ECOQUILDO?
+------------------------------------------------------------------------------
+HTTP 200 | latencia 975 ms | erro: nenhum
+perfil=visitante | modoBusca=regulamento | modoResposta=template | fontes=[]
+chars=171 | frases~=3 | PROIBIDOS: nenhum | obrigatorios presentes: NENHUM
+RESPOSTA BRUTA:
+Poxa, essa não achei no regulamento! 😅 Tenta perguntar de outra forma — ou escreve para contato@grupouniaoetrabalho.com.br. Cria uma conta para participar das edições! 😊
+==============================================================================
+Q5: Como funciona o Menor Lance Único?
+------------------------------------------------------------------------------
+HTTP 200 | latencia 1092 ms | erro: nenhum
+perfil=visitante | modoBusca=regulamento | modoResposta=template | fontes=[]
+chars=171 | frases~=3 | PROIBIDOS: nenhum | obrigatorios presentes: NENHUM
+RESPOSTA BRUTA:
+Poxa, essa não achei no regulamento! 😅 Tenta perguntar de outra forma — ou escreve para contato@grupouniaoetrabalho.com.br. Cria uma conta para participar das edições! 😊
+
+==============================================================================
+RESUMO — UTAC110c-2b
+==============================================================================
+Q | HTTP | ms   | modoResposta | chars | proibidos
+1 | 200   | 4190 | template     |   171 | -
+2 | 200   | 1075 | template     |   171 | -
+3 | 200   |  991 | template     |   171 | -
+4 | 200   |  975 | template     |   171 | -
+5 | 200   | 1092 | template     |   171 | -
+
+modoResposta == 'llm': 0 de 5
+>>> AINDA EM FALLBACK
