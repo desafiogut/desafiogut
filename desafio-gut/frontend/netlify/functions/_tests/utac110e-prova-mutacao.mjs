@@ -70,6 +70,14 @@ const MUTANTES = [
   ["M15 usar-eco-quildo não actualiza o lastro", "usar-eco-quildo.mjs",
     "  const l = await registarUsoNoLastro(valor).catch(() => ({ ok: false, code: \"ERRO_DB\" }));",
     "  const l = { ok: true, total_emitido: 0, total_usado: 0, reserva_rs_centavos: 0 };"],
+
+  // ── os ramos de REVERSÃO (sobreviventes V3/V4 do validador adversarial do SEG5, achado A2) ─────
+  ["M16 usar: falha do lastro NÃO devolve o ECOQUILDO ao saldo (V3)", "usar-eco-quildo.mjs",
+    "    const rev = await reverterEcoQuildo(endereco, refUso(chave)).catch(() => ({ ok: false, code: \"ERRO_DB\" }));",
+    "    const rev = { ok: true, revertido: true };"],
+  ["M17 creditar: falha do lastro NÃO desfaz a emissão (V4)", "creditar-eco-quildo.mjs",
+    "    const rev = await reverterEcoQuildo(endereco, ref).catch(() => ({ ok: false, code: \"ERRO_DB\" }));",
+    "    const rev = { ok: true, revertido: true };"],
 ];
 
 const base = correr();

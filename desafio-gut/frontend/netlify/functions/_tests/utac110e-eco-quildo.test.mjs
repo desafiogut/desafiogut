@@ -492,3 +492,45 @@ test("C8 compra a MEIO (pontos + crédito sim, ECOQUILDO não) → o retry compl
   assert.equal(saldoRs(), 500, "não cobrou de novo");
   assert.deepEqual([lastro().total_emitido, lastro().reserva_rs_centavos], [1, 100]);
 });
+
+// ── Fecho dos SOBREVIVENTES do validador adversarial (SEG5, achado A2: V3/V4) ────────────────────
+// Os ramos de REVERSÃO dos dois endpoints que mexem no lastro não estavam presos por nenhum teste.
+test("B2b usar: se o LASTRO falhar, o ECOQUILDO é DEVOLVIDO ao saldo (502 lastro_falhou)", async () => {
+  await E.creditarEcoQuildo(A, 5, "indicacao", "ind:1");
+  await E.registarEmissaoNoLastro(5);
+  S.g.falhar.eco_quildo_lastro = { op: "update", code: "XX000" };
+  const r = await pedir(hUsar, { corpo: { valor: 2, idempotencyKey: U(9) } });
+  assert.equal(r.status, 502, JSON.stringify(r.corpo));
+  assert.equal(r.corpo.error.code, "lastro_falhou");
+  assert.equal(r.corpo.error.devolvido, true);
+  assert.equal(ecoLinha().saldo, 5, "os 2 ECOQUILDO voltaram ao saldo");
+  assert.deepEqual(ecoLinha().historico.map((h) => h.ref), ["ind:1"], "a entrada do uso saiu do histórico");
+  assert.deepEqual([lastro().total_emitido, lastro().total_usado, lastro().reserva_rs_centavos], [5, 0, 500], "o lastro ficou coerente");
+  // e o retry (já sem falha) usa normalmente — nada ficou a meio
+  S.g.falhar.eco_quildo_lastro = null;
+  const r2 = await pedir(hUsar, { corpo: { valor: 2, idempotencyKey: U(9) } });
+  assert.equal(r2.status, 200, JSON.stringify(r2.corpo));
+  assert.equal(r2.corpo.saldo, 3);
+  assert.deepEqual([lastro().total_emitido, lastro().total_usado, lastro().reserva_rs_centavos], [5, 2, 300]);
+});
+
+test("B4b creditar (admin): se o LASTRO falhar, a EMISSÃO é desfeita (nunca moeda sem lastro)", async () => {
+  const adm = await assinarAdminAccess(ADM);
+  S.g.falhar.eco_quildo_lastro = { op: "update", code: "XX000" };
+  const r = await pedir(hCreditar, { corpo: { endereco: OUTRO, valor: 3, motivo: "indicacao", chave: "adm-chave-9" }, token: adm });
+  assert.equal(r.status, 502, JSON.stringify(r.corpo));
+  assert.equal(r.corpo.error.code, "lastro_falhou");
+  assert.equal(r.corpo.error.desfeito, true);
+  assert.equal(ecoLinha(OUTRO).saldo, 0, "a emissão foi revertida");
+  assert.deepEqual(ecoLinha(OUTRO).historico, [], "a entrada saiu do histórico");
+  assert.deepEqual([lastro().total_emitido, lastro().reserva_rs_centavos], [0, 0], "o lastro não foi tocado");
+  // a auditoria é FECHADA como falhada (não fica sucesso=null para sempre — rasto de ação rebentada)
+  assert.equal(auditoria[auditoria.length - 1][0], "confirmar");
+  assert.equal(auditoria[auditoria.length - 1][2].sucesso, false);
+  // e o retry (sem falha) emite normalmente
+  S.g.falhar.eco_quildo_lastro = null;
+  const r2 = await pedir(hCreditar, { corpo: { endereco: OUTRO, valor: 3, motivo: "indicacao", chave: "adm-chave-9" }, token: adm });
+  assert.equal(r2.status, 201, JSON.stringify(r2.corpo));
+  assert.equal(r2.corpo.saldo, 3);
+  assert.deepEqual([lastro().total_emitido, lastro().reserva_rs_centavos], [3, 300]);
+});

@@ -1,8 +1,14 @@
 // GET /.netlify/functions/ler-eco-quildo — UTAC110e. Saldo + histórico de ECOQUILDO do TITULAR.
 //
-// PORQUE UM ENDPOINT E NÃO O SDK: `public.eco_quildo` tem RLS só para `service_role` (a migração
-// `20261014_utac110e_eco_quildo.sql` não abre policy a anon/authenticated) — o cliente anónimo do
-// frontend NÃO a pode ler. O `endereco` sai do Bearer, nunca do query.
+// PORQUE UM ENDPOINT E NÃO O SDK: `public.eco_quildo` é uma tabela com RLS LIGADO e SEM policy para
+// `anon`/`authenticated`, e com os privilégios de tabela REVOGADOS desses dois papéis (ver o bloco de
+// segurança da migração `20261014_utac110e_eco_quildo.sql`) — o cliente anónimo do frontend NÃO a pode
+// ler. O `endereco` sai do Bearer, nunca do query.
+// ⚠️ CORRECÇÃO de um comentário MEU, FALSO, apanhado pelo validador adversarial (UTAC110e / SEG5, achado
+//    A1): a 1.ª versão dizia «tem RLS só para `service_role` (a migração … não abre policy a
+//    anon/authenticated)». Era FALSO — a migração não ligava RLS nenhum e não revogava grants, pelo que
+//    o papel `anon` (a chave pública que vai no bundle) podia inserir/actualizar/apagar saldo e lastro.
+//    O texto errado fica à vista, marcado; a correcção foi feita na migração E aqui.
 //
 // Header: Authorization: Bearer ***
 //

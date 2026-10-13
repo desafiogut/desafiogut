@@ -41,6 +41,34 @@ CREATE TABLE IF NOT EXISTS public.eco_quildo_lastro (
 -- A linha única do lastro tem de existir ANTES do 1.º movimento (o CAS da lib lê-a e falha em `null`).
 INSERT INTO public.eco_quildo_lastro (id) VALUES (1) ON CONFLICT DO NOTHING;
 
+-- ── SEGURANÇA: RLS + GRANT (padrão herdado do UTAC106d-v2/UTAC106f/UTAC106g/UTAC105a) ────────────
+-- ⚠️ UTAC110e: esta secção NÃO existia na 1.ª versão desta migração. O validador adversarial (SEG5,
+--    achado A1, BLOQUEANTE) mediu em PRODUÇÃO, numa transacção revertida, que com `SET LOCAL ROLE anon`
+--    se conseguia `INSERT` de saldo do nada, `UPDATE` do saldo de OUTRA pessoa, `UPDATE` do LASTRO e
+--    `SELECT` do ledger de todos — a chave `anon` (VITE_SUPABASE_ANON_KEY) vai no bundle público do
+--    frontend. Sem isto, as garantias do Art. 49º (não transferível) e do Art. 50º (lastro) ficavam
+--    anuladas ao nível da BASE DE DADOS, por muito correcta que a lib estivesse. Todas as tabelas irmãs
+--    (`pontos`, `passes`, `palpites`, `resgates`, `cupons`) já tinham `relrowsecurity = true`.
+-- RLS autoriza a LINHA; o GRANT autoriza a TABELA (sem GRANT explícito o `service_role` leva 42501 em
+-- SILÊNCIO — lição do MC93-B). Nenhuma policy para `anon`/`authenticated`: o ECOQUILDO só se lê e
+-- escreve pelas functions, com o Bearer do titular (ou admin para emitir).
+ALTER TABLE public.eco_quildo ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "service_role total eco_quildo" ON public.eco_quildo;
+CREATE POLICY "service_role total eco_quildo" ON public.eco_quildo
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+REVOKE ALL ON public.eco_quildo FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.eco_quildo TO service_role;
+
+ALTER TABLE public.eco_quildo_lastro ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "service_role total eco_quildo_lastro" ON public.eco_quildo_lastro;
+CREATE POLICY "service_role total eco_quildo_lastro" ON public.eco_quildo_lastro
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+REVOKE ALL ON public.eco_quildo_lastro FROM PUBLIC, anon, authenticated;
+-- O lastro é lido pela lib e pelos endpoints de admin; o UPDATE é do CAS da lib.
+GRANT SELECT, INSERT, UPDATE ON public.eco_quildo_lastro TO service_role;
+-- Sem DELETE para ninguém além do `service_role` (que tem ALL por omissão): nenhum dado deste UTAC é
+-- eliminado; a anonimização LGPD de saldos de ECOQUILDO fica para UTAC próprio, como nos `pontos`.
+
 COMMENT ON TABLE public.eco_quildo IS
   'UTAC110e: moeda social ECOQUILDO — saldo e histórico por endereço. Não convertível em dinheiro, não transferível (Art. 49º).';
 COMMENT ON COLUMN public.eco_quildo.saldo IS
