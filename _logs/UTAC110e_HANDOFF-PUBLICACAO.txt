@@ -1,0 +1,121 @@
+================================================================================
+UTAC110e — HANDOFF DE PUBLICACAO (ler e executar quando o Claude Code voltar)
+================================================================================
+ESTADO: codigo commitado em LOCAL (HEAD = 2fc332e). Nada publicado.
+MIGRACAO 20261014 **NAO APLICADA**. NAO FAZER PUSH ANTES DE A APLICAR.
+Quando: o Claude Code repoe o limite as 19:50 (America/Sao_Paulo).
+
+--------------------------------------------------------------------------------
+PORQUE E QUE ESTE HANDOFF EXISTE (achado da Opcao 1)
+--------------------------------------------------------------------------------
+Tentei autorizar o MCP `supabase` na sessao Hermes (Opcao 1). NAO e possivel:
+  `hermes mcp add supabase --url https://mcp.supabase.com/mcp?project_ref=... --auth oauth`
+responde "non-interactive environment and no cached tokens found. Run `hermes mcp login
+supabase` interactively first". O fluxo OAuth precisa de terminal interactivo + browser,
+coisas que a minha sessao nao tem. O `add` foi CANCELADO de proposito (nao ficou entrada
+partida na config; `hermes mcp list` continua com os 4 servidores de sempre).
+=> O instrumento para o MCP continua a ser o Claude Code.
+
+CAMINHO MELHOR PARA O FUTURO (opcional, para o operador, no SEU terminal):
+  hermes mcp add supabase --url "https://mcp.supabase.com/mcp?project_ref=vjslwowwrpcawijdiksm" --auth oauth
+  hermes mcp login supabase          (abre o browser; o token fica em auth.json, nao em config.yaml)
+  hermes mcp test supabase
+  # e reiniciar o Hermes: as ferramentas MCP so carregam numa sessao NOVA (sem hot-reload)
+Isto dispensa o Claude Code. Nao e preciso para o fecho de hoje.
+
+--------------------------------------------------------------------------------
+PASSO 1 — APLICAR A MIGRACAO (Claude Code, MCP `supabase`)
+--------------------------------------------------------------------------------
+Ferramenta: mcp__supabase__apply_migration
+  name: utac110e_eco_quildo
+  query: conteudo LITERAL de
+         desafio-gut/frontend/supabase/migrations/20261014_utac110e_eco_quildo.sql
+         (ja inclui o bloco de SEGURANCA RLS+POLICY+REVOKE+GRANT, corrigido no commit 193036c)
+
+--------------------------------------------------------------------------------
+PASSO 2 — VERIFICAR O QUE FICOU APLICADO (leitura; corre isto a seguir)
+--------------------------------------------------------------------------------
+select
+  (select count(*) from information_schema.columns
+     where table_schema='public' and table_name='eco_quildo')            as cols_eco_quildo,
+  (select count(*) from information_schema.columns
+     where table_schema='public' and table_name='eco_quildo_lastro')     as cols_lastro,
+  (select count(*) from public.eco_quildo_lastro)                        as lastro_linhas,
+  (select bool_and(c.relrowsecurity) from pg_class c
+     join pg_namespace n on n.oid=c.relnamespace
+    where n.nspname='public' and c.relname in ('eco_quildo','eco_quildo_lastro')) as rls_ligado,
+  (select count(*) from pg_policies
+    where schemaname='public' and tablename in ('eco_quildo','eco_quildo_lastro')) as policies,
+  (select count(*) from information_schema.role_table_grants
+    where table_schema='public' and table_name in ('eco_quildo','eco_quildo_lastro')
+      and grantee in ('anon','authenticated'))                            as grants_a_anon;
+
+ESPERADO: cols_eco_quildo=4 · cols_lastro=5 · lastro_linhas=1 · rls_ligado=true
+          policies=2 · grants_a_anon=0
+SE QUALQUER NUMERO NAO BATER: PARAR e reportar. Nao avancar para o push.
+
+--------------------------------------------------------------------------------
+PASSO 3 — SONDA ADVERSARIAL COM O PAPEL `anon` (tem de dar 42501 em TUDO)
+--------------------------------------------------------------------------------
+Ficheiro pronto: C:/Users/Moltbot/tmp-utac110e/sonda-anon.sql
+(corre a migracao dentro do bloco, assume o papel anon, exige 42501 nas 5 operacoes —
+INSERT, UPDATE de terceiros, SELECT do ledger, UPDATE do lastro, DELETE — e REVERTE SEMPRE)
+Alternativa mais directa, agora que a migracao esta aplicada (nao recria nada):
+  DO $p$ DECLARE a int:=0; BEGIN
+    EXECUTE 'SET LOCAL ROLE anon';
+    BEGIN EXECUTE 'INSERT INTO public.eco_quildo (endereco,saldo) VALUES (''0xp'',1000000)'; a:=a+1;
+      EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+    BEGIN EXECUTE 'UPDATE public.eco_quildo SET saldo=0'; a:=a+10;
+      EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+    BEGIN EXECUTE 'SELECT count(*) FROM public.eco_quildo'; a:=a+100;
+      EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+    BEGIN EXECUTE 'UPDATE public.eco_quildo_lastro SET reserva_rs_centavos=0'; a:=a+1000;
+      EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+    BEGIN EXECUTE 'DELETE FROM public.eco_quildo'; a:=a+10000;
+      EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+    EXECUTE 'RESET ROLE';
+    IF a <> 0 THEN RAISE EXCEPTION 'FALHA SEGURANCA: anon acede (codigo %)', a; END IF;
+    RAISE EXCEPTION 'PROBE_OK_ANON_BLOQUEADO_REVERTER';
+  END; $p$;
+
+ESPERADO: ERROR P0001: PROBE_OK_ANON_BLOQUEADO_REVERTER  (o erro final E o teste)
+SE der "FALHA SEGURANCA: anon acede": PARAR. A migracao NAO vai para producao nesse estado.
+
+--------------------------------------------------------------------------------
+PASSO 4 — PUSH EM FOREGROUND (so depois do passo 3 verde)
+--------------------------------------------------------------------------------
+  git push origin main        # 3 commits: 0a1350b, 193036c, 2fc332e
+  # declarar se o remote voltar a registar "Bypassed rule violations" (ja aconteceu no 110d)
+
+--------------------------------------------------------------------------------
+PASSO 5 — VERIFICAR A PRODUCAO (sem token, so resposta de contrato)
+--------------------------------------------------------------------------------
+  GET  /ler-eco-quildo            -> 401 JSON token_ausente   (NAO 502)
+  GET  /lastro-eco-quildo         -> 401 JSON                 (NAO 502)
+  POST /usar-eco-quildo           -> 401 JSON                 (NAO 502)
+  POST /creditar-eco-quildo       -> 401 JSON                 (NAO 502)
+  POST /comprar-passe-relampago   -> 401 JSON                 (NAO 502)
+  POST /comprar-passe-programado  -> 401 JSON                 (NAO 502)
+  GET nos endpoints POST          -> 405 JSON (SEM corpo no GET!)
+  /health 200 · home 200
+  Bundle: "ECOQUILDO" e "Usavel no site oficial" num chunk de MinhaCarteira;
+          "ler-eco-quildo" no chunk do useEcoQuildo.
+ATENCAO (erro de instrumento ja cometido no 110d): NAO mandar corpo num GET — o runtime
+recusa com 502 "Request with GET/HEAD method cannot have body", que NAO e defeito da funcao.
+
+--------------------------------------------------------------------------------
+LIMPEZA PENDENTE (nao esquecer)
+--------------------------------------------------------------------------------
+  C:\Users\Moltbot\tmp-utac110e-val\wt   -- worktree do validador; as 4 junctions ja foram
+  removidas por rmdir e o helper A13 RECUSOU remover o worktree (ficheiros nao versionados
+  do proprio validador: os scripts dele e o VEREDICTO.md, este ja copiado para _logs/).
+  Ordem: apagar o que e' do validador e SO ENTAO
+     node scripts/worktree-helper.mjs remover 'C:/Users/Moltbot/tmp-utac110e-val/wt'
+  NUNCA `rm -rf` nem `git worktree remove` com junctions dentro (o delete segue o reparse
+  point e esvazia o node_modules REAL). Verificado depois: 5 node_modules reais intactos.
+  Tambem por apagar: C:\Users\Moltbot\tmp-utac110e\ (briefs, SQL da sonda, saidas dos agentes)
+
+================================================================================
+RESUMO NUMA LINHA: aplicar a migracao (passo 1) -> verificar (2) -> sonda anon (3) ->
+push (4) -> verificar producao (5). O passo 3 e o portao: se o anon ainda aceder, PARAR.
+================================================================================
