@@ -1,16 +1,14 @@
 PASS  1. o teste (e) nomeia a decisão do operador (R18-110c-1b-1)
-PASS  2. o teste (e) diz explicitamente que NÃO foi decisão do executor
-PASS  3. CONTROLO NEGATIVO: o mesmo predicado RECUSA um marcador que não existe
+PASS  2. o teste (e) diz que NÃO foi decisão do executor
+PASS  3. CONTROLO NEGATIVO: o predicado RECUSA um marcador inexistente
 PASS  4. mc963-guto-regulamento-v4.test.mjs passa isolado  — pass=10 fail=0
 PASS  4. utac110c-guto-via-b.test.mjs passa isolado  — pass=8 fail=0
 PASS  4. mc962-fallback-vocabulario.test.mjs passa isolado  — pass=10 fail=0
-PASS  5. HEAD == origin/main  — a5052fe6
-FAIL  6. árvore limpa (só os untracked pré-existentes)  — ?? _logs/UTAC110c-1b_SEG6_ratificacao_saida.txt
-PASS  7. algum dos últimos commits nomeia a decisão R18-110c-1b-1  — docs(UTAC110c-1b): R18-110c-1b-1 -- OPERADOR ratifica por es
+PASS  5. HEAD == origin/main  — ba66b896
+PASS  6. árvore limpa (fora o próprio output desta verificação)  — limpo
+PASS  7. algum dos últimos commits nomeia a decisão R18-110c-1b-1
 PASS  8. o CLAUDE.md tem a decisão e os bytes de controlo intactos
 
 ──────────────────────────────────────────────────────────────────────
-RESULTADO AD-HOC: 9 PASS / 1 FAIL
-FALHAS: 6. árvore limpa (só os untracked pré-existentes)
+RESULTADO AD-HOC: 10 PASS / 0 FAIL
 (ad-hoc — a suíte canónica é corrida à parte)
-tmpdir usado: C:\Users\Moltbot\AppData\Local\Temp
