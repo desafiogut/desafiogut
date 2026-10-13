@@ -126,8 +126,11 @@ test("UTAC107g.2 · as frases corrigidas estão em pt-BR nos ficheiros", () => {
   const ler = (r) => readFileSync(join(SRC, r), "utf8");
   assert.match(ler("pages/OfertasProgramadas.jsx"), /Você ainda não tem pontos\. Compre o seu primeiro Passe na Carteira\./);
   assert.match(ler("pages/OfertasProgramadas.jsx"), /Carregando seus pontos…/);
-  assert.match(ler("components/ComprarPasseModal.jsx"), /Você vai comprar <strong/);
-  assert.match(ler("components/ComprarPasseModal.jsx"), /Você ganha\{" "\}/);
+  // UTAC110d-front — o balão do Passe foi REESCRITO (escolha entre os dois Passes): «Você vai
+  // comprar…/Você ganha…» deixaram de existir. A invariante (copy do balão em pt-BR) passa a
+  // guardar-se nas frases NOVAS — «Escolha o seu…» (não «Escolhe o teu…»), «Seus pontos…».
+  assert.match(ler("components/ComprarPasseModal.jsx"), /Escolha o seu Passe Desafio/);
+  assert.match(ler("components/ComprarPasseModal.jsx"), /Seus pontos de cartão:/);
   assert.match(ler("components/ResgatarCartaoModal.jsx"), /Confirme os dados de entrega\./);
   assert.match(ler("hooks/usePalpite.js"), /Você precisa ter comprado um Passe para palpitar/);
 });

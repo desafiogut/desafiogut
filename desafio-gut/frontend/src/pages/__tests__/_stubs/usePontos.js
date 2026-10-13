@@ -10,7 +10,7 @@
 
 const BASE = Object.freeze({
   pontos: 0, pontosCartao: 0, bonusPalpite: 0,
-  historico: [], palpites: [], pontosParaCartao: 50, podeResgatarCartao: false,
+  historico: [], palpites: [], pontosParaCartao: 50, podeResgatarCartao: false, creditosLance: 0,
   loading: false, erro: "",
 });
 

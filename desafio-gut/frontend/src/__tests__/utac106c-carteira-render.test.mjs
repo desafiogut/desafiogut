@@ -199,24 +199,26 @@ test("UTAC106c/RENDER · CLICAR «Comprar Passe» ABRE o balão (com o preço) e
   assert.ok(!c.html().includes("Cancelar"), "pré-condição: o balão devia estar fechado");
   await c.clicar("Comprar Passe Desafio R$ 2,00");
   const aberto = c.html();
-  assert.ok(aberto.includes("Cancelar") && aberto.includes("Confirmar"),
-    "o clique no botão NÃO abriu o balão");
+  // UTAC110d-front — o balão escolhe entre os DOIS Passes (já não tem «Confirmar»).
+  assert.ok(aberto.includes("Cancelar") && aberto.includes("Comprar Passe Relâmpago")
+            && aberto.includes("Comprar Passe Programado"),
+    "o clique no botão NÃO abriu o balão (com os dois Passes)");
   assert.ok(aberto.includes("R$ 2,00"), "o balão não mostra o preço do Passe");
   assert.match(aberto, /aria-modal="true"/, "o balão não é um diálogo modal acessível");
   await c.clicar("Cancelar");
   assert.ok(!c.html().includes("Cancelar"), "«Cancelar» NÃO fechou o balão");
 });
 
-test("UTAC106c/RENDER · CLICAR «Confirmar» NÃO navega (o balão passou a COMPRAR — UTAC106e)", async () => {
+test("UTAC106c/RENDER · CLICAR «Comprar Passe Relâmpago» NÃO navega (o balão COMPRA — UTAC106e/110d-front)", async () => {
   // UTAC106e — MUDANÇA DE CONTRATO (declarada): o 106c encaminhava «Confirmar» para as Ofertas
   // Programadas. O 106e deu-lhe o trabalho real — chamar `POST /comprar-passe-pontos` e FICAR na
   // Carteira (permite compras seguidas). Este teste guarda o que NÃO se perdeu: **não navega**.
   const c = await montarCarteira(CONECTADO);
   await c.clicar("Comprar Passe Desafio R$ 2,00");
   globalThis.__NAVEGADAS.length = 0;
-  await c.clicar("Confirmar");
+  await c.clicar("Comprar Passe Relâmpago");
   assert.deepEqual(globalThis.__NAVEGADAS, [],
-    `«Confirmar» navegou — devia ficar na Carteira: ${JSON.stringify(globalThis.__NAVEGADAS)}`);
+    `«Comprar Passe Relâmpago» navegou — devia ficar na Carteira: ${JSON.stringify(globalThis.__NAVEGADAS)}`);
 });
 
 // ═══ SEG5 — BottomNav e Sidebar em SINCRONIA (por render) ═══════════════════════════

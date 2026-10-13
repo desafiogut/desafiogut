@@ -1,23 +1,30 @@
 // utac106e-compra-passe.test.mjs — UTAC106e · UI da compra do Passe Desafio.
 //
+// ⚠️ UTAC110d-front — CONTRATO ACTUALIZADO (declarado): o hook passou a `comprar(tipo)` e chama
+// `comprar-passe-relampago` / `comprar-passe-programado` (o `comprar-passe-pontos` deprecated deixou
+// de ser chamado pela UI — continua vivo no servidor); o balão passou a ESCOLHER entre os dois Passes
+// (sem «Confirmar»). As invariantes do 106e mantêm-se: Bearer user-session, chave NOVA por clique,
+// guarda de corrida do mesmo tick, erro visível (nunca silêncio), spinner + botões desactivados
+// durante a compra, balão fecha em sucesso e fica aberto em erro.
+//
 // O que fica aqui:
-//   HOOK  — `useComprarPasse`: chama `POST /comprar-passe-pontos` com Bearer, gera uma
-//            `idempotencyKey` NOVA por clique e mapeia 200/201→ok, 401/402/400/5xx→erro;
-//   RENDER — a Carteira: o botão abre o balão, o balão mostra o texto decidido, «Cancelar» fecha,
-//            «Confirmar» COMPRA (toast verde em sucesso; toast vermelho + atalho PIX no 402) e o
-//            balão mostra o SPINNER durante o loading.
+//   HOOK  — `useComprarPasse`: chama o endpoint DO TIPO com Bearer, gera uma `idempotencyKey` NOVA
+//            por clique e mapeia 200/201→ok, 401/402/400/502/503/5xx→erro com mensagem clara;
+//   RENDER — a Carteira: o botão abre o balão com os dois Passes, «Cancelar» fecha, cada «Comprar
+//            <Passe>» chama o SEU endpoint (toast + releitura dos saldos em sucesso; erro dentro do
+//            balão + toast + atalho PIX no 402).
 //
 // Instrumentos do PRÓPRIO repo (nenhum ficheiro de produção alterado):
 //   · `_servidor-teste.mjs` + `_ponte-ssr.mjs` (instância única de React — regra A12);
 //   · `_hook-runner.mjs` — condutor de hooks sem DOM + `duploDeFetch`, que substitui SÓ o `fetch`
-//     global, deixando correr o `apiPost` REAL (`src/lib/api.js`) — é ele que monta o `Bearer` e o
-//     `BASE`, por isso um erro no contrato do helper aparece aqui;
+//     global, deixando correr o `apiPost`/`apiGet` REAIS (`src/lib/api.js`);
 //   · duplo de AppContext (`pages/__tests__/_stubs/AppContext.jsx`) e `_stubs-106e/` (getAuthToken).
 //
 // ⚠️ LIMITE DECLARADO: o «clique» é exercido chamando o `onClick` do elemento React (árvore de
 // elementos) — sem DOM, sem hit-testing, sem CSS. Prova-se «handler → estado → novo render».
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
 import { opcoesServidorTeste } from "../../__tests__/_servidor-teste.mjs";
@@ -73,29 +80,70 @@ async function comFetch(responder, corpo) {
 }
 
 // ═══ HOOK ═══════════════════════════════════════════════════════════════════════════
-test("HOOK · chama POST /comprar-passe-pontos com Bearer e mapeia 201 → ok:true", async () => {
+const URL_RELAMPAGO = /\/\.netlify\/functions\/comprar-passe-relampago$/;
+const URL_PROGRAMADO = /\/\.netlify\/functions\/comprar-passe-programado$/;
+const ehCompra = (c) => /comprar-passe/.test(c.url);
+
+test("HOOK · comprar('relampago') → POST /comprar-passe-relampago com Bearer; 201 → ok + pontos + crédito", async () => {
   definirContexto(CONECTADO);
-  const { r, corpos, dup } = await comFetch(() => ({ status: 201, json: { ok: true, pontos: 1 } }), async () => {
+  const { r, corpos, dup } = await comFetch(() => ({ status: 201, json: { ok: true, tipo: "relampago", pontosFidelidade: 10, creditosLance: 1 } }), async () => {
     const c = montar(useComprarPasse, []);
     await c.assentar();
-    return await c.resultado().comprar();
+    return await c.resultado().comprar("relampago");
   });
   assert.equal(r.ok, true, JSON.stringify(r));
-  assert.equal(r.pontos, 1);
+  assert.equal(r.tipo, "relampago");
+  assert.equal(r.pontos, 10);
+  assert.equal(r.creditosLance, 1);
   assert.equal(dup.chamadas.length, 1);
-  assert.match(dup.chamadas[0].url, /\/\.netlify\/functions\/comprar-passe-pontos$/);
+  assert.match(dup.chamadas[0].url, URL_RELAMPAGO);
   assert.equal(dup.chamadas[0].headers.Authorization, "Bearer AUTHCTX-106e");
-  assert.match(corpos[0].idempotencyKey, /^[A-Za-z0-9._:-]{8,200}$/, "a chave não casa a regex do servidor");
+  assert.match(corpos[0].idempotencyKey, /^[A-Za-z0-9._:-]{8,180}$/, "a chave não casa a regex do servidor (8–180)");
+  assert.deepEqual(Object.keys(corpos[0]), ["idempotencyKey"], "o tipo NÃO vai no corpo (vem do endpoint)");
+});
+
+test("HOOK · comprar('programado') → POST /comprar-passe-programado (e NUNCA o endpoint do outro Passe)", async () => {
+  definirContexto(CONECTADO);
+  const { r, dup } = await comFetch(() => ({ status: 201, json: { ok: true, tipo: "programado", pontosFidelidade: 20 } }), async () => {
+    const c = montar(useComprarPasse, []);
+    await c.assentar();
+    return await c.resultado().comprar("programado");
+  });
+  assert.equal(r.ok, true); assert.equal(r.tipo, "programado"); assert.equal(r.pontos, 20);
+  assert.equal(r.creditosLance, null, "o Programado não traz créditos de lance");
+  assert.equal(dup.chamadas.length, 1);
+  assert.match(dup.chamadas[0].url, URL_PROGRAMADO);
+  assert.doesNotMatch(dup.chamadas[0].url, /relampago|comprar-passe-pontos/);
+});
+
+test("HOOK · o endpoint deprecated `comprar-passe-pontos` já NÃO é chamado pela UI", () => {
+  const fonte = readFileSync(resolve(AQUI, "..", "..", "hooks", "useComprarPasse.js"), "utf8")
+    .replace(/^\s*\/\/.*$/gm, "");
+  assert.doesNotMatch(fonte, /comprar-passe-pontos/, "o hook ainda nomeia o endpoint de 1 ponto");
+});
+
+test("HOOK · tipo inválido (vazio, desconhecido, «constructor», número) → erro LOCAL, sem ida à rede", async () => {
+  definirContexto(CONECTADO);
+  const { dup, r } = await comFetch(() => ({ status: 201, json: { ok: true } }), async () => {
+    const c = montar(useComprarPasse, []); await c.assentar();
+    const out = [];
+    for (const t of [undefined, "", "pontos", "constructor", "__proto__", 1, "RELAMPAGO"]) {
+      out.push(await c.resultado().comprar(t));
+    }
+    return out;
+  });
+  for (const x of r) { assert.equal(x.ok, false); assert.equal(x.code, "tipo_invalido"); assert.ok(x.message); }
+  assert.equal(dup.chamadas.length, 0, "um tipo inválido foi à rede");
 });
 
 test("HOOK · gera uma idempotencyKey DIFERENTE por chamada (o RETRY do mesmo pedido é que a reusa)", async () => {
   definirContexto(CONECTADO);
-  const { corpos } = await comFetch(() => ({ status: 201, json: { ok: true, pontos: 1 } }), async () => {
+  const { corpos } = await comFetch(() => ({ status: 201, json: { ok: true, pontosFidelidade: 10 } }), async () => {
     const c = montar(useComprarPasse, []);
     await c.assentar();
-    await c.resultado().comprar();
+    await c.resultado().comprar("relampago");
     await c.assentar();
-    await c.resultado().comprar();
+    await c.resultado().comprar("relampago");
   });
   assert.equal(corpos.length, 2);
   assert.notEqual(corpos[0].idempotencyKey, corpos[1].idempotencyKey,
@@ -104,12 +152,10 @@ test("HOOK · gera uma idempotencyKey DIFERENTE por chamada (o RETRY do mesmo pe
 
 test("HOOK · corrida no MESMO tick: 2 comprar() sem await entre eles → SÓ 1 ida à rede (guarda `emCurso`)", async () => {
   definirContexto(CONECTADO);
-  const { corpos, dup } = await comFetch(() => ({ status: 201, json: { ok: true, pontos: 1 } }), async () => {
+  const { corpos, dup } = await comFetch(() => ({ status: 201, json: { ok: true, pontosFidelidade: 10 } }), async () => {
     const c = montar(useComprarPasse, []);
     await c.assentar();
-    // Achado ⚠️ R1 do validador: sem `await` entre as duas, o ESTADO `loading` ainda é o ANTIGO no
-    // closure. Sem o `ref`, as duas passariam e dariam DOIS débitos. Com o `ref`, a 2.ª sai sem rede.
-    const [r1, r2] = await Promise.all([c.resultado().comprar(), c.resultado().comprar()]);
+    const [r1, r2] = await Promise.all([c.resultado().comprar("relampago"), c.resultado().comprar("programado")]);
     assert.equal(r1.ok, true);
     assert.equal(r2.ok, false);
     assert.equal(r2.code, "em_curso");
@@ -120,40 +166,38 @@ test("HOOK · corrida no MESMO tick: 2 comprar() sem await entre eles → SÓ 1 
 
 test("HOOK · 200 idempotente → ok:true", async () => {
   definirContexto(CONECTADO);
-  const { r } = await comFetch(() => ({ status: 200, json: { ok: true, idempotent: true, pontos: 1 } }), async () => {
+  const { r } = await comFetch(() => ({ status: 200, json: { ok: true, idempotent: true, pontosFidelidade: 10 } }), async () => {
     const c = montar(useComprarPasse, []); await c.assentar();
-    return await c.resultado().comprar();
+    return await c.resultado().comprar("relampago");
   });
   assert.equal(r.ok, true); assert.equal(r.idempotent, true);
 });
 
-test("HOOK · 401 → «Sessão expirada»", async () => {
+test("HOOK · cada erro tem mensagem CLARA (401/402/400/502/503/outro) — nunca em silêncio", async () => {
   definirContexto(CONECTADO);
-  const { r } = await comFetch(() => ({ status: 401, json: { error: { code: "token_ausente" } } }), async () => {
-    const c = montar(useComprarPasse, []); await c.assentar();
-    return await c.resultado().comprar();
-  });
-  assert.equal(r.ok, false); assert.equal(r.status, 401); assert.equal(r.message, "Sessão expirada");
-});
-
-test("HOOK · 402 → «Saldo insuficiente»", async () => {
-  definirContexto(CONECTADO);
-  const { r } = await comFetch(() => ({ status: 402, json: { error: { code: "saldo_insuficiente" } } }), async () => {
-    const c = montar(useComprarPasse, []); await c.assentar();
-    return await c.resultado().comprar();
-  });
-  assert.equal(r.ok, false); assert.equal(r.status, 402); assert.equal(r.message, "Saldo insuficiente");
-});
-
-test("HOOK · 500 → «Erro do servidor»; 400 → «Pedido inválido»", async () => {
-  definirContexto(CONECTADO);
-  for (const [status, esperado] of [[500, "Erro do servidor"], [400, "Pedido inválido"]]) {
+  const casos = [
+    [401, "Sessão expirada"], [402, "Saldo insuficiente"], [400, "Pedido inválido"],
+    [502, "Não foi possível concluir a compra. Tente de novo."],
+    [503, "Sistema em manutenção. Tente de novo em instantes."], [500, "Erro do servidor"],
+  ];
+  for (const [status, esperado] of casos) {
     const { r } = await comFetch(() => ({ status, json: { error: { code: "x" } } }), async () => {
       const c = montar(useComprarPasse, []); await c.assentar();
-      return await c.resultado().comprar();
+      return await c.resultado().comprar("relampago");
     });
+    assert.equal(r.ok, false, `status ${status}`);
+    assert.equal(r.status, status);
     assert.equal(r.message, esperado, `status ${status}`);
   }
+});
+
+test("HOOK · sem `authToken` (sessão por cunhar) → `sem_sessao`, sem ida à rede", async () => {
+  definirContexto({ ...CONECTADO, authToken: null });
+  const { r, dup } = await comFetch(() => ({ status: 201, json: { ok: true } }), async () => {
+    const c = montar(useComprarPasse, []); await c.assentar();
+    return await c.resultado().comprar("relampago");
+  });
+  assert.equal(r.code, "sem_sessao"); assert.equal(dup.chamadas.length, 0);
 });
 
 // ═══ RENDER ═════════════════════════════════════════════════════════════════════════
@@ -192,8 +236,12 @@ async function montarCarteira(ctx = CONECTADO) {
     await b.props.onClick();
     await ctrl.assentar();
   };
-  return { ctrl, html, botoes, clicar };
+  return { ctrl, html, botoes, botaoCom, clicar };
 }
+
+// Responde ao `ler-pontos` (os dois saldos) e à compra, cada um pela sua URL.
+const servidor = ({ compra, pontos = { pontos: 12, pontosCartao: 10, lance: { creditos: 1 } } }) => (url) =>
+  /ler-pontos/.test(url) ? { status: 200, json: { ok: true, ...pontos } } : compra;
 
 test("RENDER · o botão «Comprar Passe Desafio R$ 2,00» existe na Carteira", async () => {
   const { botoes } = await montarCarteira();
@@ -201,73 +249,102 @@ test("RENDER · o botão «Comprar Passe Desafio R$ 2,00» existe na Carteira", 
     `faltou o botão do Passe: ${JSON.stringify(botoes().map(texto))}`);
 });
 
-test("RENDER · CLICAR abre o balão com o TEXTO decidido (R$ 2,00 · 1 ponto · Continuar?)", async () => {
+test("RENDER · CLICAR abre o balão: «Escolha o seu Passe Desafio» + os DOIS Passes com preço e benefício", async () => {
   const { html, clicar } = await montarCarteira();
-  assert.ok(!html().includes("Continuar?"), "pré-condição: o balão devia estar fechado");
+  assert.ok(!html().includes("Escolha o seu Passe Desafio"), "pré-condição: o balão devia estar fechado");
   await clicar("Comprar Passe Desafio R$ 2,00");
   const h = semTags(html());
-  assert.match(h, /Comprar Passe Desafio/, "o balão não abriu");
-  // ⚠️ O `semTags` troca cada tag por um ESPAÇO (as tags `<strong>` interiores deixam um espaço
-  // antes do ponto final) — a regex é tolerante a isso de propósito.
-  assert.match(h, /Você vai comprar 1 Passe por R\$ 2,00\s*\.\s*Você ganha 1 ponto\s*\.\s*Continuar\?/, `texto do balão errado: «${h}»`);
+  assert.match(h, /Escolha o seu Passe Desafio/, "o balão não abriu");
+  assert.match(h, /⚡ Passe Relâmpago R\$ 2,00 10 pontos \+ 1 lance no Menor Lance Único Comprar Passe Relâmpago/,
+    `cartão Relâmpago errado: «${h}»`);
+  assert.match(h, /🎫 Passe Programado R\$ 2,00 10 pontos \+ 1 palpite nas Ofertas Programadas Comprar Passe Programado/,
+    `cartão Programado errado: «${h}»`);
   assert.match(html(), /aria-modal="true"/, "o balão não é um diálogo modal acessível");
 });
 
 test("RENDER · «Cancelar» FECHA o balão", async () => {
   const { html, clicar } = await montarCarteira();
   await clicar("Comprar Passe Desafio R$ 2,00");
-  assert.ok(html().includes("Continuar?"), "pré-condição: o balão devia estar aberto");
+  assert.ok(html().includes("Escolha o seu Passe Desafio"), "pré-condição: o balão devia estar aberto");
   await clicar("Cancelar");
-  assert.ok(!html().includes("Continuar?"), "«Cancelar» não fechou o balão");
+  assert.ok(!html().includes("Escolha o seu Passe Desafio"), "«Cancelar» não fechou o balão");
 });
 
-test("RENDER · «Confirmar» COMPRA: fecha o balão e mostra o toast «1 ponto creditado»", async () => {
-  const { html, clicar } = await montarCarteira();
-  await clicar("Comprar Passe Desafio R$ 2,00");
-  const { dup } = await comFetch(() => ({ status: 201, json: { ok: true, pontos: 1 } }), async () => {
-    await clicar("Confirmar");
+for (const [rotulo, url, toast] of [
+  ["Comprar Passe Relâmpago", URL_RELAMPAGO, "Passe Relâmpago comprado: +10 pontos e 1 lance"],
+  ["Comprar Passe Programado", URL_PROGRAMADO, "Passe Programado comprado: +10 pontos e 1 palpite"],
+]) {
+  test(`RENDER · «${rotulo}» chama o SEU endpoint, fecha o balão, mostra o toast e RELÊ os saldos`, async () => {
+    const { html, clicar } = await montarCarteira();
+    await clicar("Comprar Passe Desafio R$ 2,00");
+    const { dup } = await comFetch(servidor({ compra: { status: 201, json: { ok: true, pontosFidelidade: 22 } } }), async () => {
+      await clicar(rotulo);
+    });
+    const compras = dup.chamadas.filter(ehCompra);
+    assert.equal(compras.length, 1, `«${rotulo}» devia fazer 1 compra; fez ${compras.length}`);
+    assert.match(compras[0].url, url, `«${rotulo}» chamou o endpoint errado: ${compras[0].url}`);
+    assert.ok(dup.chamadas.some((c) => /ler-pontos/.test(c.url)), "depois da compra os saldos NÃO foram relidos");
+    const h = semTags(html());
+    assert.ok(h.includes(toast), `faltou o toast de sucesso: «${h}»`);
+    assert.ok(!h.includes("Escolha o seu Passe Desafio"), "o balão não fechou depois do sucesso");
   });
-  assert.equal(dup.chamadas.length, 1, "«Confirmar» não chamou o endpoint");
-  const h = semTags(html());
-  assert.ok(h.includes("1 ponto creditado"), `o toast de sucesso não apareceu: «${h}»`);
-  assert.ok(!h.includes("Continuar?"), "o balão não fechou depois do sucesso");
-});
+}
 
-test("RENDER · 402 → toast vermelho «Saldo insuficiente» + atalho «Carregar agora (PIX)»", async () => {
+test("RENDER · 402 → erro DENTRO do balão + toast + atalho «Carregar agora (PIX)»; o balão FICA aberto", async () => {
   const { html, botoes, clicar } = await montarCarteira();
   await clicar("Comprar Passe Desafio R$ 2,00");
-  await comFetch(() => ({ status: 402, json: { error: { code: "saldo_insuficiente" } } }), async () => {
-    await clicar("Confirmar");
+  await comFetch(servidor({ compra: { status: 402, json: { error: { code: "saldo_insuficiente" } } } }), async () => {
+    await clicar("Comprar Passe Relâmpago");
   });
   const h = semTags(html());
   assert.ok(h.includes("Saldo insuficiente. Carregar agora?"), `faltou o toast de saldo: «${h}»`);
-  assert.ok(botoes().some((b) => texto(b).includes("Carregar agora (PIX)")),
-    "faltou o atalho de depósito PIX no 402");
-  // ⚠️ INVARIANTE: no 402 o balão NÃO fecha (a compra falhou) — fica para nova tentativa.
-  assert.ok(h.includes("Continuar?"), "o balão fechou num erro — devia manter-se aberto");
+  assert.match(html(), /role="alert"[^>]*>⚠️ Saldo insuficiente\. Deposite via PIX/, "o erro não aparece DENTRO do balão");
+  assert.ok(botoes().some((b) => texto(b).includes("Carregar agora (PIX)")), "faltou o atalho de depósito PIX no 402");
+  assert.ok(h.includes("Escolha o seu Passe Desafio"), "o balão fechou num erro — devia manter-se aberto");
 });
 
-test("RENDER · durante o loading, «Confirmar» mostra o SPINNER e ambos os botões ficam desactivados", () => {
+test("RENDER · 502 → mensagem CLARA no balão (não em silêncio) e o balão fica aberto", async () => {
+  const { html, clicar } = await montarCarteira();
+  await clicar("Comprar Passe Desafio R$ 2,00");
+  await comFetch(servidor({ compra: { status: 502, json: { error: { code: "creditar_credito_lance_falhou" } } } }), async () => {
+    await clicar("Comprar Passe Relâmpago");
+  });
+  assert.match(html(), /role="alert"[^>]*>⚠️ Não foi possível concluir a compra\. Tente de novo\./,
+    "o 502 não mostrou mensagem clara dentro do balão");
+  assert.ok(semTags(html()).includes("Escolha o seu Passe Desafio"), "o balão fechou num erro");
+});
+
+test("RENDER · durante a compra: SPINNER no Passe escolhido e TODOS os botões desactivados", () => {
   const h = renderToStaticMarkup(React.createElement(ComprarPasseModal, {
-    aberto: true, loading: true, pontos: 3, onConfirmar: () => {}, onCancelar: () => {},
+    aberto: true, emCurso: "programado", onComprar: () => {}, onCancelar: () => {},
   }));
-  assert.match(h, /data-spinner="true"/, "faltou o spinner no botão «Confirmar»");
+  assert.match(h, /data-spinner="true"/, "faltou o spinner");
   assert.match(h, /Processando…/, "faltou o rótulo de loading");
-  assert.match(h, /aria-busy="true"/, "o botão não anuncia o estado ocupado");
+  assert.equal((h.match(/aria-busy="true"/g) || []).length, 1, "só o Passe escolhido anuncia o estado ocupado");
+  assert.match(h, /data-passe="programado"[\s\S]*aria-busy="true"/, "o spinner está no Passe errado");
   const desactivados = (h.match(/disabled=""/g) || []).length;
-  assert.equal(desactivados, 2, `os DOIS botões deviam estar desactivados; medidos ${desactivados}`);
+  assert.equal(desactivados, 3, `os 2 «Comprar» + «Cancelar» deviam estar desactivados; medidos ${desactivados}`);
 });
 
-test("RENDER · o balão mostra a progressão dos pontos, DECLARANDO que é o TOTAL (não o cartão)", () => {
-  // UTAC106f-R1t: o número aqui é o TOTAL (vem de `comprar-passe-pontos`, coluna `pontos`). O ℹ️ do
-  // validador do R1v apanhou a incoerência com a barra «48 / 50» do ecrã Ofertas; o rótulo passa a
-  // dizer «(total)» e a lembrar que o cartão só conta as compras. O valor de CARTÃO não é acessível
-  // aqui dentro do escopo (ver o cabeçalho do componente).
+test("RENDER · o balão mostra os pontos de CARTÃO «X / 50» (o mesmo número da barra das Ofertas)", () => {
+  const t = semTags(renderToStaticMarkup(React.createElement(ComprarPasseModal, {
+    aberto: true, pontosCartao: 48, onComprar: () => {}, onCancelar: () => {},
+  })));
+  assert.match(t, /Seus pontos de cartão: 48 \/ 50/, `faltou «48 / 50»: «${t}»`);
+  // ilegível → não se mostra número nenhum (não se inventa 0)
+  for (const v of [null, -1, 2.5, "48", NaN]) {
+    const t2 = semTags(renderToStaticMarkup(React.createElement(ComprarPasseModal, {
+      aberto: true, pontosCartao: v, onComprar: () => {}, onCancelar: () => {},
+    })));
+    assert.doesNotMatch(t2, /Seus pontos de cartão/, `com pontosCartao=${String(v)} mostrou um número`);
+  }
+});
+
+test("RENDER · alvos de toque: os botões do balão têm ≥ 48 px", () => {
   const h = renderToStaticMarkup(React.createElement(ComprarPasseModal, {
-    aberto: true, loading: false, pontos: 49, onConfirmar: () => {}, onCancelar: () => {},
+    aberto: true, onComprar: () => {}, onCancelar: () => {},
   }));
-  const t = semTags(h);
-  assert.match(t, /Seus pontos \(total\): 49 → 50/, `a progressão (total) não apareceu: «${t}»`);
-  assert.match(t, /o cartão conta só os pontos das compras/,
-    "o rótulo tem de declarar que este número é o total — o cartão conta só as compras");
+  const botoesHtml = h.match(/<button[^>]*>/g) || [];
+  assert.equal(botoesHtml.length, 3);
+  for (const b of botoesHtml) assert.match(b, /min-height:48px/, `botão sem 48 px: ${b}`);
 });

@@ -23,6 +23,11 @@ import {
 // MC59.2 (B-4) — chainId e link do explorer vêm da config central de rede.
 import { CHAIN_ID_DEC, explorerTx } from "@/lib/network.js";
 import useTrocarPorSenhas from "../hooks/useTrocarPorSenhas.js";
+// UTAC110d-front (Frente C) — o lance Relâmpago consome 1 CRÉDITO de lance no servidor
+// (`lance-relampago.mjs`, UTAC110d; o débito em R$ está desligado por `DEBITO_SALDO_LANCE_ATIVO`).
+// O botão passa a depender dos créditos (`ler-pontos` → `lance.creditos`), não do saldo R$.
+import { usePontos } from "../hooks/usePontos.js";
+import { estadoCreditosLance, rotuloCreditos } from "../lib/passes.js";
 
 const SEPOLIA_CHAIN_ID = CHAIN_ID_DEC;
 
@@ -64,13 +69,18 @@ export default function CardLance({
 
   const {
     saldoSenhas, saldoSenhasStatus,
-    refetchSaldoRs, saldoRsCentavos, saldoRsStatus,
+    refetchSaldoRs, saldoRsCentavos,
     refetchSaldo,
     userLabel,
   } = useAppContext();
 
   // MC91.11 — conversão automática R$ → senha (programado sem senha on-chain).
   const { trocarPorSenhas } = useTrocarPorSenhas();
+
+  // UTAC110d-front — créditos de lance do titular (Relâmpago).
+  const {
+    creditosLance, loading: creditosCarregando, erro: creditosErro, refetch: refetchCreditos,
+  } = usePontos();
 
   const [valor,             setValor]             = useState("");
   const idCampoLance = useId(); // UTAC107d — liga o <label> ao <input>
@@ -98,10 +108,13 @@ export default function CardLance({
   // e o clique converte automaticamente antes do lance.
   const semFichas       = isProgramado && saldoSenhas != null && saldoSenhas <= 0 &&
                           saldoRsCentavos !== null && saldoRsCentavos < 200;
-  const valorParsed     = parseInt(valor || "0", 10);
-  const semSaldoRsFlash = !isProgramado &&
-                          saldoRsCentavos !== null && valorParsed > 0 &&
-                          saldoRsCentavos < valorParsed;
+  // UTAC110d-front — saiu o bloqueio «saldo R$ < valor do lance»: o lance Relâmpago já não debita
+  // R$ no servidor; o que o bloqueia agora é não ter créditos de lance (fail-closed: a carregar,
+  // em erro ou com 0 → botão desligado + mensagem).
+  const creditos = estadoCreditosLance({
+    isConnected, creditos: creditosLance, loading: creditosCarregando, erro: creditosErro,
+  });
+  const semCreditosFlash = !isProgramado && isConnected && !creditos.podeLancar;
 
   // Obtém token JWT de auth para flash (cached 10min). Abre popup Privy só se expirado.
   async function getFlashAuthToken() {
@@ -229,7 +242,13 @@ export default function CardLance({
             token_invalido:           "Falha na autenticação. Tente novamente.",
             endereco_nao_corresponde: "Endereço divergente. Saia e entre novamente.",
             senhas_insuficientes:     "Saldo de senhas insuficiente — converta R$ em senhas (R$ 2,00/senha) ou recarregue via PIX.",
+            // UTAC110d-front — os códigos novos do consumo de crédito (`lance-relampago.mjs`).
+            sem_creditos_lance:       "Sem créditos de lance. Adquira um Passe Relâmpago na Carteira para dar um lance.",
+            consumo_credito_falhou:   "Não foi possível usar seu crédito de lance. Tente novamente.",
+            lance_em_processamento:   "Este lance já está sendo processado. Aguarde um instante.",
           };
+          // O servidor diz que não há créditos: relê-se para o ecrã não mentir.
+          if (data?.error?.code === "sem_creditos_lance") { try { refetchCreditos?.(); } catch {} }
           throw new Error(msgMap[data?.error?.code] ?? data?.error?.message ?? "Erro no lance relâmpago.");
         }
         registrarLance(address);
@@ -240,6 +259,8 @@ export default function CardLance({
         setFase(FASES.SUCESSO);
         setValor("");
         refetchSaldoRs();
+        // UTAC110d-front — o lance consumiu 1 crédito: relê os créditos (X → X−1 no ecrã).
+        try { refetchCreditos?.(); } catch {}
         onLanceSucesso?.({ address, valorCentavos, txHash: data.lanceId, nomeExibicao: userLabel || null });
         return;
       }
@@ -305,11 +326,11 @@ export default function CardLance({
   let saldoLabel;
   let saldoPendente;
   if (!isProgramado) {
-    const r  = saldoRsCentavos;
-    const sx = saldoRsStatus === "loading" ? " ⏳"
-             : saldoRsStatus === "error"   ? " ✗" : "";
-    saldoPendente = saldoRsStatus === "stale";
-    saldoLabel = r != null ? `💰 R$ ${(r / 100).toFixed(2)}${sx}` : `💰 R$ —${sx}`;
+    // UTAC110d-front — no Relâmpago o que conta são os CRÉDITOS de lance (não o saldo R$).
+    saldoPendente = false;
+    saldoLabel = creditos.estado === "carregando" ? "⚡ … créditos"
+               : creditos.estado === "erro"       ? "⚡ — créditos ✗"
+               : `⚡ ${rotuloCreditos(creditosLance)}`;
   } else {
     const n  = saldoSenhas;
     const sx = saldoSenhasStatus === "loading" ? " ⏳"
@@ -318,18 +339,18 @@ export default function CardLance({
     saldoLabel = `🔗 ${n ?? "—"} senha${n === 1 ? "" : "s"}${sx}`;
   }
   const saldoTitle = !isProgramado
-    ? `saldo R$ — status: ${saldoRsStatus}`
+    ? `créditos de lance — estado: ${creditos.estado}`
     : `saldo on-chain — status: ${saldoSenhasStatus}`;
 
   const desabilitado = !isConnected || ocupado || !valor || semFichas ||
-                       saldoCarregando || saldoErro || semSaldoRsFlash;
+                       saldoCarregando || saldoErro || semCreditosFlash;
   const tooltipBotao =
     saldoErro       ? "Erro ao ler saldo. Verifique sua conexão." :
     saldoCarregando ? "Aguardando leitura do saldo on-chain." :
     semFichas       ? (saldoRsCentavos != null && saldoRsCentavos >= 200
                         ? "Sem senhas on-chain — o app converte R$ 2,00 automaticamente ao lançar"
                         : "Sem senhas e sem saldo R$ para converter — recarregue via PIX") :
-    semSaldoRsFlash ? `Saldo R$ insuficiente (R$ ${saldoRsCentavos != null ? (saldoRsCentavos / 100).toFixed(2) : "0"} disponível)` :
+    semCreditosFlash ? creditos.mensagem :
     "";
 
   const pipelineItens = !isProgramado
@@ -415,7 +436,7 @@ export default function CardLance({
         <p style={estilos.hintConexao}>
           {isProgramado
             ? "Lance programado consome 1 senha (Art. 20: R$ 2,00) — sem senha, o app converte R$ 2,00 do saldo automaticamente."
-            : "DesafioGUT Flash · 30 min · debita saldo R$ · menor lance único vence (Art. 8)."}
+            : "Cada lance consome 1 crédito de lance (Passe Relâmpago) · menor lance único vence."}
         </p>
       </div>
 
@@ -525,15 +546,15 @@ export default function CardLance({
         </div>
       )}
 
-      {isConnected && !isProgramado && !encerrado && semSaldoRsFlash && (
-        <div style={{
-          background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)",
-          borderRadius: "10px", padding: "0.75rem 1rem",
-          color: "#ef4444", fontSize: "0.85rem", fontWeight: "600", textAlign: "center",
-        }}>
-          ⚠️ Saldo R$ insuficiente (R${" "}
-          {saldoRsCentavos != null ? (saldoRsCentavos / 100).toFixed(2) : "0"}
-          {" "}disponível). Recarregue via PIX.
+      {/* UTAC110d-front (Frente C) — sem créditos de lance, o motivo fica À VISTA (não só no
+          `title` do botão desligado): a carregar, erro de leitura, ou «adquira um Passe Relâmpago». */}
+      {!isProgramado && !encerrado && semCreditosFlash && creditos.mensagem && (
+        <div
+          role="status"
+          data-creditos-lance={creditos.estado}
+          style={creditos.estado === "erro" ? estilos.boxErro : estilos.boxAvisoNeutro}
+        >
+          {creditos.mensagem}
         </div>
       )}
 

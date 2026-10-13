@@ -12,10 +12,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
 import { apiGet } from "../lib/api.js";
+import { creditosDaResposta } from "../lib/passes.js";
 
+// UTAC110d-front — `creditosLance`: os créditos de lance do ledger novo (`lance.creditos` do
+// `ler-pontos`, UTAC110d). Lido SEM coerção (`creditosDaResposta`): ilegível ou ausente → 0.
 const VAZIO = Object.freeze({
   pontos: 0, pontosCartao: 0, bonusPalpite: 0,
   historico: [], palpites: [], pontosParaCartao: 50, podeResgatarCartao: false,
+  creditosLance: 0,
 });
 
 export function usePontos() {
@@ -44,6 +48,7 @@ export function usePontos() {
         palpites: Array.isArray(data?.palpites) ? data.palpites : [],
         pontosParaCartao: Number(data?.pontosParaCartao ?? 50),
         podeResgatarCartao: data?.podeResgatarCartao === true,
+        creditosLance: creditosDaResposta(data),
       };
       setDados(novo);
       return novo;

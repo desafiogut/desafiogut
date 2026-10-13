@@ -4,6 +4,9 @@ import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { GlassCard } from "@/components/ui";
 import { useComprarPasse } from "../hooks/useComprarPasse.js";
+// UTAC110d-front — os dois saldos (pontos de fidelidade + créditos de lance) vêm do `ler-pontos`.
+import { usePontos } from "../hooks/usePontos.js";
+import { passeDoTipo } from "../lib/passes.js";
 import ComprarPasseModal from "../components/ComprarPasseModal.jsx";
 import Toast from "../widgets/toast/Toast.jsx";
 import ComprarFichasModal from "../components/ComprarFichasModal.jsx";
@@ -87,9 +90,18 @@ export default function MinhaCarteira() {
   // UTAC106c — balão de confirmação do Passe Desafio. UTAC106e — o balão passou a COMPRAR
   // (chama o endpoint `comprar-passe-pontos`); o estado do balão mantém o nome do 106c.
   const [passeAberto, setPasseAberto] = useState(false);
-  // UTAC106e — compra do Passe Desafio: hook que chama `POST /comprar-passe-pontos` (endpoint do
-  // UTAC106d-v2). Devolve o estado da chamada; o saldo R$ é relido pelo próprio hook.
-  const { comprar: comprarPasse, loading: comprandoPasse, pontos: pontosPasse } = useComprarPasse();
+  // UTAC106e — compra do Passe Desafio. UTAC110d-front — `comprar(tipo)` chama
+  // `comprar-passe-relampago` OU `comprar-passe-programado` (já não o `comprar-passe-pontos`).
+  // O saldo R$ é relido pelo próprio hook; os pontos/créditos relêem-se aqui (`refetchPontos`).
+  const { comprar: comprarPasse } = useComprarPasse();
+  // UTAC110d-front (Frente A) — dois saldos SEPARADOS: pontos de CARTÃO (`pontosCartao`, só
+  // compras — R1 do UTAC106f; é o mesmo número da barra das Ofertas Programadas) e créditos de lance.
+  const {
+    pontosCartao, pontosParaCartao, creditosLance,
+    loading: pontosCarregando, erro: pontosErro, refetch: refetchPontos,
+  } = usePontos();
+  const [tipoEmCurso, setTipoEmCurso] = useState(null);
+  const [erroPasse, setErroPasse] = useState("");
   // UTAC106e — feedback da compra: toast do repo + atalho «Carregar agora» no caso 402.
   const [toastPasse, setToastPasse] = useState(null);
   const [passeSemSaldo, setPasseSemSaldo] = useState(false);
@@ -114,6 +126,37 @@ export default function MinhaCarteira() {
   // Destino = a rota registada em `App.jsx` (`/ofertas-programadas`).
   function irParaOfertasProgramadas() {
     navigate("/ofertas-programadas");
+  }
+
+  // UTAC110d-front — leitura honesta dos dois saldos: a carregar «…», em erro «—» (não se inventa 0).
+  const saldosIlegiveis = pontosCarregando || Boolean(pontosErro);
+  const metaCartao = Number.isSafeInteger(pontosParaCartao) && pontosParaCartao > 0 ? pontosParaCartao : 50;
+  const progressoCartao = saldosIlegiveis ? 0 : Math.min(100, Math.round((pontosCartao / metaCartao) * 100));
+  const textoSaldo = (n) => (pontosCarregando ? "…" : pontosErro ? "—" : String(n));
+
+  async function escolherPasse(tipo) {
+    if (tipoEmCurso) return;
+    setTipoEmCurso(tipo);
+    setErroPasse("");
+    try {
+      const r = await comprarPasse(tipo);
+      if (r?.ok) {
+        setPasseAberto(false);
+        setPasseSemSaldo(false);
+        setToastPasse({ variant: "success", message: passeDoTipo(tipo)?.sucesso ?? "Passe comprado" });
+        try { await refetchPontos?.(); } catch { /* releitura é best-effort */ }
+      } else if (r?.status === 402 || r?.code === "saldo_insuficiente") {
+        setPasseSemSaldo(true);
+        setErroPasse("Saldo insuficiente. Deposite via PIX e tente de novo.");
+        setToastPasse({ variant: "error", message: "Saldo insuficiente. Carregar agora?" });
+      } else {
+        const msg = r?.message || "Erro. Tente de novo.";
+        setErroPasse(msg);
+        setToastPasse({ variant: "error", message: msg });
+      }
+    } finally {
+      setTipoEmCurso(null);
+    }
   }
 
   const pad        = isMobile ? "1rem" : "2rem";
@@ -211,6 +254,54 @@ export default function MinhaCarteira() {
                 </span>
               </div>
 
+              {/* UTAC110d-front (Frente A) — os DOIS saldos do programa, separados, DENTRO do vidro
+                  do saldo (Regra 1): pontos de fidelidade (rumo ao cartão, X / 50 + barra) e
+                  créditos de lance (cada lance no Menor Lance Único consome 1). */}
+              <div data-saldos-passe="" style={{
+                display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem", marginBottom: "0.95rem",
+              }}>
+                <div data-saldo="fidelidade" style={{
+                  padding: "0.65rem 0.75rem", borderRadius: "12px",
+                  background: "rgba(245,166,35,0.06)", border: "1px solid rgba(245,166,35,0.25)",
+                }}>
+                  <div style={{ fontSize: "0.7rem", color: COR.muted, fontWeight: 700 }}>🎟️ Pontos de fidelidade</div>
+                  <div style={{ fontSize: "1.25rem", fontWeight: 900, color: COR.gold, lineHeight: 1.2 }}>
+                    {textoSaldo(pontosCartao)} / {metaCartao}
+                  </div>
+                  <div
+                    role="progressbar"
+                    aria-label="Progresso para o cartão"
+                    aria-valuemin={0}
+                    aria-valuemax={metaCartao}
+                    aria-valuenow={saldosIlegiveis ? undefined : Math.min(pontosCartao, metaCartao)}
+                    style={{
+                      height: "6px", borderRadius: "999px", marginTop: "0.4rem",
+                      background: "rgba(245,166,35,0.15)", overflow: "hidden",
+                    }}
+                  >
+                    {/* Barra de progresso (não é botão): o preenchimento usa o amarelo único. */}
+                    <div data-barra-cartao="" style={{ width: `${progressoCartao}%`, height: "100%", background: COR.primary }} />
+                  </div>
+                </div>
+                <div data-saldo="creditos" style={{
+                  padding: "0.65rem 0.75rem", borderRadius: "12px",
+                  background: "rgba(245,166,35,0.06)", border: "1px solid rgba(245,166,35,0.25)",
+                }}>
+                  <div style={{ fontSize: "0.7rem", color: COR.muted, fontWeight: 700 }}>⚡ Créditos de lance</div>
+                  <div style={{ fontSize: "1.25rem", fontWeight: 900, color: COR.gold, lineHeight: 1.2 }}>
+                    {textoSaldo(creditosLance)}
+                  </div>
+                  <div style={{ fontSize: "0.68rem", color: COR.muted, marginTop: "0.25rem" }}>
+                    {!saldosIlegiveis && creditosLance === 1 ? "disponível" : "disponíveis"}
+                  </div>
+                </div>
+              </div>
+              {pontosErro && (
+                <p style={{ margin: "-0.5rem 0 0.8rem", fontSize: "0.72rem", color: COR.danger, lineHeight: 1.4 }}>
+                  ⚠️ Não foi possível ler seus pontos e créditos agora.
+                </p>
+              )}
+
               {/* UTAC107b — ordem decidida pelo operador (decisão 4):
                   Depositar PIX → Comprar Passe Desafio → Menor Lance Único → Ofertas Programadas.
                   R18-E: a frase de apoio do saldo saiu (texto técnico) e o botão «Trocar R$ 2,00
@@ -236,7 +327,7 @@ export default function MinhaCarteira() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setPasseAberto(true)}
+                  onClick={() => { setErroPasse(""); setPasseAberto(true); }}
                   style={{
                     ...botaoPrimario,
                     // UTAC109h.3 (decisão do operador, 2026-10-09) — este botão deixou de ser
@@ -367,27 +458,16 @@ export default function MinhaCarteira() {
         </>
       )}
 
-      {/* UTAC106e — BALÃO de confirmação do Passe Desafio (componente próprio; o 106c tinha-o
-          inline). «Confirmar» CHAMA o endpoint `comprar-passe-pontos` (débito de R$ 2,00 +
-          crédito de 1 ponto) e, em sucesso, o balão FECHA e o utilizador FICA na Carteira. */}
+      {/* UTAC106e — BALÃO do Passe Desafio. UTAC110d-front — passa a ESCOLHER entre os dois
+          Passes: cada cartão chama o SEU endpoint (`escolherPasse` → hook). Em sucesso o balão FECHA
+          e os saldos relêem-se; em erro a mensagem fica DENTRO do balão (e no toast). */}
       <ComprarPasseModal
         aberto={passeAberto}
-        loading={comprandoPasse}
-        pontos={pontosPasse}
-        onCancelar={() => setPasseAberto(false)}
-        onConfirmar={async () => {
-          const r = await comprarPasse();
-          if (r?.ok) {
-            setPasseAberto(false);
-            setPasseSemSaldo(false);
-            setToastPasse({ variant: "success", message: "1 ponto creditado" });
-          } else if (r?.status === 402 || r?.code === "saldo_insuficiente") {
-            setPasseSemSaldo(true);
-            setToastPasse({ variant: "error", message: "Saldo insuficiente. Carregar agora?" });
-          } else {
-            setToastPasse({ variant: "error", message: r?.message || "Erro. Tente de novo." });
-          }
-        }}
+        emCurso={tipoEmCurso}
+        erro={erroPasse}
+        pontosCartao={saldosIlegiveis ? null : pontosCartao}
+        onCancelar={() => { setErroPasse(""); setPasseAberto(false); }}
+        onComprar={escolherPasse}
       />
 
       {/* UTAC106e — TOAST do repo (`widgets/toast/Toast.jsx`; posiciona-se sozinho, auto-dismiss 4 s). */}
