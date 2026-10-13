@@ -274,3 +274,26 @@ fingir que está fechado. Severidade: média (só na dupla falha).
 atacou — em especial a secção de segurança da migração **ainda não foi medida com `SET LOCAL ROLE anon`**.
 Por isso: **a migração continua a NÃO ser aplicada em produção**, e isso é agora uma **condição de liberação**,
 não uma preferência.
+
+## Verificação AD-HOC da correcção A1 (o que É possível medir sem o MCP)
+**Bloqueio concreto e declarado:** a sonda `SET LOCAL ROLE anon` exige o servidor MCP `supabase`, que **não existe
+na sessão Hermes** (o `config.yaml` não o tem) e cujo único instrumento — a sessão Claude Code — **bateu no limite
+de sessão** («You've hit your session limit · resets 7:50pm»). **Não a corri, e não afirmo que passou.**
+
+**O que foi medido em vez disso (ad-hoc, NÃO é a suíte e NÃO é a sonda):** um script temporário
+`hermes-verify-ecoquildo-rls.mjs` (em `%TEMP%`, com prefixo `hermes-verify-`, removido no fim) comparou o meu bloco
+de segurança com o das **4 migrações irmãs**. Resultado **depois de corrigir os erros do próprio instrumento**:
+- **As minhas 2 tabelas têm as 4 peças** (leitura directa, `grep -n`, sem regex): l.55/62 `ENABLE ROW LEVEL SECURITY`
+  · l.57/64 `CREATE POLICY "…" … TO service_role` · l.59/66 `REVOKE ALL … FROM PUBLIC, anon, authenticated` ·
+  l.60/68 `GRANT SELECT, INSERT, UPDATE … TO service_role`.
+- **Zero GRANT a `anon`/`authenticated`** — verificado por `grep`, e não pelo regex (o regex deu **falso positivo**).
+- **A minha migração é ESTRITAMENTE MAIS FORTE do que 2 das 4 irmãs:** `palpites` e `resgates` **não revogam**
+  nada (dependem só do RLS sem policy); eu faço **RLS + REVOKE**.
+- Continua **aditiva**: 2 `CREATE TABLE IF NOT EXISTS`, zero `ALTER`/`DROP` sobre tabelas existentes.
+
+**⚠️ Os erros do MEU instrumento nesta verificação (3/3 falsos):** (1) e (2) o regex exigia `REVOKE` em todas as
+irmãs — `palpites`/`resgates` não revogam, logo acusou o **controlo** de falhar; (3) o regex de «GRANT a anon»
+casou em **texto de comentário** e acusou a minha migração de um grant que não existe. Lição (a mesma do SEG-1):
+um regex sobre SQL com comentários não é medição — a leitura directa das linhas é. O script foi **removido**.
+**Limite mantido:** isto prova **paridade/força do idioma**, não o **comportamento** do RLS/grants. A sonda
+`SET LOCAL ROLE anon` continua por correr — é o passo 2 da condição de liberação.
