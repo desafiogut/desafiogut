@@ -6057,3 +6057,62 @@ em **runtime**; os hits sao comentarios, os testes-guarda, docs historicos e o `
 `Desktop/RELATORIO-UTAC110c-2-GUTO.txt`. **Proximo passo (do OPERADOR):** carregar saldo DeepSeek ->
 re-correr as mesmas 5 perguntas (~5 s) -> so entao medir `modoResposta:"llm"`, citacao de artigo e o
 nome do modelo. **So com isso o B-4 pode fechar.**
+
+## R14 (append) -- UTAC110c-2b -- RE-TESTE EM PRODUCAO + DIAGNOSTICO DO 402: CONTA, NAO CODIGO (B-4 ABERTO) (Hermes/DeepSeek)
+
+**Tipo:** verificacao + diagnostico. **ZERO codigo, env vars ou deploy alterados.** Baseline `cfe3eb8`
+-> registo `8275db2`. O operador contestou o 110c-2 («a conta DeepSeek TEM saldo»), logo esta ronda
+re-testou e diagnosticou.
+
+**RE-TESTE: 10 chamadas reais (2 series de 5), `modoResposta: "template"` em 10/10.** Mesma resposta
+fixa de 171 chars. **O criterio de sucesso nao foi cumprido.** E **nao e cache**: cada chamada tem o seu
+`request_id` emitido pela DeepSeek. **Nao e timing**: o 110c-2 ja dava 402 e esta ronda e posterior, com
+o mesmo resultado. **Nao e codigo**: o `"template"` tem UMA ocorrencia no codigo (`chatbot.mjs:1485`,
+dentro do `catch`) e e o comportamento projectado. **Nao e chave nem endereco**: o validador foi buscar
+a **doc oficial da DeepSeek** e leu que **401 = chave errada** e **402 = Insufficient Balance «check your
+account's balance»**; e `chatbot.mjs:1318` faz *throw local* se a chave faltar, erro que tambem
+apareceria em `WARN` -- e nao aparece. ⇒ **a chave existe, nao esta vazia e AUTENTICOU.**
+
+**Diagnostico: e uma condicao de CONTA/facturacao.** ⚠️ Com a correccao do validador ao meu estatuto
+epistemico: «o saldo e por CONTA, nao por chave» e **conhecimento externo**, nao medicao (eu apresentei-o
+como facto -- N1). A inferencia operativa mantem-se e e a mais parcimoniosa: a chave do **Hermes** esta
+numa conta com **USD 1,71** e `is_available: true`; se a chave do Netlify fosse dessa conta, o GUTO
+veria os mesmos 1,71 e funcionaria ⇒ **e de outra conta, sem saldo de API.** ⚠️ **Causas alternativas que
+eu nao considerei e que dao o MESMO 402 com saldo a vista (N3): conta congelada / em atraso / verificacao
+pendente.** Acrescentado ao relatorio: **confirmar que a conta esta ACTIVA antes de carregar dinheiro.**
+
+**⛔ Validador adversarial do 110c-2b: APROVADO COM RESSALVAS, 0 bloqueantes novos**
+(`_logs/UTAC110c-2b_SEG3_VALIDADOR.md`, 18 645 B). Reproduziu **10/10 template** com as suas proprias
+chamadas, contou **23 `llm_http_402` com 23 `request_id` unicos** numa janela de 45 min e **0 linhas com
+`modoResposta:'llm'`**, correu a suite (**VERDE 979/979 - 1104/1110**, reproduzido) e confirmou que o
+executor **nao tocou em codigo** (`git diff cfe3eb8..8275db2` = so 5 `_logs/`, +265 linhas).
+
+**⭐ E APANHOU UM ERRO MEU, da pior classe -- CONTAMINACAO DE EVIDENCIA (achado G1):** o 10.o
+`request_id` que eu citei (`5e0fbbb8…`) **nao e desta ronda** -- **copiei-o, por mim, do veredicto do
+110c-2** (`_logs/UTAC110c-2_SEG3_VALIDADOR.md:48`), onde **tambem esta errado**. Ele mediu:
+`grep -c 5e0fbbb8` numa janela de 45 min = **0**; o id verdadeiro e `20aebc82…`. E, com **dano real**, eu
+ofereci esse id ao **suporte DeepSeek** como «o mais recente» ⇒ nao rastrearia nada. **Corrigido nos dois
+ficheiros, com o erro MANTIDO A VISTA marcado como REFUTADO** (regra da serie). A substancia **nao cai**
+(as 10 chamadas existem: 10 ids distintos com `perguntaLen` 21/29/35/20/34 x2); **cai a integridade da
+lista citada**.
+**⚠️ G2 (o validador mediu o que eu nao tinha): `netlify logs` e LAGGY e LOSSY -- 5 chamadas as 05:12 ->
+5 entradas, mas 5 chamadas as 05:14 -> so 3.** Logo «um `request_id` por chamada» **nao e um metodo
+fiavel de contagem** (vale no meu caso por coincidencia favoravel) -- e foi precisamente esta perda que
+explicou a contaminacao G1. Metodo correcto: contar pelo lado do cliente e exigir `nº de WARN >= nº de
+chamadas` antes de concluir, re-consultando a janela minutos depois (ela ainda enche).
+
+**A14 REPROVADA E DECLARADA:** RAM 990/997/987 MB (Chrome aberto) e, depois de o operador fechar as abas,
+**1470/1468/1453/1458 MB** -- nunca >= 1500. Procurei o que era MEU para libertar: **nada** (os
+`node`/`python` meus sao 9 e 13 MB, sao MCPs do operador; o meu agente 225 MB nao me posso matar). O
+consumo e do operador (Claude Desktop 272+105, Defender 201, explorer 154). **O validador julgou
+aceitavel** seguir: a suite nao e decisoria nesta ronda (o objecto sao 5 chamadas de ~10 MB) e **um verde
+nao se fabrica com falta de RAM**. Suite: **VERDE 979/979 - 1104/1110** (o `1104/1110` e verde legitimo:
+o harness so da VERMELHO com `fail>0`, logo os 6 que faltam sao *skipped*).
+
+**Registo:** `_logs/UTAC110c-2b_SEG-1_MEDICAO.md` - `_logs/UTAC110c-2b-diagnostico-402.md` -
+`_logs/UTAC110c-2b_SEG0_saida.txt` e `_saida_2.txt` - `_logs/UTAC110c-2b_SEG3_VALIDADOR.md` -
+`Desktop/RELATORIO-UTAC110c-2b-GUTO.txt`. **B-4 CONTINUA ABERTO** (externo: sem saldo na conta correcta
+nao existe UMA resposta de modelo para inspeccionar). **Proximo passo: do OPERADOR** -- achar o email da
+conta dona da chave do Netlify (comparando **prefixos**), confirmar que a conta esta **ACTIVA**, e
+carregar saldo LA (ou criar chave nova na conta que tem saldo + redeploy). Depois eu re-corro as 5
+perguntas e so entao se mede `modoResposta:"llm"`. **Nao escalar para novo UTAC sem decisao do operador.**

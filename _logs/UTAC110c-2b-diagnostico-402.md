@@ -29,9 +29,32 @@ WARN [chatbot] LLM indisponível, usando resposta template:
                               "type":"unknown_error","param":null,"code":"invalid_request_error"}}
 ```
 
-…e o mesmo, **uma vez por chamada**, com `request_id` **distinto** em todas:
-`86993279…`, `9cbe8e00…`, `4995feff…`, `3773162d…`, `9d64d1ca…`, `5c9d7d23…`, `9b284d09…`,
-`1b79af2b…`, `0d68b8fb…`, `5e0fbbb8…`.
+…e o mesmo, **uma vez por chamada**, com `request_id` **distinto** em todas.
+
+> ⛔ **ERRATA — achado ⚠️ G1 do validador adversarial (o erro é MEU, e fica à vista).**
+> A lista que eu escrevi aqui tinha **um id forjado por cópia**: o último, ~~`5e0fbbb8…`~~.
+> Ele **não é desta ronda**. Copiei-o, por mim, do veredicto do UTAC110c-2
+> (`_logs/UTAC110c-2_SEG3_VALIDADOR.md:48`) — e **nessa fonte ele também está errado**.
+> Medição do validador: `grep -c 5e0fbbb8` numa janela de 45 min = **0**; `20aebc82` = **1**.
+> O id verdadeiro da 10.ª chamada desta ronda é **`20aebc82…`**.
+> **O erro fica registado, não apagado** (regra da série: a conclusão errada mantém-se à vista,
+> marcada como REFUTADA). **O que cai é a INTEGRIDADE DA LISTA CITADA**, não a substância: as 10
+> chamadas existem — o validador confirmou 10 ids distintos em 05:05 com o padrão `perguntaLen`
+> 21/29/35/20/34 ×2, que são exactamente as minhas 5 perguntas duas vezes.
+> **Pior consequência, essa com dano real:** o §6 do relatório do Desktop oferecia este id ao
+> **suporte DeepSeek** como «o mais recente» ⇒ o suporte **não o conseguiria rastrear**. Corrigido.
+>
+> **Lista CORRIGIDA:** `86993279…`, `9cbe8e00…`, `4995feff…`, `3773162d…`, `9d64d1ca…`, `5c9d7d23…`,
+> `9b284d09…`, `1b79af2b…`, `0d68b8fb…`, **`20aebc82…`**.
+
+> ⚠️ **ERRATA 2 — ⚠️ G2 do validador: `netlify logs` NÃO serve de ledger 1:1.** Ele mediu o que eu não
+> tinha medido: **5 chamadas às 05:12 → 5 entradas**, mas **5 chamadas às 05:14 → só 3 entradas**. O
+> stream é *laggy* e *lossy*. Isto degrada a minha frase «um `request_id` por chamada»: **vale no meu
+> caso, mas não é um método fiável de contagem** — e é precisamente esta perda que explica a
+> contaminação acima (preencher o «5.º id» de uma série com um valor antigo, porque a linha ainda não
+> chegou). **Método correcto:** contar pelo **lado do cliente** (HTTP/latência) e, ao usar logs, exigir
+> `nº de WARN ≥ nº de chamadas` antes de concluir «1 por chamada» — e **re-consultar a mesma janela
+> minutos depois**, porque ela ainda enche.
 
 ⇒ **Cada chamada é real e independente**: o `request_id` é emitido pelo **servidor da DeepSeek**, uma
 vez por pedido. Isto fecha, outra vez e com 10 provas novas, a hipótese «as respostas iguais são
@@ -53,7 +76,22 @@ do meu `.env`, `len=35`, `sk-…`) responde ao endpoint de saldo com:
                                           "granted_balance":"0.00","topped_up_balance":"1.71"}]}
 ```
 
-Isto é decisivo por uma razão simples: **o saldo na DeepSeek é por CONTA, não por chave.**
+Isto é decisivo por uma razão simples — **mas atenção ao estatuto desta premissa (ver ⚠️ N1 abaixo)**:
+**o saldo na DeepSeek é por CONTA, não por chave.**
+
+> ⚠️ **N1 — ESTATUTO EPISTÉMICO (correcção do validador).** Na 1.ª redacção apresentei «o saldo é por
+> conta, não por chave» **como FACT O MEDIDO**. Não é: é **conhecimento externo** e **ninguém o mediu**.
+> O que o validador arranjou como corroboração: a doc oficial fala de *«your **account's** balance»* e o
+> endpoint de saldo é `/user/balance` — coerente com facturação por conta, mas a doc **não afirma** que
+> duas chaves da mesma conta nunca possam divergir. **Passa a ler-se como inferência fundamentada, não
+> como medição.**
+
+> ⚠️ **N3 — CAUSAS ALTERNATIVAS QUE EU NÃO CONSIDEREI (e que dão o MESMO 402 com saldo à vista):**
+> conta **congelada / em atraso / com verificação pendente**, ou saldo num **produto/moeda diferente**.
+> Isto é exactamente o cenário que faria a objecção do operador («a conta TEM saldo») ser **verdadeira
+> e o 402 persistir na mesma**. Eu só cobria este caso numa nota de rodapé («contactar o suporte»),
+> **depois** de mandar carregar dinheiro — ordem errada. **Antes de carregar seja o que for, confirmar
+> em `platform.deepseek.com → Billing` que a conta está ACTIVA, não só com saldo.**
 - Se a chave do Netlify pertencesse **à mesma conta** que a minha, o GUTO veria os **mesmos 1,71** e
   **estaria a funcionar**. Não está: recebe `Insufficient Balance`.
 - Logo **a chave do Netlify pertence a OUTRA conta** — uma conta **sem saldo de API**.
