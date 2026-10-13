@@ -159,6 +159,16 @@ test("(e) ZERO marcas de formatação no ficheiro, com a ERRATA a documentar o d
   assert.match(errata, /Art\. 47º/);
   // e a ERRATA já NÃO pode afirmar que a transcrição mantém o escape (era verdade até ao 1b)
   assert.doesNotMatch(errata, /NÃO corrige o escape/);
+
+  // ⭐ FIX DO ACHADO 2 DO VALIDADOR DO 1b. A 1.ª versão deste teste (e) fixava apenas a EXISTÊNCIA
+  // da ERRATA e 3 needles de forma — e por isso a coluna «valor correcto» ficou SEM guarda: medido
+  // pelo validador, corromper «**R$ 2,00**» para «**R$ 9,99**» em SIMETRIA nas duas cópias dava
+  // 10/10 VERDE. E a ERRATA ENTRA NO PROMPT (o validador mediu: `includes('ERRATA DA FONTE')` = true
+  // nos 5 prompts), logo o valor errado seria lido pelo GUTO. Fixam-se as 5 células de valor.
+  for (const celula of ["**R$ 2,00**", "**1 ponto = R$ 0,01**", "**1 Passe Desafio = 10 pontos**",
+                        "**50 pontos = 1 cartão**", "**1 ECOQUILDO = R$ 1,00**"]) {
+    assert.ok(errata.includes(celula), `a ERRATA perdeu o valor «${celula}» (entra no prompt!)`);
+  }
 });
 
 // ── (f) a metade que faz o teste valer: o verificador MORDE ────────────────

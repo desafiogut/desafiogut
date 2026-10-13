@@ -102,6 +102,14 @@ const MUTANTES = [
     substituto: "PERFIL: UTILIZADOR COMUM (autenticado). Amigável e didático. Ajuda com lances, passes, cotas comerciais, Painel Lojista,",
     porque: "mete modelo antigo NÃO declarado no prompt do perfil comum (ponto cego do needle-set)",
   },
+  {
+    // ⭐ UTAC110c-1b — FIX DO ACHADO 2 DO VALIDADOR DO 1b: a coluna «valor correcto» da ERRATA não
+    // tinha guarda (corrompê-la em simetria dava 10/10 VERDE) — e a ERRATA entra no prompt do GUTO.
+    n: "M11", ficheiro: DOC, alvo: T_MC963,
+    ancora: "| Art. 6º | `R` + barra invertida + `$` + ` 2,00` | **R$ 2,00** |",
+    substituto: "| Art. 6º | `R` + barra invertida + `$` + ` 2,00` | **R$ 9,99** |",
+    porque: "corrompe o valor da ERRATA (que é injectada no prompt) sem mexer nas marcas",
+  },
 ];
 
 function correr(alvo) {

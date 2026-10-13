@@ -5963,3 +5963,21 @@ do template literal; e o bash a comer um fragmento da mensagem do commit por cau
 `_logs/UTAC110c_SEG5_VALIDADOR.md`. **Pendente:** validador adversarial do 1b (despachado) e a
 actualizacao do relatorio do Desktop. **Proximo:** 110c-2 (chave DeepSeek + verificacao em producao +
 arrumar o residuo declarado).
+
+**FECHO do 1b (commit `7061087` + este).** Validador adversarial do 1b: **APROVADO COM RESSALVAS, 0
+bloqueantes** (`_logs/UTAC110c-1b_SEG2_VALIDADOR.md`, 15 406 B). Julgamento pedido e dado: a alteracao da
+ERRATA e **LEGITIMA**, e o argumento decisivo foi medido por ele -- **a ERRATA ENTRA NO SYSTEM PROMPT**
+(`includes('ERRATA DA FONTE')` = true nos 5 prompts), logo «nao tocar na ERRATA» deixaria o GUTO a ler
+`1\text{ ponto} = R\$ 0,01`; e o §11 derrota-se a si proprio, porque «so verificar que ela propria esta
+limpa» PRESSUPOE uma ERRATA limpa -- premissa que era falsa. Ressalva de processo: o operador deve
+ratificar por escrito a mudanca de notacao.
+⚠️ E trouxe uma **regressao causada pela MINHA inversao do teste (e)**: a coluna «valor correcto» da ERRATA
+ficou SEM guarda (medido: corromper `R$ 2,00` -> `R$ 9,99` em simetria nas duas copias dava **10/10
+VERDE**) -- e como a ERRATA entra no prompt, o valor errado seria lido pelo GUTO. **CORRIGIDO:** o teste
+(e) fixa agora as **5 celulas de valor** e o martelo ganhou **M11** -> **11/11 mutantes mordem**. Fica
+tambem a lacuna (pre-existente, por desenho) de os ~50 artigos NAO ancorados nao terem guarda nenhuma
+(medida com 4 mutantes simetricos: Art. 19/21/28/72) -- correccao prevista no 110c-2 via sha256 por
+artigo, junto com o docstring ja falso de `semEscapesDaFonte` em `guto-perfis.mjs`.
+**Verificacao ad-hoc do 1b:** 13 PASS / 0 FAIL com controlo negativo (`_logs/UTAC110c-1b_SEG3_VERIFICACAO.md`).
+**Suíte final:** frontend 979/979 - backend 1104/1110 - VERDE, com RAM >= 1 500 MB (A14 cumprida).
+**Nada disto toca o PDF do cliente nem o system prompt** -- ambos declarados pendentes.
