@@ -21,11 +21,17 @@ function montar() {
   const deps = [];
   const useRef = (v) => { if (ref.current === null) ref.current = v; return ref; };
   const useEffect = (fn, d) => { deps.push(d); fn(); };
-  const correr = new Function("useRef", "useEffect", "apiPost", "address", "authToken", BLOCO);
+  // UTAC110g (F2) — o bloco passou a incrementar o `pontosNonce` quando o login diário responde `ok`
+  // (é o que faz o `usePontos` reler e a missão do dia deixar de aparecer «pendente»). Injecta-se o
+  // `setter` como o `useState` o daria: aceita função `(n) => n+1` ou valor.
+  let nonce = 0;
+  const setPontosNonce = (v) => { nonce = typeof v === "function" ? v(nonce) : v; };
+  const correr = new Function("useRef", "useEffect", "apiPost", "address", "authToken", "setPontosNonce", BLOCO);
   return {
     chamadas, deps,
+    get nonce() { return nonce; },
     responder: (r) => { resposta = r; },
-    efeito: (address, authToken) => correr(useRef, useEffect, apiPost, address, authToken),
+    efeito: (address, authToken) => correr(useRef, useEffect, apiPost, address, authToken, setPontosNonce),
   };
 }
 const flush = () => new Promise((r) => setTimeout(r, 0));
@@ -68,4 +74,31 @@ test("F4 resposta não-ok ou erro de rede → volta a tentar na próxima vez (n�
   m.efeito(ADDR, "tk"); await flush();
   m.efeito(ADDR, "tk"); await flush();
   assert.equal(m.chamadas.length, 3, "2 falhas re-tentam; depois do ok, não volta a chamar");
+});
+
+// ═══ UTAC110g (F2) — o crédito do dia tem de CHEGAR À UI ═══════════════════════════════════════════
+// O defeito medido (F2 do validador do 110f-front): o `login-diario` corria sem `await` e nada relia os
+// pontos quando ele terminava ⇒ numa carga directa de /carteira o `ler-pontos` podia ler ANTES do
+// crédito, e a missão do dia aparecia «pendente» com «Você ganhou 0 pontos hoje» até à visita seguinte.
+// A correcção é o contador `pontosNonce` (que entra nas deps do `refetch` do `usePontos`).
+test("F5 (110g/F2) resposta ok → incrementa o `pontosNonce` (dispara a releitura dos pontos)", async () => {
+  const m = montar();
+  assert.equal(m.nonce, 0);
+  m.responder({ ok: true, creditado: true });
+  m.efeito(ADDR, "tk"); await flush();
+  assert.equal(m.nonce, 1, "o crédito do dia tem de mandar reler os pontos");
+});
+
+test("F5b (110g/F2) CONTROLO NEGATIVO — resposta não-ok NÃO incrementa (nada foi creditado)", async () => {
+  const m = montar();
+  m.responder({ ok: false, status: 502 });
+  m.efeito(ADDR, "tk"); await flush();
+  assert.equal(m.nonce, 0, "sem crédito não se força releitura (e a chave fica livre para re-tentar)");
+});
+
+test("F5c (110g/F2) `jaCreditado` também incrementa — o pedido terminou, a leitura anterior é antiga", async () => {
+  const m = montar();
+  m.responder({ ok: true, creditado: false, jaCreditado: true });
+  m.efeito(ADDR, "tk"); await flush();
+  assert.equal(m.nonce, 1, "mesmo sem creditar de novo, o fim do pedido invalida a leitura concorrente");
 });

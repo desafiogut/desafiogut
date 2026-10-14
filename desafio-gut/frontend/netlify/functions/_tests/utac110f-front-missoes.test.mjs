@@ -4,7 +4,8 @@
 //   M1 — os 4 estados (nada · só login · só lance · os dois), BIDIRECCIONAIS: cada campo é true num caso e false noutro;
 //   M2 — `pontosHoje` = 5·login + 10·lance (R18-110f-front-B): 0 · 5 · 10 · 15 — a indicação NÃO entra;
 //   M3 — só conta o DIA DE HOJE (Manaus): refs de ontem não marcam a missão;
-//   M4 — FAIL-SOFT: a leitura das missões falha ⇒ `missoesHoje: null` e o resto da resposta continua 200 e igual.
+//   M4 — FAIL-SOFT (reescrito no UTAC110g/P-1): um `historico_lance` ilegível ⇒ missões NEUTRAS e o resto 200 e igual;
+//   M5 — (UTAC110g/P-1) o endpoint faz UMA só leitura da linha `pontos` — o 2.º SELECT não pode voltar.
 //
 // O dia vem do `diaManaus()` REAL com o relógio real (datas RELATIVAS — lição do UTAC110f/B5: um teste com data fixa caduca).
 //
@@ -17,6 +18,9 @@ process.env.JWT_SECRET = "segredo-de-teste-110f-front-com-comprimento-suficiente
 
 let DB;
 let FALHAR_LEDGER = false;
+// UTAC110g (P-1) — CONTADOR de leituras da tabela `pontos`: é o instrumento que prova que o endpoint
+// deixou de fazer o 2.º SELECT (o do ledger). Zerado a cada `ler()`.
+const DB_CONTADOR = { leituras: 0 };
 function criarDuplo(linhaPontos) {
   const db = { pontos: linhaPontos ? [linhaPontos] : [], palpites: [] };
   return {
@@ -34,6 +38,7 @@ function criarDuplo(linhaPontos) {
         api[m] = () => { throw new Error(`duplo: .${m}() não modelado — o ler-pontos é só leitura`); };
       }
       function exec() {
+        if (tabela === "pontos") DB_CONTADOR.leituras += 1;
         // A leitura do ledger de lance (`lerLedgerLance`) pede as colunas explícitas; o `lerPontos` pede "*".
         if (FALHAR_LEDGER && tabela === "pontos" && String(st.colunas).includes("historico_lance")) {
           return { data: null, error: { code: "XX000", message: "falha simulada do ledger" } };
@@ -75,6 +80,7 @@ const mov = (ref, delta, motivo) => ({ ref, delta, motivo, data: AGORA_ISO });
 
 async function ler(historicoLance, { falharLedger = false } = {}) {
   FALHAR_LEDGER = falharLedger;
+  DB_CONTADOR.leituras = 0;
   DB = criarDuplo({
     endereco: A, pontos: 20, historico: [{ tipo: "compra", pontos: 20, ref: "c20", data: "2026-10-01T00:00:00.000Z" }],
     creditos_lance: 2, pontos_lance: 0, historico_lance: historicoLance, atualizado_em: "2026-10-13T00:00:00.000Z",
@@ -119,14 +125,31 @@ test("M3 — refs de ONTEM não contam hoje (o dia é o de Manaus, calendário)"
   assert.deepEqual(r.body.missoesHoje, { dia: HOJE, loginFeito: false, lanceFeito: false, pontosHoje: 0 });
 });
 
-test("M4 — FAIL-SOFT: a leitura das missões falha ⇒ missoesHoje=null e o resto continua 200 e igual", async () => {
+test("M4 — FAIL-SOFT (ACTUALIZADO no UTAC110g/P-1): linha com `historico_lance` ILEGÍVEL ⇒ missões neutras e o resto 200 e igual", async () => {
+  // ⚠️ UTAC110g (P-1 / F4) — ESTE TESTE FOI REESCRITO, e o motivo fica declarado (P2: a versão anterior
+  // fica à vista no histórico do git, marcada como superada):
+  // a versão original do 110f-front forçava a falha do SEGUNDO SELECT (o do ledger) e exigia
+  // `missoesHoje: null`. Esse segundo SELECT **deixou de existir**: as missões passaram a ser derivadas
+  // do registo JÁ lido (`missoesDoRegisto`, pura) — logo o modo de falha que ele exercitava desapareceu.
+  // A INVARIANTE que se preserva é a mesma de sempre: **o bloco das missões nunca derruba os pontos**.
+  // Agora ela prova-se pelo que ainda pode acontecer — um `historico_lance` ausente/ilegível dá missões
+  // NEUTRAS (não `null`, porque a leitura principal correu bem) e o resto da resposta fica igual.
+  // `FALHAR_LEDGER` fica no duplo de propósito (documenta o caminho removido) mas já não tem efeito.
   const ok = await ler([login()]);
-  const falha = await ler([login()], { falharLedger: true });
-  assert.equal(falha.status, 200, "uma falha das missões NÃO pode derrubar o ler-pontos");
-  assert.equal(falha.body.missoesHoje, null);
-  // Controlo: tudo o resto é byte-igual ao caso sem falha.
-  const { missoesHoje: _a, ...restoOk } = ok.body;
-  const { missoesHoje: _b, ...restoFalha } = falha.body;
-  assert.deepEqual(restoFalha, restoOk);
-  assert.notEqual(ok.body.missoesHoje, null, "controlo positivo: sem falha há missões");
+  assert.equal(ok.status, 200);
+  assert.notEqual(ok.body.missoesHoje, null, "controlo positivo: com o ledger legível há missões");
+
+  // O CONTROL0 é o `historico_lance` LEGÍVEL e VAZIO: um array ilegível tem de dar EXACTAMENTE a mesma
+  // resposta que um array vazio (não se inventa, não rebenta) — e nada mais na resposta pode mudar.
+  const vazio = await ler([]);
+  const ilegivel = await ler("não é array");
+  assert.equal(ilegivel.status, 200, "um `historico_lance` ilegível NÃO pode derrubar o ler-pontos");
+  assert.deepEqual(ilegivel.body.missoesHoje, { dia: HOJE, loginFeito: false, lanceFeito: false, pontosHoje: 0 });
+  assert.deepEqual(ilegivel.body, vazio.body, "ilegível == vazio: a resposta inteira é a mesma");
+  assert.equal(ilegivel.body.pontosCartao, 20, "os pontos de fidelidade não são afectados");
+});
+
+test("M5 — o `ler-pontos` NÃO faz o segundo SELECT (o defeito P-1/F4 não pode voltar)", async () => {
+  await ler([login(), missao()]);
+  assert.equal(DB_CONTADOR.leituras, 1, "uma só leitura da linha `pontos` por pedido");
 });

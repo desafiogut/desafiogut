@@ -910,6 +910,21 @@ export function AppProvider({ children }) {
     }).catch(() => {});
   }, [address, authToken]);
 
+  // UTAC110g (F2 + P-2, achados do validador do 110f-front) — `pontosNonce` é um CONTADOR: quando muda,
+  // o `usePontos` volta a ler (o contador entra nas dependências do `refetch` dele). Dois disparos:
+  //   • F2 — o `login-diario` corre SEM `await` e nada relia os pontos quando ele termina ⇒ numa carga
+  //     directa de `/carteira` o `GET /ler-pontos` podia correr ANTES do crédito do dia (a missão saía
+  //     «⏳ Login diário» e «Você ganhou 0 pontos hoje» até à visita seguinte). Com o incremento no
+  //     `.then` do login, a UI recebe o crédito logo que ele existe.
+  //   • P-2/F8 — o dia de Manaus muda às 04:00 UTC e um ecrã aberto não mudava: o `usePontos` só relia
+  //     em `[address, authToken]`. O tick horário volta a ler e o SERVIDOR recalcula `diaManaus()`.
+  const [pontosNonce, setPontosNonce] = useState(0);
+  const refetchPontosAgora = useCallback(() => setPontosNonce((n) => n + 1), []);
+  useEffect(() => {
+    const id = setInterval(refetchPontosAgora, 60 * 60 * 1000); // 1×/hora
+    return () => clearInterval(id);
+  }, [refetchPontosAgora]);
+
   // UTAC110f — login diário: +5 pontos de lance, 1× por dia de Manaus. Chamado uma vez por sessão e por
   // endereço, com o user-session (`authToken`) — o servidor é idempotente pela `ref` do dia, logo uma
   // repetição não credita duas vezes. Fail-soft: nunca bloqueia o arranque.
@@ -920,7 +935,12 @@ export function AppProvider({ children }) {
     if (loginDiarioFeitoRef.current.has(chave)) return;
     loginDiarioFeitoRef.current.add(chave);
     apiPost("login-diario", {}, { token: authToken })
-      .then((r) => { if (!r?.ok) loginDiarioFeitoRef.current.delete(chave); })
+      .then((r) => {
+        if (!r?.ok) { loginDiarioFeitoRef.current.delete(chave); return; }
+        // UTAC110g (F2): o crédito do dia TEM de chegar à UI — força a releitura dos pontos.
+        // (Também quando `jaCreditado`: o pedido terminou, logo qualquer leitura anterior é antiga.)
+        setPontosNonce((n) => n + 1);
+      })
       .catch(() => { loginDiarioFeitoRef.current.delete(chave); });
   }, [address, authToken]);
 
@@ -1344,6 +1364,8 @@ export function AppProvider({ children }) {
     saldoRsCentavos,
     saldoRsStatus,
     refetchSaldoRs,
+    // UTAC110g (F2/P-2) — contador que manda o `usePontos` reler (crédito do login diário + tick horário).
+    pontosNonce,
     // MC15.6 ITEM 2 — notificações proativas (polling adaptativo).
     notificacoes,
     notificacoesNaoLidas,

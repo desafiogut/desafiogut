@@ -36,7 +36,11 @@ export function missoesDaResposta(data) {
 }
 
 export function usePontos() {
-  const { address, authToken } = useAppContext();
+  // UTAC110g (F2/P-2) — `pontosNonce`: quando o AppContext o incrementa (crédito do login diário, ou o
+  // tick horário), este hook VOLTA A LER. Sem ele, o ecrã só relia em `[address, authToken]` — e um
+  // carregamento directo de /carteira podia ler os pontos ANTES do crédito do dia (F2), tal como um
+  // ecrã aberto atravessava a meia-noite de Manaus sem mudar de dia (P-2/F8).
+  const { address, authToken, pontosNonce } = useAppContext();
 
   const [dados, setDados] = useState(VAZIO);
   const [loading, setLoading] = useState(true);
@@ -72,7 +76,9 @@ export function usePontos() {
     } finally {
       setLoading(false);
     }
-  }, [address, authToken]);
+    // ⚠️ UTAC110g: `pontosNonce` nas dependências é o que faz o NONCE funcionar — mudar o contador
+    // RECRIA o `refetch`, e o `useEffect` abaixo volta a correr (é a releitura depois do login e o tick horário).
+  }, [address, authToken, pontosNonce]);
 
   useEffect(() => { refetch(); }, [refetch]);
 

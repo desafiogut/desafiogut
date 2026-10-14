@@ -28,7 +28,13 @@ const MSG_POR_STATUS = {
 };
 
 export function useResgatarCartao() {
-  const { address, authToken } = useAppContext();
+  const { address, authToken, user } = useAppContext();
+
+  // UTAC110g (FRENTE C — C1-email/C2): o e-mail de destino da confirmação é o **do login** (Privy).
+  // É o ÚNICO que o sistema conhece: o JWT do titular só traz `{ endereco, tipo }` e a morada do resgate
+  // não tem e-mail. Vai no CORPO (o servidor usa-o só para enviar e NÃO o persiste — ver o cabeçalho do
+  // `resgatar-cartao.mjs`). Sem sessão com e-mail, o campo não é enviado e o resgate corre igual.
+  const emailLogin = user?.email?.address || user?.google?.email || user?.apple?.email || null;
 
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
@@ -50,7 +56,9 @@ export function useResgatarCartao() {
       // Chave NOVA por CLIQUE (nunca reutilizada): a idempotência do servidor cobre o RETRY do
       // MESMO pedido; contra dois pedidos diferentes a trava é a guarda de corrida (`emCurso`).
       const key = idempotencyKey || gerarIdempotencyKey();
-      const { ok, status, data } = await apiPost("resgatar-cartao", { cartaoId, morada, idempotencyKey: key }, { token: authToken });
+      const corpo = { cartaoId, morada, idempotencyKey: key };
+      if (emailLogin) corpo.email = emailLogin;
+      const { ok, status, data } = await apiPost("resgatar-cartao", corpo, { token: authToken });
 
       if (ok) {
         const info = { id: data?.resgateId ?? null, status: data?.status ?? "pendente", idempotent: data?.idempotent === true };

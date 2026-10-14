@@ -57,14 +57,27 @@ export function creditarMissaoLance(endereco, agora = new Date()) {
 }
 
 /**
- * Estado das fontes diárias de hoje, lido do histórico (para a UI do 110f-front).
+ * Estado das fontes diárias de hoje a partir do registo **JÁ LIDO** (`lerPontos`, `select("*")`).
+ * PURA: não vai à rede. `historico_lance` é uma das colunas que o `select("*")` já traz.
+ *
+ * ⚠️ UTAC110g (P-1/F4 do validador do 110f-front): existe para o `ler-pontos` NÃO repetir a leitura.
+ * Antes, `estadoMissoesHoje` fazia um 2.º SELECT da MESMA linha de `pontos` (`lerLedgerLance`), em
+ * série com o primeiro — duas idas ao Supabase por pedido para ler a mesma linha.
+ */
+export function missoesDoRegisto(registo, agora = new Date()) {
+  const dia = diaManaus(agora);
+  const historico = Array.isArray(registo?.historico_lance) ? registo.historico_lance : [];
+  const tem = (ref) => historico.some((h) => h?.ref === ref);
+  return { dia, loginFeito: tem(refLoginDiario(dia)), lanceFeito: tem(refMissaoLance(dia)) };
+}
+
+/**
+ * Estado das fontes diárias de hoje, **lendo o ledger** (para quem NÃO tem o registo em mão).
  * **Lança** em erro de leitura (como o `lerLedgerLance`).
  */
 export async function estadoMissoesHoje(endereco, agora = new Date()) {
-  const dia = diaManaus(agora);
   const { historico } = await lerLedgerLance(endereco);
-  const tem = (ref) => historico.some((h) => h?.ref === ref);
-  return { dia, loginFeito: tem(refLoginDiario(dia)), lanceFeito: tem(refMissaoLance(dia)) };
+  return missoesDoRegisto({ historico_lance: historico }, agora);
 }
 
 /** Mês (UTC, `AAAA-MM`) — o MESMO recorte do limite mensal de `_lib/referral.mjs`. */

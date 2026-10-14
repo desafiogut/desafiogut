@@ -20,14 +20,18 @@ import { verificarUserSession } from "./_lib/jwt.mjs";
 import { respostaPreflight } from "./_lib/cors.mjs";
 import { sistemaPausado, lerEstadoSistema } from "./_lib/system-state.mjs";
 import { lerPontos, lerPalpites, pontosDeCompra, PONTOS_POR_CARTAO } from "./_lib/passe-pontos.mjs";
-import { estadoMissoesHoje, PONTOS_LOGIN_DIARIO, PONTOS_MISSAO_LANCE } from "./_lib/fontes-lance.mjs";
+import { missoesDoRegisto, PONTOS_LOGIN_DIARIO, PONTOS_MISSAO_LANCE } from "./_lib/fontes-lance.mjs";
 
 // UTAC110f-front — as «Missões de hoje» da Carteira. FAIL-SOFT: se a leitura falhar, `missoesHoje: null` e o resto
 // da resposta segue igual (as missões nunca derrubam os pontos). `pontosHoje` = só as missões do dia (R18-110f-front-B):
 // 5 do login diário + 10 do 1.º lance — NÃO inclui a indicação nem outros créditos.
-async function missoesDeHoje(endereco) {
+//
+// ⚠️ UTAC110g (P-1/F4 do validador): deriva do registo **JÁ LIDO** (`lerPontos` faz `select("*")`, que
+// traz `historico_lance`). Antes chamava `estadoMissoesHoje(endereco)`, que voltava a ler a MESMA linha
+// de `pontos` (`lerLedgerLance`) — duas idas ao Supabase por pedido, em série, para a mesma linha.
+function missoesDeHoje(registo) {
   try {
-    const { dia, loginFeito, lanceFeito } = await estadoMissoesHoje(endereco);
+    const { dia, loginFeito, lanceFeito } = missoesDoRegisto(registo);
     const pontosHoje = (loginFeito ? PONTOS_LOGIN_DIARIO : 0) + (lanceFeito ? PONTOS_MISSAO_LANCE : 0);
     return { dia, loginFeito, lanceFeito, pontosHoje };
   } catch {
@@ -72,7 +76,7 @@ export default async (req) => {
   // `pontos` é o TOTAL (compra + bónus de palpite) e serve para mostrar o bónus; a BARRA e o LIMIAR
   // do cartão usam `pontosCartao`. Sem isto, 48 de compra + 2 de bónus = 50 desbloqueava o cartão.
   const pontosCartao = pontosDeCompra(registo);
-  const missoesHoje = await missoesDeHoje(t.endereco);
+  const missoesHoje = missoesDeHoje(registo);
   return jsonResponse({
     ok: true,
     pontos,
