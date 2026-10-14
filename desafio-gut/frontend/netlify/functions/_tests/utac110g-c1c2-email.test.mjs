@@ -215,3 +215,25 @@ test("montarEmailResgate é PURA e não rebenta sem dados (nome/id ausentes)", (
   assert.match(comNome.mensagem, /pedido nº 7/);
   assert.match(comNome.mensagem, /50 pontos/);
 });
+
+// ═══ B-110g-1 — o e-mail NÃO pode prometer um ecrã que não existe ═════════════════════════════════
+// BLOQUEANTE medido pelo validador adversarial (2026-10-14) no commit `6418a25`: a mensagem dizia «· O
+// estado do pedido aparece na sua Carteira.» — e a C3 (estado do pedido visível) NÃO foi implementada
+// (`lerResgates` sem consumidor; `MinhaCarteira.jsx` não mostra nada do resgate). Um e-mail transaccional
+// que promete um ecrã inexistente é uma afirmação FALSA dirigida ao titular. Fechado com a frase trocada
+// por uma verdadeira + esta guarda (o validador notou que nenhum teste cobria a linha).
+test("B-110g-1 o e-mail NÃO promete a «Carteira» (a C3 não existe) e diz o que é verdade", () => {
+  const t = mod.montarEmailResgate({ nome: "Ana", resgateId: 9 });
+  assert.doesNotMatch(t.mensagem, /Carteira/, "prometeu um ecrã de estado de pedido que não existe");
+  assert.match(t.mensagem, /comprovante do seu pedido/, "tem de dizer o que É verdade sobre este e-mail");
+  // o resto do conteúdo decidido pelo operador continua lá (a troca da linha não perdeu nada)
+  assert.match(t.mensagem, /até 30 dias corridos/);
+  assert.match(t.mensagem, /Nota Técnica/);
+  assert.match(t.mensagem, /Fam[íi]lia Quildo/);
+});
+
+test("B-110g-1 CONTROLO NEGATIVO — o texto AFIRMADO pelo bloqueante seria apanhado por esta guarda", () => {
+  // Prova de que a guarda morde: com a linha antiga reconstruída, o `doesNotMatch` acima falharia.
+  const linhaAntiga = "· O estado do pedido aparece na sua Carteira.";
+  assert.match(linhaAntiga, /Carteira/, "a guarda procura exactamente a palavra que a linha falsa usava");
+});

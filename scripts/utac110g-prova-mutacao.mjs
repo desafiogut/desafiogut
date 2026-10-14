@@ -96,6 +96,13 @@ const MUTANTES = [
     "      if (emailLogin) corpo.email = emailLogin;",
     "      if (false && emailLogin) corpo.email = emailLogin;",
     [["frontend", "src/pages/__tests__/utac110g-resgate-hook.test.mjs"]]],
+
+  // M13 nasceu do BLOQUEANTE B-110g-1 (validador adversarial): o e-mail prometia um ecrã («na sua
+  // Carteira») que a C3 não entregou. Este mutante reintroduz a frase FALSA e exige RED na guarda nova.
+  ["M13 B-110g-1 o e-mail volta a prometer o ecrã «Carteira» (falso)", "backend", "resgatar-cartao.mjs",
+    '      "· Guarde este e-mail: é o comprovante do seu pedido.",',
+    '      "· O estado do pedido aparece na sua Carteira.",',
+    [["backend", "utac110g-c1c2-email.test.mjs"]]],
 ];
 
 console.log(`UTAC110g — prova de mutação · backup em ${TMP}\n`);

@@ -13,9 +13,10 @@
 | **B — adaptar `resgatar-cartao`** | ✅ **JÁ ESTAVA FEITA** | Medido: o endpoint do 106g cumpre TODO o B2 (valida ≥ 50 de CARTÃO, captura morada, grava em `resgates`, debita, idempotente, rollback). **Verificação**, não re-construção. + 5 testes novos do hook. |
 | **C — integrações** | ⚠️ **PARCIAL, declarado** | C1 in-app ✅ (com o prazo) · C1-email ✅ (novo, com o e-mail do login) · C2 (Nota Técnica) ✅ **como texto do e-mail**, emissão formal é do patrocinador · **C3 (estado do pedido visível) NÃO FEITA — exige endpoint e ecrã novos, fora do AUTORIZA** (§6). |
 | **D — UI** | ✅ **JÁ ESTAVA FEITA** | Botão + modal + hook existem desde o **UTAC106g**, no ecrã «Ofertas Programadas». **Não se duplicou** na Carteira (GATE 3/4). |
-| Suíte | ✅ **VERDE 1049/1049 · 1211/1217** | baseline 1033/1033 · 1194/1200 → **+16** frontend, **+17** backend |
-| Mutação | ✅ **12/12 MORTOS** | `scripts/utac110g-prova-mutacao.mjs` |
+| Suíte | ✅ **VERDE 1049/1049 · 1213/1219** | baseline 1033/1033 · 1194/1200 → **+16** frontend, **+19** backend (RAM 1751 MB na corrida de fecho) |
+| Mutação | ✅ **13/13 MORTOS** | `scripts/utac110g-prova-mutacao.mjs` |
 | Bidirecional (A/B) | ✅ **20 falhas no código ANTIGO** | 11 backend + 9 frontend, medido em worktree `2579b51` |
+| **Validador adversarial (SEG5)** | ⚠️ **1 BLOQUEANTE — FECHADO** | o e-mail prometia um ecrã («na sua Carteira») que a C3 não entregou; corrigido + teste-guarda + mutante M13 (§10) |
 
 **Duração medida** (carimbos desta ronda, §11.m): `23:42:33` → fecho do código `00:10:36` = **≈28 min** de trabalho efectivo (dentro do HI5).
 
@@ -146,6 +147,18 @@ testes de render/clique. O enunciado pedia o botão na **Carteira**; criar um se
 | **D-110g-1** | e-mail de confirmação: **não há destino** no servidor | (a) o cliente envia `email` no corpo (usado só para enviar, **não persistido**) · (b) migração + coluna + campo no modal · (c) não enviar | **(a) — foi a implementada.** Precisa de RATIFICAÇÃO do operador (acrescenta um campo ao contrato do corpo). |
 | **D-110g-2** | estado do pedido visível (C3) | exige **endpoint novo** (`ler-resgates.mjs`) + ecrã → fora do AUTORIZA | candidato a **110g-front** / UTAC próprio |
 | **D-110g-3** | «Emitir Nota Técnica» | o software não tem campos fiscais no resgate; `validarNfe`/`definirNfe` são dos **pedidos do MLC** | decidir conteúdo/formato/quem assina; hoje vai **em texto no e-mail** |
+| **D-110g-4** | o botão «Resgatar cartão» ficou em **`OfertasProgramadas`**, não na **Carteira** como o enunciado pedia | (a) manter onde está (fluxo já testado, sem duplicar) · (b) acrescentar um botão/atalho na Carteira a apontar ao mesmo fluxo · (c) mover | **(a) — foi o executado** (GATE 3/4: não duplicar UI que funciona). **Achado ℹ️ do validador:** estava declarado na prosa mas **faltava nesta tabela**; fica aqui para ratificação. |
+
+### Riscos residuais declarados (não mitigados por código)
+
+- **Destino do e-mail vem do cliente** (D-110g-1): um autenticado com 50 pontos de COMPRA consegue pedir o
+  envio do e-mail de marca para **um terceiro**. Mitigações medidas: `aplicarRateLimit(req,
+  "resgatar-cartao", 5)` (5/min), custo de 50 pontos por tentativa, e o precedente `emailPagador` (PIX,
+  `MinhaCarteira.jsx:88`) que já aceita e-mail do cliente. Fechar exigiria o e-mail no JWT (D-110g-1).
+- **Limite da prova do P-2:** 5 dos 6 casos de `utac110g-p2-refetch-horario.test.mjs` fazem `assert.match`
+  sobre o **texto** de `AppContext.jsx`/`usePontos.js` (não montam o provider real, que depende do Privy).
+  Os mutantes M4/M5/M6 morrem, mas é evidência **mais fraca** que a do P-1 (execução real + contador de
+  leituras). Declarado por achado ℹ️ do validador.
 
 ---
 
@@ -156,9 +169,10 @@ testes de render/clique. O enunciado pedia o botão na **Carteira**; criar um se
 | Momento | frontend | backend | Veredicto |
 |---|---|---|---|
 | Baseline SEG-1 (`23:48`) | 1033/1033 | 1194/1200 | VERDE |
-| **Fecho (`00:10`)** | **1049/1049** | **1211/1217** | **VERDE** |
+| Fecho do código (`00:10`) | 1049/1049 | 1211/1217 | VERDE |
+| **Fecho depois do veredicto (`00:51`, RAM 1751 MB)** | **1049/1049** | **1213/1219** | **VERDE** |
 
-Δ = **+16 frontend** (3 F5/F2 + 6 P-2 + 7 hook do resgate) e **+17 backend** (8 P-1/P-2 + 8 C1/C2 + 1 M5).
+Δ = **+16 frontend** (3 F5/F2 + 6 P-2 + 7 hook do resgate) e **+19 backend** (8 P-1/P-2 + 8 C1/C2 + 1 M5 + 2 do B-110g-1 — o bloqueante do validador).
 
 ⚠️ **Uma falha foi introduzida e fechada no processo** (declarada, não escondida): o teste **M4** do
 `utac110f-front-missoes.test.mjs` passou a VERMELHO porque **codificava o defeito** que o P-1 fecha («a
@@ -166,7 +180,7 @@ leitura das missões falha ⇒ `missoesHoje: null`») — o modo de falha deixou
 preservando a INVARIANTE (o bloco das missões nunca derruba os pontos), com a versão antiga à vista no
 histórico do git.
 
-### Mutação dirigida — `scripts/utac110g-prova-mutacao.mjs` → **12/12 MORDEU, 0 sobreviventes**
+### Mutação dirigida — `scripts/utac110g-prova-mutacao.mjs` → **13/13 MORDEU, 0 sobreviventes**
 
 | Mutante | RED em |
 |---|---|
@@ -182,6 +196,7 @@ histórico do git.
 | M10 o e-mail deixa de ser validado | c1c2 (2) |
 | M11 o e-mail é reenviado no idempotente | c1c2 (1) |
 | M12 o e-mail do login deixa de ir no corpo | resgate-hook (1) |
+| **M13** o e-mail volta a prometer o ecrã «Carteira» (frase falsa do B-110g-1) | c1c2 (1) |
 
 ### Bidirecional (A/B pareado) — worktree próprio em `2579b51`
 
@@ -196,15 +211,20 @@ Os 6 ficheiros de teste (4 novos + 2 actualizados) copiados para um worktree cri
 ⇒ **20 asserções mordem no código antigo e passam no novo.** Worktree removido pelo helper; `node_modules`
 reais **498 / 414 antes == depois**.
 
-### Três instrumentos independentes (o padrão que funcionou — registo pedido)
+### Quatro instrumentos independentes (o padrão que funcionou — registo pedido)
 
 1. **Suíte canónica quantificada** (com a RAM ao lado do número).
 2. **Prova de mutação versionada** (`scripts/utac110g-prova-mutacao.mjs`, âncoras em bytes com o EOL do
-   ficheiro em disco + `assert count==1` + backup fora do repo).
+   ficheiro em disco + `assert count==1` + backup fora do repo) — **13/13**.
 3. **A/B pareado num worktree no commit anterior** (o juiz final: os testes novos não podem passar no
-   código velho).
+   código velho) — **20 falhas no `2579b51`**.
+4. **Verificador ad-hoc** (`hermes-verify-utac110g.mjs`, em `%TEMP%`, com controlo negativo): suíte canónica
+   + `EM_BREVE_MODE = true` (sem comentários) + os 2 bytes `0x00`/2 `0x1F` do `CLAUDE.md` + o commit toca
+   exactamente os 15 ficheiros declarados + nenhum ficheiro proibido + nenhum `.bak-*` + `HEAD = 6418a25` +
+   o `ler-pontos` (só código) não chama o ledger. **14 PASS / 0 FAIL** depois de corrigir dois controlos
+   negativos mal formulados (ver os erros dos instrumentos, abaixo).
 
-E um 4.º, para o P-1/F4 especificamente: **o CONTADOR de leituras no duplo** com **controlo de vitalidade**
+E um 5.º, para o P-1/F4 especificamente: **o CONTADOR de leituras no duplo** com **controlo de vitalidade**
 (uma leitura directa do ledger conta +1) — sem ele, o «1 leitura» seria aritmética, não medição.
 
 ### Erros dos MEUS instrumentos, medidos nesta ronda (declarados por exigência da série)
@@ -221,6 +241,49 @@ E um 4.º, para o P-1/F4 especificamente: **o CONTADOR de leituras no duplo** co
 4. **`patch` do `usePontos.js`/`useResgatarCartao.js` reportou «lint error»** com
    `Cannot find module 'C:\c\Users\...'` — é o **path mangling** conhecido do linter no Windows (C:\c\…),
    não um erro do ficheiro: a suíte canónica passou 1049/1049 depois das duas edições.
+5. **Dois controlos negativos do verificador ad-hoc estavam mal formulados** (apanhados e corrigidos na
+   mesma ronda): (a) um afirmava «NÃO (a suíte está verde E o fix está lá)» — verde+fix é precisamente o
+   que se quer, asserção sem sentido; (b) o outro procurava `lerLedgerLance` no ficheiro **cru** e apanhou
+   o símbolo citado no **comentário que explica o fix** (armadilha do §17/§19.4). O (b) passou a fazer
+   *strip* de comentários **sem apagar newlines**, com controlo de vitalidade de que o *strip* não apaga
+   código; o (a) passou a ser um controlo real («a suíte diz VERMELHO» tem de ser falso).
+6. **Um VERMELHO transitório, declarado e não resolvido até ao fim:** a 1.ª execução do verificador ad-hoc
+   deu `frontend VERMELHO 2 falha(s)`, executada **enquanto o validador adversarial corria a suíte dele na
+   mesma máquina**. RAM medida nesse instante: **1707 MB** (A14 cumprida) ⇒ o suspeito é **contenção de
+   CPU/IO** (os testes de render sobem um servidor vite + esbuild). **Não reproduzível:** 3 corridas
+   isoladas (1 canónica + 2 com a lista exacta dos 85 ficheiros) deram **1049/1049** nas três, e a corrida
+   de fecho (1751 MB) deu VERDE. **Limite declarado: não consegui nomear os 2 testes em falha** — o
+   harness publica contagens, não nomes; registo em vez de silêncio.
+
+---
+
+## §10. SEG5 — validador adversarial
+
+Ficheiro: `_logs/UTAC110g_SEG5_VALIDADOR.md` (cópia **integral** do veredicto + a **resposta do executor**).
+Worktree próprio (`C:/Users/Moltbot/tmp-110g-val/wt` em `6418a25`), mandato «REFUTAR, não confirmar»,
+gravação do veredicto como **1.ª acção**, 909,7 s.
+
+**VEREDICTO: `ATENÇÃO — 1 BLOQUEANTE`.** Tudo o que era quantitativo foi **reproduzido ao número** e não
+refutado: suíte de fecho e baseline iguais ao declarado ⇒ Δ +16/+17; mutação própria **12/12**;
+A/B **11+9 falhas** no `2579b51`; e as 4 premissas refutadas por medição (o P-1 do enunciado, o endpoint
+do 106g já completo, a UI já existente, «13 testes» reais) também **não** foram derrubadas.
+
+**O bloqueante era meu e era real:** o e-mail de confirmação dizia «· O estado do pedido aparece na sua
+Carteira.» — e a **C3 não existe**. Um e-mail transaccional a prometer um ecrã inexistente é uma afirmação
+falsa dirigida ao titular, e **nenhum** dos meus instrumentos a podia apanhar (todos medem
+alegação↔código; nenhum pergunta se o **texto** promete algo que o sistema cumpre).
+
+**ERRATA (a conclusão errada fica à vista, marcada REFUTADA):**
+
+> ~~«· O estado do pedido aparece na sua Carteira.»~~ — **REFUTADO** pelo validador (B-110g-1).
+> Corrigido para «· Guarde este e-mail: é o comprovante do seu pedido.» + teste `B-110g-1`
+> (`doesNotMatch(/Carteira/)` e `match(/comprovante/)`) + mutante **M13**. **Não re-validado** por uma
+> 2.ª ronda independente (declarado).
+
+Achados ℹ️ tratados: **D-110g-4** (o desvio do botão passa a constar da tabela de decisões escaladas);
+o **risco residual do destino do e-mail** vem do cliente (declarado com as mitigações medidas); a
+**evidência parcialmente *source-scraping* do P-2** (declarada como limite); e a **RAM** medida pelo
+validador (1304/1296/1307) **não** é defeito do commit — o gate foi cumprido no SEG-1 e no fecho.
 
 ---
 
@@ -236,7 +299,11 @@ E um 4.º, para o P-1/F4 especificamente: **o CONTADOR de leituras no duplo** co
 `src/__tests__/utac110g-p2-refetch-horario.test.mjs` (novo) · `src/__tests__/utac110f-login-diario.test.mjs`
 (F5/F5b/F5c) · `src/pages/__tests__/utac110g-resgate-hook.test.mjs` (novo)
 
-**Instrumento:** `scripts/utac110g-prova-mutacao.mjs` (novo)
+**Instrumento:** `scripts/utac110g-prova-mutacao.mjs` (novo, 13 mutantes)
+
+**Logs:** `_logs/UTAC110g_SEG-1_MEDICAO.md` · `_logs/UTAC110g-cartoes.md` · `_logs/UTAC110g_SEG5_VALIDADOR.md` (veredicto + resposta)
+
+**Fecho (depois do veredicto):** `resgatar-cartao.mjs` (frase do e-mail corrigida) + `_tests/utac110g-c1c2-email.test.mjs` (+2 testes: guarda do B-110g-1 + controlo negativo) + M13 no mutador.
 
 **NÃO tocados:** `CartaoEdicao`, `GlassHeader`, `CardLance`, `OfertasProgramadas.jsx`, `MinhaCarteira.jsx`,
 migrações, env vars, `EM_BREVE_MODE` (continua `true`), `package.json`/`package-lock.json` (o lock está

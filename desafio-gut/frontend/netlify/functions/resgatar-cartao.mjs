@@ -64,7 +64,12 @@ export function montarEmailResgate({ nome, resgateId, pontos = PONTOS_POR_CARTAO
       "",
       `· Prazo de entrega: até ${prazoDias} dias corridos.`,
       `· O envio é pago por ${PAGADOR_ENVIO}.`,
-      "· O estado do pedido aparece na sua Carteira.",
+      // ⚠️ B-110g-1 (validador adversarial, 2026-10-14): aqui dizia-se «· O estado do pedido aparece na
+      // sua Carteira.» — e isso era FALSO: a C3 (estado do pedido visível) NÃO foi implementada (exigiria
+      // endpoint + ecrã novos, fora do AUTORIZA; `lerResgates` não tem consumidor e a Carteira não mostra
+      // nada do resgate). Um e-mail transaccional não pode prometer um ecrã que não existe. A frase foi
+      // trocada por uma afirmação VERDADEIRA (este e-mail É o comprovante) e há teste que a proíbe de voltar.
+      "· Guarde este e-mail: é o comprovante do seu pedido.",
       "",
       `Nota Técnica do resgate nº ${id}`,
       `${PAGADOR_ENVIO} é a patrocinadora do cartão e emite a Nota Técnica da entrega.`,
