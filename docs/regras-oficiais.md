@@ -1,3 +1,8 @@
+> ⛔ **SUBSTITUÍDO pelo UTAC110h (2026-10-14, decisão do operador R18-110h-A).** A página `/regras-oficiais`
+> passou a publicar o **Regulamento Oficial v5.0 integral**, cuja fonte é **`docs/REGULAMENTO-v5.md`**.
+> O texto abaixo (Regras Oficiais v1.0, vigente a partir de 2026-10-05) é **histórico**: fica à vista
+> (GATE 15) e **não é** fonte de nada. Onde divergir do v5.0, prevalece o v5.0.
+
 # REGRAS OFICIAIS — PROGRAMA DE FIDELIDADE DESAFIOGUT
 
 > **Versão 1.0 · vigente a partir de 2026-10-05.**

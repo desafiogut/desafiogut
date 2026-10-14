@@ -1,0 +1,9 @@
+BASELINE fail,pass = (0, 19)
+M1 texto do doc muda (Art.8 10->1 ponto): fail=1 pass=18 -> PROVADO
+M2 um capítulo apagado do doc: fail=3 pass=16 -> PROVADO
+M3 parser perde os itens: fail=3 pass=16 -> PROVADO
+M4 parser não une continuações: fail=1 pass=18 -> PROVADO
+M5 página volta a ler o v1.0: fail=10 pass=9 -> PROVADO
+M6 sumário sem âncoras: fail=1 pass=18 -> PROVADO
+restauro md5 identico: True
+PROVADOS 6 / 6

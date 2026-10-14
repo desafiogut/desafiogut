@@ -1,0 +1,40 @@
+schema: utac/1
+name: UTAC110h
+title: "Regulamento v5.0 no repo + /regras-oficiais reflecte o v5.0"
+type: publicacao
+baseline: 649ffd1
+motivo: >-
+  docs/GUTO-REGULAMENTO.md tem o Regulamento 5.0 (12 caps, 72 arts), mas a página
+  /regras-oficiais ainda publica as «Regras Oficiais v1.0» (9 secções) e o teste 106h fixa-as.
+frentes:
+  - id: A
+    nome: Publicar docs/REGULAMENTO-v5.md (transcrição + cabeçalho, zero edição)
+    entrega: [docs/REGULAMENTO-v5.md]
+  - id: B
+    nome: Página /regras-oficiais reflecte o v5.0
+    entrega: [docs/regras-oficiais.md, src/pages/RegrasOficiais.jsx, 2 screenshots]
+  - id: C
+    nome: Teste das regras (o enunciado chama-lhe mc106h; medido = utac106h)
+    entrega: [src/pages/__tests__/utac106h-regras.test.mjs]
+  - id: D
+    nome: Coerência cruzada GUTO ↔ Regras ↔ Regulamento (só leitura do GUTO)
+    entrega: [_logs/UTAC110h-regulamento.md]
+autoriza:
+  - criar docs/REGULAMENTO-v5.md; editar docs/regras-oficiais.md e RegrasOficiais.jsx
+  - editar o teste 106h e testes em src/__tests__/
+  - suíte front + back; _logs/UTAC110h*; Desktop/RELATORIO-UTAC110h.txt; R14 no CLAUDE.md
+  - git add individual; commit + push foreground; validador adversarial (worktree)
+proibe:
+  - git add -A; deploy em background
+  - editar docs/GUTO-REGULAMENTO.md, _lib/guto-perfis.mjs, _lib/guto-regulamento.mjs
+  - backend fora dos testes; contrato on-chain; gate legal; env vars; EM_BREVE_MODE
+  - alterar texto jurídico aprovado (só transcrever)
+dependencias:
+  - UTAC110c-1b fechado (GUTO-REGULAMENTO.md limpo)
+regras_activas: [E, T, G, L, S, A, P, AU, ST, HI]
+regras_extra: [A14]
+stop_conditions_extra: []
+ressalvas:
+  - A14 — RAM < 1500 MB → pedir trim ao operador
+  - regras-oficiais.md muito diferente do v5.0 → PARAR e reportar (enunciado §15)
+  - divergência entre as 3 fontes → registar e escalar
