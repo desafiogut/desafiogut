@@ -20,8 +20,13 @@ const MUTANTES = [
   ["M5 hook não lê missoesHoje", resolve(FE, "src/hooks/usePontos.js"), "missoesHoje: missoesDaResposta(data),", "missoesHoje: null,", FE, T_FE],
   ["M6 «Volte amanhã!» sempre", resolve(FE, "src/pages/MinhaCarteira.jsx"), '{todasFeitas ? " Volte amanhã!" : ""}', '{" Volte amanhã!"}', FE, T_FE],
   ["M7 feito a muted (cor)", resolve(FE, "src/pages/MinhaCarteira.jsx"), "color: m.feito ? COR.gold : COR.muted,\n                          }}>", "color: COR.muted,\n                          }}>", FE, T_FE],
-  ["M8 neutro inventa «pendente»", resolve(FE, "src/pages/MinhaCarteira.jsx"), 'pontosCarregando ? "carregando" : missoesHoje ? "ok" : "neutro"', 'pontosCarregando ? "carregando" : "ok"', FE, T_FE],
+  ["M8 neutro inventa «pendente»", resolve(FE, "src/pages/MinhaCarteira.jsx"), 'pontosCarregando ? "carregando" : (pontosErro || !missoesHoje) ? "neutro" : "ok"', 'pontosCarregando ? "carregando" : "ok"', FE, T_FE],
   ["M9 login lê o lance", resolve(FE, "src/pages/MinhaCarteira.jsx"), "feito: missoesHoje.loginFeito", "feito: missoesHoje.lanceFeito", FE, T_FE],
+  // SEG4 — achados do validador adversarial (F1) e os seus sobreviventes (V4, V8, V10).
+  ["M10 F1: estado ignora pontosErro", resolve(FE, "src/pages/MinhaCarteira.jsx"), "(pontosErro || !missoesHoje) ? \"neutro\"", "(!missoesHoje) ? \"neutro\"", FE, T_FE],
+  ["M11 V4: sr-only invertido", resolve(FE, "src/pages/MinhaCarteira.jsx"), '{m.feito ? " — feito" : " — pendente"}', '{m.feito ? " — pendente" : " — feito"}', FE, T_FE],
+  ["M12 V8: glifo sem aria-hidden", resolve(FE, "src/pages/MinhaCarteira.jsx"), '<span aria-hidden="true" style={{\n                            width: "1.25rem"', '<span style={{\n                            width: "1.25rem"', FE, T_FE],
+  ["M13 V10: rodapé recalculado no cliente", resolve(FE, "src/pages/MinhaCarteira.jsx"), "Você ganhou ${missoesHoje.pontosHoje} pontos", "Você ganhou ${(missoesHoje.loginFeito ? 5 : 0) + (missoesHoje.lanceFeito ? 10 : 0)} pontos", FE, T_FE],
 ];
 
 let provados = 0;

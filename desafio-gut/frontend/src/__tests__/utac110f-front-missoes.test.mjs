@@ -246,3 +246,70 @@ test("C · contraste WCAG AA dos pares do bloco sobre o vidro (com controlo nega
   assert.ok(ratio(texto85, VIDRO) >= 4.5, `texto 85%/vidro ${ratio(texto85, VIDRO).toFixed(2)}`);
   assert.ok(ratio("#1e2a5a", VIDRO) < 4.5, "controlo negativo: um azul escuro sobre o vidro devia reprovar");
 });
+
+// ═══ SEG4 — achados do validador adversarial (F1 + sobreviventes V4/V8/V10) ══════════
+test("SEG4/V4 · o texto para leitores de ecrã diz o estado CERTO por linha (feito vs pendente)", async () => {
+  const b = blocoMissoes(await carteiraCom(pontosCom(missoes(true, false))));
+  assert.match(semTags(linha(b, "login")), /Login diário — feito/);
+  assert.match(semTags(linha(b, "lance")), /Completar 1 lance — pendente/);
+  assert.doesNotMatch(semTags(linha(b, "login")), /pendente/);
+  assert.doesNotMatch(semTags(linha(b, "lance")), /— feito/);
+});
+
+test("SEG4/V8 · os glifos (✓/⏳) e o 🎯 são decorativos: aria-hidden", async () => {
+  const b = blocoMissoes(await carteiraCom(pontosCom(missoes(true, false))));
+  assert.match(linha(b, "login"), /<span aria-hidden="true"[^>]*>✓<\/span>/);
+  assert.match(linha(b, "lance"), /<span aria-hidden="true"[^>]*>⏳<\/span>/);
+  assert.match(b, /<span aria-hidden="true">🎯 <\/span>Missões de hoje/);
+});
+
+test("SEG4/V10 · o rodapé usa o pontosHoje do SERVIDOR (não recalcula no cliente)", async () => {
+  const b = blocoMissoes(await carteiraCom(pontosCom({ dia: "2026-10-13", loginFeito: true, lanceFeito: false, pontosHoje: 7 })));
+  assert.match(semTags(b), /Você ganhou 7 pontos hoje\./);
+});
+
+test("SEG4/F1 · uma releitura FALHADA (após compra) põe as missões em neutro — nada de ✓/⏳ desactualizados", async () => {
+  definirContexto(CONTEXTO);
+  const estado = { falhar: false };
+  const dup = duploDeFetch((url) => {
+    if (LER_PONTOS.test(url)) return estado.falhar ? { status: 500, json: {} } : pontosCom(missoes(true, true));
+    if (LER_ECO.test(url)) return eco;
+    if (/comprar-passe/.test(url)) { estado.falhar = true; return { status: 201, json: { ok: true } }; }
+    return { status: 404, json: {} };
+  });
+  try {
+    const c = montar(MinhaCarteira, []);
+    await c.assentar();
+    const html = () => renderToStaticMarkup(React.createElement(React.Fragment, null, c.resultado()));
+    assert.match(blocoMissoes(html()), /data-estado="ok"/, "controlo: antes da compra as missões estão legíveis");
+    const nos = [];
+    (function walk(n) {
+      if (n == null || typeof n === "boolean") return;
+      if (Array.isArray(n)) { n.forEach(walk); return; }
+      if (typeof n !== "object") return;
+      nos.push(n);
+      if (typeof n.type === "function" && n.type.name === "ComprarPasseModal") { const s = n.type(n.props); if (s?.props) walk(s.props.children); }
+      if (n.props) walk(n.props.children);
+    })(c.resultado());
+    const txt = (n) => n == null || typeof n === "boolean" ? "" : (typeof n === "string" || typeof n === "number") ? String(n)
+      : Array.isArray(n) ? n.map(txt).join("") : n.props ? txt(n.props.children) : "";
+    const clicar = async (rot, lista) => {
+      const b = lista.filter((n) => n.type === "button").find((x) => txt(x).includes(rot));
+      assert.ok(b, `não encontrei «${rot}»`); await b.props.onClick(); await c.assentar();
+    };
+    await clicar("Comprar Passe Desafio R$ 2,00", nos);
+    const nos2 = []; (function walk(n) {
+      if (n == null || typeof n === "boolean") return;
+      if (Array.isArray(n)) { n.forEach(walk); return; }
+      if (typeof n !== "object") return;
+      nos2.push(n);
+      if (typeof n.type === "function" && n.type.name === "ComprarPasseModal") { const s = n.type(n.props); if (s?.props) walk(s.props.children); }
+      if (n.props) walk(n.props.children);
+    })(c.resultado());
+    await clicar("Comprar Passe Relâmpago", nos2);
+    const b = blocoMissoes(html());
+    assert.ok(estado.falhar, "instrumento: a releitura após a compra não foi feita");
+    assert.match(b, /data-estado="neutro"/, "com a releitura falhada as missões ficaram «ok» (desactualizadas)");
+    assert.doesNotMatch(b, /✓|⏳|Você ganhou/);
+  } finally { dup.restaurar(); }
+});

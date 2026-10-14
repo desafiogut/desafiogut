@@ -146,7 +146,9 @@ export default function MinhaCarteira() {
   // `missoesHoje === null`): não se afirma «feito» nem «pendente». ✓ feito = amarelo único `#f5a623`
   // (R18-110f-front-A: a decisão do 109h.2 prevalece sobre o «verde» do enunciado; o emoji ✅ seria pintado de verde
   // pela fonte do sistema, por isso usa-se o glifo de texto «✓», U+2713); ⏳ pendente = muted.
-  const estadoMissoes = pontosCarregando ? "carregando" : missoesHoje ? "ok" : "neutro";
+  // SEG4/F1 (validador): o `refetch` do `usePontos` NÃO repõe os dados quando falha — com `pontosErro` os saldos passam
+  // a «—» e as missões têm de ir também a neutro (senão ficariam ✓/⏳ desactualizados ao lado de saldos ilegíveis).
+  const estadoMissoes = pontosCarregando ? "carregando" : (pontosErro || !missoesHoje) ? "neutro" : "ok";
   const MISSOES = missoesHoje ? [
     { id: "login", rotulo: "Login diário", pontos: 5, feito: missoesHoje.loginFeito },
     { id: "lance", rotulo: "Completar 1 lance", pontos: 10, feito: missoesHoje.lanceFeito },
@@ -353,7 +355,7 @@ export default function MinhaCarteira() {
                 <h4 id="missoes-hoje-titulo" style={{
                   margin: "0 0 0.45rem", fontSize: "0.75rem", color: COR.gold, fontWeight: 700,
                   textTransform: "uppercase", letterSpacing: "0.06em",
-                }}>🎯 Missões de hoje</h4>
+                }}><span aria-hidden="true">🎯 </span>Missões de hoje</h4>
                 {estadoMissoes !== "ok" ? (
                   <p style={{ margin: 0, fontSize: "0.8rem", color: COR.text, opacity: 0.85 }}>
                     {estadoMissoes === "carregando" ? "…" : "—"}
@@ -374,7 +376,7 @@ export default function MinhaCarteira() {
                           }}>{m.feito ? "✓" : "⏳"}</span>
                           <span style={{ flex: 1, minWidth: 0, color: COR.text, opacity: m.feito ? 1 : 0.85 }}>
                             {m.rotulo}
-                            <span style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>
+                            <span style={{ position: "absolute", width: 1, height: 1, margin: -1, padding: 0, overflow: "hidden", clip: "rect(0 0 0 0)", whiteSpace: "nowrap", border: 0 }}>
                               {m.feito ? " — feito" : " — pendente"}
                             </span>
                           </span>
