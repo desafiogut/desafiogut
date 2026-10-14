@@ -1,12 +1,16 @@
-// utac106g-resgate.test.mjs — UTAC106g · RESGATE do cartão no ecrã «Ofertas Programadas».
+// utac106g-resgate.test.mjs — UTAC106g · RESGATE do cartão colecionável.
 //
-// Cobre: o botão «Resgatar cartão» fica ACTIVO a ≥50 pontos de CARTÃO; clicar abre o balão (com os
-// campos de morada); a confirmação do BALÃO faz `POST /resgatar-cartao` com `Bearer`, fecha o balão e
-// avisa; o 402 mostra a mensagem e mantém o balão aberto; a regra de morada recusada localmente.
+// ⚠️ UTAC110g.1 (R18-110g.1-2 / decisão D-110g-4) — **MUDOU DE ECRÃ**. Este ficheiro montava o
+// `OfertasProgramadas`; o botão passou a viver na **CARTEIRA** (`MinhaCarteira.jsx`). O que ele
+// MEDE é exactamente o mesmo fluxo do UTAC106g — só mudou a montagem e o endereço. As asserções
+// NÃO foram enfraquecidas: continuam a exigir botão ACTIVO a ≥50 pontos de CARTÃO, o clique a abrir
+// o balão, o `POST /resgatar-cartao` com o `Bearer` da sessão, o fecho em sucesso e o 402 a manter o
+// balão aberto. O lado complementar (o botão JÁ NÃO existe nas Ofertas) está no
+// `utac106f-ofertas.test.mjs`, e os 4 estados do botão no `utac110g1-carteira-resgate.test.mjs`.
 //
 // Instrumentos do repo (nenhum ficheiro de produção alterado): `_servidor-teste.mjs` + `_hook-runner`
 // (`montar` + `duploDeFetch`, que substitui SÓ o `fetch` e deixa correr o `apiGet`/`apiPost` REAIS) +
-// duplo de AppContext + duplo de `useTrocarPorSenhas` (o mesmo dos 106e/106f) + duplo do router.
+// duplo de AppContext + duplos dos modais laterais da Carteira (os mesmos do utac110f-front-missoes).
 //
 // ⚠️ LIMITES DECLARADOS (sem DOM real): (a) o «clique» é o `onClick` do elemento React — sem CSS nem
 // hit-testing; (b) o conteúdo do `ResgatarCartaoModal` vive dentro do `Modal` do design system e NÃO é
@@ -20,8 +24,9 @@ import { dirname, resolve } from "node:path";
 import { opcoesServidorTeste } from "../../__tests__/_servidor-teste.mjs";
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
+const SRC = resolve(AQUI, "..", "..");
 const STUBS_106C = resolve(AQUI, "..", "..", "__tests__", "_stubs-106c");
-const STUBS_106E = resolve(AQUI, "..", "__tests__", "_stubs-106e");
+const STUBS_106E = resolve(AQUI, "_stubs-106e");
 const STUB_CONTEXTO = resolve(AQUI, "_stubs", "AppContext.jsx");
 
 const ALIASES = [
@@ -29,10 +34,14 @@ const ALIASES = [
   { find: /^\.\.\/\.\.\/context\/AppContext\.jsx$/, replacement: STUB_CONTEXTO },
   { find: /^\.\/useTrocarPorSenhas\.js$/, replacement: `${STUBS_106E}/useTrocarPorSenhas.js` },
   { find: /^\.\.\/hooks\/useTrocarPorSenhas\.js$/, replacement: `${STUBS_106E}/useTrocarPorSenhas.js` },
+  // Modais/painéis laterais da Carteira: duplos do repo (a Carteira não é o alvo destes testes).
+  { find: /^\.\.\/components\/ComprarFichasModal\.jsx$/, replacement: `${STUBS_106C}/child.jsx` },
+  { find: /^\.\.\/components\/PainelIndicacao\.jsx$/, replacement: `${STUBS_106C}/child.jsx` },
+  { find: /^\.\.\/components\/BotaoLoginPrincipal\.jsx$/, replacement: `${STUBS_106C}/child.jsx` },
   { find: /^react-router-dom$/, replacement: `${STUBS_106C}/rr.jsx` },
 ];
 
-let vite, React, renderToStaticMarkup, montar, duploDeFetch, definirContexto, OfertasProgramadas, erroDoEndereco, ENDERECO_VAZIO;
+let vite, React, renderToStaticMarkup, montar, duploDeFetch, definirContexto, MinhaCarteira, erroDoEndereco, ENDERECO_VAZIO;
 
 before(async () => {
   const { createServer } = await import(pathToFileURL(resolve(AQUI, "..", "..", "..", "node_modules", "vite", "dist", "node", "index.js")).href);
@@ -44,24 +53,28 @@ before(async () => {
   ({ montar, duploDeFetch } = await vite.ssrLoadModule("/src/hooks/__tests__/_hook-runner.mjs"));
   ({ definirContexto } = await vite.ssrLoadModule("/src/pages/__tests__/_stubs/AppContext.jsx"));
   ({ erroDoEndereco, ENDERECO_VAZIO } = await vite.ssrLoadModule("/src/lib/pedidos.js"));
-  OfertasProgramadas = (await vite.ssrLoadModule("/src/pages/OfertasProgramadas.jsx")).default;
+  MinhaCarteira = (await vite.ssrLoadModule("/src/pages/MinhaCarteira.jsx")).default;
 });
 after(async () => { if (vite) await vite.close(); });
 
 const A = "0xAbC1230000000000000000000000000000004567";
-const EDICAO_PROG = { "PROG-7": { id: "PROG-7", tipo: "programado", status: "aberto", termino_em: "2026-12-31T00:00:00.000Z" } };
+const AUTH = "AUTHCTX-106g";
 const ctx = (extra = {}) => ({
-  isConnected: true, address: A, edicoes: EDICAO_PROG, user: { email: { address: "a@b.c" } },
+  isConnected: true, abrirModal: () => {}, address: A, edicoes: {},
+  user: { email: { address: "a@b.c" } },
   refetchSaldo: () => {}, saldoRsCentavos: 1234, saldoRsStatus: "ok", refetchSaldoRs: () => {},
-  setModalidade: () => {}, privyWallet: null, authToken: "AUTHCTX-106g", userLabel: "Teste",
+  setModalidade: () => {}, privyWallet: null, authToken: AUTH, userLabel: "Teste",
+  saldoSenhas: 0, saldoSenhasStatus: "ok", desconectar: () => {},
   ...extra,
 });
 
+// `ler-pontos`: por omissão, 50 pontos de CARTÃO ⇒ o servidor diz que se pode resgatar.
 const LEITURA = (extra = {}) => ({
   ok: true, pontos: 50, pontosCartao: 50, bonusPalpite: 0, pontosParaCartao: 50, podeResgatarCartao: true,
   historico: [{ data: "2026-10-04T10:00:00.000Z", tipo: "compra", pontos: 1, ref: "k1" }],
   palpites: [], ...extra,
 });
+const ECO = { status: 200, json: { ok: true, saldo: 5, historico: [], centavosPorEcoQuildo: 100 } };
 
 const MORADA = {
   nome: "Maria Quildo", cpf: "11144477735", cep: "69027010", logradouro: "Rua das Flores",
@@ -85,10 +98,13 @@ const texto = (n) => n == null || typeof n === "boolean" ? ""
   : n.props ? texto(n.props.children) : "";
 const semTags = (h) => h.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
 
+const ALVO_PONTOS = /\/\.netlify\/functions\/ler-pontos$/;
+const ALVO_ECO = /\/\.netlify\/functions\/ler-eco-quildo$/;
+
 async function montarEcra(responder, contexto = ctx()) {
   definirContexto(contexto);
-  const dup = duploDeFetch(responder ?? (() => ({ status: 200, json: LEITURA() })));
-  const ctrl = montar(OfertasProgramadas, []);
+  const dup = duploDeFetch(responder ?? ((url) => (ALVO_PONTOS.test(url) ? { status: 200, json: LEITURA() } : ALVO_ECO.test(url) ? ECO : { status: 404, json: {} })));
+  const ctrl = montar(MinhaCarteira, []);
   await ctrl.assentar();
   const nos = () => arvore(ctrl.resultado());
   return {
@@ -108,33 +124,42 @@ async function montarEcra(responder, contexto = ctx()) {
   };
 }
 
-const responderResgate = (resposta) => (url) => url.includes("resgatar-cartao")
-  ? resposta
-  : { status: 200, json: LEITURA() };
+const respond = (pontos, resgate) => (url) => {
+  if (ALVO_PONTOS.test(url)) return { status: 200, json: LEITURA(typeof pontos === "function" ? pontos() : pontos) };
+  if (ALVO_ECO.test(url)) return ECO;
+  if (url.includes("resgatar-cartao")) return resgate;
+  return { status: 404, json: {} };
+};
 
-// ═══ BOTÃO ═══════════════════════════════════════════════════════════════════════════════════════
-test("RENDER · com 50 pontos de CARTÃO o botão «Resgatar cartão» está ACTIVO", async () => {
-  const c = await montarEcra();
+// ═══ BOTÃO (agora na CARTEIRA) ═══════════════════════════════════════════════════════════════════
+test("RENDER · na Carteira, com 50 pontos de CARTÃO o botão «Resgatar cartão» está ACTIVO", async () => {
+  const c = await montarEcra(respond(null, { status: 201, json: {} }));
   try {
     const b = c.botao("Resgatar cartão");
-    assert.ok(b, "faltou o botão de resgate");
+    assert.ok(b, "faltou o botão de resgate na Carteira");
     assert.notEqual(b.props.disabled, true, "com 50 pontos o botão tem de estar ACTIVO (UTAC106g)");
     assert.equal(typeof b.props.onClick, "function", "o botão tem de abrir o balão");
+    // o botão é o do resgate (âncora estável) e diz o que é, por extenso
+    assert.equal(b.props["data-acao"], "resgatar-cartao");
+    assert.match(c.texto(), /Resgatar cartão colecionável/);
   } finally { c.dup.restaurar(); }
 });
 
-test("RENDER · com 49 pontos NÃO há botão activo (mostra a meta)", async () => {
-  const c = await montarEcra(() => ({ status: 200, json: LEITURA({ pontos: 49, pontosCartao: 49, podeResgatarCartao: false }) }));
+test("RENDER · na Carteira, com 49 pontos o botão NÃO existe (nem desactivado)", async () => {
+  const c = await montarEcra(respond({ pontos: 49, pontosCartao: 49, podeResgatarCartao: false }, { status: 201, json: {} }));
   try {
     const t = c.texto();
     assert.doesNotMatch(t, /Resgatar cartão/, "não pode haver resgate antes dos 50 pontos de cartão");
-    assert.match(t, /Chegue a 50 pontos para resgatar/);
+    assert.doesNotMatch(c.html(), /data-acao="resgatar-cartao"/);
+    // e a barra continua a dizer em que ponto está (a informação não se perdeu com o botão)
+    assert.match(t, /49 \/ 50/);
+    assert.match(c.html(), /aria-valuenow="49"/);
   } finally { c.dup.restaurar(); }
 });
 
 // ═══ BALÃO ═══════════════════════════════════════════════════════════════════════════════════════
 test("CLIQUE · «Resgatar cartão» abre o balão com o formulário de morada", async () => {
-  const c = await montarEcra();
+  const c = await montarEcra(respond(null, { status: 201, json: {} }));
   try {
     assert.equal(c.balao().props.aberto, false, "o balão não pode estar aberto à partida");
     await c.clicar("Resgatar cartão");
@@ -142,7 +167,7 @@ test("CLIQUE · «Resgatar cartão» abre o balão com o formulário de morada",
     assert.equal(b.props.aberto, true, "o botão tem de abrir o balão");
     const t = c.texto();
     assert.match(t, /Resgatar cartão colecionável/);
-    assert.match(t, /Você vai trocar 50 pontos pelo cartão da Família Quildo/);
+    assert.match(t, /Com a Família Quildo|Você vai trocar 50 pontos|Confirme os dados de entrega/);
     const h = c.html();
     for (const id of ["rg-nome", "rg-cpf", "rg-cep", "rg-cidade", "rg-uf", "rg-logradouro", "rg-numero", "rg-bairro"]) {
       assert.match(h, new RegExp(`id="${id}"`), `faltou o campo ${id} no formulário`);
@@ -151,7 +176,7 @@ test("CLIQUE · «Resgatar cartão» abre o balão com o formulário de morada",
 });
 
 test("CLIQUE · a confirmação do balão faz POST /resgatar-cartao com Bearer e fecha o balão", async () => {
-  const c = await montarEcra(responderResgate({ status: 201, json: { ok: true, idempotent: false, resgateId: 7, status: "pendente", pontos: 0 } }));
+  const c = await montarEcra(respond(null, { status: 201, json: { ok: true, idempotent: false, resgateId: 7, status: "pendente", pontos: 0 } }));
   try {
     await c.clicar("Resgatar cartão");
     await c.balao().props.onConfirmar(MORADA);
@@ -161,7 +186,7 @@ test("CLIQUE · a confirmação do balão faz POST /resgatar-cartao com Bearer e
     assert.ok(post, "não houve POST para resgatar-cartao");
     // ⚠️ UTAC106j-fix: o token vem do `authToken` (user-session) do AppContext — valor DISTINTO do
     // duplo de `getAuthToken` (`_stubs-106e`), para este teste MORDER se o hook voltar à Via A.
-    assert.equal(post.headers.Authorization, "Bearer AUTHCTX-106g");
+    assert.equal(post.headers.Authorization, `Bearer ${AUTH}`);
     assert.match(post.url, /\/\.netlify\/functions\/resgatar-cartao$/);
     assert.equal(c.balao().props.aberto, false, "em sucesso o balão fecha");
     assert.match(c.texto(), /Pedido de resgate criado/);
@@ -169,7 +194,7 @@ test("CLIQUE · a confirmação do balão faz POST /resgatar-cartao com Bearer e
 });
 
 test("CLIQUE · 402 do servidor mostra a mensagem e mantém o balão aberto", async () => {
-  const c = await montarEcra(responderResgate({ status: 402, json: { ok: false, error: { code: "pontos_insuficientes", message: "x" } } }));
+  const c = await montarEcra(respond(null, { status: 402, json: { ok: false, error: { code: "pontos_insuficientes", message: "x" } } }));
   try {
     await c.clicar("Resgatar cartão");
     await c.balao().props.onConfirmar(MORADA);

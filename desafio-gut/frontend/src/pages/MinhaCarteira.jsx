@@ -13,6 +13,11 @@ import Toast from "../widgets/toast/Toast.jsx";
 import ComprarFichasModal from "../components/ComprarFichasModal.jsx";
 import PainelIndicacao from "../components/PainelIndicacao.jsx";
 import BotaoLoginPrincipal from "../components/BotaoLoginPrincipal.jsx";
+// UTAC110g.1 (R18-110g.1-2 / decisão D-110g-4) — o RESGATE do cartão colecionável mudou de casa: o
+// botão saiu do vidro do cartão das Ofertas Programadas e passou a viver AQUI. Reutiliza o hook e o
+// balão já existentes do UTAC106g — nenhum dos dois foi alterado por este UTAC.
+import { useResgatarCartao } from "../hooks/useResgatarCartao.js";
+import ResgatarCartaoModal, { CARTAO_ID } from "../components/ResgatarCartaoModal.jsx";
 
 const VALOR_POR_SENHA_BRL = 2;
 // UTAC106c — Passe Desafio: R$ 2,00 (NORTE Via B). Aqui vive só o PREÇO e o balão de
@@ -98,9 +103,28 @@ export default function MinhaCarteira() {
   // UTAC110d-front (Frente A) — dois saldos SEPARADOS: pontos de CARTÃO (`pontosCartao`, só
   // compras — R1 do UTAC106f; é o mesmo número da barra das Ofertas Programadas) e créditos de lance.
   const {
-    pontosCartao, pontosParaCartao, creditosLance, missoesHoje,
+    pontosCartao, pontosParaCartao, creditosLance, missoesHoje, podeResgatarCartao,
     loading: pontosCarregando, erro: pontosErro, refetch: refetchPontos,
   } = usePontos();
+  // UTAC110g.1 (R18-110g.1-2) — resgate do cartão. O `podeResgatarCartao` acima é a verdade do
+  // SERVIDOR e vale `pontosCartao >= 50` (só pontos de COMPRA): é ele que decide se o botão existe.
+  // ⚠️ NÃO se usa `pontos` (o total inclui o bónus do palpite — `pontos` não decide nada, R1/106f).
+  const [resgateAberto, setResgateAberto] = useState(false);
+  const [toastResgate, setToastResgate] = useState(null);
+  const { resgatar, loading: aResgatar, erro: erroResgate } = useResgatarCartao();
+
+  /** Confirma o resgate no servidor; em sucesso fecha o balão, avisa e relê os pontos. */
+  async function confirmarResgate(morada) {
+    const r = await resgatar({ cartaoId: CARTAO_ID, morada });
+    if (r?.ok) {
+      setResgateAberto(false);
+      setToastResgate({
+        variant: "success",
+        message: r.idempotent ? "Pedido de resgate já registado" : "Pedido de resgate criado",
+      });
+      try { await refetchPontos?.(); } catch { /* releitura é best-effort */ }
+    }
+  }
   // UTAC110e (Frente D) — 3.º saldo: ECOQUILDO (moeda social, Arts. 47º-51º). Só leitura: NÃO se
   // compra, NÃO se converte em dinheiro, NÃO se transfere (Art. 49º); usa-se só no site oficial.
   const {
@@ -393,6 +417,36 @@ export default function MinhaCarteira() {
                 )}
               </section>
 
+              {/* UTAC110g.1 (R18-110g.1-2 / decisão D-110g-4) — o botão «Resgatar cartão» MUDOU DE
+                  CASA: saiu do vidro do cartão das Ofertas Programadas e passa a viver aqui, a
+                  seguir aos 3 saldos e às «Missões de hoje», antes dos botões de compra.
+                  ⚠️ COR: o botão das Ofertas era DOURADO SÓLIDO, mas na Carteira isso violaria a
+                  R18-109h.2/109h.3 («uma só cor de destaque»; nenhum CTA cheio) — regra do operador
+                  para ESTE ecrã, guardada pelo teste `utac109h2-carteira` §8. Aqui usa-se o MESMO
+                  padrão tingido dos outros quatro botões da Carteira (PIX, Passe, MLC, OP):
+                  o AMARELO único `#f5a623` fica no contorno e no texto.
+                  Aparece SÓ quando o SERVIDOR diz que pode (`podeResgatarCartao` = pontosCartao ≥ 50,
+                  pontos de COMPRA). Sem ele, não há botão — nem desactivado: a Carteira é um ecrã de
+                  saldos e o «faltam N pontos» diz-se na barra de progresso, que já existe acima. */}
+              {podeResgatarCartao && (
+                <button
+                  type="button"
+                  data-acao="resgatar-cartao"
+                  aria-label="Resgatar cartão"
+                  onClick={() => setResgateAberto(true)}
+                  style={{
+                    ...botaoPrimario,
+                    marginBottom: "0.6rem",
+                    background: "rgba(245,166,35,0.14)",
+                    border: "1px solid rgba(245,166,35,0.4)",
+                    color: COR.gold,
+                    boxShadow: "none",
+                  }}
+                >
+                  🎁 Resgatar cartão colecionável
+                </button>
+              )}
+
               {/* UTAC107b — ordem decidida pelo operador (decisão 4):
                   Depositar PIX → Comprar Passe Desafio → Menor Lance Único → Ofertas Programadas.
                   R18-E: a frase de apoio do saldo saiu (texto técnico) e o botão «Trocar R$ 2,00
@@ -581,6 +635,26 @@ export default function MinhaCarteira() {
           try { refetchSaldo?.();   } catch {}
         }}
       />
+
+      {/* UTAC110g.1 — BALÃO do resgate do cartão (o MESMO `ResgatarCartaoModal` do UTAC106g, agora
+          aberto a partir da Carteira). A lógica de rede vive no `useResgatarCartao`. */}
+      <ResgatarCartaoModal
+        aberto={resgateAberto}
+        loading={aResgatar}
+        erro={erroResgate}
+        onCancelar={() => setResgateAberto(false)}
+        onConfirmar={confirmarResgate}
+      />
+
+      {/* UTAC110g.1 — feedback do resgate (o mesmo `Toast` do repo). */}
+      {toastResgate && (
+        <Toast
+          id={1}
+          variant={toastResgate.variant}
+          message={toastResgate.message}
+          onDismiss={() => setToastResgate(null)}
+        />
+      )}
     </div>
   );
 }

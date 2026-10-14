@@ -154,26 +154,33 @@ test("RENDER · o histórico mostra os movimentos do titular", async () => {
   } finally { c.dup.restaurar(); }
 });
 
-// ═══ RESGATE (visível a ≥50; lógica é do 106g) ══════════════════════════════════════════════════
-test("RENDER · com 49 pontos NÃO há botão «Resgatar» (mostra a meta)", async () => {
+// ═══ RESGATE — SAIU DESTE ECRÃ no UTAC110g.1 (R18-110g.1-2 / decisão D-110g-4) ═══════════════════
+// ⚠️ O botão «Resgatar cartão» vivia aqui (UTAC106g). A decisão do operador moveu-o para a CARTEIRA.
+// As guardas abaixo MANTÊM-SE e continuam a MORDER — mudou o que afirmam: este ecrã deixou de ter
+// QUALQUER botão de resgate, com ou sem os 50 pontos. A outra metade da verdade (o botão EXISTE, a
+// ≥50, e abre o balão) vive em `utac106g-resgate.test.mjs` (agora montado sobre a Carteira) e no
+// `utac110g1-carteira-resgate.test.mjs`.
+test("RENDER · com 49 pontos NÃO há botão «Resgatar» e a barra diz o que falta", async () => {
   const c = await montarEcra(() => ({ status: 200, json: LEITURA({ pontos: 49, pontosCartao: 49 }) }));
   try {
     const t = c.texto();
     assert.doesNotMatch(t, /Resgatar cartão/, "o resgate não pode aparecer antes dos 50 pontos");
-    assert.match(t, /Chegue a 50 pontos para resgatar/);
+    assert.doesNotMatch(c.html(), /data-acao="resgatar-cartao"/,
+      "UTAC110g.1: este ecrã deixou de ter botão de resgate (mudou para a Carteira)");
+    assert.match(t, /faltam 1/, "a barra continua a dizer o que falta para o cartão");
   } finally { c.dup.restaurar(); }
 });
 
-test("RENDER · com 50 pontos o botão «Resgatar cartão» aparece ACTIVO (o 106g chegou)", async () => {
-  // UTAC106g: a guarda original do 106f exigia `disabled` («o resgate só abre no UTAC106g»). O 106g
-  // chegou ⇒ a INVARIANTE mudou: visível a ≥50 e OPERÁVEL (abre o balão de morada). Actualizada
-  // mantendo o espírito da guarda (o resgate só aparece a quem tem os 50 pontos de CARTÃO).
+test("RENDER · com 50 pontos o resgate CONTINUA a NÃO estar aqui (mudou para a Carteira)", async () => {
+  // UTAC106g punha aqui o botão ACTIVO a ≥50. O UTAC110g.1 tirou-o deste ecrã — nem activo nem
+  // desactivado. A guarda INVERTEU-SE, mas não desapareceu, e continua a morder: se alguém voltar a
+  // pôr o botão nas Ofertas, este teste cai.
   const c = await montarEcra(() => ({ status: 200, json: LEITURA({ pontos: 50, pontosCartao: 50, podeResgatarCartao: true }) }));
   try {
-    assert.match(c.texto(), /Resgatar cartão/);
-    const b = c.botao("Resgatar cartão");
-    assert.notEqual(b.props.disabled, true, "com 50 pontos o resgate tem de estar activo (UTAC106g)");
-    assert.equal(typeof b.props.onClick, "function", "o botão tem de abrir o balão de resgate");
+    assert.doesNotMatch(c.texto(), /Resgatar cartão/);
+    assert.doesNotMatch(c.html(), /data-acao="resgatar-cartao"/);
+    assert.equal(c.botao("Resgatar cartão"), undefined, "há um botão de resgate de volta nas Ofertas");
+    assert.match(c.texto(), /meta atingida/, "o ecrã continua a dizer que a meta foi atingida");
   } finally { c.dup.restaurar(); }
 });
 
@@ -300,15 +307,20 @@ test("RENDER · palpite apurado como PERDEDOR → «Não acertou» (ninguém gan
 });
 
 // ═══ INVARIANTE CRÍTICA ═════════════════════════════════════════════════════════════════════════
+// ⚠️ UTAC110g.1: esta invariante tinha aqui a sua metade «o botão de resgate continua a aparecer».
+// Como o botão mudou para a Carteira, essa metade vive no `utac110g1-carteira-resgate.test.mjs`
+// (com o MESMO cenário: 50 pontos de compra + palpite perdedor ⇒ o botão existe). O que se prova
+// AQUI continua a ser o essencial e no sítio certo: o PALPITE não move o CARTÃO.
 test("INVARIANTE · o cartão NUNCA depende do palpite (Google Play: jogo de habilidade)", async () => {
-  // 50 pontos de COMPRA, com um palpite apurado como PERDEDOR: o resgate tem de continuar a
-  // aparecer. Se o cartão dependesse do palpite, este teste cairia.
   const c = await montarEcra(() => ({ status: 200, json: LEITURA({
     pontos: 50, pontosCartao: 50, podeResgatarCartao: true,
     palpites: [{ edicaoId: "PROG-7", valor: 5, apurado: true, resultado: "perdeu" }],
   }) }));
   try {
-    assert.match(c.texto(), /Resgatar cartão/, "o cartão é só por pontos de compra — o palpite é bónus");
+    const t = c.texto();
+    assert.match(t, /50 \/ 50 pontos/, "o cartão é só por pontos de compra — o palpite é bónus");
+    assert.match(t, /meta atingida/, "com 50 de compra a meta está atingida, apesar do palpite perdido");
+    assert.match(c.html(), /aria-valuenow="50"/, "a barra reflecte os pontos de compra");
   } finally { c.dup.restaurar(); }
 });
 

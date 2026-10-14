@@ -12,9 +12,10 @@
 //      CSS, para não haver <img> quebrada);
 //   3. histórico de movimentos (compras de Passe, bónus de palpite);
 //   4. PALPITE (bónus +2 pontos) — só quando há edição Programada a decorrer;
-//   5. botão «Resgatar cartão»: VISÍVEL e ACTIVO a ≥50 pontos de CARTÃO — abre o balão de morada
-//      (`ResgatarCartaoModal`) que chama `POST /resgatar-cartao` (UTAC106g: debita os 50 pontos e
-//      cria o pedido em `public.resgates`).
+//   5. ⚠️ UTAC110g.1 (R18-110g.1-2 / decisão D-110g-4): o botão «Resgatar cartão» que aqui vivia
+//      SAIU deste ecrã e passou a viver na CARTEIRA (`MinhaCarteira.jsx`). O balão de morada
+//      (`ResgatarCartaoModal`) e o `POST /resgatar-cartao` continuam a existir — só mudaram de
+//      porta de entrada. Este ecrã ficou com os pontos, a barra, o cartão, o palpite e o histórico.
 //
 // ⚠️ O palpite é BÓNUS — NÃO decide o cartão (requisito crítico da Google Play: jogo de habilidade).
 //    O cartão é só por PONTOS DE COMPRA. Nenhuma linha deste ecrã faz depender o cartão do palpite.
@@ -32,8 +33,6 @@ import { usePalpite, usePalpitesDaEdicao } from "../hooks/usePalpite.js";
 // passou a mostrar o vidro «🎫 Programada» com a zona de palpite dentro. Uma só verdade para as
 // duas telas: `estaAberta` / `edicoesProgramadasDe` / `estadoPalpite` / `PILULA`.
 import { estaAberta, edicoesProgramadasDe, estadoPalpite, PILULA } from "../lib/palpite.js";
-import { useResgatarCartao } from "../hooks/useResgatarCartao.js";
-import ResgatarCartaoModal, { CARTAO_ID } from "../components/ResgatarCartaoModal.jsx";
 // UTAC108e.1 — o MESMO cartão de edição do «Menor Lance Único» (mockup v2, variante A «Família»):
 // só a acção muda (aqui, o palpite).
 import CartaoEdicao, { ACOES } from "../components/CartaoEdicao.jsx";
@@ -71,7 +70,7 @@ export default function OfertasProgramadas() {
   const { edicoes, address, isConnected, userLabel, ready, abrirModal } = useAppContext();
   // ⚠️ R1 (UTAC106f, decisão do operador = opção A): o CARTÃO conta SÓ pontos de COMPRA
   // (`pontosCartao`); `pontos` é o TOTAL e `bonusPalpite` é a parte que NÃO conta (prestígio).
-  const { pontos, pontosCartao, bonusPalpite, historico, palpites, pontosParaCartao, podeResgatarCartao, loading, erro, refetch: refetchPontos } = usePontos();
+  const { pontos, pontosCartao, bonusPalpite, historico, palpites, pontosParaCartao, loading, erro } = usePontos();
 
   const programadas = useMemo(() => edicoesProgramadasDe(edicoes), [edicoes]);
   // A tabela do fim é da 1.ª edição da lista (a aberta, quando há).
@@ -86,22 +85,7 @@ export default function OfertasProgramadas() {
   const [cartaoEmErro, setCartaoEmErro] = useState(null);
   const palpiteDe = (id) => registados[id]
     ?? (Array.isArray(palpites) ? palpites.find((p) => p?.edicaoId === id) ?? null : null);
-  // UTAC106g — resgate do cartão colecionável.
-  const { resgatar, loading: aResgatar, erro: erroResgate } = useResgatarCartao();
-
   const [toast, setToast] = useState(null);
-  // UTAC106g — estado do balão de resgate.
-  const [resgateAberto, setResgateAberto] = useState(false);
-
-  /** Confirma o resgate no servidor; em sucesso fecha o balão, avisa e relê os pontos. */
-  async function confirmarResgate(morada) {
-    const r = await resgatar({ cartaoId: CARTAO_ID, morada });
-    if (r?.ok) {
-      setResgateAberto(false);
-      setToast({ variant: "success", message: r.idempotent ? "Pedido de resgate já registado" : "Pedido de resgate criado" });
-      try { await refetchPontos?.(); } catch { /* refetch é best-effort */ }
-    }
-  }
 
   const progresso = Math.min(100, Math.round((pontosCartao / Math.max(1, pontosParaCartao)) * 100));
   const semPontos = !loading && !erro && pontos === 0;
@@ -315,8 +299,9 @@ export default function OfertasProgramadas() {
           </GlassCard>
         )}
 
-        {/* 3 — CARTÃO (colecionável) + o RESGATE por baixo dele (UTAC108e.1: o botão mudou do vidro dos
-            pontos para o vidro do cartão — mockup v2 A). UTAC106g: ACTIVO a ≥50 pontos de CARTÃO. */}
+        {/* 3 — CARTÃO (colecionável). UTAC108e.1 pôs aqui o botão de resgate; UTAC110g.1 (R18-110g.1-2,
+            decisão D-110g-4) TIRA-O daqui e leva-o para a Carteira — este vidro passou a ser só a
+            apresentação do cartão (nome + descrição). */}
         {!loading && !erro && (
           <GlassCard as="section" aria-label="Cartão" style={{ padding: isMobile ? "1rem" : "1.25rem" }}>
             <div style={cartao}>
@@ -324,26 +309,11 @@ export default function OfertasProgramadas() {
               <h3 style={{ margin: "0.5rem 0 0.25rem", color: COR.gold, fontWeight: 800, fontSize: "1rem" }}>{CARTAO_NOME}</h3>
               <p style={{ margin: 0, color: COR.muted, fontSize: "0.82rem", lineHeight: 1.55 }}>{CARTAO_DESCRICAO}</p>
             </div>
-            {podeResgatarCartao ? (
-              <>
-                <button
-                  type="button" onClick={() => setResgateAberto(true)} aria-label="Resgatar cartão"
-                  style={{ marginTop: "0.9rem", width: "100%", minHeight: "48px", padding: "0.75rem 1rem", borderRadius: "12px", cursor: "pointer", border: `1px solid ${COR.gold}`, background: COR.gold, color: "#0a0f1a", fontWeight: 800, fontSize: "0.9rem" }}
-                >
-                  🎁 Resgatar cartão
-                </button>
-                <p style={{ margin: "0.4rem 0 0", color: COR.muted, fontSize: "0.74rem", textAlign: "center" }}>
-                  Você vai trocar {pontosParaCartao} pontos pelo cartão da Família Quildo.
-                </p>
-              </>
-            ) : (
-              <button
-                type="button" disabled aria-label="Resgatar cartão indisponível"
-                style={{ marginTop: "0.9rem", width: "100%", minHeight: "48px", padding: "0.75rem 1rem", borderRadius: "12px", cursor: "not-allowed", border: "1px solid rgba(107,125,184,0.35)", background: "transparent", color: COR.muted, fontWeight: 700, fontSize: "0.88rem" }}
-              >
-                Chegue a {pontosParaCartao} pontos para resgatar
-              </button>
-            )}
+            {/* UTAC110g.1 (R18-110g.1-2 / decisão D-110g-4) — o par de botões de RESGATE que vivia
+                aqui (activo a ≥50 e o desactivado «Chegue a 50 pontos para resgatar») SAIU deste
+                ecrã: o resgate passou a viver na CARTEIRA (`MinhaCarteira.jsx`), a seguir aos saldos.
+                Este ecrã continua a mostrar os pontos, a barra, o cartão, o palpite e o histórico —
+                e a barra acima continua a dizer «faltam N pontos», que era o que faltava saber. */}
           </GlassCard>
         )}
 
@@ -380,16 +350,6 @@ export default function OfertasProgramadas() {
           <TabelaPalpites edicao={edicaoTabela} tabela={tabelaPalpites} isMobile={isMobile} />
         )}
       </main>
-      {/* UTAC106g — BALÃO de resgate do cartão (componente próprio; a lógica de rede vive no
-          `useResgatarCartao`). «Confirmar resgate» debita os 50 pontos e cria o pedido no servidor. */}
-      <ResgatarCartaoModal
-        aberto={resgateAberto}
-        loading={aResgatar}
-        erro={erroResgate}
-        onCancelar={() => setResgateAberto(false)}
-        onConfirmar={confirmarResgate}
-      />
-
       {toast && (
         <Toast id={1} variant={toast.variant} message={toast.message} onDismiss={() => setToast(null)} />
       )}

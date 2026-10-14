@@ -8,11 +8,22 @@
 //   `morada` = o MESMO contrato de `_lib/pedidos.mjs` (`validarMorada`): nome, cpf, cep,
 //   logradouro, numero, complemento?, bairro, cidade, uf, telefone?
 //
+// ⚠️ UTAC110g.1 (FRENTE A, R18-110g.1-1 = decisão D-110g-3) — a **Nota Técnica de Envio** deixou de
+// ser uma menção em prosa e passou a ser o DOCUMENTO ESTRUTURADO do template fixo
+// (`_lib/nota-tecnica.mjs`), montado com produto + destinatário + remetente + nº do pedido + data.
+// Continua a ser TEXTO no e-mail (sem PDF, como a R18-110g.1-1 decidiu). As linhas de PRAZO e de
+// quem paga o envio (R18-110g-2/3) e a frase do comprovante (correcção B-110g-1) MANTÊM-SE: a
+// Nota Técnica é ACRESCENTADA no lugar das duas linhas de prosa que só a anunciavam.
+//
 // ⚠️ UTAC110g (FRENTE C) — `email?` (OPCIONAL, decisão D-110g-1 declarada ao operador): o único e-mail
 // que o sistema conhece é o do LOGIN (Privy), que vive no CLIENTE — o JWT do titular só traz
 // `{ endereco, tipo }` e `validarMorada`/`public.resgates` não têm e-mail. O cliente envia-o, o servidor
 // usa-o SÓ PARA ENVIAR a confirmação e **NÃO o persiste** (minimização — o espírito da R18-110g-4,
 // «evita armazenar dados sem uso»). Sem `email` no corpo, o resgate segue exactamente como antes.
+// ⚠️ UTAC110g.1: a R18-110g.1-3 pede «o e-mail do Privy é a fonte de verdade». MEDIDO: o token de
+// sessão NÃO carrega e-mail (EIP-191 de carteira) e não há verificação de token Privy no backend —
+// a origem é, e só pode ser, o objecto Privy do CLIENTE, que o frontend já envia neste campo. Ver
+// `_logs/UTAC110g.1_SEG-1_MEDICAO.md` §8 (desvio declarado).
 //
 // 201 { ok, idempotent:false, resgateId, status:"pendente", pontos }   resgate criado, 50 pontos debitados
 // 200 { ok, idempotent:true,  resgateId, status }                      já criado (mesma chave; nada debitado)
@@ -35,6 +46,7 @@ import { sistemaPausado, lerEstadoSistema } from "./_lib/system-state.mjs";
 import { validarMorada } from "./_lib/pedidos.mjs";
 import { registarResgate, PONTOS_POR_CARTAO } from "./_lib/passe-pontos.mjs";
 import { adicionarNotificacao } from "./_lib/notificacoes-usuario.mjs";
+import { gerarNotaTecnica, PRODUTO_CARTAO } from "./_lib/nota-tecnica.mjs";
 
 const IDEMPOTENCY_RE = /^[A-Za-z0-9._:-]{8,200}$/;
 
@@ -49,11 +61,26 @@ export const MSG_NOTIFICACAO_RESGATE =
 
 /**
  * Texto do e-mail de confirmação + a Nota Técnica do resgate (C1-email / C2). **PURA** — testável sem rede.
+ *
+ * UTAC110g.1 (FRENTE A) — a partir daqui o e-mail carrega a **Nota Técnica de Envio ESTRUTURADA**
+ * (`gerarNotaTecnica`): produto, destinatário (nome + morada), remetente (Associação + CNPJ), nº do
+ * pedido e data. O que já estava decidido NÃO se perdeu: prazo de entrega (R18-110g-3), quem paga o
+ * envio (R18-110g-2), «guarde este e-mail» (B-110g-1) e a nota de que o DESAFIOGUT não emite
+ * documento fiscal deste resgate.
+ *
+ * @param {{nome?:string, resgateId?:string|number, pontos?:number, prazoDias?:number,
+ *          morada?:object|null, produto?:string, criadoEm?:string|number|Date|null}} [opts]
  * @returns {{assunto:string, mensagem:string}}
  */
-export function montarEmailResgate({ nome, resgateId, pontos = PONTOS_POR_CARTAO, prazoDias = PRAZO_ENTREGA_DIAS } = {}) {
+export function montarEmailResgate({
+  nome, resgateId, pontos = PONTOS_POR_CARTAO, prazoDias = PRAZO_ENTREGA_DIAS,
+  morada = null, produto = PRODUTO_CARTAO, criadoEm = null,
+} = {}) {
   const quem = typeof nome === "string" && nome.trim() ? nome.trim().split(/\s+/)[0] : "olá";
   const id = resgateId == null ? "—" : String(resgateId);
+  const notaTecnica = gerarNotaTecnica({
+    id: resgateId, criadoEm, descricaoProduto: produto, nome, morada,
+  });
   return {
     assunto: `Cartão colecionável resgatado — chega em ${prazoDias} dias`,
     mensagem: [
@@ -71,8 +98,13 @@ export function montarEmailResgate({ nome, resgateId, pontos = PONTOS_POR_CARTAO
       // trocada por uma afirmação VERDADEIRA (este e-mail É o comprovante) e há teste que a proíbe de voltar.
       "· Guarde este e-mail: é o comprovante do seu pedido.",
       "",
-      `Nota Técnica do resgate nº ${id}`,
-      `${PAGADOR_ENVIO} é a patrocinadora do cartão e emite a Nota Técnica da entrega.`,
+      // ⚠️ UTAC110g.1 — a linha «Segue a Nota Técnica de envio:» mantém a expressão consagrada
+      // («Nota Técnica») e anuncia o documento ESTRUTURADO que vem abaixo (o template fixo da
+      // R18-110g.1-1). As duas linhas de prosa que antes só MENCIONAVAM a Nota Técnica saíram.
+      "Segue a Nota Técnica de envio:",
+      "",
+      notaTecnica,
+      "",
       "O DESAFIOGUT não emite documento fiscal deste resgate: os pontos de fidelidade não são",
       "mercadoria e o cartão é entregue pela patrocinadora.",
     ].join("\n"),
@@ -180,7 +212,16 @@ export default async (req) => {
     if (email) {
       try {
         const { enviarEmail } = await import("./_lib/email.mjs");
-        const texto = montarEmailResgate({ nome: morada?.nome, resgateId: r.resgate?.id });
+        // UTAC110g.1 (FRENTE A) — a morada VALIDADA e a data de criação do pedido alimentam a Nota
+        // Técnica de Envio. O `criado_em` vem da linha gravada (`public.resgates`); sem ela, usa-se
+        // agora (o documento nunca sai sem data).
+        const texto = montarEmailResgate({
+          nome: morada?.nome,
+          resgateId: r.resgate?.id,
+          morada,
+          produto: PRODUTO_CARTAO,
+          criadoEm: r.resgate?.criado_em ?? new Date(),
+        });
         await enviarEmail({ para: email, assunto: texto.assunto, mensagem: texto.mensagem });
       } catch { /* fail-soft: o resgate já está criado e debitado */ }
     }
