@@ -203,7 +203,7 @@ test("CLIQUE · 402 do servidor mostra a mensagem e mantém o balão aberto", as
     await c.clicar("Resgatar cartão");
     await c.balao().props.onConfirmar(MORADA);
     await c.ctrl.assentar();
-    assert.match(c.texto(), /Você precisa de 50 pontos de compra para resgatar o cartão/);
+    assert.match(c.texto(), /Você precisa de 50 pontos de fidelidade para resgatar o cartão/);
     assert.equal(c.balao().props.aberto, true, "no erro o balão NÃO fecha");
   } finally { c.dup.restaurar(); }
 });

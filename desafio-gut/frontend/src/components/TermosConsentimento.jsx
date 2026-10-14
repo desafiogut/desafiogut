@@ -4,14 +4,18 @@ import { Modal } from "@/components/ui";
 /**
  * TermosConsentimento — Gate de compliance LGPD · DesafioGUT
  *
- * Exibe o regulamento oficial e bloqueia participação até aceitação total.
- * Artigos numerados em arábico conforme regulamento RTD Manaus/AM (1º mai/2026).
+ * Exibe o resumo do Regulamento Oficial e bloqueia participação até aceitação total.
  * MC23.3 — overlay migrado para <Modal> (spring entry + backdrop bg-black/60).
+ * UTAC110h.1 — o resumo passou do Regulamento v4 para o **Regulamento Oficial v5.0**
+ * (`docs/REGULAMENTO-v5.md`): só frases e números do v5, com o artigo citado. O texto integral
+ * vive em /regras-oficiais (rota pública, Boot.jsx), ligada daqui.
  */
 // MC88.31 — partilhados com Boot.jsx, que decide se o gate é mostrado.
 // Subir VERSAO_CONSENTIMENTO invalida os aceites anteriores de propósito.
+// UTAC110h.1 (R18-110h.1-B) — "2.0" (v4) -> "3.0" (v5): quem aceitou o v4 volta a ver o gate.
+// Tem de ser igual a VERSAO_GATE de netlify/functions/_lib/consentimento.mjs (há teste).
 export const CHAVE_CONSENTIMENTO  = "gut_consentimento";
-export const VERSAO_CONSENTIMENTO = "2.0";
+export const VERSAO_CONSENTIMENTO = "3.0";
 
 export default function TermosConsentimento({ onAceitar }) {
   const [lido,       setLido]       = useState(false);
@@ -65,7 +69,7 @@ export default function TermosConsentimento({ onAceitar }) {
           </div>
           <p style={estilos.subtitulo}>
             Leia e aceite o regulamento antes de participar. Vigência: a partir de{" "}
-            <strong style={{ color: "#f5a623" }}>5 de outubro de 2026</strong>.
+            <strong style={{ color: "#f5a623" }}>2 de novembro de 2026</strong>.
           </p>
         </div>
 
@@ -75,108 +79,86 @@ export default function TermosConsentimento({ onAceitar }) {
             é 100% visível (herança da correcção do MC99.5.1). Os 4 aceites ficam FORA daqui —
             continuam sempre visíveis e clicáveis, aberto ou fechado. */}
         <details style={estilos.regulamento}>
-          <summary style={estilos.botaoExpandir}>📖 Ler o regulamento completo</summary>
+          <summary style={estilos.botaoExpandir}>📖 Ler o resumo do regulamento</summary>
           <div style={estilos.scrollBox}>
-          <h3 style={estilos.secaoTitulo}>Regulamento Oficial — Resumo dos Artigos Principais</h3>
+          <h3 style={estilos.secaoTitulo}>Regulamento Oficial v5.0 — Resumo</h3>
 
+          {/* UTAC110h.1 — cada parágrafo é TEXTO do Regulamento Oficial v5.0 (docs/REGULAMENTO-v5.md),
+              com o artigo citado. Nada aqui é redacção nova: o teste citacoesRegulamento compara
+              cada bloco com o artigo do v5, palavra a palavra. */}
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 1</strong> — O DesafioGUT é uma atividade
-            comercial em formato de E-commerce através de Dropshipping, operada pelo Grupo União e
-            Trabalho (GUT), CNPJ 23.040.066/0001-00, contato (92) 98428-5774,
-            e-mail: contato@grupouniaoetrabalho.com.br.
+            <strong style={estilos.artLabel}>Art. 1º</strong> — O DesafioGUT é um programa de fidelidade
+            gamificado operado pela Associação Recreativa dos Nordestinos no Amazonas, nome fantasia Grupo
+            União e Trabalho (GUT), CNPJ nº 23.040.066/0001-00, com sede em Manaus/AM.
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 4</strong> — O aplicativo DesafioGUT será
-            implantado a partir do dia <strong>5 (cinco) de outubro de 2026</strong> por tempo
-            indeterminado, sob coordenação da diretoria do Grupo União e Trabalho.
+            <strong style={estilos.artLabel}>Art. 2º</strong> — O DesafioGUT funciona como plataforma de comércio
+            eletrónico por dropshipping, com duas modalidades distintas: I — Oferta Relâmpago: modalidade de
+            menor lance único, com duração entre minutos e horas; II — Oferta Programada: modalidade de
+            palpite, com duração entre dias e semanas.
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 5</strong> — O interessado na aquisição do
-            produto ou serviço oferecido deverá se cadastrar gratuitamente para poder participar do
+            <strong style={estilos.artLabel}>Art. 5º</strong> — Poderão participar do DesafioGUT pessoas
+            físicas e jurídicas, maiores de 18 (dezoito) anos, regularmente cadastradas no aplicativo.
+          </p>
+
+          <p style={estilos.artigo}>
+            <strong style={estilos.artLabel}>Art. 6º</strong> — O Passe Desafio é o produto digital adquirido
+            pelo utilizador, com preço fixo de{" "}
+            <strong style={{ color: "#f5a623" }}>R$ 2,00 (dois reais)</strong>, nas modalidades Passe
+            Relâmpago e Passe Programado.
+          </p>
+
+          <p style={estilos.artigo}>
+            <strong style={estilos.artLabel}>Art. 8º</strong> — Cada Passe Desafio adquirido concede ao
+            utilizador 10 (dez) pontos de fidelidade.
+          </p>
+
+          <p style={estilos.artigo}>
+            <strong style={estilos.artLabel}>Art. 9º</strong> — A cada 50 (cinquenta) pontos de fidelidade
+            acumulados, o utilizador poderá adquirir 1 (um) cartão colecionável físico da Família Quildo.
+          </p>
+
+          <p style={estilos.artigo}>
+            <strong style={estilos.artLabel}>Art. 14º</strong> — A Oferta Relâmpago é uma competição de
+            habilidade: vence o participante que apresentar o menor valor em pontos de lance que ninguém
+            mais escolheu{" "}
+            <strong style={{ color: "#f5a623" }}>(menor lance único)</strong>.
+          </p>
+
+          <p style={estilos.artigo}>
+            <strong style={estilos.artLabel}>Art. 27º</strong> — O participante regista o seu palpite (ex: "a
+            edição terá 148 lances"). Vence o palpite que ficar mais próximo do número real de lances apurado
+            pela Associação.
+          </p>
+
+          <p style={estilos.artigo}>
+            <strong style={estilos.artLabel}>Art. 47º</strong> — O ECOQUILDO é uma moeda social interna do
+            Grupo União e Trabalho, com lastro em reais à razão de 1 ECOQUILDO = R$ 1,00 (um real).
+          </p>
+
+          <p style={estilos.artigo}>
+            <strong style={estilos.artLabel}>Art. 49º</strong> — O ECOQUILDO não é convertível em dinheiro e
+            não é transferível a terceiros.
+          </p>
+
+          <p style={estilos.artigo}>
+            <strong style={estilos.artLabel}>Art. 65º</strong> — É vedada a participação de funcionários,
+            colaboradores, prestadores de serviços e familiares de qualquer empresa envolvida na operação do
             DesafioGUT.
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 6</strong> — O(a) cadastrado(a) deverá ser
-            obrigatoriamente maior de idade e receberá um código único, intransferível e exclusivo de
-            acesso para realizar lances no aplicativo DesafioGUT.
+            <strong style={estilos.artLabel}>Art. 66º</strong> — Os participantes cedem à coordenação do
+            DesafioGUT, de forma gratuita, os direitos de utilização do seu nome, imagem e som de voz para
+            divulgação em qualquer mídia, exclusivamente referente ao evento em epígrafe.
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 7</strong> — O DesafioGUT funciona sempre
-            através da pergunta: <em>"QUANTO VOCÊ OFERTA POR... este produto ou serviço?"</em> —{" "}
-            <strong style={{ color: "#f5a623" }}>O MENOR LANCE ÚNICO GANHA.</strong>
-          </p>
-
-          <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 8</strong> — O participante poderá ofertar
-            lances por meio de saldo em dinheiro, na modalidade Relâmpago (Flash), ou de senhas, na modalidade Programado (adquiridas pela conversão de saldo),
-            com data e tempo estipulado conforme descrito em cada edição.
-          </p>
-
-          <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 14</strong> — O produto ou serviço da edição é entregue exclusivamente na forma descrita na edição, não sendo admitida a sua conversão ou substituição por dinheiro.
-          </p>
-
-          <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 13</strong> — Bens ou produtos com valor acima
-            de R$ 10.000,00: as despesas com transferência de propriedade são de total
-            responsabilidade do participante contemplado, com prazo máximo de 15 (quinze) dias.
-          </p>
-
-          <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 20</strong> — As senhas, quando utilizadas na modalidade Programado, têm custo unitário de{" "}
-            <strong style={{ color: "#f5a623" }}>R$ 2,00 (dois reais)</strong>, adquiridas exclusivamente pela conversão de saldo em dinheiro. A modalidade <strong>Relâmpago não consome senhas</strong>, operando com débito de saldo em dinheiro a partir de R$ 0,01 por lance.
-          </p>
-
-          <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 21</strong> — Formas de pagamento: PIX — chave: <strong>23.040.066/0001-00</strong> (código gerado
-            dinamicamente no aplicativo a cada compra), cartão de débito nacional/internacional
-            ou TED — Banco do Brasil, Agência 198627, Conta Corrente 847534.
-          </p>
-
-          <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 24</strong> — Mensagens de comunicação
-            recorrente:
-          </p>
-          <ul style={estilos.lista}>
-            <li>a) <em>"Seu lance é o menor e único até agora, parabéns"</em></li>
-            <li>b) <em>"Seu lance não é o menor mas é único, tente novamente"</em></li>
-            <li>c) <em>"Já recebemos um lance igual ao seu, tente novamente"</em></li>
-            <li>d) <em>"O valor informado não é válido, tente novamente"</em></li>
-            <li>e) <em>"Lance inválido — envie apenas o valor, ex: 0,01"</em></li>
-            <li>f) <em>"Fique de olho no relógio para o final da edição"</em></li>
-          </ul>
-
-          <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 25</strong> — A apuração dos lances é
-            automática através do painel interno de controle restrito.
-          </p>
-
-          <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 26</strong> — O participante poderá ofertar
-            qualquer valor de lance a partir de{" "}
-            <strong style={{ color: "#f5a623" }}>R$ 0,01 (um centavo)</strong>, sempre com no
-            máximo 2 (duas) casas decimais. Valores fora deste formato não serão aceitos.
-          </p>
-
-          <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 34</strong> — É proibida a participação de
-            funcionários, colaboradores, prestadores de serviços e familiares de qualquer empresa
-            envolvida no DesafioGUT.
-          </p>
-
-          <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 29</strong> — Os participantes cedem,
-            gratuitamente, os direitos de utilização de seu nome, imagem e som de voz para
-            divulgação em qualquer mídia, exclusivamente referente ao evento.
-          </p>
-
-          <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 37</strong> — Este regulamento está registrado
-            no RTD — Cartório de Títulos e Documentos da comarca de Manaus/AM, Brasil, em 5 (cinco) de outubro de 2026.
+            Regras completas (12 capítulos, 72 artigos) em{" "}
+            <a href="/regras-oficiais" style={estilos.link}>Regras Oficiais</a>.
           </p>
 
           <div style={estilos.contatoBox}>
@@ -193,17 +175,20 @@ export default function TermosConsentimento({ onAceitar }) {
         <div style={estilos.checkboxes}>
           <label style={estilos.label}>
             <input type="checkbox" checked={lido} onChange={(e) => setLido(e.target.checked)} style={estilos.checkbox} />
-            <span>Li e compreendi o regulamento completo do DesafioGUT registrado em cartório.</span>
+            <span>
+              Li e compreendi o regulamento completo do DesafioGUT (Regulamento Oficial v5.0), disponível em{" "}
+              <a href="/regras-oficiais" style={estilos.link}>Regras Oficiais</a>.
+            </span>
           </label>
 
           <label style={estilos.label}>
             <input type="checkbox" checked={maiores} onChange={(e) => setMaiores(e.target.checked)} style={estilos.checkbox} />
-            <span>Declaro ter 18 anos ou mais, capacidade civil plena e não ser funcionário do GUT.</span>
+            <span>Declaro ter 18 anos ou mais (Art. 5º), capacidade civil plena e não ser funcionário, colaborador, prestador de serviços nem familiar de empresa envolvida na operação do DesafioGUT (Art. 65º).</span>
           </label>
 
           <label style={estilos.label}>
             <input type="checkbox" checked={termos} onChange={(e) => setTermos(e.target.checked)} style={estilos.checkbox} />
-            <span>Aceito os Termos de Participação, o mecanismo "Menor Lance Único Ganha" (Art. 7) e as regras de lance (Art. 26).</span>
+            <span>Aceito os Termos de Participação: cada Passe Desafio de R$ 2,00 concede 10 pontos de fidelidade (Art. 8º) e a Oferta Relâmpago é uma competição de habilidade — vence o menor lance único (Art. 14º).</span>
           </label>
 
           <label style={estilos.label}>
@@ -211,10 +196,10 @@ export default function TermosConsentimento({ onAceitar }) {
             <span>
               Concordo com o tratamento dos meus dados conforme a{" "}
               {/* MC90.3 — GAP 1 (MC90.2): link iubenda 404 -> rota pública /privacidade */}
-              <a href="/privacidade" style={{ color: "#fbbf24" }}>
+              <a href="/privacidade" style={estilos.link}>
                 Política de Privacidade
               </a>{" "}
-              (LGPD/GDPR) e cedo minha imagem conforme Art. 29.
+              (LGPD/GDPR) e cedo minha imagem conforme Art. 66º.
             </span>
           </label>
         </div>
@@ -273,13 +258,8 @@ const estilos = {
     border: "1px solid rgba(245,166,35,0.15)",
   },
   artigo: { margin: "0 0 0.9rem" },
+  link: { color: "#fbbf24" },
   artLabel: { color: "#fbbf24", fontWeight: "800" },
-  lista: {
-    margin: "0.25rem 0 0.9rem 1.2rem",
-    padding: 0,
-    display: "flex", flexDirection: "column", gap: "0.3rem",
-    fontSize: "0.81rem", color: "#94a3b8",
-  },
   contatoBox: {
     marginTop: "1rem", padding: "0.75rem",
     background: "rgba(245,166,35,0.08)",
@@ -288,8 +268,9 @@ const estilos = {
   },
   checkboxes: { display: "flex", flexDirection: "column", gap: "0.8rem" },
   checkbox:   { accentColor: "#f5a623", width: "16px", height: "16px", flexShrink: 0, marginTop: "1px" },
+  // UTAC110h.1 — a linha inteira é o alvo de toque da caixa: ≥ 44 px (mobile-ux).
   label: {
-    display: "flex", alignItems: "flex-start", gap: "0.6rem",
+    display: "flex", alignItems: "flex-start", gap: "0.6rem", minHeight: "44px",
     fontSize: "0.86rem", cursor: "pointer", lineHeight: "1.5",
     color: "#e8f0fe",
   },

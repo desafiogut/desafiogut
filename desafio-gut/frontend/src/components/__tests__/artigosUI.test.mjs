@@ -24,7 +24,8 @@ const ler = (f) => readFileSync(resolve(FE, f), "utf8");
 // Artigos citados na UI e a palavra que TEM de estar perto da citação.
 // ⚠️ Os valores foram MEDIDOS no v4 — não inventados aqui.
 const EXIGIDO = {
-  "1":  ["torneio de habilidade", "dropshipping", "e-commerce", "venda à ordem", "habilidade"],
+  // UTAC110h.1 (R18-110h.1-D) — saiu «torneio de habilidade» (o v5 diz «competição de habilidade»).
+  "1":  ["dropshipping", "e-commerce", "venda à ordem", "habilidade"],
   "4":  ["5 (cinco) de outubro", "implantado", "tempo indeterminado", "coordenação", "outubro de 2026"],
   "9":  ["bloqueia", "senha", "inutilizada", "indevidamente", "repetida"],
   "10": ["sigilo", "segurança", "dados pessoais", "senha", "acesso restrito"],
@@ -95,6 +96,24 @@ function citacoes(src) {
 }
 
 const V4 = ler("../../docs/REGULAMENTO-v4.md");
+const V5 = ler("../../docs/REGULAMENTO-v5.md");
+const GATE = "src/components/TermosConsentimento.jsx";
+
+// UTAC110h.1 — mapa do gate contra o v5 (mesma regra: assunto do artigo na janela da citação).
+const EXIGIDO_V5 = {
+  "1":  ["programa de fidelidade", "Associação"],
+  "2":  ["duas modalidades", "dropshipping"],
+  "5":  ["18", "maiores"],
+  "6":  ["Passe Desafio", "R$ 2,00"],
+  "8":  ["pontos de fidelidade", "10"],
+  "9":  ["cartão colecionável", "50"],
+  "14": ["competição de habilidade", "menor lance único"],
+  "27": ["palpite"],
+  "47": ["ECOQUILDO", "R$ 1,00"],
+  "49": ["ECOQUILDO", "convertível"],
+  "65": ["funcionários", "colaborador", "familiar"],
+  "66": ["imagem", "som de voz"],
+};
 
 test("o v4 é legível e tem os artigos citados (guarda contra medição vazia)", () => {
   assert.ok(V4.length > 5000, "o Regulamento v4 não foi lido — medição inválida");
@@ -109,6 +128,9 @@ test("cada (Art. Nº) na UI aponta para o artigo certo — palavra-chave na mesm
   const problemas = [];
   let total = 0;
   for (const f of fs_) {
+    // UTAC110h.1 — o gate legal cita o Regulamento v5.0 (verificado no teste próprio, abaixo);
+    // o resto da UI ainda cita o v4 (alinhamento regulamento ↔ app = UTAC110j).
+    if (f === GATE) continue;
     const lista = citacoes(ler(f));
     // ⚠️ CITAÇÕES COLECTIVAS: uma legenda como «Proteção de dados … — Art. 9 e Art. 10 do
     // Regulamento» cita dois artigos e resume-os em conjunto, sem repetir as palavras de cada
@@ -151,4 +173,19 @@ test("as palavras-chave exigidas constam mesmo do texto do artigo no v4 (não in
     assert.ok(chaves.some((k) => V4.toLowerCase().includes(k.toLowerCase())),
       `Art. ${n}º: nenhuma palavra-chave (${chaves.join(", ")}) consta do v4 — a exigência é inventada`);
   }
+});
+
+test("UTAC110h.1 · o gate legal cita o Regulamento v5.0 com o assunto certo (e o assunto está no v5)", () => {
+  const lista = citacoes(ler(GATE));
+  assert.ok(lista.length >= 10, `o gate tem só ${lista.length} citações — medição suspeita`);
+  const problemas = [];
+  for (const c of lista) {
+    const chaves = EXIGIDO_V5[c.artigo];
+    if (!chaves) { problemas.push(`gate:${c.linha + 1} cita Art. ${c.artigo}º, fora do mapa do v5`); continue; }
+    const janela = c.texto.toLowerCase();
+    if (!chaves.some((k) => janela.includes(k.toLowerCase()))) problemas.push(`gate:${c.linha + 1} Art. ${c.artigo}º sem [${chaves.join(", ")}]`);
+    const m = V5.match(new RegExp("^Art\\. " + c.artigo + "º — .*", "m"));
+    if (!m || !chaves.some((k) => m[0].toLowerCase().includes(k.toLowerCase()))) problemas.push(`v5 Art. ${c.artigo}º não trata de [${chaves.join(", ")}] — mapa inventado`);
+  }
+  assert.deepEqual(problemas, [], problemas.join(" | "));
 });

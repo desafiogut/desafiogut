@@ -184,7 +184,7 @@ export default async (req) => {
   if (!r.ok) {
     if (r.code === "PONTOS_INSUFICIENTES") {
       return jsonError(402, "pontos_insuficientes",
-        `são precisos ${PONTOS_POR_CARTAO} pontos de compra para resgatar o cartão`);
+        `são precisos ${PONTOS_POR_CARTAO} pontos de fidelidade para resgatar o cartão`);
     }
     if (r.code === "ENDERECO_INVALIDO" || r.code === "CHAVE_INVALIDA" || r.code === "CARTAO_INVALIDO") {
       return jsonError(400, r.code.toLowerCase(), "pedido de resgate inválido");

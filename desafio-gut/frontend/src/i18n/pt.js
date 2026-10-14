@@ -56,8 +56,8 @@ export default {
   "config.salvar": "💾 Salvar Configurações",
   "config.salvo": "✅ Salvo!",
 
-  // -- Meus Ativos . Torneio de habilidade (MC94) -----------------------------
-  "ativos.torneio.titulo": "🏆 Torneio de habilidade",
+  // -- Meus Ativos . Competição de habilidade (MC94; era «Torneio de habilidade» até ao UTAC110h.1) -----------------------------
+  "ativos.torneio.titulo": "🏆 Competição de habilidade",
   "ativos.torneio.posicao": "Posição",
   "ativos.torneio.pontos": "Pontos",
   "ativos.torneio.acertos": "Acertos",

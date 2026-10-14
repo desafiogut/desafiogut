@@ -28,7 +28,7 @@ export default function PainelTorneio({
   isMobile = false,
   t = T_PADRAO,
 }) {
-  const titulo = t("ativos.torneio.titulo", "🏆 Torneio de habilidade");
+  const titulo = t("ativos.torneio.titulo", "🏆 Competição de habilidade");
 
   if (!temSessao) {
     return (

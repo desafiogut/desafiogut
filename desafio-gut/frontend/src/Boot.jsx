@@ -49,7 +49,9 @@ export default function Boot() {
   // continuam dentro dos providers, por isso entram pelo caminho normal do
   // PrivyRoot. A política é conteúdo estático (sem Privy), a exclusão reutiliza
   // o login — ambas fora do gate.
-  const ROTAS_PUBLICAS = ["/excluir-conta", "/privacidade"];
+  // UTAC110h.1 (R18-110h.1-E) — /regras-oficiais também: o gate liga para o Regulamento v5.0
+  // integral, e o utilizador tem de o poder ler ANTES de aceitar (sem isto o link devolvia o gate).
+  const ROTAS_PUBLICAS = ["/excluir-conta", "/privacidade", "/regras-oficiais"];
   const rotaPublica = ROTAS_PUBLICAS.includes(pathname);
   const carregarApp = aceito || rotaPublica;
 

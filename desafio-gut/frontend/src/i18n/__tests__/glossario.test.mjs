@@ -50,9 +50,10 @@ const PROIBIDOS = {
   pt: /\bleil[ãõa]o\b|\bleil[õo]es\b|\bapost\w*\b|\bsort\w*\b|\bazar\b|\bloterias?\b/i,
 };
 const OBRIGATORIOS = {
-  pt: [/torneio de habilidade/i, /menor lance[^.]{0,24}[úu]nico/i],
+  // UTAC110h.1 (R18-110h.1-D) — v5 Art. 14º: «competição de habilidade» (era «torneio de habilidade»).
+  pt: [/competição de habilidade/i, /menor lance[^.]{0,24}[úu]nico/i],
 };
-const GLOSSARIO_PT = [/torneio de habilidade/i, /\bsenhas?\b/i];   // PT mantém «senha»
+const GLOSSARIO_PT = [/competição de habilidade/i, /\bsenhas?\b/i];   // PT mantém «senha» (senhas antigas) · UTAC110h.1: «competição de habilidade»
 
 test("o dicionario PT e legivel e nao vazio (guarda contra medicao vazia)", () => {
   // ✅ CONTROLO POSITIVO: sem isto, um extractor partido devolvia 0 chaves, o teste de

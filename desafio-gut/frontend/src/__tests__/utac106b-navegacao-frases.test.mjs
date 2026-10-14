@@ -125,8 +125,9 @@ test("UTAC106b · /menor-lance-unico é ALIAS por REDIRECT (não um 2.º render)
 
 test("UTAC106b · a frase é consistente com o gate legal (Regulamento Art. 7)", () => {
   const termos = ler("components/TermosConsentimento.jsx");
-  assert.match(termos, /O MENOR LANCE ÚNICO GANHA/i,
-    "o gate legal deixou de fixar «O MENOR LANCE ÚNICO GANHA» — a frase ficaria sem âncora");
+  // UTAC110h.1 — a âncora passou do v4 («O MENOR LANCE ÚNICO GANHA», Art. 7) para o v5 (Art. 14º).
+  assert.match(termos, /vence o menor lance único \(Art\. 14º\)/i,
+    "o gate legal deixou de fixar «vence o menor lance único» (v5 Art. 14º) — a frase ficaria sem âncora");
   const frase = fraseEfeito() ?? "";
   assert.ok(regraInteira(frase),
     "a frase não partilha o invariante (menor + único) com o Regulamento aceite");

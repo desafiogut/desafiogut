@@ -13,6 +13,8 @@
 // mesmo tempo — que o PIX do gate seja o oficial, E que o suporte não tenha sido
 // arrastado por um replace global.
 //
+// UTAC110h.1 — ver a nota acima dos testes: gate v5, sem dados bancários.
+//
 // node --test --test-concurrency=1 src/components/__tests__/dadosPagamento.test.mjs
 
 import { test } from "node:test";
@@ -22,33 +24,28 @@ import { resolve } from "node:path";
 
 const ler = (p) => readFileSync(resolve(process.cwd(), p), "utf8");
 const TERMOS = ler("src/components/TermosConsentimento.jsx");
-const V4 = ler("../../docs/REGULAMENTO-v4.md");
+const V5 = ler("../../docs/REGULAMENTO-v5.md");
 
-/** O bloco do Art. 21 no gate, em texto puro. */
-function art21Gate() {
-  const m = TERMOS.match(/artLabel\}>Art\. 21<\/strong> — ([\s\S]*?)<\/p>/);
-  assert.ok(m, "o gate não tem o bloco do Art. 21");
-  return m[1].replace(/<[^>]+>/g, " ").replace(/\{[^}]*\}/g, " ").replace(/\s+/g, " ").trim();
-}
+// ⚠️ UTAC110h.1 — o gate passou ao Regulamento v5.0 e deixou de mostrar dados bancários: o v5 não
+// tem o «Art. 21» do v4 (PIX/BB) e o Art. 54º veda contas de pessoas físicas. A invariante deste
+// ficheiro mantém-se — o gate NÃO pode mostrar dados de pagamento que o Regulamento não regista —
+// e passa a ser verificada pela AUSÊNCIA desses dados (as 3 guardas do MC95.1 continuam lá dentro).
+const GATE_SEM_COMENTARIOS = TERMOS.replace(/\{\/\*[\s\S]*?\*\/\}/g, " ").replace(/\/\*[\s\S]*?\*\//g, " ");
 
-test("o PIX do gate é o oficial (CNPJ), como no Regulamento — não um e-mail", () => {
-  const art21 = art21Gate();
-  assert.match(art21, /23\.040\.066\/0001-00/, "o Art. 21 do gate não traz o PIX oficial (CNPJ)");
-  assert.doesNotMatch(art21, /[@]/, "o Art. 21 do gate ainda apresenta um e-mail como PIX");
-  // e o CNPJ que o gate mostra é o mesmo que o Regulamento regista
-  assert.match(V4, /PIX — chave: 23\.040\.066\/0001-00/, "o v4 mudou o PIX oficial?");
+test("o gate não mostra dados bancários nem chave PIX (o v5 não os regista no texto que o gate resume)", () => {
+  assert.doesNotMatch(GATE_SEM_COMENTARIOS, /Agência|Conta Corrente|TED|chave:/i, "o gate voltou a mostrar dados bancários");
+  assert.doesNotMatch(GATE_SEM_COMENTARIOS, /181627|198627|847534/, "o gate voltou a mostrar agência/conta");
+  assert.doesNotMatch(V5, /Agência 181627/, "o v5 regista a agência errada?");
 });
 
-test("a agência do Banco do Brasil é a 198627, como no Regulamento", () => {
-  const art21 = art21Gate();
-  assert.match(art21, /Agência 198627/, "o gate não diz Agência 198627");
-  assert.doesNotMatch(art21, /181627/, "o gate ainda diz a agência errada 181627");
-  assert.match(V4, /Agência 198627/, "o v4 regista outra agência");
+test("nenhum e-mail de pessoa física aparece como meio de pagamento (v5, Art. 54º)", () => {
+  assert.match(V5, /Art\. 54º — É vedada a utilização de contas bancárias de pessoas físicas/);
+  assert.doesNotMatch(GATE_SEM_COMENTARIOS, /renascendoam@gmail\.com|grupouniaoetrabalhoam@gmail\.com/, "o gate mostra um gmail pessoal/antigo");
 });
 
-test("o e-mail institucional do Art. 1 é o oficial", () => {
-  assert.match(TERMOS, /contato@grupouniaoetrabalho\.com\.br/, "falta o e-mail institucional oficial");
-  assert.doesNotMatch(TERMOS, /grupouniaoetrabalhoam@gmail\.com/, "o gate ainda mostra o gmail institucional");
+test("o contacto do gate é o canal oficial de dúvidas do v5 (Art. 69º)", () => {
+  assert.match(V5, /Art\. 69º — Dúvidas, informações e sugestões deverão ser encaminhadas exclusivamente através do e-mail desafiogut01@gmail\.com/);
+  assert.match(GATE_SEM_COMENTARIOS, /Dúvidas: desafiogut01@gmail\.com/, "o gate perdeu o contacto oficial de dúvidas");
 });
 
 test("o e-mail de SUPORTE (MC88.44) NÃO foi arrastado pelo alinhamento", () => {
