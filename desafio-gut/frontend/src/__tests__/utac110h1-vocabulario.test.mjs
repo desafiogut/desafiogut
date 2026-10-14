@@ -22,7 +22,8 @@ const semComentarios = (src) => src
   .replace(/\/\*[\s\S]*?\*\//g, " ")
   .split(/\r?\n/).map((l) => l.replace(/(^|[^:"'`])\/\/.*$/, "$1")).join("\n");
 
-const ANTIGOS = [/torneio de habilidade/i, /pontos de compra/i];
+// SEG4 (ℹ️ do validador): «funcionamento do torneio» na Privacidade :126 também é vocabulário antigo.
+const ANTIGOS = [/torneio de habilidade/i, /pontos de compra/i, /funcionamento do torneio/i];
 const violacoes = (txt) => ANTIGOS.filter((re) => re.test(txt)).map(String);
 
 /** Ficheiros de UI (sem testes) + os endpoints que falam com o utilizador. */

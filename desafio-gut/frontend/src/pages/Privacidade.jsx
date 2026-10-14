@@ -123,7 +123,7 @@ export default function Privacidade() {
           </p>
           <ul style={{ margin: "0 0 0.75rem", paddingLeft: "1.2rem" }}>
             <li style={liStyle}>Os lances são registados no smart contract LeilaoGUT na rede Ethereum mainnet. Os dados on-chain (endereço da carteira, valores, timestamps) são públicos por natureza da blockchain e IMUTÁVEIS — não podem ser apagados.</li>
-            <li style={liStyle}>Finalidade: funcionamento do torneio (pipeline de lance 100% on-chain).</li>
+            <li style={liStyle}>Finalidade: funcionamento da competição (pipeline de lance 100% on-chain).</li>
             <li style={liStyle}>Estes dados são pseudónimos (identificados pelo endereço da carteira, não pelo nome) e não são utilizados para fins de marketing.</li>
           </ul>
           <p style={{ ...pStyle, fontWeight: 700, color: COR.text }}>

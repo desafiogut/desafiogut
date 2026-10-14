@@ -78,6 +78,15 @@ const MUTANTES = [
     "50 pontos de fidelidade para resgatar", "50 pontos de compra para resgatar", [V, ["frontend", "src/pages/__tests__/utac106g-resgate.test.mjs"]]],
   ["M15 C  o 402 do servidor volta a «pontos de compra»", "netlify/functions/resgatar-cartao.mjs",
     "pontos de fidelidade para resgatar o cartão`", "pontos de compra para resgatar o cartão`", [V]],
+  // Achados X1/X9/X10 do validador SEG4 (sobreviviam) + o «torneio» da Privacidade :126.
+  ["M16 X1 a caixa «termos» diz 20 pontos (v5 Art. 8º: 10)", "src/components/TermosConsentimento.jsx",
+    "concede 10 pontos de fidelidade (Art. 8º)", "concede 20 pontos de fidelidade (Art. 8º)", [G]],
+  ["M17 X9 GUTO corporativo: +5 para o indicado", "netlify/functions/_lib/guto-perfis.mjs",
+    "para si e +50 para o indicado", "para si e +5 para o indicado", [GU]],
+  ["M18 X10 GUTO admin: até 20 por mês", "netlify/functions/_lib/guto-perfis.mjs",
+    "(até 10 por mês por indicante)", "(até 20 por mês por indicante)", [GU]],
+  ["M19 C  Privacidade volta a «funcionamento do torneio»", "src/pages/Privacidade.jsx",
+    "funcionamento da competição (pipeline", "funcionamento do torneio (pipeline", [V]],
 ];
 
 // ── baseline: todos os alvos verdes ANTES de mutar ─────────────────────────────

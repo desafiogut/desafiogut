@@ -6301,3 +6301,23 @@ Autorizado pelo operador. **Migracao** `utac110d_ledger_lance` aplicada em produ
 **Escalado (fora do AUTORIZA):** ⚠️ gate legal `TermosConsentimento.jsx` com o regulamento antigo («senhas», Arts. 14/20/37) · ⚠️ GUTO `guto-perfis.mjs:367-368` promete «+1 senha» por indicacao (v5 Art. 51º = ECOQUILDO) · `Privacidade.jsx:77` «torneio de habilidade» · «pontos de compra» em `useResgatarCartao`/`resgatar-cartao` · factos do v5 nao implementados (Play Billing Art. 52º, cartao «adquirido» por PIX Arts. 9º/53º, perda de metricas Arts. 21º/32º) · comentario `App.jsx:388`.
 **Registo:** `_logs/UTAC110h-regulamento.md` · `_logs/UTAC110h_SEG-1_MEDICAO.md` · `_logs/UTAC110h_SEG5_VALIDADOR.md` · `Desktop/RELATORIO-UTAC110h.txt`.
 **Custo:** validador 692 043 tokens = 13,8–1384 ¢ (277 ¢ se tudo input); sessao principal nao medida (`/cost`).
+
+## R14 (append) -- UTAC110h.1 -- GATE LEGAL NO v5.0 + GUTO SEM «+1 SENHA» + VOCABULÁRIO (Claude Code, Opus 5.5)
+
+**Tipo:** saneamento (pendências do 110h). **Baseline:** `ec2028d`. **Commits:** `703e78e` (código, validado) -> fecho (ressalvas do SEG4 + registo).
+**A14:** RAM 630 MB -> PARADO; o operador mandou fechar o necessário -> MCP sem uso + `vite preview` órfão + Claude Desktop fechados -> 1 566-1 578 MB. Baseline 1066/1066 · 1227/1233.
+**Decisões do operador (R18):** **110h.1-A** A14 · **110h.1-B** `VERSAO_CONSENTIMENTO` 2.0 -> **3.0** (+ `VERSAO_GATE` em `_lib/consentimento.mjs`): todos voltam a aceitar, agora o v5 · **110h.1-C** o GUTO diz o que o app credita (+50 pontos de lance), **não** o «2 ECOQUILDO» do v5 Art. 51º, que não está ligado (substitui a R18-110h.1-2 do enunciado) · **110h.1-D** Meus Ativos também («🏆 Competição de habilidade»: `pt.js`, `PainelTorneio.jsx`, guardas) · **110h.1-E** `/regras-oficiais` em `ROTAS_PUBLICAS` (`Boot.jsx`); sem isto o link do gate devolvia o próprio gate.
+**Feito:**
+- **Gate:** 12 trechos **literais** do v5 (Arts. 1, 2, 5, 6, 8, 9, 14, 27, 47, 49, 65, 66), vigência 02/11/2026, link para as Regras Oficiais (no resumo e na caixa «Li e compreendi»). 4 caixas com as mesmas chaves e o texto passado ao v5; linhas ≥ 44 px.
+- **GUTO `indique_e_ganhe`:** +50 pontos de lance, até 10 por mês, com os números amarrados a `fontes-lance.mjs`.
+- **Vocabulário:** «competição de habilidade» (`Privacidade.jsx:77` e `:126`, Meus Ativos); «pontos de fidelidade» no 402 do resgate (`useResgatarCartao` + `resgatar-cartao.mjs`).
+**Testes:**
+- Contratos do v4 actualizados com a invariante preservada: `citacoesRegulamento` (bloco = trecho literal do v5, com verificação bidireccional), `dadosPagamento`, `artigosUI` (gate contra o v5), `mc9951`, `106b`, `106c`, `glossario`, `106g`, `mc104`.
+- Novos: `utac110h1-gate-render` (render + clique), `utac110h1-vocabulario`, `_tests/utac110h1-guto-indicacao`.
+- Mutação **20/20**. Suíte **1077/1077 · 1232/1238 VERDE**. Capturas em `_logs/utac110h.1-browser/`: overflow 0, 0 erros de página, e o link abre o v5 sem passar pelo gate.
+**Validador: APROVADO COM RESSALVAS, 0 bloqueantes.**
+- Fechados depois do veredicto (não re-validados): X1, X9, X10 e `Privacidade.jsx:126`.
+- ⚠️ **W1 (UTAC próprio):** «+1 senha» por indicação continua em `PainelIndicacao.jsx` (Carteira), `ChatbotWidget.jsx:183` e `_lib/referral.mjs:146,148`.
+- Também pendentes: o ECOQUILDO do Art. 51º; «senhas» na Privacidade; `pt.js:100` «regra do torneio»; nenhum teste de comportamento do `Boot.jsx` (X7); contacto do gate com telefone e site (o Art. 69º só prevê e-mail); o resto da UI ainda cita o v4 (110j).
+**Registo:** `_logs/UTAC110h.1_SEG-1_MEDICAO.md` · `_logs/UTAC110h.1-pendencias.md` · `_logs/UTAC110h.1_SEG4_VALIDADOR.md` · `Desktop/RELATORIO-UTAC110h.1.txt`.
+**Custo:** validador ≈ 438 k tokens; sessão principal não medida (`/cost`).

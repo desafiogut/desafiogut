@@ -57,6 +57,14 @@ test("o limite mensal dito pelo GUTO é o do código (comum e corporativo)", () 
   }
 });
 
+test("TODOS os números de crédito e de limite, em todos os perfis, são os do código (achados X9/X10 do SEG4)", () => {
+  for (const perfil of PERFIS) {
+    const r = obterResposta("indique_e_ganhe", perfil, DADOS);
+    for (const m of r.matchAll(/\+(\d+)/g)) assert.equal(Number(m[1]), PONTOS, `${perfil}: «+${m[1]}» ≠ PONTOS_INDICACAO`);
+    for (const m of r.matchAll(/até (\d+)/g)) assert.equal(Number(m[1]), LIMITE, `${perfil}: «até ${m[1]}» ≠ LIMITE_INDICACOES_MES`);
+  }
+});
+
 test("BIDIRECCIONAL: as 4 respostas antigas (verbatim, até ao UTAC110h) são reprovadas", () => {
   const antigas = [
     "Indique e Ganhe é para membros! Cria a tua conta e, por cada amigo que se registar com o teu código, ganhas +1 senha na hora (e o teu amigo também). 😊",

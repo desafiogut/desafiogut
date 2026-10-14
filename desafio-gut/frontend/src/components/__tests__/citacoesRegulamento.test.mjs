@@ -106,6 +106,15 @@ test("vocabulário do gate: v5 presente, modelo antigo ausente (texto inteiro, s
     assert.match(visivel, re, `o gate perdeu ${re}`);
 });
 
+test("a caixa «termos» repete os números do v5 (Art. 6º R$ 2,00 · Art. 8º 10 pontos) — achado X1 do SEG4", () => {
+  const m = TERMOS.match(/Aceito os Termos de Participação:([^<]*)<\/span>/);
+  assert.ok(m, "não encontrei a caixa «termos»");
+  const preco = m[1].match(/R\$ ([\d,]+)/), pontos = m[1].match(/concede (\d+) pontos de fidelidade/);
+  assert.ok(preco && pontos, `a caixa perdeu preço ou pontos: «${m[1]}»`);
+  assert.ok(artigoV5(6).includes(`R$ ${preco[1]} (dois reais)`), `R$ ${preco[1]} não é o preço do Art. 6º`);
+  assert.ok(artigoV5(8).includes(`${pontos[1]} (dez) pontos de fidelidade`), `${pontos[1]} pontos não é o Art. 8º`);
+});
+
 test("o gate não apresenta datas que o v5 não regista", () => {
   assert.doesNotMatch(TERMOS, /junho|5 de outubro de 2026/i, "o gate voltou a uma data do v4");
   assert.match(TERMOS, /2 de novembro de 2026/, "o gate perdeu a vigência do v5 (Art. 4º: 02 de novembro de 2026)");

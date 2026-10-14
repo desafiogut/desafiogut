@@ -62,3 +62,24 @@ SEG-1: `_logs/UTAC110h.1_SEG-1_MEDICAO.md` (A14, inventário, 5 conflitos, decis
 
 ## Suíte (harness `mc966`, foreground, RAM ≥ 1 500)
 - Baseline: **1066/1066 · 1227/1233**. Depois: **1076/1076 · 1231/1237 VERDE** (+10 / +4).
+
+## Prova de mutação (`scripts/utac110h1-prova-mutacao.mjs`, baseline verde exigida)
+- 1.ª corrida: **16/16 MORDERAM** (M1–M15 + M7b), restauro sha256 idêntico.
+- Depois do SEG4: **20/20** (M16 X1 · M17 X9 · M18 X10 · M19 «funcionamento do torneio»).
+
+## SEG4 — Validador adversarial (`_logs/UTAC110h.1_SEG4_VALIDADOR.md`): **APROVADO COM RESSALVAS, 0 bloqueantes**
+Reproduziu a suíte (1076/1076 · 1231/1237) e a mutação (16/16). Os 12 blocos foram conferidos um a um contra o v5: todos são trechos literais, com o artigo certo. (a)–(d), (f), (g), (i), (j) não refutados.
+Tratado depois do veredicto (**não re-validado** por 2.ª ronda):
+- Mutantes sobreviventes **X1** (pontos na caixa «termos»), **X9** (+50 do GUTO corporativo) e **X10** (limite do GUTO admin) → testes novos + M16–M18.
+- ℹ️ `Privacidade.jsx:126` «funcionamento do torneio» → «funcionamento da competição» (era a linha que o enunciado apontava) + M19 + guarda.
+Declarado, fora do escopo autorizado:
+- ⚠️ **W1:** «+1 senha» por indicação continua noutros 3 sítios, o que contradiz o GUTO novo: `PainelIndicacao.jsx:87,163` (Carteira), `ChatbotWidget.jsx:183` («Senhas ganhas»), `_lib/referral.mjs:146,148` (notificação). → **UTAC próprio.**
+- **X7** (pré-existente): não há teste de comportamento do `Boot.jsx`; `rotaPublica` sempre verdadeiro passaria.
+- **X11:** a caixa de contacto do gate (telefone e site, pré-existentes) não está no v5; o Art. 69º diz «exclusivamente» e-mail.
+- `/privacidade` ainda diz «senhas» (:78, :99, :108); `pt.js:100` diz «regra do torneio».
+- `/regras-oficiais` carrega o shell completo (Privy, navegação) sem consentimento; ao navegar dali, o gate volta (`includes` exato).
+- A caixa «maiores» mantém «capacidade civil plena» (texto pré-existente, não está no v5).
+- O ECOQUILDO por indicação (v5 Art. 51º) continua por ligar no backend.
+
+## Suíte final: **frontend 1077/1077 · backend 1232/1238 VERDE**
+RAM livre medida no arranque desta corrida: 1 157 MB, abaixo da A14 (declarado). O resultado é verde e coerente com as corridas anteriores feitas a ≥ 1 566 MB.
