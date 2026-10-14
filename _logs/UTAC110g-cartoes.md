@@ -118,6 +118,10 @@ aditivas) e declarado aqui.
   repetição idempotente não reenvia). **NÃO é persistido** (minimização — ver D-110g-1).
   O destino sai do **cliente**: `useResgatarCartao` lê o e-mail do login (Privy) e põe-no no corpo — é o
   único e-mail que o sistema conhece (o JWT só traz `{endereco, tipo}`).
+  ⚠️ **ERRATA (ver §10):** a 1.ª versão desta mensagem dizia ~~«· O estado do pedido aparece na sua
+  Carteira.»~~ — **REFUTADO** pelo validador (B-110g-1), porque a C3 (estado do pedido visível) **não**
+  existe. A frase foi substituída por «· Guarde este e-mail: é o comprovante do seu pedido.». **A redacção
+  errada fica à vista, marcada como refutada** — o texto acima descreve a versão corrigida.
 - **C2 Nota Técnica ✅ (como TEXTO)** — bloco «Nota Técnica do resgate nº N» no mesmo e-mail, a declarar
   que a **patrocinadora** (Associação Recreativa dos Nordestinos no Amazonas) emite, e que o DESAFIOGUT
   **não** emite documento fiscal do resgate. **LIMITE DECLARADO:** o software não emite o documento
