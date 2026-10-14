@@ -57,6 +57,9 @@ mock.module("../_lib/ledger-lance.mjs", {
   namedExports: {
     consumirCreditoLance: async () => { chamadasConsumoCredito += 1; return { ok: true, criado: true, creditos: 0 }; },
     reverterMovimentoLance: async () => ({ ok: true, revertido: true }),
+    // UTAC110f — a missão do lance importa `creditarPontosLance` (via `_lib/fontes-lance.mjs`).
+    creditarPontosLance: async () => ({ ok: true, criado: true, pontos: 10 }),
+    lerLedgerLance: async () => ({ creditos: 0, pontos: 0, historico: [] }),
   },
 });
 mock.module("../_lib/cors.mjs", {

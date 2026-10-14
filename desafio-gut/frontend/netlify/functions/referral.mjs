@@ -24,6 +24,7 @@ import {
   registrarConversao, estatisticasIndicador, referralAtivo,
   registrarTentativaConversaoIp, appendReferralLog,
 } from "./_lib/referral.mjs";
+import { creditarIndicacao } from "./_lib/fontes-lance.mjs"; // UTAC110f — +50 pontos de lance
 import { respostaPreflight } from "./_lib/cors.mjs";
 
 const RATE_LIMIT_RPM = 5;
@@ -141,6 +142,7 @@ async function handleUsarCodigo(req) {
   const ipGate = await registrarTentativaConversaoIp(ip);
 
   let conversao = null;
+  let pontosLance = null; // UTAC110f — só no ramo que passa o throttle de IP (R18-110f-2)
   if (!ipGate.ok) {
     // Excedeu o limite por IP/hora → vincula mas NÃO credita (auditável).
     try {
@@ -161,6 +163,20 @@ async function handleUsarCodigo(req) {
       );
     } catch (err) {
       console.warn("[referral] registrarConversao no registo falhou (não-fatal):", err?.message);
+    }
+    // UTAC110f — +50 pontos de lance ao indicante e +50 ao indicado (Art. 16º IV). Endereços REAIS
+    // (nunca os mascarados do log). Idempotente pelas refs do ledger; o indicante respeita o limite de
+    // 10/mês. FAIL-SOFT: uma falha aqui nunca desfaz o vínculo já registado.
+    try {
+      const pl = await creditarIndicacao(r.indicador, endereco);
+      pontosLance = {
+        indicante: !!pl.indicante?.creditado, indicado: !!pl.indicado?.creditado,
+        ...(pl.indicante?.code ? { codeIndicante: pl.indicante.code } : {}),
+        ...(pl.indicado?.code ? { codeIndicado: pl.indicado.code } : {}),
+      };
+    } catch (err) {
+      console.warn("[referral] pontos de lance da indicação falharam (não-fatal):", err?.message);
+      pontosLance = { indicante: false, indicado: false, codeIndicante: "excecao", codeIndicado: "excecao" };
     }
     if (deviceTracked) {
       try {
@@ -198,6 +214,7 @@ async function handleUsarCodigo(req) {
     conversao: conversao
       ? { ok: !!conversao.ok, idempotent: !!conversao.idempotent, code: conversao.code || null }
       : { ok: false, code: "conversao_falhou" },
+    pontosLance, // UTAC110f — null quando o throttle de IP impediu o crédito
   });
 }
 

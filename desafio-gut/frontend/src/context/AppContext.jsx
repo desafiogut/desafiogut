@@ -910,6 +910,20 @@ export function AppProvider({ children }) {
     }).catch(() => {});
   }, [address, authToken]);
 
+  // UTAC110f — login diário: +5 pontos de lance, 1× por dia de Manaus. Chamado uma vez por sessão e por
+  // endereço, com o user-session (`authToken`) — o servidor é idempotente pela `ref` do dia, logo uma
+  // repetição não credita duas vezes. Fail-soft: nunca bloqueia o arranque.
+  const loginDiarioFeitoRef = useRef(new Set());
+  useEffect(() => {
+    if (!address || !authToken) return;
+    const chave = String(address).toLowerCase();
+    if (loginDiarioFeitoRef.current.has(chave)) return;
+    loginDiarioFeitoRef.current.add(chave);
+    apiPost("login-diario", {}, { token: authToken })
+      .then((r) => { if (!r?.ok) loginDiarioFeitoRef.current.delete(chave); })
+      .catch(() => { loginDiarioFeitoRef.current.delete(chave); });
+  }, [address, authToken]);
+
   // ── Saldo R$ off-chain: polling 5s (gated em authToken para anti-IDOR) ──
   const refetchSaldoRs = useCallback(async () => {
     if (!address || !authToken) {

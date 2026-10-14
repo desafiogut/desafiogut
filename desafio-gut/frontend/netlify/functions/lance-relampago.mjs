@@ -31,6 +31,7 @@ import { verificarJanelaLance, EDICAO_ESPECIAL_RE } from "./_lib/edicao-janela.m
 import { registrarConsumoSenha, BLOB_SENHAS_CONSUMO } from "./_lib/senhas-programado.mjs"; // MC91.11 — ledger
 import { keccak256, AbiCoder } from "ethers";
 import { consumirCreditoLance, reverterMovimentoLance } from "./_lib/ledger-lance.mjs"; // UTAC110d
+import { creditarMissaoLance } from "./_lib/fontes-lance.mjs"; // UTAC110f — missão «1 lance do dia»
 import { respostaPreflight } from "./_lib/cors.mjs";
 
 const LANCE_MIN_CENTAVOS = 1;
@@ -330,6 +331,22 @@ export default async (req) => {
     }
   }
 
+  // ── 7b. UTAC110f — missão «Completar 1 lance» (+10 pontos de lance, 1× por dia de Manaus) ─────
+  // Creditada AQUI, pelo servidor, depois de o lance existir — não há endpoint público que a reclame
+  // (decisão do operador no SEG-1). Só o MLC (relâmpago): o programado não conta. FAIL-SOFT: uma falha
+  // na missão nunca desfaz nem bloqueia o lance; a `ref` diária garante um só crédito por dia.
+  let missaoLance = null;
+  if (!ehProgramado) {
+    try {
+      const m = await creditarMissaoLance(endereco);
+      missaoLance = m.ok ? { creditado: m.creditado } : { creditado: false, erro: m.code };
+      if (!m.ok) console.warn("[lance-relampago] missão do lance falhou (não-fatal):", m.code);
+    } catch (err) {
+      missaoLance = { creditado: false, erro: "excecao" };
+      console.warn("[lance-relampago] missão do lance falhou (não-fatal):", err?.message);
+    }
+  }
+
   // ── 8. Persistir chave de idempotência ────────────────────────────────────
   if (idempotencyKey) {
     const idemStore = abrirStore(BLOB_IDEM);
@@ -365,6 +382,7 @@ export default async (req) => {
     saldoOnChain: debito.resultado.saldoOnChain ?? null,
     creditoLanceConsumido: refCreditoLance !== null,
     creditosLanceRestantes: debito.resultado.creditosLanceRestantes ?? null,
+    missaoLance, // UTAC110f — null no programado; {creditado} no relâmpago
     processadoEm: registro.processadoEm,
     commitmentHash: registro.commitmentHash ?? null,
   }, 201);
