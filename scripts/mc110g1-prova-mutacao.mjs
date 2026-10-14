@@ -32,6 +32,13 @@ const MUTANTES = [
   ["M3 a data do documento deixa de ser a de Manaus (passa a UTC)", NOTA,
     '      timeZone: "America/Manaus", day: "2-digit", month: "2-digit", year: "numeric",',
     '      timeZone: "UTC", day: "2-digit", month: "2-digit", year: "numeric",', FN, ALVO],
+  // M8 — ⚠️ achado F1 do validador adversarial do SEG3: o M3 (→UTC) morria por causa do DIA, não do
+  // FUSO. Com Manaus→São Paulo (UTC-3) o mutante SOBREVIVIA, porque os dois instantes do teste
+  // caíam no mesmo dia nos dois fusos. Fechado com o instante de fronteira (03:30Z) no teste —
+  // este mutante passa a MORRER, e é ele que prova que o fuso é mesmo medido.
+  ["M8 o fuso do remetente passa a São Paulo (UTC-3) em vez de Manaus (UTC-4)", NOTA,
+    '      timeZone: "America/Manaus", day: "2-digit", month: "2-digit", year: "numeric",',
+    '      timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", year: "numeric",', FN, ALVO],
   ["M4 o remetente perde a praça (Manaus/AM sai do bloco)", NOTA,
     "    REMETENTE.cidade,\n",
     "", FN, ALVO],

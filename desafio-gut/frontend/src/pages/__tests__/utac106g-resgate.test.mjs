@@ -167,7 +167,11 @@ test("CLIQUE · «Resgatar cartão» abre o balão com o formulário de morada",
     assert.equal(b.props.aberto, true, "o botão tem de abrir o balão");
     const t = c.texto();
     assert.match(t, /Resgatar cartão colecionável/);
-    assert.match(t, /Com a Família Quildo|Você vai trocar 50 pontos|Confirme os dados de entrega/);
+    // ⚠️ achado do validador adversarial do SEG3 (2026-10-14): aqui havia uma TRI-ALTERNAÇÃO em que
+    // a 1.ª hipótese (`Com a Família Quildo`) não casava nada — uma guarda que passava por acidente.
+    // O texto REAL do balão (medido em `ResgatarCartaoModal.jsx:57-59`) é asserido por inteiro.
+    assert.match(t, /Você vai trocar 50 pontos pelo cartão da Família Quildo\./);
+    assert.match(t, /Confirme os dados de entrega\./);
     const h = c.html();
     for (const id of ["rg-nome", "rg-cpf", "rg-cep", "rg-cidade", "rg-uf", "rg-logradouro", "rg-numero", "rg-bairro"]) {
       assert.match(h, new RegExp(`id="${id}"`), `faltou o campo ${id} no formulário`);

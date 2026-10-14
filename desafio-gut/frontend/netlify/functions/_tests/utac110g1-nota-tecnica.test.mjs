@@ -161,6 +161,24 @@ test("A1 a data sai `DD/MM/AAAA` no fuso de Manaus (UTC-4), não em UTC", () => 
   assert.equal(nota.formatarData("2026-10-14T13:30:00.000Z"), "14/10/2026");
 });
 
+test("A1 ⚠️ achado F1 do validador SEG3 — o INSTANTE DE FRONTEIRA discrimina o fuso (UTC-4 vs UTC-3)", () => {
+  // O validador adversarial refutou (com razão) a guarda anterior: os dois instantes do teste acima
+  // caem no MESMO dia em UTC-4 (Manaus) e em UTC-3 (São Paulo), logo um mutante Manaus→São Paulo
+  // sobrevivia. A fronteira do dia de Manaus é 04:00 UTC; 03:30 UTC ainda é o dia ANTERIOR em
+  // Manaus e já é o dia seguinte em São Paulo. Com este instante, o fuso — que é a DECISÃO — passa
+  // a ser medido, e não só o formato.
+  const fronteira = "2026-10-14T03:30:00.000Z";
+  assert.equal(nota.formatarData(fronteira), "13/10/2026", "03:30Z é 23:30 do dia 13 em Manaus (UTC-4)");
+  // CONTROLOS: o mesmo instante noutros fusos dá OUTRO dia — prova que a asserção acima não é
+  // satisfeita «por acaso» por qualquer formatação.
+  const dataEm = (tz) => new Intl.DateTimeFormat("pt-BR", {
+    timeZone: tz, day: "2-digit", month: "2-digit", year: "numeric",
+  }).format(new Date(fronteira));
+  assert.equal(dataEm("America/Sao_Paulo"), "14/10/2026", "em UTC-3 (São Paulo) este instante já é dia 14");
+  assert.equal(dataEm("UTC"), "14/10/2026");
+  assert.notEqual(dataEm("America/Sao_Paulo"), dataEm("America/Manaus"), "a fronteira TEM de separar os dois fusos");
+});
+
 test("A1 o documento NUNCA escreve «undefined», «null» nem «Invalid Date» (defensiva)", () => {
   const vazio = nota.gerarNotaTecnica();
   assert.doesNotMatch(vazio, /undefined|null|NaN|Invalid Date/);
@@ -275,6 +293,11 @@ test("A3 BIDIRECIONAL a guarda morde: passa no e-mail NOVO e FALHA no e-mail ant
 test("A3 BIDIRECIONAL mutação: sem a Nota Técnica o e-mail do HANDLER falha a guarda", async () => {
   // Mutante: a mesma montagem de e-mail, mas SEM o documento (o que o código faria se a linha
   // `notaTecnica` fosse retirada). Não se toca no ficheiro real — monta-se o mutante ao lado.
+  // ⚠️ NOTA DO AUTOR (achado do validador SEG3): este mutante é de TEXTO (`.replace()` sobre a
+  // string capturada), não uma mutação do código de produção — é um controlo de leitura, mais
+  // fraco por natureza. A mutação de CÓDIGO que guarda esta mesma regra é o **M5** de
+  // `scripts/mc110g1-prova-mutacao.mjs` (tira o `notaTecnica` do array do e-mail), e essa é
+  // executada de verdade, com md5 confirmado.
   semear();
   await post(corpo({ email: "maria@example.com" }));
   const real = emails[0].mensagem;
