@@ -86,6 +86,29 @@ test("COBERTURA · TODOS os parágrafos do Regulamento aparecem na página (não
   assert.deepEqual(faltam, [], `a página não publica ${faltam.length} parágrafo(s)`);
 });
 
+// Achado do validador SEG5: `includes` mede PRESENÇA, não igualdade — texto duplicado ou uma
+// cláusula inventada passavam. Aqui a sequência de palavras da página (do 1.º capítulo ao fim do
+// rodapé) tem de ser IGUAL à do documento (do 1.º capítulo ao fim).
+test("COBERTURA · a página publica EXACTAMENTE as palavras do documento, pela ordem (nada a mais, nada a menos)", () => {
+  const palavras = (s) => colapsar(s).split(" ").filter(Boolean);
+  const doDoc = palavras(CORPO_V5.slice(CORPO_V5.indexOf("CAPÍTULO I —")).replace(/^- /gm, ""));
+  const ini = html.indexOf("<section");
+  const fim = html.indexOf("<p data-fim-regulamento");
+  assert.ok(ini > 0 && fim > ini, "marcadores da página em falta");
+  const trecho = html.slice(ini, fim).replace(/<[^>]+>/g, " ").replace(/&#x27;|&#39;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, "&");
+  const daPagina = palavras(trecho);
+  assert.equal(daPagina.length, doDoc.length, `contagem de palavras: página ${daPagina.length} vs documento ${doDoc.length}`);
+  assert.deepEqual(daPagina, doDoc);
+});
+
+test("ACESSIBILIDADE · os alvos de toque da página (sumário e «Voltar») têm 48 px", () => {
+  const jsx = readFileSync(resolve(FRONTEND, "src", "pages", "RegrasOficiais.jsx"), "utf8");
+  assert.match(jsx, /const linkSumario = \{[^}]*minHeight: "48px"/);
+  assert.match(jsx, /<Link to="\/" style=\{\{[^}]*minHeight: "48px"/);
+  assert.match(html, /data-rodape/);
+  assert.ok(html.indexOf("data-rodape") > html.lastIndexOf("gut-glass-standard"), "o rodapé tem de viver dentro do último vidro");
+});
+
 // ── 3. Estrutura: 12 capítulos, 72 artigos ──────────────────────────────────────────────────────
 test("ESTRUTURA · um <h1> com o título e a vigência do v5.0", () => {
   assert.equal((html.match(/<h1[\s>]/g) || []).length, 1);

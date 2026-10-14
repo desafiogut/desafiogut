@@ -148,16 +148,19 @@ export default function RegrasOficiais() {
         </GlassCard>
       ))}
 
-      {REGULAMENTO.rodape && (
-        <p style={{ textAlign: "center", marginTop: "1rem", fontSize: "0.8rem", color: COR.muted, lineHeight: 1.6 }}>
-          {REGULAMENTO.rodape}
+      {/* Rodapé dentro do vidro (achado do validador SEG5: fora dele o contraste dependia da imagem de fundo). */}
+      <GlassCard className={cardCls}>
+        {REGULAMENTO.rodape && (
+          <p data-rodape style={{ textAlign: "center", margin: "0 0 0.5rem", fontSize: "0.8rem", color: COR.muted, lineHeight: 1.6 }}>
+            {REGULAMENTO.rodape}
+          </p>
+        )}
+        <p data-fim-regulamento style={{ textAlign: "center", margin: 0 }}>
+          <Link to="/" style={{ display: "inline-flex", alignItems: "center", minHeight: "48px", color: COR.text, fontSize: "0.88rem" }}>
+            ← Voltar ao app
+          </Link>
         </p>
-      )}
-      <p style={{ textAlign: "center", marginTop: "0.5rem" }}>
-        <Link to="/" style={{ display: "inline-flex", alignItems: "center", minHeight: "48px", color: COR.text, fontSize: "0.88rem" }}>
-          ← Voltar ao app
-        </Link>
-      </p>
+      </GlassCard>
     </div>
   );
 }
