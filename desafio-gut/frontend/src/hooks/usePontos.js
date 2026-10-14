@@ -20,7 +20,20 @@ const VAZIO = Object.freeze({
   pontos: 0, pontosCartao: 0, bonusPalpite: 0,
   historico: [], palpites: [], pontosParaCartao: 50, podeResgatarCartao: false,
   creditosLance: 0,
+  missoesHoje: null,
 });
+
+// UTAC110f-front — «Missões de hoje» (campo `missoesHoje` do `ler-pontos`). Leitura ESTRITA, sem coerção: só se aceita
+// o bloco com os 3 campos legíveis (`loginFeito`/`lanceFeito` booleanos e `pontosHoje` inteiro >= 0). Em falta ou
+// ilegível → `null` = estado NEUTRO (a UI não afirma nem «feito» nem «pendente» — não se inventa).
+export function missoesDaResposta(data) {
+  const m = data?.missoesHoje;
+  if (m === null || typeof m !== "object") return null;
+  const { loginFeito, lanceFeito, pontosHoje } = m;
+  if (typeof loginFeito !== "boolean" || typeof lanceFeito !== "boolean") return null;
+  if (!Number.isSafeInteger(pontosHoje) || pontosHoje < 0) return null;
+  return { loginFeito, lanceFeito, pontosHoje };
+}
 
 export function usePontos() {
   const { address, authToken } = useAppContext();
@@ -49,6 +62,7 @@ export function usePontos() {
         pontosParaCartao: Number(data?.pontosParaCartao ?? 50),
         podeResgatarCartao: data?.podeResgatarCartao === true,
         creditosLance: creditosDaResposta(data),
+        missoesHoje: missoesDaResposta(data),
       };
       setDados(novo);
       return novo;

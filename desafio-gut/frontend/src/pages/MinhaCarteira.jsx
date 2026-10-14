@@ -98,7 +98,7 @@ export default function MinhaCarteira() {
   // UTAC110d-front (Frente A) — dois saldos SEPARADOS: pontos de CARTÃO (`pontosCartao`, só
   // compras — R1 do UTAC106f; é o mesmo número da barra das Ofertas Programadas) e créditos de lance.
   const {
-    pontosCartao, pontosParaCartao, creditosLance,
+    pontosCartao, pontosParaCartao, creditosLance, missoesHoje,
     loading: pontosCarregando, erro: pontosErro, refetch: refetchPontos,
   } = usePontos();
   // UTAC110e (Frente D) — 3.º saldo: ECOQUILDO (moeda social, Arts. 47º-51º). Só leitura: NÃO se
@@ -141,6 +141,17 @@ export default function MinhaCarteira() {
   // UTAC110e — a mesma leitura honesta serve o ECOQUILDO: passa-se o estado do hook dele.
   const textoSaldo = (n, carregando = pontosCarregando, erro = pontosErro) =>
     (carregando ? "…" : erro || n == null ? "—" : String(n));
+
+  // UTAC110f-front — «Missões de hoje». Estado NEUTRO quando não se sabe (a carregar, erro, ou campo ilegível —
+  // `missoesHoje === null`): não se afirma «feito» nem «pendente». ✓ feito = amarelo único `#f5a623`
+  // (R18-110f-front-A: a decisão do 109h.2 prevalece sobre o «verde» do enunciado; o emoji ✅ seria pintado de verde
+  // pela fonte do sistema, por isso usa-se o glifo de texto «✓», U+2713); ⏳ pendente = muted.
+  const estadoMissoes = pontosCarregando ? "carregando" : missoesHoje ? "ok" : "neutro";
+  const MISSOES = missoesHoje ? [
+    { id: "login", rotulo: "Login diário", pontos: 5, feito: missoesHoje.loginFeito },
+    { id: "lance", rotulo: "Completar 1 lance", pontos: 10, feito: missoesHoje.lanceFeito },
+  ] : [];
+  const todasFeitas = MISSOES.length > 0 && MISSOES.every((m) => m.feito);
 
   async function escolherPasse(tipo) {
     if (tipoEmCurso) return;
@@ -332,6 +343,53 @@ export default function MinhaCarteira() {
                   ⚠️ {ecoErro === "Sessão expirada" ? "Sessão expirada." : "Não foi possível ler seu ECOQUILDO agora."}
                 </p>
               )}
+
+              {/* UTAC110f-front — «Missões de hoje»: DENTRO do 1.º vidro (Regra 1), a seguir aos 3 saldos e antes dos
+                  botões. Só visualização (sem botão — não há acção aqui). Os 3 saldos acima NÃO foram tocados. */}
+              <section data-missoes-hoje="" data-estado={estadoMissoes} aria-labelledby="missoes-hoje-titulo" style={{
+                padding: "0.65rem 0.75rem", borderRadius: "12px", marginBottom: "0.95rem",
+                border: "1px solid rgba(245,166,35,0.25)",
+              }}>
+                <h4 id="missoes-hoje-titulo" style={{
+                  margin: "0 0 0.45rem", fontSize: "0.75rem", color: COR.gold, fontWeight: 700,
+                  textTransform: "uppercase", letterSpacing: "0.06em",
+                }}>🎯 Missões de hoje</h4>
+                {estadoMissoes !== "ok" ? (
+                  <p style={{ margin: 0, fontSize: "0.8rem", color: COR.text, opacity: 0.85 }}>
+                    {estadoMissoes === "carregando" ? "…" : "—"}
+                  </p>
+                ) : (
+                  <>
+                    <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: "0.35rem", maxWidth: "26rem" }}>
+                      {MISSOES.map((m) => (
+                        <li
+                          key={m.id}
+                          data-missao={m.id}
+                          data-feito={m.feito ? "true" : "false"}
+                          style={{ display: "flex", alignItems: "center", gap: "0.55rem", fontSize: "0.8rem", lineHeight: 1.4 }}
+                        >
+                          <span aria-hidden="true" style={{
+                            width: "1.25rem", textAlign: "center", flex: "none", fontWeight: 900,
+                            color: m.feito ? COR.gold : COR.muted,
+                          }}>{m.feito ? "✓" : "⏳"}</span>
+                          <span style={{ flex: 1, minWidth: 0, color: COR.text, opacity: m.feito ? 1 : 0.85 }}>
+                            {m.rotulo}
+                            <span style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>
+                              {m.feito ? " — feito" : " — pendente"}
+                            </span>
+                          </span>
+                          <span style={{ flex: "none", fontWeight: 800, color: m.feito ? COR.gold : COR.muted }}>
+                            +{m.pontos}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p data-missoes-rodape="" style={{ margin: "0.5rem 0 0", fontSize: "0.75rem", color: COR.text, opacity: 0.85 }}>
+                      {`Você ganhou ${missoesHoje.pontosHoje} pontos hoje.`}{todasFeitas ? " Volte amanhã!" : ""}
+                    </p>
+                  </>
+                )}
+              </section>
 
               {/* UTAC107b — ordem decidida pelo operador (decisão 4):
                   Depositar PIX → Comprar Passe Desafio → Menor Lance Único → Ofertas Programadas.

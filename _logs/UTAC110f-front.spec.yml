@@ -1,0 +1,37 @@
+schema: utac/1
+name: UTAC110f-front
+title: "UI «Missões de hoje» na Carteira (login diário +5 · 1 lance +10)"
+type: produto
+baseline: 2e6e43c
+motivo: >-
+  O UTAC110f creditou as fontes de pontos de lance no backend, mas o utilizador não vê
+  quais missões já completou hoje. Expor o estado (ler-pontos) e mostrá-lo na Carteira.
+frentes:
+  - id: A
+    nome: Missões de hoje (backend mínimo + hook + UI)
+    entrega: [netlify/functions/ler-pontos.mjs (+missoesHoje, fail-soft),
+              src/hooks/usePontos.js (reutilizado — Ponytail, sem hook novo),
+              src/pages/MinhaCarteira.jsx (bloco no 1.º vidro, após os 3 saldos),
+              testes backend + frontend (4 estados, bidireccional), 2 screenshots]
+autoriza:
+  - editar netlify/functions/ler-pontos.mjs (só este ficheiro do backend — §6/§13 do enunciado)
+  - editar src/hooks/usePontos.js e src/pages/MinhaCarteira.jsx
+  - criar testes em src/__tests__/ e netlify/functions/_tests/
+  - suíte + build; _logs/UTAC110f-front-*; Desktop/RELATORIO-UTAC110f-front.txt; R14 no CLAUDE.md
+  - git add individual; commit + push foreground; validador adversarial (worktree)
+proibe:
+  - git add -A; deploy em background
+  - outro ficheiro de netlify/functions/ (incl. _lib/fontes-lance.mjs)
+  - tocar nos 3 saldos (fidelidade, lance, ECOQUILDO), CardLance, CartaoEdicao, GlassHeader
+  - alterar EM_BREVE_MODE
+  - botões no bloco (só visualização)
+dependencias:
+  - UTAC110f fechado (2e6e43c) — estadoMissoesHoje em _lib/fontes-lance.mjs
+regras_activas: [E, T, G, L, S, A, P, AU, ST, HI]
+regras_extra: [A14]
+stop_conditions_extra: []
+ressalvas:
+  - R18-110f-front-A — ✅ = amarelo #f5a623 (não verde; decisão 109h.2 prevalece)
+  - R18-110f-front-B — pontosHoje = 5·login + 10·lance (só as missões)
+  - R18-110f-front-C — texto pt-BR «você» («Você ganhou X pontos hoje», «Volte amanhã!»)
+  - Fail-soft — sem missoesHoje legível ⇒ estado neutro, nunca inventado

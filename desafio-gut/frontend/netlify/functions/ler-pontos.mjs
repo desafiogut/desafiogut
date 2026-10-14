@@ -10,6 +10,7 @@
 //   ⚠️ R1 (UTAC106f): `pontos` é o TOTAL; `pontosCartao` é o que CONTA para o cartão (só compra/resgate).
 //   UTAC110d (aditivo): + `fidelidade: {total, historico}` e `lance: {creditos, pontos, historico}` —
 //   os dois ledgers SEPARADOS. Os campos acima ficam iguais (a UI actual consome-os).
+//   UTAC110f-front (aditivo): + `missoesHoje: {dia, loginFeito, lanceFeito, pontosHoje}` — ou `null` se a leitura falhar.
 // 401 token_ausente|token_invalido · 405 metodo_invalido · 503 sistema_pausado|store_indisponivel
 //
 // Padrão herdado POR LEITURA de `comprar-passe-pontos.mjs` (Bearer → endereco; erros snake_case).
@@ -19,6 +20,20 @@ import { verificarUserSession } from "./_lib/jwt.mjs";
 import { respostaPreflight } from "./_lib/cors.mjs";
 import { sistemaPausado, lerEstadoSistema } from "./_lib/system-state.mjs";
 import { lerPontos, lerPalpites, pontosDeCompra, PONTOS_POR_CARTAO } from "./_lib/passe-pontos.mjs";
+import { estadoMissoesHoje, PONTOS_LOGIN_DIARIO, PONTOS_MISSAO_LANCE } from "./_lib/fontes-lance.mjs";
+
+// UTAC110f-front — as «Missões de hoje» da Carteira. FAIL-SOFT: se a leitura falhar, `missoesHoje: null` e o resto
+// da resposta segue igual (as missões nunca derrubam os pontos). `pontosHoje` = só as missões do dia (R18-110f-front-B):
+// 5 do login diário + 10 do 1.º lance — NÃO inclui a indicação nem outros créditos.
+async function missoesDeHoje(endereco) {
+  try {
+    const { dia, loginFeito, lanceFeito } = await estadoMissoesHoje(endereco);
+    const pontosHoje = (loginFeito ? PONTOS_LOGIN_DIARIO : 0) + (lanceFeito ? PONTOS_MISSAO_LANCE : 0);
+    return { dia, loginFeito, lanceFeito, pontosHoje };
+  } catch {
+    return null;
+  }
+}
 
 async function titular(req) {
   const h = req.headers.get("authorization") || "";
@@ -57,6 +72,7 @@ export default async (req) => {
   // `pontos` é o TOTAL (compra + bónus de palpite) e serve para mostrar o bónus; a BARRA e o LIMIAR
   // do cartão usam `pontosCartao`. Sem isto, 48 de compra + 2 de bónus = 50 desbloqueava o cartão.
   const pontosCartao = pontosDeCompra(registo);
+  const missoesHoje = await missoesDeHoje(t.endereco);
   return jsonResponse({
     ok: true,
     pontos,
@@ -72,6 +88,7 @@ export default async (req) => {
       pontos: Number(registo?.pontos_lance ?? 0),
       historico: Array.isArray(registo?.historico_lance) ? registo.historico_lance : [],
     },
+    missoesHoje,
     palpites: palpites.map((p) => ({
       edicaoId: p.edicao_id, valor: p.valor, criadoEm: p.criado_em,
       apurado: p.apurado === true, resultado: p.resultado ?? null,
