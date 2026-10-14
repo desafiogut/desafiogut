@@ -42,6 +42,10 @@ const MUTANTES = [
   ["M12 a indicação usa os endereços MASCARADOS", "referral.mjs", "const pl = await creditarIndicacao(r.indicador, endereco);", "const pl = await creditarIndicacao(mascararEndereco(r.indicador), mascararEndereco(endereco));"],
   ["M13 login-diario aceita GET", "login-diario.mjs", "if (req.method !== \"POST\")", "if (false)"],
   ["M14 login-diario diz sempre creditado", "login-diario.mjs", "    creditado: r.creditado,\n", "    creditado: true,\n"],
+  // SEG5 — sobreviventes do validador, agora com teste dirigido:
+  ["O2 o limite conta também o bónus de indicado", L, ' && String(h?.ref ?? "").startsWith("indicacao:")', ""],
+  ["O7 papéis trocados no referral", "referral.mjs", "const pl = await creditarIndicacao(r.indicador, endereco);", "const pl = await creditarIndicacao(endereco, r.indicador);"],
+  ["O8 login-diario lê o endereço do CORPO (IDOR)", "login-diario.mjs", "try { r = await creditarLoginDiario(t.endereco, agora); }", "const corpo = await req.json().catch(() => ({})); try { r = await creditarLoginDiario(corpo.endereco ?? t.endereco, agora); }"],
   ["M15 AppContext chama sem authToken", CTX, "    if (!address || !authToken) return;\n    const chave = String(address).toLowerCase();", "    if (!address) return;\n    const chave = String(address).toLowerCase();", "front"],
   ["M16 AppContext marca feito mesmo quando falha", CTX, ".then((r) => { if (!r?.ok) loginDiarioFeitoRef.current.delete(chave); })", ".then(() => {})", "front"],
   ["M17 AppContext não envia o token", CTX, "apiPost(\"login-diario\", {}, { token: authToken })", "apiPost(\"login-diario\", {}, {})", "front"],

@@ -58,6 +58,9 @@ test("R1 indicação válida → 200 e +50 pontos de lance ao indicante E ao ind
   assert.equal(r.status, 200);
   assert.deepEqual(r.corpo.pontosLance, { indicante: true, indicado: true });
   assert.deepEqual([pontos(A), pontos(B)], [50, 50]);
+  // SEG5 (mutante O7): os papéis não se trocam — a ref do indicante aponta para o indicado.
+  assert.deepEqual(T.linha(A).historico_lance.map((h) => h.ref), [`indicacao:${B}`]);
+  assert.deepEqual(T.linha(B).historico_lance.map((h) => h.ref), ["indicacao-recebida"]);
 });
 
 test("R2 auto-indicação → 400 auto_indicacao e NADA creditado", async () => {

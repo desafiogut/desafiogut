@@ -211,8 +211,12 @@ test("B4 o indicado só recebe UMA vez na vida, mesmo indicado por outro (o indi
   assert.deepEqual([pontos(A), pontos(B), pontos(C)], [50, 50, 50]);
 });
 
+// ⚠️ SEG5 (validador): o ledger data cada entrada com o relógio REAL; o limite conta pelo mês do `agora`.
+//    Um `agora` FIXO (2026-10) tornava o B5 vermelho a partir de 2026-11-01. Datas RELATIVAS ao relógio real.
+const AGORA_REAL = () => new Date();
+const MES_SEGUINTE = () => { const n = new Date(); return new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth() + 1, 2, 15)); };
 test("B5 limite mensal: o 11.º indicado do mês NÃO paga o indicante (o indicado recebe); o mês seguinte paga", async () => {
-  const agora = D("2026-10-20T15:00:00Z");
+  const agora = AGORA_REAL();
   const end = (i) => `0x${String(i).padStart(40, "0")}`;
   for (let i = 1; i <= 10; i++) await F.creditarIndicacao(A, end(i), agora);
   assert.equal(pontos(A), 500);
@@ -220,16 +224,38 @@ test("B5 limite mensal: o 11.º indicado do mês NÃO paga o indicante (o indica
   assert.deepEqual([r.ok, r.indicante.creditado, r.indicante.code, r.indicado.creditado], [true, false, "LIMITE_MENSAL", true]);
   assert.equal(pontos(A), 500);
   assert.equal(pontos(end(11)), 50);
-  const nov = await F.creditarIndicacao(A, end(12), D("2026-11-02T15:00:00Z"));
-  assert.equal(nov.indicante.creditado, true, "os créditos de Outubro não contam em Novembro");
+  const nov = await F.creditarIndicacao(A, end(12), MES_SEGUINTE());
+  assert.equal(nov.indicante.creditado, true, "os créditos deste mês não contam no seguinte");
   assert.equal(pontos(A), 550);
 });
 
 test("B6 o limite não bloqueia a idempotência: re-registar um indicado já pago no 10.º slot não falha", async () => {
-  const agora = D("2026-10-20T15:00:00Z");
+  const agora = AGORA_REAL();
   const end = (i) => `0x${String(i + 100).padStart(40, "0")}`;
   for (let i = 1; i <= 10; i++) await F.creditarIndicacao(A, end(i), agora);
   const r = await F.creditarIndicacao(A, end(10), agora);
   assert.deepEqual([r.ok, r.indicante.creditado, r.indicante.code], [true, false, undefined]);
   assert.equal(pontos(A), 500);
+});
+
+// ── SEG5: mutantes sobreviventes do validador (O2, O8) ───────────────────────────────────────────
+test("B7 o limite conta SÓ indicações FEITAS — o bónus de indicado (`indicacao-recebida`) não ocupa slot", async () => {
+  const agora = AGORA_REAL();
+  await F.creditarIndicacao(C, A, agora);                       // A recebe +50 como indicado
+  const end = (i) => `0x${String(i + 300).padStart(40, "0")}`;
+  for (let i = 1; i <= 10; i++) {
+    const r = await F.creditarIndicacao(A, end(i), agora);
+    assert.equal(r.indicante.creditado, true, `a ${i}.ª indicação feita por A paga`);
+  }
+  assert.equal(pontos(A), 550);
+});
+
+test("A9 endpoint: um endereço de OUTRA pessoa no corpo é IGNORADO — credita só o titular do token (anti-IDOR)", async () => {
+  const req = new Request("https://x/.netlify/functions/login-diario", {
+    method: "POST", body: JSON.stringify({ endereco: B, address: B }),
+    headers: { "content-type": "application/json", authorization: `Bearer ${await assinarUserSession(A)}` },
+  });
+  const r = await hLogin(req);
+  assert.equal(r.status, 200);
+  assert.deepEqual([pontos(A), pontos(B)], [5, 0]);
 });

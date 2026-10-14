@@ -73,8 +73,9 @@ const mesUTC = (iso) => (typeof iso === "string" ? iso.slice(0, 7) : null);
 /**
  * +50 ao indicante e +50 ao indicado. Recusa auto-indicação. O indicante só recebe enquanto tiver
  * menos de `LIMITE_INDICACOES_MES` indicações creditadas no mês; o indicado recebe na mesma.
- * ⚠️ O limite é verificado ANTES do crédito (fora do CAS): dois indicados creditados em paralelo no
- *    10.º slot podem dar 11 — declarado; o CAS impede só a duplicação, não o excesso marginal.
+ * ⚠️ O limite é verificado ANTES do crédito (fora do CAS): N indicados creditados EM PARALELO perto do
+ *    limite podem ultrapassá-lo em até N−1 (medido pelo validador do SEG5: 9 pagos + 6 em paralelo → 14).
+ *    O CAS impede só a duplicação, não o excesso. Fechar exige contador atómico — UTAC próprio.
  */
 export async function creditarIndicacao(indicante, indicado, agora = new Date()) {
   const a = String(indicante ?? "").toLowerCase();
