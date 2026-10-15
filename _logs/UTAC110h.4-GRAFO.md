@@ -163,3 +163,23 @@ arestas do grafo — mas a invariante que se quer testável é «zero endereços
 por isso foram mascarados **todos**. O §2 fica com o inventário **de arestas**; a contagem completa de
 endereços está no §-1.6 do `UTAC110h.4_SEG-1_MEDICAO.md`.
 
+---
+
+## 7. CORRECÇÃO DO SEG5 (3.ª passagem) — o critério passou do NOME para o VALOR
+
+> O validador adversarial (veredicto **PARCIAL**) refutou a alegação de que as 4 superfícies estavam
+> todas mascaradas: escaparam **3 sítios** porque o critério era o **nome** do identificador.
+
+| sítio | o que escapava | tratamento |
+|---|---|---|
+| `_lib/sybil-check.mjs:101` | `addresses: r.addresses` (array de N endereços) → Sentry | ponto de estrangulamento no wrapper |
+| `netlify/functions/monitor-onchain.mjs:170-178` (×2) | `lancador: b.lancador` / `o.lancador` → Sentry | idem |
+| `src/lib/sentry-alerts.js:70` | `address: key` → Sentry **cliente** | idem |
+| `src/components/CardLance.jsx:311` (achado no 2.º varrimento) | `tags.wallet` + `reasonRaw` → Sentry **cliente** | `capturarExcecao` + `beforeSend` |
+
+**A correcção estrutural:** `mascararEnderecosProfundo` — mascara qualquer `0x`+40 hex em qualquer
+profundidade — aplicado em **3 pontos de estrangulamento** (`_lib/sentry-server.mjs`,
+`src/lib/sentry-alerts.js`, `src/lib/sentryLazy.js::beforeSend`, este último passou a mascarar o
+**evento inteiro**; antes só saneava `argon2id_`). Detalhe em `UTAC110h.4-quota-grafo.md` §6.
+**Uma lista de nomes é dívida com prazo de validade; a forma do valor não.**
+

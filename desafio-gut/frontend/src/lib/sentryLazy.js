@@ -27,6 +27,10 @@ const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN;
 // beforeSend strippa qualquer payload contendo "argon2id_" como defesa em
 // profundidade contra vazar hash de prova de intenção do lance. (Movido do
 // main.jsx sem alteração de lógica.)
+// UTAC110h.4 (DEBT-031/S6) — mascarador de endereços. Módulo minúsculo e sem dependências: não
+// quebra o carregamento preguiçoso deste ficheiro (o `Sentry` continua a ser `import()` dinâmico).
+import { mascararEnderecosProfundo } from "./mascarar.js";
+
 const ARGON2ID_RE = /argon2id_/i;
 const scrubArgon2id = (obj) => {
   if (!obj || typeof obj !== "object") return;
@@ -118,7 +122,12 @@ export function carregarSentry() {
               }
             });
           }
-          return event;
+          // ⚠️ UTAC110h.4 (DEBT-031/S6 — achado do 2.º varrimento do validador adversarial): o
+          // `argon2id_` era a única coisa saneada. Qualquer ENDEREÇO que viaje num evento do cliente
+          // (mensagem de excepção do revert, `tags.wallet` do CardLance, breadcrumbs, extras) saía
+          // completo para o Sentry. Aqui o critério é o **VALOR** (0x + 40 hex), em QUALQUER
+          // profundidade — não uma lista de nomes, que fica desactualizada no dia seguinte.
+          return mascararEnderecosProfundo(event);
         },
       });
 

@@ -9,6 +9,7 @@
 // cobre o lado durável.
 
 import * as Sentry from "@sentry/react";
+import { mascararEnderecosProfundo } from "./mascarar.js"; // UTAC110h.4 (DEBT-031/S6)
 
 const LIMIAR_RATE_LIMIT  = 50;  // requests/min no mesmo endpoint
 const LIMIAR_JWT_FAILS   = 5;   // falhas 401 em 1 min
@@ -21,7 +22,9 @@ function captureAlert(kind, payload, level = "warning") {
     Sentry.captureMessage(`[sec] ${kind}`, {
       level,
       tags: { security_alert: kind, source: "client" },
-      extra: payload,
+      // UTAC110h.4 (DEBT-031/S6) — o endereço sai mascarado: o critério é o VALOR, não o nome da
+      // chave (a guarda por nome deixava passar `addresses`/`lancador`/`address`).
+      extra: mascararEnderecosProfundo(payload),
     });
   } catch (err) {
     // Sentry pode estar desabilitado (sem DSN). Não pode quebrar a app.
@@ -54,6 +57,26 @@ export function checkJwtFailures(endpoint) {
   // Limpa a janela após disparar para evitar spam (próximo alerta exige nova burst).
   jwtFailsWindow.length = 0;
   return true;
+}
+
+/**
+ * Captura uma EXCEPÇÃO no Sentry do cliente, com o endereço mascarado.
+ *
+ * UTAC110h.4 (SEG5 · F2 do validador adversarial) — existe para não haver chamadas directas a
+ * `Sentry.captureException` fora dos wrappers: o `CardLance` passava `tags.wallet = address` e
+ * `extra.reasonRaw` (texto do revert, que pode trazer um endereço lá dentro). Uma chamada directa
+ * escapa ao mascaramento do wrapper; passando por aqui, não.
+ *
+ * O `beforeSend` do `sentryLazy.js` mascara o evento inteiro (defesa em profundidade); isto é a
+ * 1.ª barreira, no sítio onde o dado é recolhido.
+ */
+export function capturarExcecao(err, ctx = {}) {
+  try {
+    Sentry.captureException(err, mascararEnderecosProfundo(ctx));
+  } catch (e) {
+    // Sentry pode estar desabilitado (sem DSN). Não pode quebrar a app.
+    if (typeof console !== "undefined") console.warn("[sentry-alerts] capturarExcecao falhou:", e?.message);
+  }
 }
 
 // ── Burst de compras / lances do mesmo endereço ─────────────────────────────

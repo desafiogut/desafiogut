@@ -11,7 +11,7 @@ import { dirname, join } from "node:path";
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), "..");  // netlify/functions
 const FRONT = join(RAIZ, "..", "..");                             // desafio-gut/frontend
 const md5 = (s) => createHash("md5").update(s).digest("hex");
-const BACK_T = ["_tests/utac110h4-quota.test.mjs", "_tests/utac110h4-grafo.test.mjs"];
+const BACK_T = ["_tests/utac110h4-quota.test.mjs", "_tests/utac110h4-grafo.test.mjs", "_tests/utac110h4-sentry-mascara.test.mjs"];
 const FRONT_T = ["src/__tests__/utac110h4-mascarar.test.mjs"];
 
 function correr(lado) {
@@ -28,6 +28,9 @@ const R  = "_lib/referral.mjs";       // Frente A — quota/fail-closed
 const EP = "referral.mjs";            // Frente C — aresta do grafo no endpoint
 const AA = "auth-admin.mjs";          // Frente C — endereço isolado noutro ficheiro
 const AC = "src/context/AppContext.jsx"; // Frente C — browser (caminho relativo à frontend)
+const SS = "_lib/sentry-server.mjs";     // SEG5/F2-F3 — ponto de estrangulamento do Sentry (servidor)
+const SL = "src/lib/sentryLazy.js";      // SEG5/F3 — choke point do Sentry cliente (frontend)
+const GT = "_tests/utac110h4-grafo.test.mjs"; // a PRÓPRIA guarda (o seu ponto cego)
 
 const MUTANTES = [
   // ── FRENTE A — a quota ─────────────────────────────────────────────────────────────────────────
@@ -60,6 +63,21 @@ const MUTANTES = [
   ["G4 o console do BROWSER volta a escrever o endereço cru", AC,
     "        address: mascararEnderecoLog(address), message: err?.message, name: err?.name,",
     "        address, message: err?.message, name: err?.name,", "front"],
+
+  // ── OS MUTANTES DO VALIDADOR ADVERSARIAL (SEG5) — os dois que SOBREVIVERAM à 1.ª versão ────────
+  // ⚠️ Ele correu 5 mutantes próprios e 2 sobreviveram (V1, V4). Estes são os mesmos, agora com a
+  // guarda que os mata. Ficam aqui como prova permanente, não como nota de rodapé.
+  ["V1 (F4) o `catch` da LEITURA do contador volta a FALHAR ABERTO (era o buraco que ele achou)", R,
+    '  catch { return { ok: false, conversoes: null, motivo: "quota_indisponivel", fonte: "fail-closed" }; }',
+    '  catch { return { ok: true, conversoes: 0, motivo: null, fonte: "fail-open" }; }', "back"],
+  ["V4 (F2/F3) o ponto de estrangulamento do Sentry deixa de mascarar o payload", SS,
+    "  const payloadSeguro = mascararEnderecosProfundo(payload);",
+    "  const payloadSeguro = payload;", "back"],
+  ["V6 (F3) o `beforeSend` do cliente volta a devolver o evento SEM mascarar", SL,
+    "          return mascararEnderecosProfundo(event);", "          return event;", "front"],
+  ["V7 (F2) a guarda volta a ter a allowlist ESTREITA (addresses/lancador/wallet cegos)", GT,
+    "|\\baddresses\\b|",
+    "|", "back"],
 ];
 
 // Baseline verde obrigatória antes de mutar (mutar sobre vermelho não prova nada).

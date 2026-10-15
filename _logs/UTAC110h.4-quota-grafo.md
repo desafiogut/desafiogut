@@ -170,3 +170,81 @@ resposta**. Não se corrige sozinho: **escalado ao operador** (§R18-110h.4-2 e 
 **Intocados (verificado por diff):** `docs/REGULAMENTO-v5.md`, `GUTO-REGULAMENTO.md`,
 `regras-oficiais.md`, o **contrato on-chain** (só leitura), env vars, `_lib/contract.mjs` (**não foi
 necessário** — medido: o defeito nunca esteve lá).
+
+---
+
+## 5. ARMADILHAS DE AMBIENTE REPRODUZIDAS (medidas por MIM e pelo VALIDADOR independente)
+
+Duas armadilhas apareceram **em duas sessões separadas** (executor e validador adversarial), o que as
+torna reprodutíveis e não idiossincrasias de uma sessão. Ficam registadas aqui; **não** se editou a
+skill UTAC (`protocol/ambiente.md` / `regras/A-ambiente.md`) porque este UTAC não autoriza editar a
+skill e a doutrina manda **não estender o próprio escopo** (GATE 2/HI4). *Recomendação ao operador:
+acrescentar as duas ao `protocol/ambiente.md` num UTAC próprio.*
+
+| # | armadilha | sintoma medido | o que funciona |
+|---|---|---|---|
+| **E-1** | **Correr o harness da suíte num subshell de background** — `(node scripts/mc966-suite-harness.mjs ambos > log 2>&1; echo EXIT=$? >> log)` | **`stdin is not a tty`** e **`EXIT=1`**, com o log do harness **vazio** (nada foi medido). O harness *não* reporta erro; simplesmente não mediu. ⚠️ Lido à pressa, um log de 26 bytes parece «suíte falhou» quando na verdade é «NÃO MEDI» — exactamente o defeito que o MC96.5 documentou no próprio harness. | **Script `.sh` em FICHEIRO**, corrido com `bash <ficheiro>` a partir de `terminal(background=true)`; ou foreground com `timeout` generoso. Medido a funcionar nas 3 corridas verdes. |
+| **E-2** | **Assumir que o limiar de RAM (A14, 1500 MB) é alcançável** | O **tecto caiu no fim da sessão**: 6 leituras pós-trim = **1472-1482 MB**, com o `Memory Compression` a crescer de 210 → **381 MB** (o próprio trim alimenta a compressão). O validador adversarial mediu, na sessão dele, **807 / 869 / 880 / 867 MB**. Alavancas seguras esgotadas: a árvore `msedge` sem janela (289 MB) já tinha sido fechada; os `python`/`node` restantes são **a própria sessão Hermes**. | **Desvio declarado** com pico + mínimo + leitura imediatamente antes da tarefa, e **PARAR** se aparecerem falhas inexplicadas (§3 da skill). As 3 corridas deram VERDE — o dano que o portão existe para evitar não se materializou. Registado como **DEBT-035** (o `scripts/liberar-ram.ps1` que a skill cita **não existe** no repo). |
+
+**Nota de método:** as duas armadilhas produzem o **mesmo tipo de erro de instrumento** —
+*um resultado vazio lido como «correu mal»* (E-1) e *um limiar não alcançável declarado como
+cumprido* (E-2, se não fosse declarado). É a terceira variante da mesma família do `^.` do MC96.5 e do
+`grep` cego do §1: **o instrumento devolve vazio ou parcial, e o vazio lê-se como resposta.**
+
+---
+
+## 6. SEG5 — O VALIDADOR DERRUBOU PARTE DO QUE ESTÁ AQUI EM CIMA (mantido à vista)
+
+> **VEREDICTO: PARCIAL** (5 das 12 alegações refutadas). Relatório integral e transcrito:
+> `_logs/UTAC110h.4_SEG5_VALIDADOR.md`. Esta secção **não apaga** nada do que está acima — corrige-o
+> onde ele provou que estava errado.
+
+### 6.1 Correccções às afirmações deste ficheiro
+
+| o que este ficheiro afirmava | o que o validador provou | estado |
+|---|---|---|
+| §2.1 «GAP-1: o contador passou a **FAIL-CLOSED**» | **verdade só na LEITURA.** A **ESCRITA** do contador continua a falhar em aberto (`catch { console.warn }` + `return { ok:true }`): falha depois do crédito ⇒ contador a menos ⇒ a quota passa mais. **Medido: 12/12 créditos com o contador a 0** | **PARCIAL** — o lado da leitura está fechado e testado; o da escrita → **DEBT-036 (alta)**, escalada |
+| §2.2 «`limite_mensal_excedido` vs `quota_indisponivel`» | **confirmado** — `VAL-T3` verifica que o selo só acontece no ramo do limite | mantém-se ✅ |
+| §2.4 «mutação 9/9» | **reproduzido** (9/9) — mas **2 mutantes dele sobreviveram** aos meus 9 | **insuficiente** → mutação alargada a **13/13** (§6.2) |
+| §3.3 «todos os `console.*` e todos os payloads de `captureSecurityAlert` mascarados» | **incompleto**: 3 sítios escaparam porque o critério era o **NOME** do identificador — `addresses` (`sybil-check.mjs:101`), `lancador` (`monitor-onchain.mjs:170-178`) e `address` (`sentry-alerts.js:70`) → Sentry | **corrigido** (§6.2) |
+| §3.5 (do GRAFO) «nenhum evento do cliente envia o par» | **verdade para o PAR, falso para o ENDEREÇO** — o `CardLance.jsx:311` mandava `tags.wallet` + `reasonRaw` inteiros | **corrigido** (§6.2) |
+
+### 6.2 O tratamento — o critério passou do **NOME** para o **VALOR**
+
+```
+mascararEnderecosProfundo(v)   // mascara QUALQUER 0x+40hex, em QUALQUER profundidade
+```
+Aplicado em **3 pontos de estrangulamento** (para não voltar a haver uma lista de nomes a envelhecer):
+
+| ponto | ficheiro | o que passou a cobrir |
+|---|---|---|
+| servidor | `_lib/sentry-server.mjs::captureSecurityAlert` | **todas** as chamadas de alerta + o `console.warn` de fallback |
+| cliente | `src/lib/sentry-alerts.js::captureAlert` e o novo `capturarExcecao` | `burst_compras`, geo, rate-limit, e o `CardLance` (que passou a usar o wrapper em vez de `Sentry.captureException` directo) |
+| cliente (init) | `src/lib/sentryLazy.js::beforeSend` | **o evento INTEIRO** — antes só saneava `argon2id_`; era por aqui que qualquer endereço em `tags`/`extra`/`message`/breadcrumbs saía inteiro |
+
+**A guarda** (`_tests/utac110h4-grafo.test.mjs`) ficou com: a lista de nomes **alargada aos que a
+cegavam** (`addresses`, `lancador`, `wallet`, `carteira`, `comprador`, `vendedor`, `cliente_id`), um
+**control positivo** que os exige, e uma regra nova — **`Sentry.capture*` só dentro dos wrappers**, com
+o wrapper **obrigado** a mascarar (senão a garantia estrutural não existe).
+
+**Provas novas:** `_tests/utac110h4-sentry-mascara.test.mjs` (3 testes — **stub ao `@sentry/node`, não
+ao wrapper**: é assim que se mede o que **sai**), 2 testes da leitura que falha (fecham o **F4**,
+bidireccionais), o `beforeSend` amarrado no teste do frontend, e a mutação **9 → 13**.
+
+### 6.3 Mutação final (13/13)
+
+| # | mutante | morreu? |
+|---|---|---|
+| Q1-Q5, G1-G4 | os 9 originais | ✅ todos |
+| **V1 (F4)** | o `catch` da leitura volta a falhar aberto — **o mutante que o validador fez sobreviver** | ✅ **agora morre** (fail=2) |
+| **V4 (F2/F3)** | o ponto de estrangulamento deixa de mascarar o payload — **o 2.º sobrevivente dele** | ✅ **agora morre** (fail=3) |
+| **V6 (F3)** | o `beforeSend` do cliente volta a devolver o evento sem mascarar | ✅ morre (fail=1) |
+| **V7 (F2)** | a guarda volta a ter a allowlist ESTREITA (o seu próprio ponto cego) | ✅ morre (fail=1) |
+
+### 6.4 Erro de método que este SEG5 expôs (e que fica escrito)
+
+O `grep` de uma linha (§3.3) e a **allowlist por NOME** são a **mesma família de erro**: *o
+instrumento vê só o que já se lembrou de procurar*. A correcção do primeiro ainda usava o segundo
+critério — foi preciso um validador independente para o mostrar. **Regra que fica:** para uma
+invariante sobre DADOS (um endereço), o critério tem de ser a **forma do valor**; listas de nomes são
+dívida com prazo de validade.

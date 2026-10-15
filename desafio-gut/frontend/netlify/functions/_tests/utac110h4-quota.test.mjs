@@ -22,8 +22,12 @@ process.env.JWT_SECRET = "segredo-de-teste-utac110h4-quota-comprimento-suficient
 delete process.env.REFERRAL_ATIVO;
 
 let BL, P, E, creditos;
-/** Quando `true`, abrir o store do contador mensal LANÇA → exercita o caminho fail-closed. */
+/** Quando `true`, abrir o store do contador mensal LANÇA → exercita o ramo `if (!store)`. */
 let falharContador = false;
+/** Quando `true`, o store ABRE mas o `get` LANÇA → exercita o `catch` da LEITURA (mutante V1 do
+ *  validador adversarial: era este caminho que os 8 testes originais NÃO cobriam, e por isso um
+ *  mutante que o voltasse a pôr fail-open sobrevivia à suíte completa). */
+let falharLeituraContador = false;
 
 mock.module("../_lib/contract.mjs", { namedExports: {
   creditarSenhas: async (endereco, qtd) => { creditos.push({ endereco, qtd }); return { txHash: "0xmock" }; },
@@ -32,7 +36,12 @@ mock.module("@netlify/blobs", { namedExports: {
   getStore: (o) => {
     const nome = typeof o === "string" ? o : o?.name;
     if (falharContador && nome === "referral-bonus") throw new Error("Blobs indisponível (simulado)");
-    return BL.getStore(typeof o === "string" ? { name: o } : o);
+    const store = BL.getStore(typeof o === "string" ? { name: o } : o);
+    if (falharLeituraContador && nome === "referral-bonus") {
+      // O store ABRE (o `abrirStore` não vê nada de errado) mas a LEITURA falha.
+      return { ...store, get: async () => { throw new Error("leitura do contador falhou (simulado)"); } };
+    }
+    return store;
   } } });
 function duploPalpites() {
   const api = {};
@@ -197,6 +206,26 @@ test("UNITÁRIO: contador ilegível → `concederBonus` NÃO chama o contrato", 
   assert.deepEqual([r.ok, r.code], [false, "quota_indisponivel"]);
   assert.equal(creditos.length, 0, "ALARME: o contrato foi chamado sem quota legível");
   falharContador = false;
+});
+
+// ⚠️ ACHADO F4 DO VALIDADOR ADVERSARIAL (mutante V1 sobreviveu à suíte). O teste acima exercita o
+// ramo `if (!store)` (o store NÃO abre). O `catch` da LEITURA — store abRE, `get` LANÇA — ficava SEM
+// COBERTURA: pôr esse `catch` a devolver fail-open (`conversoes: 0`) sobrevivia a tudo. Estes dois
+// testes fecham esse caminho, de forma BIDIRECCIONAL.
+test("F4: store ABRE mas a LEITURA do contador LANÇA → fail-closed (não credita on-chain)", async () => {
+  falharLeituraContador = true;
+  const r = await R.concederBonus(A);
+  assert.deepEqual([r.ok, r.code, r.conversoes ?? null], [false, "quota_indisponivel", null],
+    `a leitura falhada TEM de contar como contador indisponível — recebi ${JSON.stringify(r)}`);
+  assert.equal(creditos.length, 0, "ALARME: creditou on-chain com a leitura do contador a falhar");
+  falharLeituraContador = false;
+});
+
+test("F4 BIDIRECCIONAL: com a leitura a funcionar, a MESMA chamada credita (o teste acima não é vácuo)", async () => {
+  const r = await R.concederBonus(A);
+  assert.deepEqual([r.ok], [true], `sem falha de leitura a conversão tem de correr — recebi ${JSON.stringify(r)}`);
+  assert.equal(creditos.length, 1, "e o contrato tem de ser chamado");
+  assert.equal(contadorMes(A), 1, "e o contador incrementado");
 });
 
 /** O gas real é impossível por construção (o contrato é um duplo) — este guarda é o alarme explícito. */

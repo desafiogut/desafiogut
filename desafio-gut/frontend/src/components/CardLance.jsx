@@ -2,7 +2,7 @@ import { useState, useRef, useId } from "react";
 import { useWallets } from "@privy-io/react-auth";
 import { keccak256, toUtf8Bytes } from "ethers";
 import { motion, useReducedMotion } from "framer-motion";
-import * as Sentry from "@sentry/react";
+import { capturarExcecao } from "../lib/sentry-alerts.js"; // UTAC110h.4 (DEBT-031/S6) — wrapper que mascara
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useAppContext } from "../context/AppContext.jsx";
@@ -308,10 +308,14 @@ export default function CardLance({
       setFase(FASES.ERRO);
 
       if (err?.code !== "ACTION_REJECTED") {
-        Sentry.captureException(err, {
+        // UTAC110h.4 (DEBT-031/S6 — achado do 2.º varrimento): ia o `address` COMPLETO do
+        // utilizador para o Sentry do cliente (em `tags.wallet`) e o `reasonRaw` (texto do revert,
+        // que pode trazer um endereço lá dentro). Passa pelo wrapper `capturarExcecao`, que mascara
+        // o contexto; a chamada directa a `Sentry.*` deixou de existir aqui (é o que a guarda exige).
+        capturarExcecao(err, {
           tags: {
             idEdicao: edicaoSanitizada,
-            wallet:   address ?? "anonymous",
+            wallet:   address || "anonymous",
             chainId:  SEPOLIA_CHAIN_ID,
             fase,
           },

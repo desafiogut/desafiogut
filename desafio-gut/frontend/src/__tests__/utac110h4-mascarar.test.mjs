@@ -96,3 +96,21 @@ test("os pontos de uso do frontend chamam o mascarador (nenhum escreve o endere�
   const cru = ['console.info("[x]", { address, message: err })', 'console.warn("[y]", { endereco: endereco })'].join("\n");
   assert.equal(violacoes(cru, "sintetico").length, 2, "o varrimento não vê a forma crua");
 });
+
+test("o `beforeSend` do cliente mascara o EVENTO inteiro (choke point do Sentry cliente)", () => {
+  // ⚠️ Achado F2/F3 do validador adversarial: o `beforeSend` do `sentryLazy.js` só saneava `argon2id_`.
+  // O `CardLance` mandava `tags.wallet = address` completo. Aqui amarra-se o choke point: se alguém
+  // voltar a fazer `return event;`, este teste cai.
+  const txt = readFileSync(join(RAIZ, "src/lib/sentryLazy.js"), "utf8");
+  assert.match(txt, /return mascararEnderecosProfundo\(event\);/,
+    "o beforeSend do cliente deixou de mascarar o evento (o endereço volta a sair inteiro para o Sentry)");
+  assert.match(txt, /import \{ mascararEnderecosProfundo \}/, "o sentryLazy.js perdeu o import do mascarador");
+  // E o wrapper de excepções tem de existir e mascarar o contexto.
+  const alertas = readFileSync(join(RAIZ, "src/lib/sentry-alerts.js"), "utf8");
+  assert.match(alertas, /extra: mascararEnderecosProfundo\(payload\)/,
+    "o `captureAlert` deixou de mascarar o payload do cliente");
+  assert.match(alertas, /Sentry\.captureException\(err, mascararEnderecosProfundo\(ctx\)\)/,
+    "o `capturarExcecao` deixou de mascarar o contexto");
+  // CONTROL POSITIVO: um ficheiro sem o mascaramento NÃO passaria esta verificação.
+  assert.doesNotMatch("return event;", /return mascararEnderecosProfundo\(event\);/);
+});

@@ -196,7 +196,7 @@ test("GRAFO/relatório: o log de auditoria GUARDA o par, mas a SAÍDA do relató
 });
 
 // ══ B) ESTÁTICO ══════════════════════════════════════════════════════════════════════════════════
-const IDENT = /(\bendereco\b|\benderecos\b|\bindicador\b|\bindicado\b|\bindicante\b|\bnovoEndereco\b|\baddress\b|\bsubject\b)/g;
+const IDENT = /(\bendereco\b|\benderecos\b|\baddresses\b|\baddress\b|\bindicador\b|\bindicado\b|\bindicante\b|\bnovoEndereco\b|\bsubject\b|\blancador\b|\bwallet\b|\bcarteira\b|\bcomprador\b|\bvendedor\b|\bcliente_id\b)/g;
 const MASCARADO = /mascararEndereco(?:Log)?\(\s*[\w.?,[\]' ]*$/;
 
 /**
@@ -254,7 +254,16 @@ function violacoesDe(texto, ficheiro, padrao) {
   return out;
 }
 const PADRAO_CONSOLE = /console\.(?:log|info|warn|error|debug|trace)\s*\(/;
-const PADRAO_ALERTA  = /captureSecurityAlert\s*\(/;
+/**
+ * Wrappers de alerta que MASCARAAM no próprio wrapper (ponto de estrangulamento, UTAC110h.4/S6):
+ * `_lib/sentry-server.mjs::captureSecurityAlert` (servidor) e `src/lib/sentry-alerts.js::captureAlert`
+ * (cliente) aplicam `mascararEnderecosProfundo(payload)` ao payload antes de o enviar. Um endereço
+ * CRU dentro destas chamadas é portanto **seguro por desenho** — e a prova de que o wrapper mascara
+ * não é estática: é o teste COMPORTAMENTAL `GRAFO/Sentry: o wrapper mascara...`, que faz stub ao
+ * `@sentry/node` (não ao wrapper) e inspecciona o que sai.
+ */
+const WRAPPERS = ["_lib/sentry-server.mjs", "src/lib/sentry-alerts.js", "src/lib/sentryLazy.js"];
+const PADRAO_SENTRY_DIRETO = /Sentry\.capture(?:Message|Exception|Event)\s*\(/;
 
 function ficheirosDeProducao(dir, exts, ignorar) {
   const out = [];
@@ -274,22 +283,22 @@ test("GRAFO/estático: CONTROL POSITIVO — o varrimento VÊ a forma crua e NÃO
     'console.info("[auth-admin] login ok", { endereco, jti: par.jti });',
     'console.log("[X] par", { indicado: endereco, indicador: r.indicador });',
     'console.warn(`[require-mfa] endereco=${subject}`);',
-    'captureSecurityAlert("x", { indicador, indicado: novoEndereco }, "error");',
+    // ⚠️ nomes que a 1.ª versão da guarda NÃO via (achado F2 do validador: mutante V4 sobreviveu):
+    'console.log("[Z]", { addresses, lancador, wallet });',
   ].join("\n");
-  const v = violacoesDe(cru, "sintetico", PADRAO_CONSOLE).length + violacoesDe(cru, "sintetico", PADRAO_ALERTA).length;
-  assert.equal(v, 6, `o varrimento não vê as formas cruas (viu ${v}, esperado 6)`);
+  const v = violacoesDe(cru, "sintetico", PADRAO_CONSOLE).length;
+  assert.equal(v, 7, `o varrimento não vê as formas cruas (viu ${v}, esperado 7: endereco, indicado, endereco, indicador, subject, addresses, lancador, wallet — os 3 últimos são os nomes que a 1.ª versão NÃO via)`);
   const limpo = [
     'console.info("[a]", { endereco: mascararEndereco(endereco) });',
     'console.info("[b]", { temAddress: !!address, hasEndereco: !!meta?.endereco });',
     'console.warn(`notificar ${String(endereco).slice(0, 10)}…`);',
     'console.warn(`não a notificar ${mascararEndereco(endereco)}`);',
-    'captureSecurityAlert("x", { endereco: mascararEndereco(endereco) }, "error");',
+    'console.warn(`mascarado ${mascararEndereco(wallet)}`);',
   ].join("\n");
-  assert.deepEqual(violacoesDe(limpo, "sintetico", PADRAO_CONSOLE).concat(violacoesDe(limpo, "sintetico", PADRAO_ALERTA)),
-    [], "o varrimento reprova código JÁ mascarado");
+  assert.deepEqual(violacoesDe(limpo, "sintetico", PADRAO_CONSOLE), [], "o varrimento reprova código JÁ mascarado");
 });
 
-test("GRAFO/estático: nenhum `console.*`/`captureSecurityAlert` de produção leva endereço sem mascarar", () => {
+test("GRAFO/estático: nenhum `console.*` de produção leva endereço sem mascarar", () => {
   const alvos = [
     ...ficheirosDeProducao(RAIZ, [".mjs"], ["_tests", "node_modules", "dist"]),
     ...ficheirosDeProducao(join(FRONT, "src"), [".js", ".jsx"], ["__tests__", "node_modules", "dist"]),
@@ -299,7 +308,34 @@ test("GRAFO/estático: nenhum `console.*`/`captureSecurityAlert` de produção l
   for (const f of alvos) {
     const txt = readFileSync(f, "utf8");
     const rel = f.replace(FRONT + "\\", "").replace(FRONT + "/", "");
-    violacoes.push(...violacoesDe(txt, rel, PADRAO_CONSOLE), ...violacoesDe(txt, rel, PADRAO_ALERTA));
+    violacoes.push(...violacoesDe(txt, rel, PADRAO_CONSOLE));
   }
-  assert.deepEqual(violacoes, [], `endereços em payload de log/alerta:\n${violacoes.join("\n")}`);
+  assert.deepEqual(violacoes, [], `endereços em console.*:\n${violacoes.join("\n")}`);
+});
+
+test("GRAFO/estático: `Sentry.capture*` só DENTRO dos dois wrappers (nada escapa ao mascaramento)", () => {
+  const alvos = [
+    ...ficheirosDeProducao(RAIZ, [".mjs"], ["_tests", "node_modules", "dist"]),
+    ...ficheirosDeProducao(join(FRONT, "src"), [".js", ".jsx"], ["__tests__", "node_modules", "dist"]),
+  ];
+  const fora = [];
+  for (const f of alvos) {
+    // ⚠️ separadores normalizados: no Windows o `rel` vem com `\` e um `endsWith("src/lib/x.js")`
+    // com barras FALHA — foi o que fez o 1.º varrimento acusar os PRÓPRIOS wrappers (falso positivo
+    // medido). E os comentários são retirados antes de procurar: `monitor-onchain.mjs:13` tem
+    // `Sentry.captureMessage(...)` DENTRO de um comentário de documentação.
+    const rel = f.replace(FRONT + "\\", "").replace(FRONT + "/", "").replace(/\\/g, "/");
+    const ehWrapper = WRAPPERS.some((w) => rel.endsWith(w));
+    const txt = readFileSync(f, "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
+    if (ehWrapper) {
+      // O wrapper TEM de aplicar o mascaramento ao payload — senão a garantia estrutural não existe.
+      assert.match(txt, /mascararEnderecosProfundo\(\s*payload\s*\)|mascararEnderecosProfundo\(\s*event\s*\)/,
+        `${rel} é wrapper mas não mascara o payload/evento (a garantia de S6 deixaria de existir)`);
+      continue;
+    }
+    if (PADRAO_SENTRY_DIRETO.test(txt)) fora.push(rel);
+  }
+  assert.deepEqual(fora, [],
+    `chamam Sentry DIRECTAMENTE (fora dos wrappers mascaradores) — o payload sai sem mascarar:\n${fora.join("\n")}`);
 });
