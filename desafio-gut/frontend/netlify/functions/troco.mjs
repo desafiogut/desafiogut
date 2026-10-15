@@ -19,6 +19,7 @@ import { getAdminAddresses } from "./_lib/admin-helpers.mjs";
 import { lerTroco, consumirTrocoFIFO, creditarTroco } from "./_lib/troco-senhas.mjs";
 import { creditarSenhas, lerSaldoSenhas } from "./_lib/contract.mjs";
 import { respostaPreflight } from "./_lib/cors.mjs";
+import { mascararEndereco } from "./_lib/validate.mjs"; // UTAC110h.4 (DEBT-031)
 
 async function handleGet(req) {
   const url = new URL(req.url);
@@ -90,7 +91,7 @@ async function handleConverter(req) {
     senhasDepois = await lerSaldoSenhas(endereco);
   } catch (err) {
     console.error("[troco] conversão on-chain falhou — devolvendo troco:", {
-      endereco, qtd, message: err?.message, code: err?.code,
+      endereco: mascararEndereco(endereco), qtd, message: err?.message, code: err?.code,
     });
     // Reembolso: recredita o troco (novo lote, validade renovada — aceitável e raro).
     await creditarTroco({ endereco, senhas: qtd, origem: "reembolso-conversao" });

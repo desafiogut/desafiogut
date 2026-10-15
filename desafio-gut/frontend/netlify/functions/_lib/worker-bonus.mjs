@@ -109,7 +109,7 @@ export async function creditarSenhasBonus(payload) {
     // a confirmação, e reabrir a dívida criaria a janela de pagamento duplo.
     // Vai para reconciliação manual, como no worker-credito.
     captureSecurityAlert("worker_bonus_credito_falhou", {
-      cicloId, endereco, quantidade: decisao.quantidade,
+      cicloId, endereco: mascararEndereco(endereco), quantidade: decisao.quantidade, // UTAC110h.4 (DEBT-031/S6)
       liquidadoEm: quandoISO, erro: String(err?.message || err).slice(0, 300),
     }, "error").catch(() => {});
     throw err;

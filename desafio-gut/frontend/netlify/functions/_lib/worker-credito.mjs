@@ -50,7 +50,7 @@ export async function confirmarCreditoSenhas(payload) {
       reembolso = await reembolsarSaldoRs({ endereco, valorCentavos, motivo: "credito-assincrono-revertido" });
       if (!reembolso.ok) {
         captureSecurityAlert("worker_credito_reembolso_falhou",
-          { pedidoId, endereco, valorCentavos, txHash, code: reembolso.code }, "error").catch(() => {});
+          { pedidoId, endereco: mascararEndereco(endereco), valorCentavos, txHash, code: reembolso.code }, "error").catch(() => {}); // UTAC110h.4
       }
     }
     console.warn("[worker-credito] revertido → reembolso", { pedidoId, endereco: mascararEndereco(endereco), txHash, reembolsado: reembolso.ok });

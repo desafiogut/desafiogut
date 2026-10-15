@@ -33,6 +33,7 @@ import { keccak256, AbiCoder } from "ethers";
 import { consumirCreditoLance, reverterMovimentoLance } from "./_lib/ledger-lance.mjs"; // UTAC110d
 import { creditarMissaoLance } from "./_lib/fontes-lance.mjs"; // UTAC110f — missão «1 lance do dia»
 import { respostaPreflight } from "./_lib/cors.mjs";
+import { mascararEndereco } from "./_lib/validate.mjs"; // UTAC110h.4 (DEBT-031)
 
 const LANCE_MIN_CENTAVOS = 1;
 const LANCE_MAX_CENTAVOS = 999999;
@@ -147,7 +148,7 @@ export default async (req) => {
     : null;
 
   console.info("[lance-relampago] início", {
-    endereco, valorCentavos, edicaoId, idem: !!idempotencyKey,
+    endereco: mascararEndereco(endereco), valorCentavos, edicaoId, idem: !!idempotencyKey,
     role, // MC49.3.1 — auditoria: papel do autor do lance (não bloqueia; ver passo 4.5)
   });
 
@@ -158,7 +159,7 @@ export default async (req) => {
       try {
         const existente = await idemStore.get(idempotencyKey, { type: "json" });
         if (existente?.lanceId) {
-          console.info("[lance-relampago] idempotent hit", { endereco, idempotencyKey });
+          console.info("[lance-relampago] idempotent hit", { endereco: mascararEndereco(endereco), idempotencyKey }); // UTAC110h.4 (DEBT-031)
           return jsonResponse({ ...existente, idempotent: true });
         }
       } catch (err) {
@@ -367,7 +368,7 @@ export default async (req) => {
   }
 
   console.info("[lance-relampago] concluído", {
-    endereco, valorCentavos, edicaoId, lanceId,
+    endereco: mascararEndereco(endereco), valorCentavos, edicaoId, lanceId,
     saldoAntes:  debito.resultado.saldoAntesCentavos,
     saldoDepois: debito.resultado.saldoDepoisCentavos,
   });

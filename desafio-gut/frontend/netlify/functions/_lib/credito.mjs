@@ -100,7 +100,7 @@ export async function creditarPedidoIdempotente({ pedidoId, endereco, qtd, fonte
     };
   } catch (err) {
     console.error(`[credito:${fonte}] erro on-chain:`, {
-      pedidoId, endereco, qtd,
+      pedidoId, endereco: mascararEndereco(endereco), qtd,
       message: err?.message, code: err?.code, shortMessage: err?.shortMessage,
     });
     return {
@@ -121,7 +121,7 @@ export async function creditarPedidoIdempotente({ pedidoId, endereco, qtd, fonte
   }
 
   console.info(`[credito:${fonte}] crédito concluído`, {
-    pedidoId, endereco, qtd, txHash: resultado.txHash,
+    pedidoId, endereco: mascararEndereco(endereco), qtd, txHash: resultado.txHash,
     saldoAntes: resultado.saldoAntes, saldoDepois: resultado.saldoDepois,
   });
   return { ok: true, idempotent: false, resultado };

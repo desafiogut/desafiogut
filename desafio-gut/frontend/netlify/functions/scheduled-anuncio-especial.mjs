@@ -71,6 +71,7 @@ import { schedule } from "@netlify/functions";
 import { getStore } from "@netlify/blobs";
 import { adicionarNotificacao } from "./_lib/notificacoes-usuario.mjs";
 import { getSupabaseReadOnly } from "./_lib/supabase-client.mjs";
+import { mascararEndereco } from "./_lib/validate.mjs"; // UTAC110h.4 (DEBT-031)
 
 // ── Constantes (exportadas: os testes medem-nas em vez de as repetirem) ──────
 
@@ -196,7 +197,7 @@ export async function executarTick({
       if (ok) escritas++; else naoEscritas++; // false = dedupe (camada 2) ou store indisponível
     } catch (err) {
       naoEscritas++;
-      console.warn(`[anuncio-especial] falha a notificar ${String(endereco).slice(0, 10)}…:`, err?.message);
+      console.warn(`[anuncio-especial] falha a notificar ${mascararEndereco(endereco)}:`, err?.message); // UTAC110h.4 (DEBT-031)
     }
   }
 

@@ -22,6 +22,7 @@ import { useEffect } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
 import { apiPost } from "../lib/api.js";
 import { REF_STORAGE_KEY, REF_STORAGE_KEY_LEGACY } from "./ReferralTracker.jsx";
+import { mascararEnderecoLog } from "../lib/mascarar.js"; // UTAC110h.4 (DEBT-031) — o log do browser não leva endereço cru
 
 // Estados TERMINAIS do registo — consumir a flag sem retry (não são transitórios).
 //  200 ok · 400 auto_indicacao/codigo_invalido · 403 endereco_nao_corresponde
@@ -57,9 +58,9 @@ export default function ReferralRegistrar() {
     (async () => {
       let deviceTracked = "false";
       try { deviceTracked = localStorage.getItem(DEVICE_KEY) ? "true" : "false"; } catch { /* sem storage */ }
-      console.log("[GUT][MC17.4.2] T4 POST usar-codigo", { codigo, endereco: address, deviceTracked });
+      console.log("[GUT][MC17.4.2] T4 POST usar-codigo", { codigo, endereco: mascararEnderecoLog(address), deviceTracked });
       // MC17.5.1 [LOG TEMPORÁRIO] T3 — POST enviado (espera por address+authToken garantida acima).
-      console.log("[MC17.5.1] T3 POST enviado", { codigo, endereco: address, temAuthToken: !!authToken, deviceTracked });
+      console.log("[MC17.5.1] T3 POST enviado", { codigo, endereco: mascararEnderecoLog(address), temAuthToken: !!authToken, deviceTracked });
       try {
         const resp = await apiPost("referral?acao=usar-codigo",
           { codigo_indicacao: codigo, endereco: address },
@@ -90,6 +91,10 @@ export default function ReferralRegistrar() {
         // próximo mount/login. Rejeições definitivas continuam a selar.
         const RECUPERAVEIS = new Set([
           "credito_onchain_falhou", "conversao_falhou", "store_indisponivel", "credito_indicado_falhou",
+          // UTAC110h.4 (GAP-1) — o contador da quota ficou ILEGÍVEL: o servidor NÃO creditou on-chain
+          // (fail-closed) e NÃO selou a conversão. É transitório por desenho ⇒ o código fica guardado
+          // para nova tentativa, em vez de se perder o bónus do indicante pela duração da indisponibilidade.
+          "quota_indisponivel",
         ]);
         const conversaoRecuperavel =
           resp.status === 200 && !conv.ok && !conv.idempotent && RECUPERAVEIS.has(conv.code);

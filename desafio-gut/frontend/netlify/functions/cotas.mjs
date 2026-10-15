@@ -43,6 +43,7 @@ import {
   resumoCotas, upsertCota, deleteCota, getFingerprint, setFingerprint,
 } from "./_lib/cotas-store.mjs";
 import { respostaPreflight } from "./_lib/cors.mjs";
+import { mascararEndereco } from "./_lib/validate.mjs"; // UTAC110h.4 (DEBT-031)
 
 const CATEGORIAS  = new Set(["bronze", "prata", "ouro", "diamante"]);
 
@@ -542,7 +543,7 @@ async function handlePost(req) {
     }
 
     console.info("[cotas] register-corporativo", {
-      cliente_id: clienteId, endereco, origem: registro.origem,
+      cliente_id: clienteId, endereco: mascararEndereco(endereco), origem: registro.origem,
       empresa: registro.empresa, cnpj: registro.cnpj,
       visitorId: visitorId.slice(0, 8) + "…",
     });
@@ -688,7 +689,7 @@ async function handlePost(req) {
   }
 
   console.info("[cotas] upsert", {
-    endereco, categoria, vendida: registro.vendida,
+    endereco: mascararEndereco(endereco), categoria, vendida: registro.vendida,
     troco_senhas: trocoSenhas ? { senhas: trocoSenhas.senhas, diferencaBrl: trocoSenhas.diferencaBrl } : null,
   });
   return jsonResponse({

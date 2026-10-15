@@ -16,6 +16,7 @@ import {
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 import { registrarFalhaJwt } from "./_lib/jwt-fail-counter.mjs";
 import { respostaPreflight } from "./_lib/cors.mjs";
+import { mascararEndereco } from "./_lib/validate.mjs"; // UTAC110h.4 (DEBT-031)
 
 const TTL_LANCE_AUTH = 10 * 60; // 10 min
 
@@ -101,6 +102,6 @@ export default async (req) => {
     return jsonError(500, "jwt_indisponivel", "configuração de servidor incompleta");
   }
 
-  console.info("[auth-lance] token emitido", { endereco });
+  console.info("[auth-lance] token emitido", { endereco: mascararEndereco(endereco) }); // UTAC110h.4 (DEBT-031)
   return jsonResponse({ token, ttl: TTL_LANCE_AUTH });
 };

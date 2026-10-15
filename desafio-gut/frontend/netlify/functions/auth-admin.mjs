@@ -24,6 +24,7 @@ import { emitirParAdmin, rotacionarRefresh, revogarAdmin, TTL_ACCESS_SEC, TTL_RE
 import { getAdminAddresses } from "./_lib/admin-helpers.mjs";
 import { registrarFalhaJwt } from "./_lib/jwt-fail-counter.mjs";
 import { respostaPreflight } from "./_lib/cors.mjs";
+import { mascararEndereco } from "./_lib/validate.mjs"; // UTAC110h.4 (DEBT-031)
 
 export default async (req) => {
   // MC88.12 — preflight CORS do APK. Tem de ser a primeira coisa: o OPTIONS não
@@ -112,7 +113,7 @@ async function acaoLogin(body, req) {
     return jsonError(500, "emissao_falhou", "não foi possível emitir credenciais admin");
   }
 
-  console.info("[auth-admin] login ok", { endereco, jti: par.jti });
+  console.info("[auth-admin] login ok", { endereco: mascararEndereco(endereco), jti: par.jti }); // UTAC110h.4 (DEBT-031)
   return jsonResponse({
     accessToken:      par.accessToken,
     refreshToken:     par.refreshToken,

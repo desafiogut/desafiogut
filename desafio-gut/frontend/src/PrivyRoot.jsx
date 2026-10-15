@@ -18,6 +18,7 @@ import { Component } from "react";
 import { PrivyProvider, useLogin, useCreateWallet } from "@privy-io/react-auth";
 import { sepolia as sepoliaChain, mainnet as mainnetChain } from "viem/chains"; // viem instalado como dep do Privy
 import App from "./App.jsx";
+import { mascararEnderecoLog } from "./lib/mascarar.js"; // UTAC110h.4 (DEBT-031) — o log do browser não leva endereço cru
 
 // App ID validado via Privy Management API em 2026-04-28.
 // NÃO usar import.meta.env — o dashboard Netlify tem o valor ERRADO (cmo5113v)
@@ -134,7 +135,7 @@ function temEmbeddedWallet(user) {
 function PrivyEventsBridge() {
   const { createWallet } = useCreateWallet({
     onSuccess: ({ wallet }) =>
-      console.info("[GUT] embedded wallet criada", { address: wallet?.address }),
+      console.info("[GUT] embedded wallet criada", { address: mascararEnderecoLog(wallet?.address) }), // UTAC110h.4 (DEBT-031)
     onError: (error) => console.warn("[GUT] createWallet erro", error),
   });
 

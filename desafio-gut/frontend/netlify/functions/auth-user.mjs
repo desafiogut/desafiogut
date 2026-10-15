@@ -21,6 +21,7 @@ import { registrarFalhaJwt } from "./_lib/jwt-fail-counter.mjs";
 import { registarAtividade } from "./_lib/atividade-utilizadores.mjs";
 import { registerAndCheck } from "./_lib/sybil-check.mjs";
 import { respostaPreflight } from "./_lib/cors.mjs";
+import { mascararEndereco } from "./_lib/validate.mjs"; // UTAC110h.4 (DEBT-031)
 
 const TTL_USER_SESSION = 24 * 60 * 60; // 24h
 
@@ -117,6 +118,6 @@ export default async (req) => {
     console.warn("[auth-user] registo de atividade falhou (não-fatal):", err?.message);
   });
 
-  console.info("[auth-user] sessão emitida", { endereco, visitorId: visitorId ? "presente" : "ausente" });
+  console.info("[auth-user] sessão emitida", { endereco: mascararEndereco(endereco), visitorId: visitorId ? "presente" : "ausente" }); // UTAC110h.4 (DEBT-031)
   return jsonResponse({ token, ttl: TTL_USER_SESSION });
 };

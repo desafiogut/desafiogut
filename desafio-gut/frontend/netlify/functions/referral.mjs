@@ -197,8 +197,10 @@ async function handleUsarCodigo(req) {
   // idempotência/on-chain) eventualmente saltou o crédito num teste manual.
   console.log("[MC17.4.2] usar-codigo resultado", {
     codigo,
-    indicado:             endereco,
-    indicador:            r.indicador,
+    // UTAC110h.4 (DEBT-031) — o par indicador↔indicado é grafo social (LGPD): mascarado já aqui,
+    // como o log da linha acima já fazia. Os DADOS (endereços reais) seguem intactos para as chamadas.
+    indicado:             mascararEndereco(endereco),
+    indicador:            mascararEndereco(r.indicador),
     vinculoIdempotent:    !!r.idempotent,
     ipGateOk:             ipGate.ok,
     ipCount:              ipGate.count,

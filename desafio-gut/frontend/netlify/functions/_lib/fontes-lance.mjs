@@ -28,6 +28,7 @@
 import { creditarPontosLance, lerLedgerLance } from "./ledger-lance.mjs";
 import { creditarEcoQuildo, registarEmissaoNoLastro, reverterEcoQuildo } from "./eco-quildo.mjs";
 import { captureSecurityAlert } from "./sentry-server.mjs";
+import { mascararEndereco } from "./validate.mjs"; // UTAC110h.4 (DEBT-031)
 
 export const PONTOS_LOGIN_DIARIO = 5;
 export const PONTOS_MISSAO_LANCE = 10;
@@ -167,7 +168,7 @@ async function creditarEcoQuildoDaIndicacao(indicante, indicado, indicanteRes) {
   }
   if (!reverteramTodos) {
     captureSecurityAlert("indicacao_eco_reversao_falhou", {
-      code: lastro.code, enderecos: criados.map((c) => c.endereco), emitidos: total,
+      code: lastro.code, enderecos: criados.map((c) => mascararEndereco(c.endereco)), emitidos: total, // UTAC110h.4 (DEBT-031/S6)
     }, "error").catch(() => {});
   }
   return {

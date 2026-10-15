@@ -12,6 +12,27 @@
 // (gas real pago pela coordenação) — ver `Desktop/RELATORIO-UTAC110h.3.txt` §8 e a ressalva ⚠️-1 do
 // validador (quota: o marcador de convertido é gravado mesmo quando o indicador está no limite).
 //
+// ── CUSTO DO BÓNUS ON-CHAIN — o que a quota limita, e o que NÃO limita (UTAC110h.4, §A5) ────────────
+// A quota (`LIMITE_MENSAL = 10` conversões/mês/indicante, verificada em `concederBonus`) limita
+// **um só dos dois lados** do crédito:
+//   • LADO DO INDICANTE — limitado a **10 créditos/mês** (contador `referral-monthly:{end}:{AAAA-MM}`,
+//     mês UTC). Tecto de transacções do indicante = 10 × (n.º de indicantes activos no mês).
+//   • LADO DO INDICADO   — **SEM quota** (é o bónus de boas-vindas, `MC15.8.1 R4`). Mas é limitado por
+//     OUTRA via: o marcador `referral-convertido:{codigo}:{indicado}` é único por (código, indicado),
+//     logo cada endereço indicado gera **1 transacção na vida** (não por mês).
+// ⇒ Tecto total de transacções/mês = 10 × (indicantes activos) + (endereços indicados NOVOS no mês).
+//   **Não é** «10 × utilizadores»: o lado do indicado não tem quota mensal.
+//
+// ⚠️ ESTIMATIVA, NÃO MEDIÇÃO (medir exige transaccionar — proibido neste UTAC). Cada crédito é uma
+// chamada `adicionarSenhas` (escrita de estado): custo ≈ `gas_por_tx × preço_do_gás × preço_do_ETH`.
+// Com as premissas típicas de uma escrita de estado (~50–70 k gas) e gás a 10–30 gwei, a ordem de
+// grandeza é **~10⁻³ ETH por transacção** — e portanto **~2× isso por indicação confirmada** (2 tx).
+// Convertido a dinheiro depende do preço do ETH no momento; **a fórmula acima é a verdade durável**,
+// o número não. A quota põe o piso do custo mensal em: 10 conversões/indicante → **20 transacções**
+// por cada indicante que esgote o mês. Sem a quota (comportamento ANTERIOR, fail-open do contador) o
+// tecto era, na prática, o volume de indicações — foi essa a dívida que o GAP-1 fechou.
+// 
+//
 // Convenções de Blobs:
 //   referral-code:{endereco}              → { codigo, criadoEm }                                  (1 código por endereço)
 //   referral-code-reverso:{codigo}        → { endereco, criadoEm }                                (lookup O(1) codigo→dono)
@@ -29,6 +50,7 @@ import { randomBytes, createHash } from "node:crypto";
 import { creditarSenhas } from "./contract.mjs";
 import { checkSybil, registerVisitor } from "./sybil-check.mjs";
 import { captureSecurityAlert } from "./sentry-server.mjs";
+import { mascararEndereco } from "./validate.mjs"; // UTAC110h.4 (DEBT-031) — o grafo social não sai em log
 
 const STORE_CODES     = "referral-codes";       // referral-code:* + referral-code-reverso:*
 const STORE_LINKS     = "referral-links";       // referral:* + referral-convertido:* + referral-fraud:*
@@ -404,7 +426,7 @@ export async function registrarIndicacao(codigo, novoEndereco, visitorIdNovo) {
     }
     if (fraude.motivo !== "codigo_inexistente" && fraude.motivo !== "auto_indicacao") {
       captureSecurityAlert("referral_fraude", {
-        codigo, novoEndereco: novoLower, motivo: fraude.motivo,
+        codigo, novoEndereco: mascararEndereco(novoLower), motivo: fraude.motivo, // UTAC110h.4 (DEBT-031)
       }).catch(() => {});
     }
     // ITEM 2 — regista a anomalia no log diário (alimenta o relatório admin).
@@ -450,18 +472,37 @@ export async function registrarIndicacao(codigo, novoEndereco, visitorIdNovo) {
 }
 
 /**
- * Verifica contador mensal do indicador. Retorna { ok, conversoes }.
- * `ok: false` se conversoes >= LIMITE_MENSAL.
+ * Verifica contador mensal do indicador. Retorna { ok, conversoes, limite, motivo }.
+ * `ok: false` se conversoes >= LIMITE_MENSAL (`motivo: "limite_mensal_excedido"`) **ou** se o
+ * contador não puder ser LIDO (`motivo: "quota_indisponivel"`).
+ *
+ * ⚠️ UTAC110h.4 (GAP-1 da medição do SEG-1) — o contador passou a ser **FAIL-CLOSED**.
+ * Antes: `if (!store) return { ok: true, conversoes: 0, fonte: "fail-open" }` — e o mesmo no `catch`
+ * (`reg = null` → 0 conversões). Com o Blobs indisponível a quota **desaparecia**: o bónus on-chain
+ * era creditado sem limite nenhum, durante toda a indisponibilidade, em gas REAL de mainnet.
+ * A ordem do operador (R18-110h.4-1 + §A3 do UTAC110h.4) é conservadora — *«se a contagem falhar →
+ * não creditar on-chain»* — e o crédito dos +50 pontos + ECOQUILDO mantém-se (vive noutro caminho:
+ * `creditarIndicacao`, chamado em paralelo pelo endpoint).
+ *
+ * ⚠️ O `motivo` é o que separa os dois casos, e a diferença é DELIBERADA:
+ *   • `limite_mensal_excedido` = estado **terminal do mês** → `registrarConversao` grava o marcador;
+ *   • `quota_indisponivel`     = falha **TRANSITÓRIA** → `registrarConversao` NÃO grava nada e devolve
+ *     o erro, para a conversão poder ser re-tentada quando o contador voltar a ser legível.
+ * Confundir os dois é o que transforma uma indisponibilidade de minutos num mês perdido.
  */
 export async function verificarLimiteMensal(enderecoIndicador, mes = mesAtualKey()) {
   const store = abrirStore(STORE_BONUS);
-  if (!store) return { ok: true, conversoes: 0, fonte: "fail-open" };
+  if (!store) return { ok: false, conversoes: null, motivo: "quota_indisponivel", fonte: "fail-closed" };
   const chave = `referral-monthly:${enderecoIndicador}:${mes}`;
   let reg;
+  // Um `get` que LANÇA é falha de leitura (fail-closed); um `get` que devolve `null` é um indicador
+  // que ainda não converteu este mês (0 conversões — caminho normal, não é falha).
   try { reg = await store.get(chave, { type: "json" }); }
-  catch { reg = null; }
+  catch { return { ok: false, conversoes: null, motivo: "quota_indisponivel", fonte: "fail-closed" }; }
   const conversoes = Number(reg?.conversoes || 0);
-  return { ok: conversoes < LIMITE_MENSAL, conversoes, limite: LIMITE_MENSAL };
+  return conversoes < LIMITE_MENSAL
+    ? { ok: true, conversoes, limite: LIMITE_MENSAL, motivo: null }
+    : { ok: false, conversoes, limite: LIMITE_MENSAL, motivo: "limite_mensal_excedido" };
 }
 
 /**
@@ -482,6 +523,14 @@ export async function concederBonus(enderecoIndicador, contexto = {}) {
   }
   const limite = await verificarLimiteMensal(enderecoLower);
   if (!limite.ok) {
+    // UTAC110h.4 (GAP-1) — DOIS motivos, deliberadamente com códigos DIFERENTES:
+    //   • quota_indisponivel     → TRANSITÓRIO. Não se credita (conservador, é a ordem do §A3), mas
+    //     o chamador (`registrarConversao`) NÃO pode gravar o marcador definitivo — assim a conversão
+    //     é re-tentável. É a diferença entre «o mês está cheio» e «não consegui contar agora».
+    //   • limite_mensal_excedido → TERMINAL do mês (10 conversões creditadas).
+    if (limite.motivo === "quota_indisponivel") {
+      return { ok: false, code: "quota_indisponivel", message: "contador mensal ilegível (fail-closed): não se credita on-chain" };
+    }
     return { ok: false, code: "limite_mensal_excedido", message: `${limite.conversoes}/${limite.limite} conversões no mês` };
   }
 
@@ -493,7 +542,8 @@ export async function concederBonus(enderecoIndicador, contexto = {}) {
   } catch (err) {
     console.error("[referral] creditarSenhas falhou:", err?.message);
     captureSecurityAlert("referral_bonus_falhou", {
-      indicador: enderecoLower, err: err?.message, contexto,
+      indicador: mascararEndereco(enderecoLower), err: err?.message, // UTAC110h.4 (DEBT-031) — o `contexto` trazia o par inteiro
+      contexto: { ...contexto, indicado: mascararEndereco(contexto?.indicado) },
     }, "error").catch(() => {});
     return { ok: false, code: "credito_onchain_falhou", message: err?.message };
   }
@@ -579,7 +629,7 @@ export async function registrarConversao(vinculo, contexto = {}) {
   const bonus = await concederBonus(indicador, { ...contexto, codigo: vinculo.codigo, indicado });
   // MC17.5.1 [LOG TEMPORÁRIO] T6 — resultado do crédito ao indicador.
   console.log("[MC17.5.1] T6 concederBonus(indicador)", {
-    indicador, bonusOk: bonus.ok, bonusCode: bonus.code || null, txHash: bonus.txHash || null,
+    indicador: mascararEndereco(indicador), bonusOk: bonus.ok, bonusCode: bonus.code || null, txHash: bonus.txHash || null, // UTAC110h.4 (DEBT-031)
   });
   // Falha TRANSITÓRIA (ex.: on-chain) → NÃO marca convertido (permite retry no
   // próximo lance/compra) e NÃO credita o indicado ainda. Só limite mensal
@@ -599,7 +649,7 @@ export async function registrarConversao(vinculo, contexto = {}) {
     console.warn("[referral] crédito ao indicado falhou (não-fatal):", err?.message);
   }
   // MC17.5.1 [LOG TEMPORÁRIO] T6 — resultado do crédito ao indicado (+1 senha).
-  console.log("[MC17.5.1] T6 crédito indicado", { indicado, txHashIndicado });
+  console.log("[MC17.5.1] T6 crédito indicado", { indicado: mascararEndereco(indicado), txHashIndicado }); // UTAC110h.4 (DEBT-031)
 
   const semBonusIndicador = !bonus.ok; // true só quando limite mensal excedido
   try {

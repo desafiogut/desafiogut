@@ -35,6 +35,7 @@ import {
   gravarPrazoStorage,
 } from "../lib/leilaoTimer.js";
 import { apiGet, apiPost } from "../lib/api.js";
+import { mascararEnderecoLog } from "../lib/mascarar.js"; // UTAC110h.4 (DEBT-031)
 import { enviarConsentimentoPendente } from "../lib/consentimento.js";
 import { EM_BREVE_MODE } from "../lib/leilaoLock.js";
 // UTAC000.17bc (17c/GATE 22) — memória do «visto» no aparelho (localStorage).
@@ -811,7 +812,7 @@ export function AppProvider({ children }) {
       gravarSaldoCache(address, { senhas: valor });   // MC88.34 (P0)
     } catch (err) {
       console.warn("[GUT-DEBUG] refetchSaldo falhou", {
-        address, message: err?.message, name: err?.name,
+        address: mascararEnderecoLog(address), message: err?.message, name: err?.name,
       });
       setSaldoSenhasStatus((prev) => (prev === "ok" ? "stale" : "error"));
     }
@@ -1000,7 +1001,7 @@ export function AppProvider({ children }) {
       setSaldoRsStatus("ok");
       gravarSaldoCache(address, { centavos });   // MC88.34 (P0)
     } catch (err) {
-      console.warn("[GUT-DEBUG] refetchSaldoRs falhou", { address, message: err?.message });
+      console.warn("[GUT-DEBUG] refetchSaldoRs falhou", { address: mascararEnderecoLog(address), message: err?.message });
       setSaldoRsStatus((prev) => (prev === "ok" ? "stale" : "error"));
     }
   }, [address, authToken, visitorId]);

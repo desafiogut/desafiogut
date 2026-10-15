@@ -33,6 +33,7 @@ import { buscarVinculoPorIndicado, registrarConversao } from "./_lib/referral.mj
 import { sistemaPausado, lerEstadoSistema } from "./_lib/system-state.mjs";
 // MC59.2 (B-2/C-4) — alertas observáveis para casos de reconciliação financeira.
 import { captureSecurityAlert } from "./_lib/sentry-server.mjs";
+import { mascararEndereco } from "./_lib/validate.mjs"; // UTAC110h.4 (DEBT-031) — logs sem endereços
 import { respostaPreflight } from "./_lib/cors.mjs";
 
 const VALOR_POR_SENHA_CENTAVOS = 200; // R$ 2,00
@@ -194,7 +195,7 @@ export default async (req) => {
   const valorCentavos = voucherValido ? 0 : valorBruto;
 
   console.info("[comprar-senhas] início", {
-    endereco, qtd, valorBruto, valorCentavos,
+    endereco: mascararEndereco(endereco), qtd, valorBruto, valorCentavos,
     voucher: voucherValido ? voucherCodigo : null,
     role, // MC49.3 — auditoria: papel do comprador (não bloqueia; ver passo 4.5)
   });
@@ -230,11 +231,11 @@ export default async (req) => {
       ({ txHash } = await submeterCredito(endereco, qtd));
     } catch (err) {
       // Submissão falhou ANTES do txHash (nonce/gás/RPC) → reembolsa (idêntico ao síncrono).
-      console.error("[comprar-senhas:async] submissão falhou — reembolsando:", { endereco, qtd, message: err?.message });
+      console.error("[comprar-senhas:async] submissão falhou — reembolsando:", { endereco: mascararEndereco(endereco), qtd, message: err?.message });
       let reembolso = { ok: true };
       if (valorCentavos > 0) {
         reembolso = await reembolsarSaldoRs({ endereco, valorCentavos, motivo: "comprar-senhas-async-submit-falha" });
-        if (!reembolso.ok) captureSecurityAlert("comprar_senhas_reembolso_falhou", { endereco, valorCentavos, code: reembolso.code }, "error").catch(() => {});
+        if (!reembolso.ok) captureSecurityAlert("comprar_senhas_reembolso_falhou", { endereco: mascararEndereco(endereco), valorCentavos, code: reembolso.code }, "error").catch(() => {});
       }
       return jsonError(502, "credito_onchain_falhou", err?.shortMessage || err?.message || "falha ao submeter", { reembolsado: reembolso.ok, voucher_preservado: false });
     }
@@ -251,10 +252,10 @@ export default async (req) => {
 
     if (enfileirado) {
       await gravarConsentLog(req, endereco);
-      console.info("[comprar-senhas:async] 202 aceito", { endereco, qtd, txHash });
+      console.info("[comprar-senhas:async] 202 aceito", { endereco: mascararEndereco(endereco), qtd, txHash });
       return jsonResponse({
         ok: true, status: "processando", assincrono: true,
-        endereco, qtd, valorBrutoCentavos: valorBruto, valorCentavos,
+        endereco: mascararEndereco(endereco), qtd, valorBrutoCentavos: valorBruto, valorCentavos,
         txHash, contrato: CONTRATO_ADDRESS,
         mensagem: "Crédito submetido on-chain; confirmação em processamento.",
         processadoEm: new Date().toISOString(),
@@ -267,7 +268,7 @@ export default async (req) => {
     // e re-submeter causaria double-credit). NÃO reembolsamos (a tx pode minerar):
     // respondemos pendente e sinalizamos reconciliação (runbook). É um estado de
     // MISCONFIG — o operador não deve ligar CREDITO_ASSINCRONO sem a fila pronta.
-    captureSecurityAlert("comprar_senhas_tx_pendente", { endereco, qtd, txHash, motivo: "fila_indisponivel" }, "error").catch(() => {});
+    captureSecurityAlert("comprar_senhas_tx_pendente", { endereco: mascararEndereco(endereco), qtd, txHash, motivo: "fila_indisponivel" }, "error").catch(() => {});
     return jsonError(502, "credito_pendente",
       "Crédito on-chain submetido; fila de confirmação indisponível — não reembolsado. Reconciliação em andamento.",
       { txHash, reembolsado: false });
@@ -294,17 +295,17 @@ export default async (req) => {
     //     atribuição cruzada entre requisições reprovada no MC59.2).
     if (err?.code === "TX_PENDENTE") {
       console.error("[comprar-senhas] tx pendente/desconhecida — NÃO reembolsa (reconciliação):", {
-        endereco, qtd, valorCentavos, txHash: err.txHash,
+        endereco: mascararEndereco(endereco), qtd, valorCentavos, txHash: err.txHash,
       });
       // level "error": é dinheiro do usuário preso até reconciliação.
-      captureSecurityAlert("comprar_senhas_tx_pendente", { endereco, qtd, txHash: err.txHash }, "error").catch(() => {});
+      captureSecurityAlert("comprar_senhas_tx_pendente", { endereco: mascararEndereco(endereco), qtd, txHash: err.txHash }, "error").catch(() => {});
       return jsonError(502, "credito_pendente",
         "Crédito on-chain pendente de confirmação — não reembolsado. Reconciliação em andamento.",
         { txHash: err.txHash, reembolsado: false, voucher_preservado: !!voucherValido });
     }
 
     console.error("[comprar-senhas] credito on-chain falhou — reembolsando R$:", {
-      endereco, qtd, valorCentavos, message: err?.message, code: err?.code, txHash: err?.txHash,
+      endereco: mascararEndereco(endereco), qtd, valorCentavos, message: err?.message, code: err?.code, txHash: err?.txHash,
     });
     let reembolso = { ok: true };
     if (valorCentavos > 0) {
@@ -312,7 +313,7 @@ export default async (req) => {
       // MC59.2 (C-4) — reembolso falho não pode ser silencioso (reconciliação).
       if (!reembolso.ok) {
         captureSecurityAlert("comprar_senhas_reembolso_falhou", {
-          endereco, valorCentavos, code: reembolso.code,
+          endereco: mascararEndereco(endereco), valorCentavos, code: reembolso.code,
         }).catch(() => {});
       }
     }
@@ -354,7 +355,8 @@ export default async (req) => {
         contexto: "comprar-senhas", txHashCompra: resultadoOnChain.txHash, qtd,
       });
       console.info("[comprar-senhas] referral check", {
-        indicado: endereco, indicador: vinculo.indicador, codigo: vinculo.codigo, referralBonus,
+        // UTAC110h.4 (DEBT-031) — aresta do grafo social: mascarada.
+        indicado: mascararEndereco(endereco), indicador: mascararEndereco(vinculo.indicador), codigo: vinculo.codigo, referralBonus,
       });
     }
   } catch (err) {
@@ -362,7 +364,7 @@ export default async (req) => {
   }
 
   console.info("[comprar-senhas] concluído", {
-    endereco, qtd,
+    endereco: mascararEndereco(endereco), qtd, // UTAC110h.4 (DEBT-031)
     valorCentavos, valorBruto,
     voucher: voucherCodigo,
     saldoRsAntes: debito.resultado.saldoAntesCentavos,

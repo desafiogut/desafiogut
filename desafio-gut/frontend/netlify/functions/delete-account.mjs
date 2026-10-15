@@ -26,6 +26,7 @@ import { registrarFalhaJwt } from "./_lib/jwt-fail-counter.mjs";
 import { getSupabase, supabaseConfigurado } from "./_lib/supabase-client.mjs";
 import { excluirConta } from "./_lib/conta-delete.mjs";
 import { respostaPreflight } from "./_lib/cors.mjs";
+import { mascararEndereco } from "./_lib/validate.mjs"; // UTAC110h.4 (DEBT-031)
 
 export default async (req) => {
   // MC88.12 — preflight CORS do APK. Tem de ser a primeira coisa: o OPTIONS não
@@ -94,13 +95,13 @@ export default async (req) => {
       dryRun,
     });
   } catch (err) {
-    console.error("[delete-account] falha inesperada:", { endereco, message: err?.message });
+    console.error("[delete-account] falha inesperada:", { endereco: mascararEndereco(endereco), message: err?.message }); // UTAC110h.4 (DEBT-031)
     return jsonError(500, "exclusao_falhou", err?.message || "erro inesperado na exclusão");
   }
 
   const modo = dryRun ? "SIMULAÇÃO" : "EXCLUSÃO";
   console.info(`[delete-account] ${modo} concluída`, {
-    endereco, papel: guard.papel, ok: manifesto.ok, erros: manifesto.erros.length,
+    endereco: mascararEndereco(endereco), papel: guard.papel, ok: manifesto.ok, erros: manifesto.erros.length,
   });
 
   // erros não vazios ⇒ exclusão parcial (207-like): reporta 500 com manifesto para

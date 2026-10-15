@@ -15,7 +15,7 @@
 // quando o usuário tiver MFA verificado na sessão atual. Este middleware
 // está pronto para receber esse fluxo sem mudanças adicionais.
 
-import { jsonError } from "./validate.mjs";
+import { jsonError, mascararEndereco } from "./validate.mjs"; // UTAC110h.4 (DEBT-031)
 
 const MODOS = new Set(["off", "warn", "enforce"]);
 
@@ -42,7 +42,7 @@ export function requireMfa(req, jwtPayload, contexto) {
   if (mfaOk) return null;
 
   const subject = jwtPayload?.endereco || "anonimo";
-  console.warn(`[require-mfa:${modo}] ${contexto} sem MFA verificado — endereco=${subject}`);
+  console.warn(`[require-mfa:${modo}] ${contexto} sem MFA verificado — endereco=${mascararEndereco(subject)}`); // UTAC110h.4 (DEBT-031)
 
   if (modo === "warn") return null;
 
