@@ -15,7 +15,7 @@
 //   - pedidos casam também por `comprador` (é o campo do pedido; antes nunca casavam);
 //   - `lances_relampago`: só os lances DO titular dentro do Blob legado por edição;
 //   - `supabase`: as tabelas onde o sistema vive desde o MC36.1 (saldo R$, créditos/débitos PIX,
-//     Vale-Crédito, troco, cotas, lances, lojista, actividade, pontuação e ranking do torneio),
+//     Vale-Crédito, troco, cotas, lances, lojista, actividade, pontuação e ranking da competição),
 //     cada uma filtrada pelo titular. Os Blobs legados continuam exportados como antes (HARD GATE 4).
 //   - `consent_log` já inclui o aceite do gate legal (MC104 Frente A).
 

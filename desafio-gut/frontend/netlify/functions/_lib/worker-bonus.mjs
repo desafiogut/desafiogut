@@ -2,7 +2,7 @@
 //
 // Handler da fila (MC39.20) para o tipo "creditar-senhas-bonus", produzido por
 // `_lib/pontuacao-store.mjs` quando um participante completa uma sequência de
-// acertos no torneio. Antes deste MC o tipo não tinha handler nenhum: a tarefa
+// acertos na competição. Antes deste MC o tipo não tinha handler nenhum: a tarefa
 // esgotava as 5 tentativas e caía na DLQ.
 //
 // ⚠️ ESTE É O ÚNICO SÍTIO DO SISTEMA QUE PODE CREDITAR SENHAS POR MÉRITO.

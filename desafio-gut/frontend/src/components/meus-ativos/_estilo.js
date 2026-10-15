@@ -1,4 +1,4 @@
-// _estilo.js — MC94. Paleta e utilitários partilhados pelas secções do torneio.
+// _estilo.js — MC94. Paleta e utilitários partilhados pelas secções da competição.
 //
 // Reproduz a paleta local de `MeusAtivos.jsx` em vez de inventar outra: as
 // secções novas ficam a viver dentro da tela e têm de parecer parte dela.

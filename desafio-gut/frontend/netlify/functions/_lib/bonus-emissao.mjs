@@ -1,4 +1,4 @@
-// _lib/bonus-emissao.mjs — MC93-C. Decide se o bónus do torneio é emitido.
+// _lib/bonus-emissao.mjs — MC93-C. Decide se o bónus da competição é emitido.
 //
 // PORQUÊ ESTE MÓDULO EXISTE, E PORQUE É PURO:
 // Emitir o bónus é creditar 20 senhas on-chain — R$ 40,00 (20 × R$ 2,00) por

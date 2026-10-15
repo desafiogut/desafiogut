@@ -16,7 +16,7 @@
 //
 // ⚠️ ADMIN-ONLY por uma razão concreta: este endpoint escreve a tabela que
 // decide prémio e regista dívida de senhas. Sem o guarda, qualquer pessoa
-// pontua o torneio.
+// pontua a competição.
 
 import { jsonResponse, jsonError, parseJsonBody } from "./_lib/validate.mjs";
 import { guardAdmin } from "./_lib/admin-auth.mjs";

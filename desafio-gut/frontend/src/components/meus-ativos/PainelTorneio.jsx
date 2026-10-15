@@ -1,7 +1,7 @@
 import { COR, T_PADRAO, caixa, tituloSecao, legenda, inteiroSeguro } from "./_estilo.js";
 
 /**
- * Painel do torneio de habilidade: posição, pontos e acertos do utilizador no
+ * Painel da competição de habilidade: posição, pontos e acertos do utilizador no
  * ciclo corrente.
  *
  * Componente APRESENTACIONAL — não faz I/O. Os dados vêm de `useFeedback`, que

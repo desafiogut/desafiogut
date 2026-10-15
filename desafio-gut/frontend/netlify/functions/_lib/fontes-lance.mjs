@@ -100,6 +100,22 @@ export async function estadoMissoesHoje(endereco, agora = new Date()) {
   return missoesDoRegisto({ historico_lance: historico }, agora);
 }
 
+/**
+ * UTAC110h.3 (P1/DEBT-028) — contador de indicações **creditadas no mês corrente (UTC)**, a partir do
+ * registo **JÁ LIDO**. PURA: não vai à rede. É a MESMA conta que `creditarIndicacao` faz para aplicar o
+ * `LIMITE_INDICACOES_MES` (motivo `indicacao`, ref `indicacao:<indicado>`, mês UTC) — extraída para uma
+ * função só, para os dois sítios não poderem divergir. Reutilizável pelo `ler-pontos` sem leitura nova
+ * (padrão do `missoesDoRegisto`, do UTAC110g).
+ * @returns {{mes:string|null, creditadas:number, limite:number}}
+ */
+export function indicacoesDoMes(registo, agora = new Date()) {
+  const mes = mesUTC(agora.toISOString());
+  const historico = Array.isArray(registo?.historico_lance) ? registo.historico_lance : [];
+  const creditadas = historico.filter((h) => h?.motivo === "indicacao"
+    && String(h?.ref ?? "").startsWith("indicacao:") && mesUTC(h?.data) === mes).length;
+  return { mes, creditadas, limite: LIMITE_INDICACOES_MES };
+}
+
 /** Mês (UTC, `AAAA-MM`) — o MESMO recorte do limite mensal de `_lib/referral.mjs`. */
 const mesUTC = (iso) => (typeof iso === "string" ? iso.slice(0, 7) : null);
 
@@ -183,9 +199,9 @@ export async function creditarIndicacao(indicante, indicado, agora = new Date())
   } else {
     const ref = `indicacao:${b}`;
     const jaCreditado = historicoA.some((h) => h?.ref === ref);
-    const mes = mesUTC(agora.toISOString());
-    const noMes = historicoA.filter((h) => h?.motivo === "indicacao" && String(h?.ref ?? "").startsWith("indicacao:")
-      && mesUTC(h?.data) === mes).length;
+    // UTAC110h.3 (P1/DEBT-028) — a MESMA função que alimenta o contador da UI (`indicacoesDoMes`, PURA):
+    // fonte única para o limite mensal, para o painel e para o servidor não poderem divergir.
+    const noMes = indicacoesDoMes({ historico_lance: historicoA }, agora).creditadas;
     if (!jaCreditado && noMes >= LIMITE_INDICACOES_MES) {
       indicanteRes = { ok: true, creditado: false, code: "LIMITE_MENSAL" };
     } else {

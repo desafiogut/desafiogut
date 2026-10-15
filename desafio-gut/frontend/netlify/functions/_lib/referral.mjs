@@ -226,7 +226,7 @@ function abreviarEndereco(end) {
 
 /**
  * MC15.8.1 ITEM 7 — relatório diário de indicações (admin only). Lê o log do dia
- * (BRT) e compila: total de conversões, senhas creditadas (indicado sempre +1;
+ * (BRT) e compila: total de conversões, recompensas on-chain creditadas (indicado sempre +1;
  * indicador +1 salvo limite mensal), top 3 indicadores e anomalias (fraudes).
  * Fail-soft: sem log/Blobs → relatório a zeros. Texto conciso, sem emojis.
  * @returns {Promise<{dia,totalConversoes,senhasCreditadas,topIndicadores,anomalias,falhasTransitorias,texto}>}
@@ -238,7 +238,8 @@ export async function gerarRelatorioIndicacoes(dia = diaBRT()) {
   const falhas     = eventos.filter((e) => e?.tipo === "conversao_falha");
 
   const totalConversoes = conversoes.length;
-  // Senhas creditadas no dia: cada conversão dá +1 ao indicado e +1 ao indicador
+  // Recompensas on-chain creditadas no dia (campo `senhasCreditadas`, mantido como chave da resposta):
+  // cada conversão dá +1 ao indicado e +1 ao indicador (UTAC110h.3/P2: vocabulário; o número é o mesmo).
   // (exceto quando o indicador bateu o limite mensal → semBonusIndicador).
   const senhasCreditadas = conversoes.reduce(
     (acc, c) => acc + 1 + (c.semBonusIndicador ? 0 : 1), 0,
@@ -263,7 +264,7 @@ export async function gerarRelatorioIndicacoes(dia = diaBRT()) {
 
   const texto =
     `Indique e Ganhe (${dia}). Conversoes: ${totalConversoes}. ` +
-    `Senhas creditadas: ${senhasCreditadas}. ` +
+    `Recompensas on-chain creditadas: ${senhasCreditadas}. ` +
     `Top indicadores: ${topIndicadores.length ? topIndicadores.join("; ") : "—"}. ` +
     `Anomalias: ${anomalias.length ? anomalias.join("; ") : "nenhuma"}.` +
     (falhas.length ? ` Falhas transitorias: ${falhas.length}.` : "");

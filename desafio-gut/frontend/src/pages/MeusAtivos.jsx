@@ -70,7 +70,7 @@ export default function MeusAtivos() {
   const [filtro, setFiltro] = useState("todos");
   const t = useT();
 
-  // O ciclo do torneio é a edição activa: `ciclo_id` é TEXT e os ids são "R-1"
+  // O ciclo da competição é a edição activa: `ciclo_id` é TEXT e os ids são "R-1"
   // (decisão do operador no MC93-B — um UUID impediria o join com `lances`).
   const ranking = useRanking(EDICAO_ATIVA);
   const feedback = useFeedback(EDICAO_ATIVA, address, authToken);
@@ -175,7 +175,7 @@ export default function MeusAtivos() {
         ))}
       </div>
 
-      {/* ── Torneio de habilidade (MC94) ────────────────────────────────────
+      {/* ── Competição de habilidade (MC94) ────────────────────────────────────
           Secções ADITIVAS: entram entre os stats e o histórico, e nada do que
           já existia foi removido ou reordenado. Os componentes são
           apresentacionais; o I/O vive nos hooks acima. */}

@@ -1,4 +1,4 @@
-// MC93-B — persistência da pontuação do torneio de habilidade (Supabase).
+// MC93-B — persistência da pontuação da competição de habilidade (Supabase).
 //
 // O motor puro vive em `pontuacao-utils.mjs` (MC93-A) e não é tocado aqui.
 // Este módulo dá-lhe memória: grava o resultado de cada rodada, mantém o
@@ -108,7 +108,7 @@ export async function registrarPontuacaoRodada(cicloId, lances) {
   const ciclo = String(cicloId || "").trim();
   if (!ciclo) throw new Error("[pontuacao-store] cicloId obrigatório");
 
-  // MC94.3 — GUARDA CENTRAL: edições ESPECIAL-* não entram no torneio (decisão
+  // MC94.3 — GUARDA CENTRAL: edições ESPECIAL-* não entram na competição (decisão
   // do operador, R18, 2026-09-25). Aqui, e não nos chamadores, porque o MC94.2
   // a pôs só em `consolidar-lances` e o `POST /pontuacao` — o caminho de
   // recuperação que o próprio consolidar-lances manda usar — continuava a

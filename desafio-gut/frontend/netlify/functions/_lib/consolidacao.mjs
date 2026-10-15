@@ -140,7 +140,7 @@ export async function consolidarEdicao(edicaoId, { timeoutMinerMs = TIMEOUT_MINE
     txHash: receipt.hash, blockNumber: receipt.blockNumber, totalLances: lances.length,
   };
 
-  // MC93-B — pontuação do torneio, DEPOIS do recibo: pontuar uma rodada cuja
+  // MC93-B — pontuação da competição, DEPOIS do recibo: pontuar uma rodada cuja
   // tx ficou pendente (202) ou falhou (502) seria pontuar um resultado que não
   // existe on-chain. Esses dois caminhos saem antes deste ponto.
   //
@@ -167,7 +167,7 @@ export async function consolidarEdicao(edicaoId, { timeoutMinerMs = TIMEOUT_MINE
   const pontua = !EDICAO_ESPECIAL_RE.test(edicaoId);
   let pontuacao = null;
   if (!pontua) {
-    console.info("[consolidacao] edição especial consolidada SEM pontuar o torneio", edicaoId);
+    console.info("[consolidacao] edição especial consolidada SEM pontuar a competição", edicaoId);
   } else {
     try {
       pontuacao = await registrarPontuacaoRodada(edicaoId, lances);

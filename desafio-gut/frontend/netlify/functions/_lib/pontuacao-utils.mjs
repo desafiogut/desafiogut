@@ -1,4 +1,4 @@
-// MC93-A — motor de pontuação do torneio de habilidade. FUNÇÕES PURAS.
+// MC93-A — motor de pontuação da competição de habilidade. FUNÇÕES PURAS.
 //
 // PORQUÊ ESTE MÓDULO É PURO (e tem de continuar a ser):
 // O SEG-1 do MC93 refutou 7 das 9 premissas do enunciado e encontrou 6
@@ -21,7 +21,7 @@
 import { apurarMenorLanceUnico } from "./simulador.mjs";
 
 /**
- * Parâmetros do torneio. FONTE ÚNICA — não repetir estes números no código.
+ * Parâmetros da competição. FONTE ÚNICA — não repetir estes números no código.
  *
  * ⚠️ Três destes valores são decisões do operador ainda NÃO ratificadas pelo
  * regulamento (MC95). Ver docs/TORNEIO-HABILIDADE.md §Lacunas:

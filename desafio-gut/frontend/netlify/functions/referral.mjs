@@ -157,8 +157,13 @@ async function handleUsarCodigo(req) {
     // MC17.5.1 [LOG TEMPORÁRIO] T5 — conversão imediata acionada no registo.
     console.log("[MC17.5.1] T5 registrarConversao acionado", { codigo, indicador: mascararEndereco(r.indicador), indicado: mascararEndereco(endereco) });
     try {
+      // ⚠️ UTAC110h.3 (P5/DEBT-025) — os ARGUMENTOS levam os endereços REAIS. O `mascararEndereco` do
+      // commit 0ec7d13 («fix(security): P3 logs mascarados») devia ter ficado SÓ no log (o console.log
+      // logo acima mascara, e é isso que se quer); aplicado aos DADOS, matava o bónus on-chain:
+      // `concederBonus` valida /^0x[a-f0-9]{40}$/ e recebia «0x1234…abcd» ⇒ `endereco_invalido` ⇒ não
+      // creditava a senha on-chain, NÃO gravava o marcador `referral-convertido:…` nem a indução do GUTO.
       conversao = await registrarConversao(
-        { codigo, indicador: mascararEndereco(r.indicador), indicado: mascararEndereco(endereco) },
+        { codigo, indicador: r.indicador, indicado: endereco },
         { contexto: "registo" },
       );
     } catch (err) {

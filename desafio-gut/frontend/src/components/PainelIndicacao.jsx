@@ -39,7 +39,7 @@ export default function PainelIndicacao({ isMobile: isMobileProp }) {
   const isMobile = typeof isMobileProp === "boolean" ? isMobileProp : isMobileHook;
   const { address, authToken, isConnected } = useAppContext();
 
-  const [dados, setDados] = useState({ status: "idle", codigo: null, total_indicados: 0, total_convertidos: 0, senhas_ganhas: 0, erro: null });
+  const [dados, setDados] = useState({ status: "idle", codigo: null, total_indicados: 0, total_convertidos: 0, senhas_ganhas: 0, indicacoesMes: null, erro: null });
   const [copiado, setCopiado] = useState(false);
   const [compartilhado, setCompartilhado] = useState(false);
 
@@ -50,18 +50,29 @@ export default function PainelIndicacao({ isMobile: isMobileProp }) {
     }
     setDados((s) => ({ ...s, status: "loading", erro: null }));
     try {
-      const { ok, status, data: d } = await apiGet(`referral?acao=meu-codigo&endereco=${encodeURIComponent(address)}`, { token: authToken });
+      const [ref, mp] = await Promise.all([
+        apiGet(`referral?acao=meu-codigo&endereco=${encodeURIComponent(address)}`, { token: authToken }),
+        // UTAC110h.3 (P1/DEBT-028) — o contador do mês vive no `ler-pontos` (o mesmo endpoint que a
+        // Carteira já usa para as «Missões de hoje»). FAIL-SOFT DECLARADO: se falhar, `indicacoesMes` fica
+        // `null` e o painel segue igual — o contador nunca derruba o código de indicação.
+        apiGet("ler-pontos", { token: authToken }).catch(() => null),
+      ]);
+      const { ok, status, data: d } = ref;
       if (status === 503) {
-        setDados({ status: "off", codigo: null, total_indicados: 0, total_convertidos: 0, senhas_ganhas: 0, erro: null });
+        setDados({ status: "off", codigo: null, total_indicados: 0, total_convertidos: 0, senhas_ganhas: 0, indicacoesMes: null, erro: null });
         return;
       }
       if (!ok) throw new Error(`HTTP ${status}`);
+      const im = mp?.ok ? mp.data?.indicacoesMes : null;
+      const creditadas = Number(im?.creditadas);
       setDados({
         status: "ok",
         codigo: d.codigo,
         total_indicados:   Number(d.total_indicados   || 0),
         total_convertidos: Number(d.total_convertidos || 0),
         senhas_ganhas:     Number(d.senhas_ganhas     || 0),
+        indicacoesMes: Number.isFinite(creditadas)
+          ? { creditadas, limite: Number(im?.limite ?? 10) } : null,
         erro: null,
       });
     } catch (err) {
@@ -230,6 +241,11 @@ export default function PainelIndicacao({ isMobile: isMobileProp }) {
           <div style={{ fontSize: isMobile ? "0.82rem" : "0.78rem", fontWeight: 800, color: COR.gold, lineHeight: 1.35 }}>
             +50 pontos de lance e +2 ECOQUILDO
           </div>
+          {dados.indicacoesMes && (
+            <div style={{ fontSize: "0.68rem", color: COR.muted, marginTop: "0.25rem" }}>
+              Este mês: {dados.indicacoesMes.creditadas} / {dados.indicacoesMes.limite} indicações
+            </div>
+          )}
         </div>
       </div>
 

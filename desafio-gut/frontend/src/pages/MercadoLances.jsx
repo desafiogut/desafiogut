@@ -342,7 +342,7 @@ export default function MercadoLances() {
         {/* MC99 — o banner do cliente (REQ-01) foi REMOVIDO desta tela: era um
             SEGUNDO vidro colado ao topo, antes do vidro do painel principal, e a
             primeira coisa que o utilizador via nos Lances era publicidade — e não a
-            pergunta do torneio ("QUANTO VOCÊ OFERTA POR..."). */}
+            pergunta da competição ("QUANTO VOCÊ OFERTA POR..."). */}
 
         {/* ── Coluna única (UTAC107d — R18-D): lance primeiro, TABELA NO FIM, a largura total,
              como último vidro antes do rodapé (Regra 2 do mockup). Era «1fr 1.6fr» no desktop,

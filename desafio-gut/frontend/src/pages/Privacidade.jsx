@@ -42,7 +42,7 @@ export default function Privacidade() {
             Política de Privacidade — DesafioGUT
           </h1>
           <p style={{ margin: 0, color: COR.muted, fontSize: "0.9rem" }}>
-            Última atualização: 15 de agosto de 2026
+            Última atualização: 15 de outubro de 2026
           </p>
         </header>
 

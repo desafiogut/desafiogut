@@ -1,14 +1,14 @@
 import { COR, T_PADRAO, caixa, tituloSecao, legenda, reais, valorUtilizavel } from "./_estilo.js";
 
 /**
- * Quanto vale cada lance do utilizador, pela regra do torneio.
+ * Quanto vale cada lance do utilizador, pela regra da competição.
  *
  * ⚠️ DIZ "VALE", NUNCA "GANHOU", E A DISTINÇÃO NÃO É DE ESTILO.
  * Medido no SEG-1 do MC94: NENHUM endpoint devolve pontos por lance. O
  * `lerFeedback` devolve agregados do ciclo; a pontuação é atribuída pelo backend
  * no FECHO da rodada (`consolidar-lances.mjs`). Escrever "ganhou 3 pontos" seria
  * a UI a afirmar um facto que o backend não produziu — e em produção as tabelas
- * do torneio estão vazias, logo seria falso hoje.
+ * da competição estão vazias, logo seria falso hoje.
  * O que se mostra é a projecção pela regra em vigor
  * (`_lib/pontuacao-utils.mjs`): único = 1, menor único = 3, repetido = 0.
  *

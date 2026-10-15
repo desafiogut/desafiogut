@@ -22,7 +22,7 @@ function corpoEhJson(data) {
 }
 
 /**
- * Lê o feedback do torneio do PRÓPRIO utilizador no ciclo.
+ * Lê o feedback da competição do PRÓPRIO utilizador no ciclo.
  *
  * ⚠️ EXIGE SESSÃO E ENDEREÇO COINCIDENTE. O endpoint aplica o anti-IDOR do
  * MC93-B: sem `Authorization: Bearer` devolve `401 sessao_invalida`, e com uma
