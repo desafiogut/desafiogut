@@ -161,11 +161,13 @@ export default function TermosConsentimento({ onAceitar }) {
             <a href="/regras-oficiais" style={estilos.link}>Regras Oficiais</a>.
           </p>
 
+          {/* UTAC110h.2 (D3) — Art. 69º do Regulamento v5.0: «Dúvidas, informações e sugestões deverão ser
+              encaminhadas EXCLUSIVAMENTE através do e-mail desafiogut01@gmail.com». Saíram o telefone
+              (92) 98428-5774 e o site www.grupouniaoetrabalho.com.br — deixaram de figurar aqui. O texto
+              começa por «Dúvidas:» de propósito: é a forma que a guarda `dadosPagamento.test.mjs` fixa. */}
           <div style={estilos.contatoBox}>
             <p style={{ margin: 0, fontSize: "0.78rem", color: "#6b7db8" }}>
-              📧 Dúvidas: desafiogut01@gmail.com &nbsp;·&nbsp;
-              📞 (92) 98428-5774 &nbsp;·&nbsp;
-              🌐 www.grupouniaoetrabalho.com.br
+              📧 Dúvidas: desafiogut01@gmail.com
             </p>
           </div>
         </div>

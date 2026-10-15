@@ -97,7 +97,7 @@ export default {
   "ativos.lance.valeZero": "não vale pontos",
   "ativos.lance.ponto1": "ponto",
   "ativos.lance.pontoN": "pontos",
-  "ativos.lance.aviso": "Projeção pela regra do torneio. Os pontos são apurados pela coordenação no fechamento da rodada, e o menor lance único da rodada depende dos lances de todos os participantes.",
+  "ativos.lance.aviso": "Projeção pela regra da competição. Os pontos são apurados pela coordenação no fechamento da rodada, e o menor lance único da rodada depende dos lances de todos os participantes.",
   "ativos.rank.titulo": "📋 Ranking do ciclo",
   "ativos.rank.vazio": "Ainda não há pontuações neste ciclo. O ranking aparece depois da primeira rodada apurada.",
   "ativos.rank.erro": "Não foi possível carregar o ranking agora. Tente novamente mais tarde.",

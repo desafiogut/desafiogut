@@ -133,7 +133,7 @@ export default function FeedbackLance({
 
       <p style={{ ...legenda(isMobile), marginTop: "0.55rem" }}>
         {t("ativos.lance.aviso",
-           "Projeção pela regra do torneio. Os pontos são apurados pela coordenação no fechamento da rodada, e o menor lance único da rodada depende dos lances de todos os participantes.")}
+           "Projeção pela regra da competição. Os pontos são apurados pela coordenação no fechamento da rodada, e o menor lance único da rodada depende dos lances de todos os participantes.")}
       </p>
     </section>
   );

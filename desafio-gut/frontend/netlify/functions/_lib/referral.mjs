@@ -1,9 +1,12 @@
 // Sistema de Indicação ("Indique e Ganhe") — Mega Comando 10 / Item 1.
 //
 // Geração/validação de códigos de indicação, registro de vínculos e
-// concessão de bônus (+1 senha on-chain) ao indicador quando o indicado
-// faz a primeira compra. Anti-fraude via FingerprintJS visitorId + Sybil
-// check; limite mensal de 10 conversões.
+// concessão de bónus ao indicador quando o indicado faz a primeira compra.
+// UTAC110h.2 — o crédito on-chain de senhas do modelo antigo continua em
+// `concederBonus` (DEBT-025: morto no caminho do endpoint, vivo no
+// `comprar-senhas`), mas o TEXTO visível ao utilizador deixou de o prometer: a
+// recompensa diz-se «+50 pontos de lance e +2 ECOQUILDO». Anti-fraude via
+// FingerprintJS visitorId + Sybil check; limite mensal de 10 conversões.
 //
 // Convenções de Blobs:
 //   referral-code:{endereco}              → { codigo, criadoEm }                                  (1 código por endereço)
@@ -138,14 +141,20 @@ export async function lerReferralLog(dia = diaBRT()) {
 // O texto é recalculado na leitura a partir do contador, para o singular/plural
 // refletir sempre o agregado do dia. O nome usado é o do PRIMEIRO indicado do dia.
 
-/** Texto da mensagem indutiva (singular vs plural) a partir do agregado do dia. */
+/**
+ * Texto da mensagem indutiva (singular vs plural) a partir do agregado do dia.
+ * UTAC110h.2 (R18-110h.2-3) — deixou de prometer «+1 senha» (modelo antigo): diz a recompensa REAL que o
+ * indicante recebeu por cada conversão creditada — «+50 pontos de lance» (UTAC110f, `_lib/fontes-lance.mjs`)
+ * e «+2 ECOQUILDO» (Art. 51º do Regulamento v5.0). O contador `n` só conta conversões CREDITADAS
+ * (`registrarConversao` grava quando o bónus entrou), logo `n × 50` e `n × 2` são os valores exactos.
+ */
 export function mensagemInducao(contador, primeiroNome) {
   const n = Number(contador || 0);
   if (n <= 1) {
     const quem = primeiroNome ? `O teu amigo ${primeiroNome}` : "Um amigo teu";
-    return `Parabéns! ${quem} entrou no DESAFIOGUT. +1 senha creditada!`;
+    return `Parabéns! ${quem} entrou no DESAFIOGUT. +50 pontos de lance e +2 ECOQUILDO creditados!`;
   }
-  return `${n} amigos teus entraram hoje no DESAFIOGUT! +${n} senhas creditadas.`;
+  return `${n} amigos teus entraram hoje no DESAFIOGUT! +${n * 50} pontos de lance e +${n * 2} ECOQUILDO creditados.`;
 }
 
 /**

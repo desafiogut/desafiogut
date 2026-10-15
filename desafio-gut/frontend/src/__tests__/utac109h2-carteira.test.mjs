@@ -169,7 +169,12 @@ test("UTAC109h.2 · 7 — o texto visível não mudou: a mudança é de cor, nã
   // (esta linha tem expressões `{}` dentro do nó de texto => lê-se na fonte, não no extractor)
   assert.ok(CART.includes("ver em Meus Ativos"), "o atalho «ver em Meus Ativos» desapareceu");
   const vp = visivel(PAINEL).join(" | ");
-  for (const frase of ["🎁 Indique e Ganhe", "Seu código de indicação", "👥 Indicados", "✅ Converteram", "🎁 Senhas ganhas"]) {
+  // UTAC110h.2 (R18-110h.2-3), declarado: o 3.º card do painel deixou de ser «🎁 Senhas ganhas» (bónus
+  // on-chain do modelo antigo, morto — DEBT-025) e passa a dizer a recompensa real («+50 pontos de lance
+  // e +2 ECOQUILDO»). A guarda do 109h.2 era sobre a COPY desta peça; a copy mudou por decisão do
+  // operador num UTAC POSTERIOR — a frase antiga mantém-se à vista no git (GATE 15). As 4 primeiras
+  // frases continuam exigidas sem alteração.
+  for (const frase of ["🎁 Indique e Ganhe", "Seu código de indicação", "👥 Indicados", "✅ Converteram", "🎁 Recompensa por indicação"]) {
     assert.ok(vp.includes(frase), `a frase «${frase}» desapareceu do painel`);
   }
   assert.ok(PAINEL.includes("📋 Copiar código") && PAINEL.includes("📤 Compartilhar"), "os botões do Indique perderam o rótulo");

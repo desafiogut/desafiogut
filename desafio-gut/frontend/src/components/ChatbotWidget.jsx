@@ -180,7 +180,10 @@ function CardIndicacao({ indicacao }) {
       <div style={{ display: "flex", gap: "0.4rem", marginTop: "0.5rem" }}>
         {stat("Indicados", indicacao?.total_indicados)}
         {stat("Converteram", indicacao?.total_convertidos)}
-        {stat("Senhas ganhas", indicacao?.senhas_ganhas)}
+        {/* UTAC110h.2 (R18-110h.2-3) — era «Senhas ganhas» (bónus on-chain do modelo antigo, morto pelo
+            DEBT-025); passa a dizer a recompensa REAL da indicação: +50 pontos de lance e +2 ECOQUILDO
+            ao indicante (Art. 51º do Regulamento v5.0 + UTAC110f). */}
+        {stat("Recompensa por indicação", "+50 pontos de lance e +2 ECOQUILDO")}
       </div>
     </div>
   );

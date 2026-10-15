@@ -75,7 +75,7 @@ export default function Privacidade() {
           </p>
           <p style={pStyle}>
             O DesafioGUT é uma plataforma de competição de habilidade de "menor lance único": os utilizadores
-            participam em edições, lançam lances e podem adquirir produtos/senhas mediante
+            participam em edições, lançam lances e podem adquirir Passes Desafio mediante
             pagamento. A participação requer a criação de uma conta e o aceite dos Termos
             de Consentimento (gate LGPD) antes de qualquer interação.
           </p>
@@ -96,7 +96,7 @@ export default function Privacidade() {
             3.2. Informações financeiras
           </p>
           <ul style={{ margin: "0 0 0.75rem", paddingLeft: "1.2rem" }}>
-            <li style={liStyle}>Histórico de compras de senhas e transações de pagamento PIX processadas através do Mercado Pago (instituição de pagamento).</li>
+            <li style={liStyle}>Histórico de compras de Passes Desafio e transações de pagamento PIX processadas através do Mercado Pago (instituição de pagamento).</li>
             <li style={liStyle}>Os dados de pagamento (PIX) são processados pelo Mercado Pago; o DesafioGUT não armazena chaves PIX nem dados de cartão.</li>
             <li style={liStyle}>Finalidade: processamento de pagamentos, prevenção de fraude e obrigações fiscais/legais.</li>
             <li style={liStyle}>Obrigatório para o funcionamento do app (compras). Base legal: execução do contrato e obrigação legal (legislação fiscal brasileira).</li>
@@ -105,7 +105,7 @@ export default function Privacidade() {
             3.3. Atividade no app (interações, lances, histórico)
           </p>
           <ul style={{ margin: "0 0 0.75rem", paddingLeft: "1.2rem" }}>
-            <li style={liStyle}>Registos de interações: lances (com hash Argon2id off-chain de prova de intenção), histórico de compras, saldo de senhas e visualizações.</li>
+            <li style={liStyle}>Registos de interações: lances (com hash Argon2id off-chain de prova de intenção), histórico de compras, saldo de Passes Desafio e visualizações.</li>
             <li style={liStyle}>Armazenados na base de dados Supabase.</li>
             <li style={liStyle}>Finalidade: funcionamento do serviço, apuração do vencedor, resolução de disputas, melhoria da experiência e prevenção de abuso/fraude.</li>
             <li style={liStyle}>Coleta não estritamente obrigatória para a navegação básica, mas necessária para participar em edições. Base legal: execução do contrato e interesse legítimo (segurança e prevenção de fraude).</li>

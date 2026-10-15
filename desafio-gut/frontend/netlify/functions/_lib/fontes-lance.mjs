@@ -15,13 +15,32 @@
 //   indicante: `indicacao:<indicado>`  → um mesmo indicado nunca paga 2× ao mesmo indicante;
 //   indicado:  `indicacao-recebida`    → cada endereço só recebe o bónus de indicado UMA vez na vida.
 // O indicante respeita o limite mensal de 10 do sistema de indicação existente (`_lib/referral.mjs`).
+//
+// ECOQUILDO (UTAC110h.2, R18-110h.2-1 e -2): a MESMA indicação confirmada credita, **em paralelo com os
+// pontos de lance** (os dois coexistem), **+2 ECOQUILDO ao indicante e +1 ECOQUILDO ao indicado** — Art. 51º
+// do Regulamento v5.0 («Cada indicação de novo cadastro, após confirmação, concede 2 (dois) ECOQUILDO ao
+// indicante e 1 (um) ECOQUILDO ao indicado»). O indicante respeita o MESMO limite mensal dos pontos; o
+// indicado é independente dele. A idempotência do ECOQUILDO é PRÓPRIA, no histórico da tabela `eco_quildo`
+// (refs `eco-indicacao:<indicado>` e `eco-indicacao-recebida`) — não depende das refs do ledger de pontos.
+// Fail-soft para com os pontos de lance (uma falha no ECOQUILDO nunca desfaz os pontos), mas o ECOQUILDO
+// nunca fica sem lastro em R$ (Art. 50º): se o lastro falhar, as emissões daquele passo são revertidas.
 
 import { creditarPontosLance, lerLedgerLance } from "./ledger-lance.mjs";
+import { creditarEcoQuildo, registarEmissaoNoLastro, reverterEcoQuildo } from "./eco-quildo.mjs";
 
 export const PONTOS_LOGIN_DIARIO = 5;
 export const PONTOS_MISSAO_LANCE = 10;
 export const PONTOS_INDICACAO = 50;
 export const LIMITE_INDICACOES_MES = 10;
+
+/** UTAC110h.2 — ECOQUILDO da indicação confirmada (Art. 51º do Regulamento 5.0). */
+export const ECOQUILDO_INDICACAO_INDICANTE = 2;
+export const ECOQUILDO_INDICACAO_INDICADO = 1;
+/** Motivo de emissão (tem de estar em `MOTIVOS_EMISSAO` de `_lib/eco-quildo.mjs`). */
+export const MOTIVO_ECO_INDICACAO = "indicacao";
+/** Refs de idempotência no histórico do `eco_quildo` — namespace próprio (≠ das refs do ledger de pontos). */
+export const REF_ECO_INDICACAO_RECEBIDA = "eco-indicacao-recebida";
+export const refEcoIndicacao = (indicado) => `eco-indicacao:${indicado}`;
 
 const OFFSET_MANAUS_MS = 4 * 60 * 60 * 1000;
 const REF_INDICACAO_RECEBIDA = "indicacao-recebida";
@@ -84,8 +103,57 @@ export async function estadoMissoesHoje(endereco, agora = new Date()) {
 const mesUTC = (iso) => (typeof iso === "string" ? iso.slice(0, 7) : null);
 
 /**
+ * ECOQUILDO da indicação confirmada (Art. 51º v5): +2 ao indicante e +1 ao indicado, EM PARALELO com os
+ * +50 pontos de lance (R18-110h.2-2 — os dois coexistem). O indicante só recebe quando a indicação contou
+ * para o mês (mesmo gate de `LIMITE_INDICACOES_MES`); o indicado recebe sempre. Idempotente pelas refs do
+ * `eco_quildo`. FAIL-SOFT: um erro aqui nunca desfaz os pontos de lance; mas nunca deixa ECOQUILDO sem
+ * lastro em R$ (Art. 50º) — se o lastro falhar, as emissões deste passo são revertidas.
+ * @returns {Promise<{emitidos:number, indicante:object, indicado:object, code?:string}>}
+ */
+async function creditarEcoQuildoDaIndicacao(indicante, indicado, indicanteRes) {
+  const out = {
+    emitidos: 0,
+    // `NAO_TENTADO` cobre o limite mensal (não é erro) e a falha do ledger de pontos (não se emite ECOQUILDO
+    // por uma indicação cujos pontos não entraram).
+    indicante: { ok: false, code: indicanteRes.code ?? "NAO_TENTADO" },
+    indicado:  { ok: false, code: "NAO_TENTADO" },
+  };
+  const criados = [];
+
+  if (indicanteRes.ok && indicanteRes.code !== "LIMITE_MENSAL") {
+    const ref = refEcoIndicacao(indicado);
+    const r = await creditarEcoQuildo(indicante, ECOQUILDO_INDICACAO_INDICANTE, MOTIVO_ECO_INDICACAO, ref)
+      .catch(() => ({ ok: false, code: "ERRO_DB" }));
+    out.indicante = r.ok ? { ok: true, creditado: r.criado === true } : { ok: false, code: r.code };
+    if (r.ok && r.criado === true) criados.push({ endereco: indicante, ref, valor: ECOQUILDO_INDICACAO_INDICANTE });
+  }
+
+  const r2 = await creditarEcoQuildo(indicado, ECOQUILDO_INDICACAO_INDICADO, MOTIVO_ECO_INDICACAO, REF_ECO_INDICACAO_RECEBIDA)
+    .catch(() => ({ ok: false, code: "ERRO_DB" }));
+  out.indicado = r2.ok ? { ok: true, creditado: r2.criado === true } : { ok: false, code: r2.code };
+  if (r2.ok && r2.criado === true) criados.push({ endereco: indicado, ref: REF_ECO_INDICACAO_RECEBIDA, valor: ECOQUILDO_INDICACAO_INDICADO });
+
+  if (criados.length === 0) return out; // nada criado (idempotência ou falha) → sem lastro a mexer
+  const total = criados.reduce((s, c) => s + c.valor, 0);
+  const lastro = await registarEmissaoNoLastro(total).catch(() => ({ ok: false, code: "ERRO_DB" }));
+  if (lastro.ok) return { ...out, emitidos: total };
+
+  // ECOQUILDO sem lastro em R$ não existe (Art. 50º — mesma doutrina do `_lib/comprar-passe-tipado.mjs`):
+  // desfaz SÓ o que este passo criou, antes de desistir.
+  for (const c of criados) {
+    await reverterEcoQuildo(c.endereco, c.ref).catch(() => ({ ok: false }));
+  }
+  return {
+    emitidos: 0, code: `lastro:${lastro.code}`,
+    indicante: { ok: false, code: "LASTRO_FALHOU" },
+    indicado:  { ok: false, code: "LASTRO_FALHOU" },
+  };
+}
+
+/**
  * +50 ao indicante e +50 ao indicado. Recusa auto-indicação. O indicante só recebe enquanto tiver
  * menos de `LIMITE_INDICACOES_MES` indicações creditadas no mês; o indicado recebe na mesma.
+ * Credita também o ECOQUILDO do Art. 51º (+2/+1) — ver `creditarEcoQuildoDaIndicacao`.
  * ⚠️ O limite é verificado ANTES do crédito (fora do CAS): N indicados creditados EM PARALELO perto do
  *    limite podem ultrapassá-lo em até N−1 (medido pelo validador do SEG5: 9 pagos + 6 em paralelo → 14).
  *    O CAS impede só a duplicação, não o excesso. Fechar exige contador atómico — UTAC próprio.
@@ -118,5 +186,9 @@ export async function creditarIndicacao(indicante, indicado, agora = new Date())
   const r = await creditarPontosLance(b, PONTOS_INDICACAO, "indicacao", REF_INDICACAO_RECEBIDA);
   const indicadoRes = r.ok ? { ok: true, creditado: r.criado === true, pontosLance: r.pontos } : { ok: false, code: r.code };
 
-  return { ok: indicanteRes.ok && indicadoRes.ok, indicante: indicanteRes, indicado: indicadoRes };
+  // UTAC110h.2 — ECOQUILDO do Art. 51º, em paralelo com os pontos (R18-110h.2-1/-2). Fail-soft para com
+  // os pontos: `ok` continua a depender SÓ dos pontos de lance (contrato anterior intacto, GATE 4).
+  const ecoQuildo = await creditarEcoQuildoDaIndicacao(a, b, indicanteRes);
+
+  return { ok: indicanteRes.ok && indicadoRes.ok, indicante: indicanteRes, indicado: indicadoRes, ecoQuildo };
 }

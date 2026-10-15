@@ -1,7 +1,11 @@
 // PainelIndicacao — Sistema "Indique e Ganhe" (Mega Comando 10 / Item 4).
 //
 // Mostra: código pessoal IND-XXXXXX, botões Copiar e Compartilhar, cards de
-// estatísticas (indicados, converteram, senhas ganhas) e mensagem motivacional.
+// estatísticas (indicados, converteram, recompensa por indicação) e mensagem motivacional.
+// UTAC110h.2 (R18-110h.2-3) — o painel deixou de falar em «+1 senha»: o crédito real da indicação é
+// «+50 pontos de lance e +2 ECOQUILDO» ao indicante (e «+50 pontos e +1 ECOQUILDO» ao amigo) — UTAC110f
+// (`_lib/fontes-lance.mjs`) + Art. 51º do Regulamento v5.0. O 3.º card deixou de mostrar o contador
+// `senhas_ganhas` (bónus on-chain do modelo antigo, morto pelo DEBT-025) e passa a dizer a recompensa.
 // Aderente ao mesmo design system inline-style dos outros componentes da pasta
 // (WalletCard, VoucherPanel, RenovacaoCard) — Tailwind v4 só está disponível
 // no globals.css mas o padrão prático aqui é JSX inline-style.
@@ -84,7 +88,7 @@ export default function PainelIndicacao({ isMobile: isMobileProp }) {
 
   async function compartilhar() {
     if (!linkConvite) return;
-    const texto = `🎯 Te convido para o DesafioGUT! Use meu código ${dados.codigo} e, no seu 1º lance, nós dois ganhamos +1 senha.`;
+    const texto = `🎯 Te convido para o DesafioGUT! Use meu código ${dados.codigo}: você ganha +50 pontos de lance e +1 ECOQUILDO, e eu ganho +50 pontos e +2 ECOQUILDO.`;
     try {
       if (typeof navigator !== "undefined" && navigator.share) {
         await navigator.share({ title: "DesafioGUT — Indique e Ganhe", text: texto, url: linkConvite });
@@ -159,9 +163,9 @@ export default function PainelIndicacao({ isMobile: isMobileProp }) {
       </div>
 
       <p style={{ margin: "0 0 1rem", fontSize: isMobile ? "0.85rem" : "0.9rem", color: COR.text, lineHeight: 1.5 }}>
-        Quando um amigo entra com o seu código e dá o
-        <strong style={{ color: COR.primary }}> 1º lance, vocês dois ganham +1 senha! </strong>
-        Compartilhe e cresça com a gente.
+        Quando um amigo cria a conta com o seu código, você ganha
+        <strong style={{ color: COR.primary }}> +50 pontos de lance e +2 ECOQUILDO </strong>
+        (e ele ganha +50 pontos e +1 ECOQUILDO). Compartilhe e cresça com a gente.
       </p>
 
       {/* Código pessoal */}
@@ -221,10 +225,10 @@ export default function PainelIndicacao({ isMobile: isMobileProp }) {
         </div>
         <div style={statCardStyle}>
           <div style={{ fontSize: "0.62rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700, marginBottom: "0.25rem" }}>
-            🎁 Senhas ganhas
+            🎁 Recompensa por indicação
           </div>
-          <div style={{ fontSize: "1.4rem", fontWeight: 900, color: COR.gold }}>
-            {dados.senhas_ganhas}
+          <div style={{ fontSize: isMobile ? "0.82rem" : "0.78rem", fontWeight: 800, color: COR.gold, lineHeight: 1.35 }}>
+            +50 pontos de lance e +2 ECOQUILDO
           </div>
         </div>
       </div>
