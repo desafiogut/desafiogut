@@ -6343,3 +6343,39 @@ Autorizado pelo operador. **Migracao** `utac110d_ledger_lance` aplicada em produ
 - **Correcções pós-veredicto NÃO re-validadas** por um 2.º validador (precedente da série); substituídas pelos mutantes do validador agora RED e pela suíte verde.
 **Registo:** `_logs/UTAC110h.2_SEG-1_MEDICAO.md` · `_logs/UTAC110h.2_SEG0_FRENTE-A_ECOQUILDO.md` · `_logs/UTAC110h.2_SEG1-3_FRENTES-B-C-D.md` · `_logs/UTAC110h.2-coerencia-eco.md` · `_logs/UTAC110h.2_SEG5_VALIDADOR.md` · `_logs/utac110h.2-browser/` · `Desktop/RELATORIO-UTAC110h.2.txt`. Dívida nova: **DEBT-028** (contador de recompensa na UI) e **DEBT-029** (relatório admin ainda conta «Senhas creditadas»).
 **Custo:** validador 50 chamadas / 875 s; sessão principal estimada em ~0,13-0,14 USD pelo `sessions.estimated_cost_usd` do `state.db` (estimativa do Hermes, `cost_source=official_docs_snapshot`). ⚠️ **O delta de saldo real NÃO foi medido nesta sessão** (sem acesso à chave/API de saldo no ambiente) — é um DESVIO ao padrão do operador (o delta de saldo é a verdade); o número acima é estimativa, não medição.
+
+## R14 (append) -- UTAC110h.3 -- PENDÊNCIAS P1–P5 DO 110h.2 + TESTE DE COMPORTAMENTO DO `Boot.jsx` (Hermes, deepseek-v4-flash)
+
+**Tipo:** saneamento + coerência (backend, UI, copy, on-chain chamador) + dívida técnica fechada (DEBT-025/028/029).
+**Baseline:** `9117402` (= origin/main, pós-110h.2) → commit de código **`3d72419`**.
+**Suíte:** frontend **1108/1108** · backend **1253/1259** (baseline 1092/1092 e 1247/1253) · mutação **15/15** · 31 testes novos.
+**A14:** 1475/1458/1463 MB antes (abaixo do limiar) → trim → 2154/2148/2123 MB.
+
+**Decisões do operador (R18-110h.3):** R18-110h.3-1 contador no `ler-pontos` · -2 vocabulário do relatório admin · -3 comentários (chaves ficam) · -4 data da Privacidade · -5 **corrigir o bug dos endereços mascarados** (reactiva o bónus on-chain) · -6 teste de comportamento do `Boot` · -7 SQL do P6 para o operador correr.
+
+**FECHADO:**
+- **P1/DEBT-028** — `indicacoesDoMes(registo, agora)` **PURA** em `_lib/fontes-lance.mjs` = **fonte única** do limite mensal (o `creditarIndicacao` passou a usá-la) e do novo campo **aditivo** `indicacoesMes` do `ler-pontos` → «Este mês: X / 10 indicações» no painel. Fail-soft (`null`). O painel passou a fazer 2 pedidos em paralelo.
+- **P2/DEBT-029** — «Senhas creditadas» → «Recompensas on-chain creditadas» (o número conta créditos on-chain, não pontos). **O campo `senhasCreditadas` fica** (chave consumida por `notificacoes.mjs` e amarrada por teste).
+- **P3** — 20 substituições de «torneio» como vocabulário (14 ficheiros). **Intocados:** `isTorneioVisivel`, `ativos.torneio.*`, `data-secao="painel-torneio"`, o componente `PainelTorneio`, as **anotações históricas** do `guto-perfis.mjs` e os ficheiros de teste (GATE 15).
+- **P4** — Privacidade: «15 de agosto de 2026» → «15 de outubro de 2026».
+- **P5/DEBT-025** — o endpoint `netlify/functions/referral.mjs` deixou de passar `mascararEndereco(...)` como **argumento** ao `registrarConversao` (fica só no log, como o commit `0ec7d13` queria): o **bónus on-chain de +1 senha volta a disparar** para indicador e indicado, e o marcador `referral-convertido` volta a ser gravado. O contrato **não** precisou de ser tocado (medido: `creditarSenhas` não valida endereços).
+- **F/X7** — `Boot.jsx` com 6 estados de consentimento provados em SSR (inclui o bidireccional «versão antiga → volta o gate», MC88.31) + prova de que o PrivyRoot continua em `import()` dinâmico.
+- **G/P6** — `_logs/UTAC110h.3_VERIFICACAO-P6.sql`: 7 consultas de **leitura** para o operador confirmar a migração `20261014` (sem ela o ECOQUILDO é inerte em silêncio).
+
+**⚠️ DESVIO DECLARADO (2.º da mesma família):** a §4 autorizava editar `_lib/referral.mjs` «(P5)», mas o **mascaramento vive no CHAMADOR** (`netlify/functions/referral.mjs:160`); não há forma de corrigir o bug sem tocar no endpoint. Executou-se a intenção no sítio correcto por ordem explícita do R18-110h.3-5. **Precedente: R18-110h.2-A.** Regra que fica: *quando o enunciado manda corrigir «o ficheiro X» e a medição mostra que o defeito está no chamador de X, corrigir o chamador e declarar.*
+
+**⚠️ FLAG AO OPERADOR (dinheiro):** com o P5 corrigido, **cada indicação confirmada gasta 2 transacções reais na Ethereum mainnet** (gas pago pela coordenação). Não medível sem transaccionar (proibido). Opções dadas ao operador: aceitar · tecto mensal · batch · manter o bónus só no caminho `comprar-senhas`. **Nenhum teste gasta gas** (o `_lib/contract.mjs` é sempre um duplo espiado + guarda explícita).
+
+**Erros dos meus instrumentos (declarados):** backticks no `git commit -m` comeram o corpo da mensagem (corrigido com `--amend -F`; **mensagem passa a ser sempre escrita em ficheiro**) · âncora de stub sem `..` fez 8 testes falharem de uma vez (parecia falha grave, era o `before`) · `git add` a partir da raiz com caminhos da `frontend` não adiciona nada (`pathspec did not match`).
+
+**Registos:** `_logs/UTAC110h.3_SEG-1_MEDICAO.md` · `_logs/UTAC110h.3-pendencias.md` · `_logs/UTAC110h.3_SEG8_VALIDADOR.md` · `_logs/UTAC110h.3_VERIFICACAO-P6.sql` · `Desktop/RELATORIO-UTAC110h.3.txt` · capturas em `_logs/utac110h.3-browser/`.
+
+**DEBT:** fecha **DEBT-025**, **DEBT-028** e **DEBT-029**.
+
+**SEG8 — VALIDADOR ADVERSARIAL: APROVADO COM RESSALVAS (0 das 8 alegações refutadas).** Relatório: `_logs/UTAC110h.3_SEG8_VALIDADOR.md` (worktree próprio no `3d72419`; reproduziu a suíte, os 15 mutantes e correu os seus).
+- ⚠️ **GRAVE, ESCALADO AO OPERADOR (DEBT-030):** o P5 não reactiva só o gas — **move o Momento e a Quota** do bónus. Se o indicador já estiver no **limite mensal**, o `registrarConversao` **grava o marcador de convertido na mesma** (`semBonusIndicador: true`) e, como o marcador é definitivo por `(codigo, indicado)`, **aquele indicado nunca mais gera a senha on-chain do indicador** (o caminho do `comprar-senhas` fica no-op). Como o bónus passou a disparar no **registo** (maior volume), a janela **alarga-se**. **Não inventei a correcção** — não está coberta pela decisão do operador; a regra do processo manda **PARAR e escalar** quando um trade-off parte um caso legítimo. Opções: aceitar · tecto/lote mensal · manter o bónus só no `comprar-senhas`. Derivado por leitura de código (on-chain é proibido).
+- ⚠️ **MÉDIA, FECHADA COM PROVA:** a «fonte única» do contador não estava amarrada por teste — o mutante de **divergência** dele (o `ler-pontos` a derivar por conta própria, sem recorte de mês) **sobrevivia à suíte completa**. Corrigido com 2 guardas novas (mês anterior → contador **0**; aos 10 creditados o contador diz 10 **e** o 11.º é travado com `LIMITE_MENSAL`, o indicado a receber a parte dele). Reproduzi o mutante como **P1f**: passou a **morrer**; mutação **16/16**. Backend **1255/1261**.
+- ℹ️ corrigidos: comentário obsoleto em `_lib/referral.mjs:6`; expectativa errada na consulta 6 do SQL. ℹ️ declarados: «Senhas creditadas» em 2 docs (fora de escopo) e a **fuga de grafo social pré-existente** em `referral.mjs:193` (**DEBT-031**), intocada por GATE 2/HI4.
+- **Regressões:** nenhum teste pré-existente alterado; nenhuma guarda antiga enfraquecida (confirmado pelo validador).
+- **Erro meu novo, declarado:** li um ficheiro **dentro do worktree do validador** enquanto ele tinha lá o mutante aplicado e concluí mal que o commit tinha a data velha. **Regra que fica:** um worktree sob validação é **alvo móvel** — para julgar o entregável lê-se o **commit** (`git show` + md5), nunca a cópia de trabalho de outro processo.
+- **Custo (estimativa, `state.db`):** executor ~0,25 USD + validador ~0,037 USD ⇒ **~0,29 USD**. O delta de saldo não foi medível (sem chave da API no ambiente) — **desvio declarado**.

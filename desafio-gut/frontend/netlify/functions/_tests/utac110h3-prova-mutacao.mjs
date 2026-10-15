@@ -48,6 +48,12 @@ const MUTANTES = [
     "return { mes, creditadas, limite: 99 };", "back"],
   ["P1e o painel deixa de mostrar o contador", PL,
     "          {dados.indicacoesMes && (", "          {null && (", "front"],
+  // ⚠️ este é o mutante de DIVERGÊNCIA que o validador do SEG8 viu SOBREVIVER à suíte (⚠️-2): o
+  // `ler-pontos` passa a derivar por conta própria, sem recorte de mês. A guarda nova (teste do MÊS
+  // ANTERIOR) é o que o mata.
+  ["P1f divergência: o `ler-pontos` deriva por conta própria, sem recorte de mês", LP,
+    "    return indicacoesDoMes(registo);",
+    "    const h = Array.isArray(registo?.historico_lance) ? registo.historico_lance : [];\n    return { mes: null, creditadas: h.filter((x) => x?.motivo === \"indicacao\").length, limite: 10 };", "back"],
   // ── P2 — vocabulário do relatório ──────────────────────────────────────────────────────────────
   ["P2a o relatório admin volta a dizer «Senhas creditadas»", R,
     "`Recompensas on-chain creditadas: ${senhasCreditadas}. ` +",

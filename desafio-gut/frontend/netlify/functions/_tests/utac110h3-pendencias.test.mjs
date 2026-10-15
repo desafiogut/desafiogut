@@ -114,6 +114,56 @@ test("P1 endpoint: o `ler-pontos` devolve `indicacoesMes` (aditivo) e acompanha 
   assert.equal(doIndicado.corpo.indicacoesMes.creditadas, 0, "o crédito de «indicado» não é uma indicação FEITA");
 });
 
+/** Semeia a linha do ledger `pontos` directamente (colunas reais do duplo). */
+function semearPontos(endereco, historicoLance) {
+  P.tabela.push({ endereco, pontos: 500, historico: [], atualizado_em: new Date().toISOString(),
+    creditos_lance: 0, pontos_lance: 500, historico_lance: historicoLance });
+}
+
+// ⚠️ SEG8-110h.3 (⚠️-2 do validador: o mutante de DIVERGÊNCIA sobrevivia à suíte) — estes dois testes
+// amarram o número que a UI mostra ao recorte de mês e ao LIMITE que o servidor usa. Sem eles, uma
+// derivação própria no `ler-pontos` (sem recorte de mês, ou com outro limite) passava verde.
+test("P1 amarra: com indicações só do MÊS ANTERIOR o contador diz 0 (recorte de mês no ENDPOINT)", async () => {
+  const antes = new Date(Date.now() - 40 * 24 * 3600 * 1000).toISOString(); // ~40 dias atrás: outro mês
+  semearPontos(A, [
+    { motivo: "indicacao", ref: "indicacao:0x1111", data: antes, pontos: 50 },
+    { motivo: "indicacao", ref: "indicacao:0x2222", data: antes, pontos: 50 },
+    { motivo: "indicacao", ref: "indicacao:0x3333", data: antes, pontos: 50 },
+  ]);
+  const r = await lerPontosDe(A);
+  assert.equal(r.status, 200);
+  assert.equal(r.corpo.indicacoesMes.creditadas, 0, "o contador contou meses anteriores no ENDPOINT");
+});
+
+test("P1 amarra: aos 10 creditados o contador diz 10 E o 11.º é travado pelo limite mensal", async () => {
+  // 10 indicações já creditadas no mês corrente, semeadas DIRECTAMENTE no ledger.
+  const agora = new Date().toISOString();
+  const creditadas = [];
+  for (let i = 0; i < 10; i++) {
+    const e = `0x${String(i + 1).padStart(40, "c")}`;
+    creditadas.push({ motivo: "indicacao", ref: `indicacao:${e}`, data: agora, pontos: 50 });
+  }
+  semearPontos(A, creditadas);
+
+  const r = await lerPontosDe(A);
+  assert.equal(r.corpo.indicacoesMes.creditadas, 10, "o contador tem de chegar ao limite");
+  assert.equal(r.corpo.indicacoesMes.limite, 10);
+
+  // E o SERVIDOR usa o MESMO número para travar: o 11.º indicado entra, mas o indicador não recebe.
+  const { codigo } = await R.gerarCodigoIndicacao(A);
+  const resp = await usar(codigo, B);
+  assert.equal(resp.status, 200);
+  assert.equal(resp.corpo.pontosLance.indicante, false, "o indicador no limite não pode receber pontos");
+  assert.equal(resp.corpo.pontosLance.codeIndicante, "LIMITE_MENSAL");
+  assert.equal(resp.corpo.pontosLance.indicado, true, "o indicado NÃO depende do limite do indicador");
+  assert.equal(pontos(A), 500, "os pontos do indicador no limite não mudaram");
+  assert.equal(eco(A), 0, "e o ECOQUILDO do indicador também não");
+  assert.equal(eco(B), 1, "o indicado recebe sempre a parte dele");
+  // O contador NÃO subiu (os créditos do indicador foram travados).
+  const depois = await lerPontosDe(A);
+  assert.equal(depois.corpo.indicacoesMes.creditadas, 10, "o contador não pode passar do limite");
+});
+
 // ══ P2 — vocabulário do relatório admin ═══════════════════════════════════════════════════════════
 test("P2: o relatório de indicações diz «Recompensas on-chain creditadas» e o CAMPO mantém-se", async () => {
   const { codigo } = await R.gerarCodigoIndicacao(A);

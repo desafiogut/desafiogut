@@ -3,10 +3,14 @@
 // Geração/validação de códigos de indicação, registro de vínculos e
 // concessão de bónus ao indicador quando o indicado faz a primeira compra.
 // UTAC110h.2 — o crédito on-chain de senhas do modelo antigo continua em
-// `concederBonus` (DEBT-025: morto no caminho do endpoint, vivo no
-// `comprar-senhas`), mas o TEXTO visível ao utilizador deixou de o prometer: a
+// `concederBonus`, mas o TEXTO visível ao utilizador deixou de o prometer: a
 // recompensa diz-se «+50 pontos de lance e +2 ECOQUILDO». Anti-fraude via
 // FingerprintJS visitorId + Sybil check; limite mensal de 10 conversões.
+// ⚠️ UTAC110h.3/P5 (DEBT-025) — o crédito on-chain foi RESSUSCITADO no caminho do registo: o chamador
+// (`netlify/functions/referral.mjs`) deixou de passar endereços mascarados. Esta frase dizia «morto no
+// caminho do endpoint» — deixou de ser verdade. Efeito: 2 transacções mainnet por indicação confirmada
+// (gas real pago pela coordenação) — ver `Desktop/RELATORIO-UTAC110h.3.txt` §8 e a ressalva ⚠️-1 do
+// validador (quota: o marcador de convertido é gravado mesmo quando o indicador está no limite).
 //
 // Convenções de Blobs:
 //   referral-code:{endereco}              → { codigo, criadoEm }                                  (1 código por endereço)

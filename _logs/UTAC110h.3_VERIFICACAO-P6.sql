@@ -42,7 +42,7 @@ WHERE schemaname = 'public'
   AND tablename IN ('eco_quildo', 'eco_quildo_lastro')
 ORDER BY tablename;
 
--- 6) As policies existem?                  [ esperado: as da migração (service_role + leitura do titular) ]
+-- 6) As policies existem?                  [ esperado: as da migração — SÓ `service_role`, com REVOKE a anon/authenticated (a migração NÃO cria policy para o titular) ]
 SELECT tablename, policyname, cmd, roles
 FROM pg_policies
 WHERE schemaname = 'public'
