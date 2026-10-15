@@ -232,4 +232,36 @@ mutante dele (**P1f**) e ele passou a **MORRER** (`fail=2`); mutação global **
 
 ### Regressões em testes pré-existentes
 O validador confirmou: **nenhum ficheiro de teste pré-existente foi alterado** nesta UTAC (só
-acrescentados) e nenhuma guarda antiga enfraqueceu.
+acrescentados) e nenhuma guarda antiga enfraqueceu (medido: `tests` 1253→1259, `pass` 1247→1253, `fail 0`
+nos dois pontos, `skipped 6` **idêntico** nos dois — não se desactivou nada).
+
+---
+
+## 11. Os 3 mutantes do validador que SOBREVIVIAM — todos fechados com prova
+
+Ele correu 8 mutantes próprios; **5 morreram** e **3 sobreviveram**. Li-os um a um, reproduzi-os e fechei
+os três. (O §5 do relatório dele descreve o estado **antes** deste fecho — mantém-se à vista, como o
+processo manda.)
+
+| # | o que fazia | 1.ª medição | agora |
+|---|---|---|---|
+| **M1** | `ler-pontos` deriva o contador por conta própria, **sem** recorte de mês (divergência UI↔servidor) | ✗ sobrevivia à **suíte completa** | **MORRE** — mutante `P1f` → `fail=2`. As 2 guardas novas (mês anterior → 0; aos 10 o 11.º é travado) |
+| **M3a** | «torneio» visível introduzido **fora** dos 14 ficheiros do P3 | ✗ sobrevivia à suíte completa | **MORRE** — mutante `P3b` (em `useRecursosApp.js`) → `fail=1`. A guarda passou a varrer **todo** o `src/` + `netlify/` de produção |
+| **M3b** | «**TORNEIO**» em MAIÚSCULAS dentro dos 14 | ✗ sobrevivia (o token era `[Tt]orneio`) | **MORRE** — mutante `P3c` → `fail=1`. O varrimento passou a ser **sem distinção de caixa** |
+
+**A guarda do P3 ficou assim:** varre `src/` + `netlify/` de produção (fora de testes), aceita só tokens
+que sejam **chave/identificador/caminho** (`isTorneioVisivel`, `PainelTorneio[.jsx]`, `ativos.torneio.*`,
+`painel-torneio`, `TORNEIO-HABILIDADE.md`) e exige **contagem EXACTA** nas anotações históricas
+(`guto-perfis.mjs` = 3; comentário do `pt.js` = 1) — uma ocorrência nova em qualquer lado reprova. Tem
+**controlo positivo** (vê as chaves reais) para não ser um passe automático. Mutação: **18/18**.
+
+### Evidência extra do validador sobre o gas (a mais forte que existe hoje)
+Ele provou que **nenhum teste toca a rede de três formas**, incluindo correr os testes com o `RPC_URL` a
+apontar para um **destino morto** — continuam verdes, logo o contrato é sempre duplo. Isto fecha o
+«ALARME DE GAS» que eu lhe pedi para tentar disparar: não há transacção real em teste nenhum.
+
+### Não testável (declarado por ele e por mim)
+Custo real de gas em produção · efeito no bónus do `comprar-senhas` **depois** de o registo gravar o
+marcador (derivado por leitura, não medido) · migração `20261014` aplicada em produção (é o P6, do
+operador) · vacuidade «profunda» do teste do `Boot` quanto ao `useEffect`/Sentry (o próprio teste declara
+o limite).

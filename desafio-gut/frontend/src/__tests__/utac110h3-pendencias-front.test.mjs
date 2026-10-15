@@ -13,7 +13,7 @@
 // node --test --test-concurrency=1 src/__tests__/utac110h3-pendencias-front.test.mjs
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
 import { opcoesServidorTeste } from "./_servidor-teste.mjs";
@@ -23,9 +23,8 @@ const SRC = resolve(AQUI, "..");
 const STUB_CONTEXTO = resolve(AQUI, "..", "pages", "__tests__", "_stubs", "AppContext.jsx");
 const STUB_API = resolve(AQUI, "_stubs-110h3", "api.js");
 const ler = (p) => readFileSync(resolve(SRC, p), "utf8").replace(/\r\n/g, "\n");
-/** Leitura a partir da RAIZ do frontend (os ficheiros do P3 vivem em `netlify/` e em `src/`). */
+/** Raiz do frontend (o P3 varre `src/` e `netlify/` a partir daqui). */
 const FE = resolve(SRC, "..");
-const lerFE = (p) => readFileSync(resolve(FE, p), "utf8").replace(/\r\n/g, "\n");
 const codigo = (t) => t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\{\/\*[\s\S]*?\*\/\}/g, "").replace(/\/\/[^\n]*/g, "");
 
 // ── P1: o contador do mês, com os hooks reais ─────────────────────────────────────────────────────
@@ -77,43 +76,78 @@ test("P1 fail-soft: se o `ler-pontos` falhar, o painel segue igual e o contador 
   assert.match(html, /\+50 pontos de lance e \+2 ECOQUILDO/);
 });
 
-// ── P3: «torneio» fora do vocabulário (só chaves/identificadores) ────────────────────────────────
-const FICHEIROS_P3 = [
-  "netlify/functions/exportar-dados.mjs",
-  "netlify/functions/fila-processor-scheduled.mjs",
-  "netlify/functions/pontuacao.mjs",
-  "netlify/functions/_lib/bonus-emissao.mjs",
-  "netlify/functions/_lib/consolidacao.mjs",
-  "netlify/functions/_lib/pontuacao-store.mjs",
-  "netlify/functions/_lib/pontuacao-utils.mjs",
-  "netlify/functions/_lib/worker-bonus.mjs",
-  "src/pages/MeusAtivos.jsx",
-  "src/pages/MercadoLances.jsx",
-  "src/hooks/useFeedback.js",
-  "src/components/meus-ativos/_estilo.js",
-  "src/components/meus-ativos/FeedbackLance.jsx",
-  "src/components/meus-ativos/PainelTorneio.jsx",
+// ── P3: «torneio» fora do vocabulário ────────────────────────────────────────────────────────────
+// ⚠️ SEG8-110h.3 (mutantes M3a/M3b do validador, ambos SOBREVIVIAM): a 1.ª versão desta guarda só
+// varria os 14 ficheiros do P3 e só reconhecia `[Tt]orneio` — logo «torneio» VISÍVEL introduzido fora
+// da lista, e «TORNEIO» em maiúsculas, passavam verdes. Agora varre TODO o `src/` + `netlify/` de
+// produção (fora de testes), SEM distinção de caixa, e exige que cada ocorrência caia no allowlist
+// abaixo — com CONTAGEM EXACTA nas anotações históricas, para uma ocorrência NOVA fazer falhar.
+const ALLOW = [
+  /^isTorneioVisivel$/,              // chave de configuração/API (HI9)
+  /^PainelTorneio(\.jsx)?$/,         // componente/ficheiro (renomear partiria consumidores)
+  /^ativos\.torneio\.[A-Za-z]+$/,    // chaves de i18n (os VALORES já dizem «Competição»)
+  /^painel-torneio$/,                // chave de DOM (`data-secao`)
+  /^TORNEIO-HABILIDADE\.md$/,        // CAMINHO de um documento do repo (não é vocabulário nosso)
 ];
-const PERMITIDO = /^(isTorneioVisivel|PainelTorneio|ativos\.torneio\.[A-Za-z]+|painel-torneio)/;
+// Anotações HISTÓRICAS que registam o termo ANTIGO de propósito (doutrina «manter à vista»).
+// O número é EXACTO: +1 ocorrência em qualquer destes ficheiros reprova.
+const HISTORICAS = { "netlify/functions/_lib/guto-perfis.mjs": 3, "src/i18n/pt.js": 1 };
+const IGNORAR = ["node_modules", "__tests__", "_tests", "test-stubs", "_stubs", "dist", ".git"];
+const TOKEN = /[A-Za-zÀ-ÿ_.:-]*[Tt][Oo][Rr][Nn][Ee][Ii][Oo][A-Za-zÀ-ÿ_.:-]*/g;
+/** O char class inclui `:` e `.` (por causa das chaves `ativos.torneio.titulo` e de `T:`), logo o token
+ *  pode trazer separadores colados do código (`isTorneioVisivel:`). Normaliza-se ANTES do allowlist. */
+const normalizar = (t) => t.replace(/[:]+$/, "");
 
-test("P3: nos ficheiros tocados, «torneio» só sobrevive como CHAVE ou IDENTIFICADOR", () => {
-  let vistos = 0;
-  for (const f of FICHEIROS_P3) {
-    const txt = lerFE(f);
-    const tokens = [...txt.matchAll(/[A-Za-zÀ-ÿ_.:-]*[Tt]orneio[A-Za-zÀ-ÿ_.:-]*/g)].map((m) => m[0]);
-    for (const t of tokens) {
-      vistos++;
-      assert.ok(PERMITIDO.test(t), `${f}: «${t}» é vocabulário, não chave/identificador`);
+function* ficheirosDeProducao(dir) {
+  for (const e of readdirSync(dir, { withFileTypes: true })) {
+    if (IGNORAR.includes(e.name) || e.name.endsWith(".test.mjs") || e.name.endsWith(".test.js")) continue;
+    const p = resolve(dir, e.name);
+    if (e.isDirectory()) yield* ficheirosDeProducao(p);
+    else if (/\.(jsx?|mjs)$/.test(e.name)) yield p;
+  }
+}
+
+function scanearTorneio() {
+  const achados = [];
+  for (const raiz of ["src", "netlify"]) {
+    for (const abs of ficheirosDeProducao(resolve(FE, raiz))) {
+      const rel = abs.slice(FE.length + 1).replace(/\\/g, "/");
+      const txt = readFileSync(abs, "utf8");
+      for (const t of txt.match(TOKEN) ?? []) {
+        const limpo = normalizar(t);
+        if (ALLOW.some((re) => re.test(limpo))) continue;
+        achados.push({ rel, token: limpo });
+      }
     }
   }
-  assert.ok(vistos > 0, "o instrumento não viu nenhum «torneio» — não está a medir nada");
+  return achados;
+}
+
+test("P3: em TODA a produção, «torneio» só existe como chave/identificador/caminho ou anotação histórica", () => {
+  const achados = scanearTorneio();
+  const porFicheiro = achados.reduce((a, x) => ({ ...a, [x.rel]: (a[x.rel] ?? 0) + 1 }), {});
+  // Nenhum ficheiro fora do allowlist pode ter ocorrências…
+  for (const [rel, n] of Object.entries(porFicheiro)) {
+    if (rel in HISTORICAS) continue;
+    assert.fail(`${rel}: ${n}× «torneio» como VOCABULÁRIO (fora do allowlist): ${achados.filter((a) => a.rel === rel).map((a) => a.token).join(", ")}`);
+  }
+  // …e nas anotações históricas a contagem tem de ser EXACTAMENTE a conhecida.
+  assert.deepEqual(porFicheiro, HISTORICAS, "as anotações históricas mudaram de contagem (ocorrência nova?)");
+  // Controlo de vitalidade: o instrumento TEM de estar a ver as ocorrências legítimas.
+  assert.ok(Object.keys(porFicheiro).length >= 2, "o varrimento não encontrou nada — não está a medir");
 });
 
-test("P3 controlo negativo: o filtro APANHA vocabulário (não é um passe automático)", () => {
-  const falsos = ["// pontua o torneio", "bónus do torneio de habilidade", "Ranking do Torneio"];
-  for (const t of falsos) {
-    const tok = (t.match(/[A-Za-zÀ-ÿ_.:-]*[Tt]orneio[A-Za-zÀ-ÿ_.:-]*/g) ?? [])[0];
-    assert.ok(tok && !PERMITIDO.test(tok), `o filtro deixou passar «${t}»`);
+test("P3 controlo positivo: o varrimento vê as chaves reais (não é um passe automático)", () => {
+  // Se o `ALLOW` engolisse tudo, o teste acima seria vácuo. Aqui exige-se que os tokens legítimos
+  // EXISTAM no código: `isTorneioVisivel` (chave) e `ativos.torneio.` (i18n).
+  const T = readFileSync(resolve(FE, "netlify/functions/_lib/recursos-app-config.mjs"), "utf8");
+  assert.match(T, /\bisTorneioVisivel\b/, "a chave `isTorneioVisivel` desapareceu do config");
+  const I = readFileSync(resolve(FE, "src/i18n/pt.js"), "utf8");
+  assert.match(I, /"ativos\.torneio\.titulo"/, "as chaves de i18n desapareceram");
+  // E o filtro REPROVA vocabulário, em qualquer caixa (o que M3a/M3b exploravam).
+  for (const visto of ["// o torneio de habilidade", "TORNEIO DE HABILIDADE", "Ranking do Torneio"]) {
+    const tok = (visto.match(TOKEN) ?? []).find((t) => !ALLOW.some((re) => re.test(t)));
+    assert.ok(tok, `o filtro deixou passar «${visto}»`);
   }
 });
 

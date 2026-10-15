@@ -32,6 +32,7 @@ const B = "../../src/Boot.jsx";                    // F
 const PL = "../../src/components/PainelIndicacao.jsx"; // P1 (UI)
 const PV = "../../src/pages/Privacidade.jsx";      // P4
 const ES = "../../src/components/meus-ativos/_estilo.js"; // P3
+const URA = "../../src/hooks/useRecursosApp.js";          // P3 (FORA dos 14 — mutante M3a do SEG8)
 
 const MUTANTES = [
   // ── P1 — contador do mês ───────────────────────────────────────────────────────────────────────
@@ -87,6 +88,13 @@ const MUTANTES = [
   // ── P3 — vocabulário «torneio» ─────────────────────────────────────────────────────────────────
   ["P3a volta o vocabulário «torneio» num comentário de produção", ES,
     "partilhados pelas secções da competição.", "partilhados pelas secções do torneio.", "front"],
+  // ⚠️ Os dois mutantes do validador do SEG8 que SOBREVIVIAM à 1.ª versão da guarda (M3a/M3b):
+  // (a) vocabulário introduzido FORA dos 14 ficheiros do P3; (b) em MAIÚSCULAS dentro de um deles.
+  ["P3b (M3a) «torneio» visível num ficheiro FORA dos 14 (useRecursosApp.js)", URA,
+    "  isTorneioVisivel:         true,",
+    "  isTorneioVisivel:         true, // o torneio antigo", "front"],
+  ["P3c (M3b) «TORNEIO» em MAIÚSCULAS dentro de um dos 14", ES,
+    "partilhados pelas secções da competição.", "partilhados pelas secções do TORNEIO.", "front"],
 ];
 
 for (const lado of ["back", "front"]) {
