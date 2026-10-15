@@ -73,6 +73,14 @@ test("o limite mensal dito pelo GUTO é o do código (comum e corporativo)", () 
 test("TODOS os números de crédito e de limite, em todos os perfis, são os do código (achados X9/X10 do SEG4)", () => {
   for (const perfil of PERFIS) {
     const r = obterResposta("indique_e_ganhe", perfil, DADOS);
+    // ⚠️ GUARDA GENÉRICA (achado ⚠️-1 do validador do SEG5): a varredura tem de apanhar QUALQUER `+N`,
+    // não só os que seguem «pontos de lance»/«ECOQUILDO». Quando o UTAC110h.2 trocou a varredura única por
+    // duas escopadas, um «+7 bónus» inventado passou a escapar — regressão demonstrada por mutação (V13).
+    // O conjunto permitido é fechado: os números que o código pode prometer.
+    for (const m of r.matchAll(/\+\d+/g)) {
+      assert.ok([PONTOS, ECO_INDICANTE, ECO_INDICADO].includes(Number(m[0].slice(1))),
+        `${perfil}: «${m[0]}» não é um crédito conhecido (${PONTOS}/${ECO_INDICANTE}/${ECO_INDICADO}) — «${r}»`);
+    }
     for (const m of r.matchAll(/\+(\d+) pontos de lance/g)) assert.equal(Number(m[1]), PONTOS, `${perfil}: «+${m[1]} pontos de lance» ≠ PONTOS_INDICACAO`);
     for (const m of r.matchAll(/\+(\d+) ECOQUILDO/g)) {
       assert.ok([ECO_INDICANTE, ECO_INDICADO].includes(Number(m[1])), `${perfil}: «+${m[1]} ECOQUILDO» não é 2 (indicante) nem 1 (indicado)`);

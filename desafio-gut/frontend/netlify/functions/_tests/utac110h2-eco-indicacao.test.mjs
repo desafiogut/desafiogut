@@ -167,6 +167,25 @@ test("R7 falha do lastro → emissões revertidas (nunca fica ECOQUILDO sem rese
   assert.deepEqual([lastro().total_emitido, lastro().reserva_rs_centavos], [0, 0]);
 });
 
+// ── R9 — o ramo anti-fraude por IP não credita NADA (pina o mutante V7 do SEG5) ────────────────────
+test("R9 throttle por IP: ao 3.º pedido do mesmo IP/hora vincula mas NÃO credita pontos NEM ECOQUILDO", async () => {
+  // Herdado do UTAC110f (LIMITE_CONVERSOES_IP_HORA = 2) e não estava pinado por teste — o validador do
+  // SEG5 provou-o com um mutante que SOBREVIVEU (V7: pôr `creditarIndicacao` no ramo do gate não fazia
+  // falhar nada). O comportamento é o pretendido (onde não há pontos, não há ECO); aqui fica testado.
+  const { codigo } = await R.gerarCodigoIndicacao(A);
+  const IP = "10.9.9.9";
+  const r1 = await usar(codigo, ALVO(1), { ip: IP });
+  const r2 = await usar(codigo, ALVO(2), { ip: IP });
+  assert.deepEqual([r1.corpo.pontosLance, r2.corpo.pontosLance],
+    [{ indicante: true, indicado: true }, { indicante: true, indicado: true }], "os 2 primeiros do IP passam");
+  const eco3 = eco(ALVO(3));
+  const r3 = await usar(codigo, ALVO(3), { ip: IP });
+  assert.equal(r3.status, 200);
+  assert.equal(r3.corpo.pontosLance, null, "o ramo do gate de IP não pode creditar pontos");
+  assert.deepEqual([pontos(ALVO(3)), eco(ALVO(3))], [0, eco3], "nem pontos nem ECOQUILDO no ramo do gate");
+  assert.deepEqual([eco(A), lastro().total_emitido], [4, 6], "2 indicações completas: 2×2 ao indicante, 2×1 aos indicados");
+});
+
 // ── R8 — unidade: o motivo fechado é respeitado e a assinatura real é a do módulo do 110e ──────────
 test("R8 unitário: `creditarIndicacao` devolve `ecoQuildo` e usa as constantes do Art. 51º", async () => {
   assert.equal(L.ECOQUILDO_INDICACAO_INDICANTE, 2);

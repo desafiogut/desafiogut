@@ -1,0 +1,9 @@
+viewport 375: docScrollWidth=375 clientWidth=375 bodyScrollWidth=375 · elementos com overflow: 0 
+viewport 1280: docScrollWidth=1280 clientWidth=1280 bodyScrollWidth=1280 · elementos com overflow: 0 
+amarelo/gold #f5a623: 9.44:1 AA texto normal ✅
+texto #e8f0fe: 16.70:1 AA texto normal ✅
+muted #94a3b8: 7.46:1 AA texto normal ✅
+gold sobre o card: 8.79:1 AA texto normal ✅
+muted sobre o card: 6.95:1 AA texto normal ✅
+CONTROLO NEGATIVO branco/#f5a623: 2.03:1 REPROVA ❌
+controlo negativo (tem de REPROVAR): branco sobre amarelo = 2.03:1 < 4.5 ✅

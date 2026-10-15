@@ -69,6 +69,12 @@ const blocoContato = (fonte) => {
 test("D3 Termos: a caixa de contacto mostra SÓ o e-mail (Art. 69º do v5.0)", () => {
   const T = ler("components/TermosConsentimento.jsx");
   assert.deepEqual(problemasContato(blocoContato(T)), [], `caixa: «${blocoContato(T)}»`);
+  // ⚠️ ALCANCE (mutante V12 do validador do SEG5, que SOBREVIVEU): a janela de 280 caracteres só olha para
+  // DENTRO da caixa — um telefone posto noutra parte do MESMO componente passaria. Agora o componente
+  // inteiro (sem comentários) é varrido: nenhum telefone e nenhum site em lado nenhum do gate.
+  const codigoT = codigo(T);
+  assert.doesNotMatch(codigoT, /\(\d{2}\)\s*\d{4,5}[-.\s]?\d{4}/, "apareceu um TELEFONE no gate");
+  assert.doesNotMatch(codigoT, /www\.|https?:\/\//, "apareceu um SITE no gate");
   // A fonte legal, lida do ficheiro: o Art. 69º manda «exclusivamente» e-mail.
   const REG = readFileSync(resolve(SRC, "..", "..", "..", "docs", "REGULAMENTO-v5.md"), "utf8");
   const art69 = (REG.match(/Art\. 69º[^\n]*/) ?? [])[0] ?? "";

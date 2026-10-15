@@ -27,6 +27,7 @@
 
 import { creditarPontosLance, lerLedgerLance } from "./ledger-lance.mjs";
 import { creditarEcoQuildo, registarEmissaoNoLastro, reverterEcoQuildo } from "./eco-quildo.mjs";
+import { captureSecurityAlert } from "./sentry-server.mjs";
 
 export const PONTOS_LOGIN_DIARIO = 5;
 export const PONTOS_MISSAO_LANCE = 10;
@@ -139,12 +140,22 @@ async function creditarEcoQuildoDaIndicacao(indicante, indicado, indicanteRes) {
   if (lastro.ok) return { ...out, emitidos: total };
 
   // ECOQUILDO sem lastro em R$ não existe (Art. 50º — mesma doutrina do `_lib/comprar-passe-tipado.mjs`):
-  // desfaz SÓ o que este passo criou, antes de desistir.
+  // desfaz SÓ o que este passo criou, antes de desistir. ⚠️ A reversão é best-effort: se ELA também falhar
+  // (update do Supabase em baixo, `CONFLITO_CONCORRENCIA`), o ECOQUILDO fica sem reserva — é uma violação
+  // do Art. 50º e o operador TEM de saber, logo alerta-se (achado ⚠️-2 do validador do SEG5; a doutrina e
+  // a chamada são as do `comprar-passe-tipado.mjs`).
+  let reverteramTodos = true;
   for (const c of criados) {
-    await reverterEcoQuildo(c.endereco, c.ref).catch(() => ({ ok: false }));
+    const rev = await reverterEcoQuildo(c.endereco, c.ref).catch(() => ({ ok: false, code: "ERRO_DB" }));
+    if (!(rev.ok && rev.revertido)) reverteramTodos = false;
+  }
+  if (!reverteramTodos) {
+    captureSecurityAlert("indicacao_eco_reversao_falhou", {
+      code: lastro.code, enderecos: criados.map((c) => c.endereco), emitidos: total,
+    }, "error").catch(() => {});
   }
   return {
-    emitidos: 0, code: `lastro:${lastro.code}`,
+    emitidos: 0, code: `lastro:${lastro.code}`, reversaoCompleta: reverteramTodos,
     indicante: { ok: false, code: "LASTRO_FALHOU" },
     indicado:  { ok: false, code: "LASTRO_FALHOU" },
   };

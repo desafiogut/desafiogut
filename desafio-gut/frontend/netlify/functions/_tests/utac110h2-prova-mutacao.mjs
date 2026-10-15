@@ -16,7 +16,8 @@ const FRONT = join(RAIZ, "..", "..");                                   // desaf
 const md5 = (s) => createHash("md5").update(s).digest("hex");
 const BACK_T = ["_tests/utac110h2-eco-indicacao.test.mjs", "_tests/utac110h2-guto-eco.test.mjs",
   "_tests/utac110h1-guto-indicacao.test.mjs"];
-const FRONT_T = ["src/__tests__/utac110h2-indicacao-copy.test.mjs", "src/__tests__/utac110h2-pendencias.test.mjs"];
+const FRONT_T = ["src/__tests__/utac110h2-indicacao-copy.test.mjs", "src/__tests__/utac110h2-pendencias.test.mjs",
+  "src/__tests__/utac110h2-render-indicacao.test.mjs"];
 
 function correr(lado) {
   const [cwd, args] = lado === "front"
@@ -105,6 +106,19 @@ const MUTANTES = [
   ["D3 a caixa de contacto volta a mostrar telefone e site", T,
     '📧 Dúvidas: desafiogut01@gmail.com\n            </p>',
     '📧 Dúvidas: desafiogut01@gmail.com &nbsp;·&nbsp; 📞 (92) 98428-5774 &nbsp;·&nbsp; 🌐 www.grupouniaoetrabalho.com.br\n            </p>', "front"],
+  // ── SOBREVIVENTES do validador do SEG5 (V13/V7/V10/V12), agora com guarda dirigida ────────────────
+  ["V13 (SEG5) o GUTO passa a prometer um crédito inventado («+7 bónus»)", G,
+    "até 10 indicações por mês. Código: ${g(p.codigo)}.`,",
+    "até 10 indicações por mês. Ganhe +7 bónus. Código: ${g(p.codigo)}.`,", "back"],
+  ["V7 (SEG5) o ramo anti-fraude por IP passa a creditar a indicação", "referral.mjs",
+    '    conversao = { ok: false, code: "suspeita_sybil_ip" };',
+    '    conversao = { ok: false, code: "suspeita_sybil_ip" }; await creditarIndicacao(r.indicador, endereco);', "back"],
+  ["V10 (SEG5) o CARD da recompensa mostra o crédito do AMIGO (+1)", P,
+    "+50 pontos de lance e +2 ECOQUILDO\n          </div>",
+    "+50 pontos de lance e +1 ECOQUILDO\n          </div>", "front"],
+  ["V12 (SEG5) telefone posto FORA da caixa de contacto do gate", T,
+    'Regras completas (12 capítulos, 72 artigos) em{" "}',
+    'Regras completas ligue (92) 98428-5774 ou veja{" "}', "front"],
 ];
 
 for (const lado of ["back", "front"]) {
