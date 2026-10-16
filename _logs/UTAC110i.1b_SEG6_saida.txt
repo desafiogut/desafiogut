@@ -1,0 +1,61 @@
+=== 1. ENTREGAVEIS EXISTEM ===
+OK   | desafio-gut/frontend/src/hooks/useComprarPasse.js
+OK   | desafio-gut/frontend/src/__tests__/utac110i1-front-billing.test.mjs
+OK   | desafio-gut/frontend/src/lib/google-play-billing.js
+OK   | desafio-gut/frontend/src/lib/__tests__/_duplo-cdv-purchase.mjs
+OK   | desafio-gut/frontend/src/lib/__tests__/_duplo-capacitor.mjs
+OK   | desafio-gut/frontend/src/__tests__/_stubs-110i1/useRecursosApp.js
+OK   | desafio-gut/frontend/netlify/functions/validar-compra-google.mjs
+OK   | desafio-gut/frontend/netlify/functions/_lib/google-play-billing.mjs
+OK   | desafio-gut/frontend/supabase/migrations/20261016_utac110i1_google_play_compras.sql
+OK   | scripts/mc110i1d-prova-mutacao.mjs
+OK   | scripts/run-mut110i1d.sh
+OK   | _logs/UTAC110i.1b_SEG-1_MEDICAO.md
+OK   | _logs/UTAC110i.1b_SEG0_FRENTE-A-DIAGNOSTICO.md
+OK   | _logs/UTAC110i.1b_SEG1_FRENTE-B-FECHO.md
+OK   | _logs/UTAC110i.1b_SEG2_VERIFICACAO.md
+OK   | _logs/UTAC110i.1b_SEG1_MUTACAO.txt
+OK   | _logs/UTAC110i.1b_SEG1_PROVA-D7.txt
+OK   | _logs/UTAC110i.1b_SEG2_saida.txt
+OK   | _logs/DEBT.md
+OK   | CLAUDE.md
+
+=== 2. O GATE CORRIGIDO (o nucleo do UTAC) ===
+OK   | gate tem as DUAS condicoes
+OK   | gate NAO tem a versao mutada
+OK   | md5 do hook == 7bbc1625... — 7bbc1625ac7077b263b2298c7768ee94
+OK   | reconstrucao do estado pre-correccao == a2cd8446...
+
+=== 3. TESTES (o ficheiro e a rede de seguranca) ===
+OK   | ficheiro tem 14 testes — 14
+OK   | teste (c) presente com a assercao do PIX
+OK   | teste do ESTADO erro presente (mata D7)
+OK   | 106e mudou SO nos 2 aliases (nenhuma assercao)
+
+=== 4. CONTROLOS POSITIVOS (o script TEM de saber dizer FALHA) ===
+OK   | [controlo 1] a verificacao do gate REPROVA o texto mutado (D3) — se este der OK, o detector e cego e o check #2 nao vale nada
+OK   | [controlo 2] ficheiro inexistente -> existsSync false
+OK   | [controlo 3] reconstrucao SEM a troca do gate DIVERGE do md5 do pre-fix — sem a troca do gate, o md5 tem de ser diferente do pre-fix
+
+=== 5. DEBT e CLAUDE.md ===
+OK   | DEBT registada: DEBT-037
+OK   | DEBT registada: DEBT-038
+OK   | DEBT registada: DEBT-039
+OK   | DEBT registada: DEBT-040
+OK   | DEBT registada: DEBT-041
+OK   | CLAUDE.md registou o UTAC110i.1b (R14)
+OK   | errata REFUTADA a vista no SEG2 do 110i.1
+
+=== 6. NADA QUE NAO DEVIA MUDAR MUDOU (producao) ===
+ficheiros alterados no commit: 35
+OK   | INALTERADO vs baseline: desafio-gut/frontend/src/pages/MinhaCarteira.jsx
+OK   | INALTERADO vs baseline: desafio-gut/frontend/src/components/ComprarPasseModal.jsx
+OK   | NOVO no commit (nao existia no baseline): scripts/mc110i1d-prova-mutacao.mjs
+OK   | NOVO no commit (nao existia no baseline): desafio-gut/frontend/src/lib/google-play-billing.js
+OK   | NOVO no commit (nao existia no baseline): desafio-gut/frontend/netlify/functions/validar-compra-google.mjs
+OK   | NOVO no commit (nao existia no baseline): desafio-gut/frontend/netlify/functions/_lib/google-play-billing.mjs
+OK   | NOVO no commit (nao existia no baseline): desafio-gut/frontend/supabase/migrations/20261016_utac110i1_google_play_compras.sql
+OK   | SO 2 ficheiros de codigo do repo tocados por este UTAC (hook + teste front) — desafio-gut/frontend/src/__tests__/_stubs-110i1/useRecursosApp.js, desafio-gut/frontend/src/__tests__/utac110i1-front-billing.test.mjs, desafio-gut/frontend/src/__tests__/utac110i1-google-play-billing.test.mjs, desafio-gut/frontend/src/hooks/useComprarPasse.js, desafio-gut/frontend/src/lib/__tests__/_duplo-capacitor.mjs, desafio-gut/frontend/src/lib/__tests__/_duplo-cdv-purchase.mjs, desafio-gut/frontend/src/lib/google-play-billing.js, desafio-gut/frontend/src/pages/__tests__/utac106e-compra-passe.test.mjs
+hook vs baseline (add/del): 88	8	desafio-gut/frontend/src/hooks/useComprarPasse.js (o baseline a8fe980 NAO tinha a bifurcacao)
+
+=== RESUMO: 46 OK / 0 FALHA ===

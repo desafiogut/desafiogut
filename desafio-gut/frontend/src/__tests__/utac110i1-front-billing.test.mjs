@@ -208,6 +208,18 @@ test("(e) cancelamento na loja ⇒ erro claro e ZERO idas à rede", async () => 
   assert.equal(dup.chamadas.length, 0, "foi ao servidor depois de o utilizador cancelar");
 });
 
+// ⚠️ NOTA DE COBERTURA AMPLIADA (UTAC110i.1b — achados do validador adversarial do SEG3, declarados):
+//   · `produto_indisponivel` (loja que nunca carrega o produto): NÃO exercitado — obrigaria a esperar
+//     os 15 s do `TIMEOUT_PRODUTO_MS` (declarado abaixo, na nota original);
+//   · `timeout_compra`, `sem_token`, `sku_divergente` e `billing_indisponivel` (mensagens do
+//     `MSG_BILLING`): também NÃO exercitados — o mutante que lhes troca a mensagem sobrevive
+//     (medido: N1/N2/N5 do validador). São mensagens de caminhos raros, não de decisão de dinheiro;
+//   · `isPagamentoNativoAtivo` **truthy mas não `true`** (mutante N3 do validador: gate sem o
+//     `=== true`): SOBREVIVE — **mutante EQUIVALENTE**, e por construção: a fonte da flag normaliza
+//     sempre para booleano (`useRecursosApp.js:93` `Boolean(DEFAULT_RECURSOS…[plat])`, `:131`
+//     `Boolean(data.…)`, e o mesmo no duplo `_stubs-110i1/useRecursosApp.js:23`), logo nenhum valor
+//     truthy não-booleano chega ao gate. O `=== true` é a defesa declarada para esse caso (config
+//     malformada); NÃO se enfraquece o gate para agradar ao mutante.
 // ⚠️ NOTA DE COBERTURA (declarada, medida): o desfecho `produto_indisponivel` da abstracção (loja
 // que nunca carrega o produto) NÃO é exercitado aqui — obrigaria a esperar os 15 s do
 // `TIMEOUT_PRODUTO_MS` e o instrumento de mutação (que corre este ficheiro por cada mutante) ficaria

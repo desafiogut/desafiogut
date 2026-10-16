@@ -40,7 +40,9 @@ PIX. O teste (c) — que exige PIX — fica à espera da transacção que ningu�
 
 ## 0.3 CAUSA RAIZ (ficheiro:linha) — o gate perdeu a primeira condição
 
-`src/hooks/useComprarPasse.js:135`, **antes**:
+`src/hooks/useComprarPasse.js:135` **no ficheiro ANTES da correcção** (⚠️ no ficheiro **corrigido**
+esta linha é a **138** — o deslocamento é +3 pelas linhas de comentário acrescentadas; achado ⚠️-1 do
+validador do SEG3, corrigido):
 
 ```js
 if (billingDisponivel()) return await comprarNativo(tipo);            // <-- só a 2.ª condição
@@ -92,7 +94,8 @@ dados**; ambas declaram o mesmo estado. O que se mede, e basta, é o estado.)
 - O teste (c) exige **exactamente** o contrato declarado pelo UTAC («flag DESLIGADA ⇒ PIX, mesmo em
   Android nativo»): `_logs/UTAC110i.1_SEG2_FRENTE-D.md` §2.2 e o cabeçalho do próprio hook.
 - O teste (c) está **correcto**: a sonda de §0.2 mostra que, com a condição reposta, ele passa.
-- **A/B PAREADO (E8) no MESMO ficheiro, mudando SÓ a linha 135:**
+- **A/B PAREADO (E8) no MESMO ficheiro, mudando SÓ a linha do gate (135 antes da correcção ·
+  138 depois):**
 
 | cena (sonda do ramo) | loja tocada | rede | `comprar()` | veredicto |
 |---|---|---|---|---|
@@ -121,3 +124,29 @@ md5 antes `a2cd84465231f4c8c1e427018c7c49e5` → depois `7bbc1625ac7077b263b2298
    tem o hook do 106e, só PIX). O defeito era um risco **no ramo de trabalho**, não no que está no ar.
 2. A correcção **repõe o contrato declarado** — não introduz decisão nova (o gate já estava escrito e
    documentado no SEG2 do 110i.1).
+
+## 0.7 PROVA POR RECONSTRUÇÃO (o estado pré-correcção era, byte a byte, o mutante D3)
+
+A afirmação «o ficheiro estava no estado do mutante D3» foi **provada por reconstrução**, não por
+inferência: partindo do ficheiro **actual** (md5 `7bbc1625ac7077b263b2298c7768ee94`, LF), retiram-se
+as 3 linhas de comentário acrescentadas no §0.6 e repõe-se a linha do mutante D3. O resultado tem de
+dar o md5 do estado pré-correcção — e **dá**:
+
+```
+bloco de comentário presente 1×: 1        linha corrigida presente 1×: 1
+md5 da reconstrução:  a2cd84465231f4c8c1e427018c7c49e5
+md5 esperado (log da mutação do 110i.1): a2cd84465231f4c8c1e427018c7c49e5
+MATCH: True
+```
+
+O `diff` entre a reconstrução e o ficheiro actual é **exactamente**: `+3` linhas de comentário e a
+troca de `if (billingDisponivel())` por `if (isPagamentoNativoAtivo === true && billingDisponivel())`.
+⇒ o ficheiro entregue pelo 110i.1 era o **estado declarado original com UMA única linha mutada** (a do
+mutante D3), nada mais.
+
+⚠️ **Armadilha de instrumento (declarada, mediu-se aqui):** `pathlib.read_text()` (e o `cat` do
+git-bash) fazem **tradução universal de newlines** — a leitura em modo texto colapsa/expande `\r\n`,
+e o md5 daí sai **diferente do md5 dos bytes no disco** (medido: `c21c3c75…` em modo texto vs
+`7bbc1625…` nos bytes crus). Quem repetir esta conferência tem de ler em **binário**. (O ficheiro tem
+**175 LF e 0 CRLF**.)
+

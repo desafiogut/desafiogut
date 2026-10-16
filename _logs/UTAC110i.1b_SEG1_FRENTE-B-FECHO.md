@@ -87,6 +87,13 @@ mutantes RED: 9/9
 md5 final: 7bbc1625ac7077b263b2298c7768ee94 (== inicial)
 ```
 
+**Sinal do instrumento (declarado; achado ℹ️-6 do validador do SEG3):** dos 9 RED, **três**
+(D1/D2/D3 — os que partem a bifurcação) são «**RED por pendura**»: a heurística
+`pendurou = sinal==="SIGTERM" || tests===null` conta um corte do limite de 45 s como RED. É um
+veredicto **honesto** (com o gate partido o ramo nativo fica à espera dos 300 s da loja e o reporter
+nunca imprime resumo), mas o `9/9` inclui esses casos e **não** são nove «RED por asserção».
+Declarado, não escondido.
+
 **GATE 8 (bidireccional):** o mesmo instrumento dá **8/9** com o ficheiro de 13 testes e **9/9** com o
 de 14 — o delta é o teste novo, e nada mais. Não é circular: o mutante é o **código** (o gate/setErro),
 o teste é o **juiz**, e o controlo positivo de cada corrida exige baseline verde antes de mutar.
@@ -95,7 +102,7 @@ o teste é o **juiz**, e o controlo positivo de cada corrida exige baseline verd
 
 | ficheiro | mudança |
 |---|---|
-| `desafio-gut/frontend/src/hooks/useComprarPasse.js` | **1 linha** — reposição da condição `isPagamentoNativoAtivo === true &&` no gate (l. 135) + 3 linhas de comentário |
+| `desafio-gut/frontend/src/hooks/useComprarPasse.js` | **1 linha** — reposição da condição `isPagamentoNativoAtivo === true &&` no gate (**l. 135** antes da correcção · **l. 138** no ficheiro corrigido) + 3 linhas de comentário |
 | `desafio-gut/frontend/src/__tests__/utac110i1-front-billing.test.mjs` | **+1 teste** (13 → 14) |
 
 Nada mais: SEG0 (plugin) e SEG1 (backend) **não foram tocados**; o `106e` **não foi tocado**;

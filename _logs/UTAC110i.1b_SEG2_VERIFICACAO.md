@@ -16,7 +16,16 @@ Saída real: `_logs/UTAC110i.1b_SEG2_saida.txt`
 | 2 | `110d + 110e` (rede de segurança do SEG1/backend) | 1645/1642 | **45/45** · 0 fail | **VERDE** |
 | 3 | **suíte FRONTEND completa** (`scripts/mc966-suite-harness.mjs frontend`) | 1577/1573 | **1148/1148** · 0 fail · 354 s | **VERDE** |
 | 4 | **suíte BACKEND completa** (`... backend`) | 1778/1758 | **1310/1316** · **0 fail** · 6 skipped · 20 s | **VERDE** |
+| 5 | **build de produção** (`npm run build`, o MESMO comando do `netlify.toml:3`) | — | **✓ built in 16,73 s** · `BUILD_EXIT=0` | **VERDE** |
 | — | RAM no fim | 1724/1723 | — | — |
+
+**Porque é que o build entra aqui (acrescentado, declarado):** este UTAC **empurra para `main`** e o
+push dispara o **auto-deploy** do Netlify — que corre `npm install --legacy-peer-deps` +
+`npm run build` (`netlify.toml:1-4`). O commit carrega o trabalho do 110i.1 inteiro (bundle novo:
+abstracção do Billing, dependência `capacitor-plugin-cdv-purchase`, 2 endpoints). **Um build partido
+seria um incidente de produção**; por isso ele foi corrido **antes** do push. Saída:
+`_logs/UTAC110i.1b_SEG2_build.txt`. (`dist/` é ignorado pelo git — `.gitignore:5` — logo o build não
+suja o commit.)
 
 ## 2.2 Leitura dos números (por comparação com a baseline do enunciado)
 

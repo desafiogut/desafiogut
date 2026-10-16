@@ -1,0 +1,20 @@
+md5 antes: 7bbc1625ac7077b263b2298c7768ee94  (bak: /tmp/run-mut110i1d-useComprarPasse.bak)
+alvo: C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\src\hooks\useComprarPasse.js
+md5 inicial: 7bbc1625ac7077b263b2298c7768ee94
+
+controlo (sem mutação): VERDE 33/33
+
+RED (pendurou) | entrou: sim | restaurado: sim | D1  a bifurcação ignora a flag (todo o Android/browser vai ao Billing)
+RED            | entrou: sim | restaurado: sim | D2  a bifurcação ignora a disponibilidade REAL da loja (o PWA iria ao Billing)
+RED (pendurou) | entrou: sim | restaurado: sim | D3  a bifurcação ignora a flag (o APK actual deixava o PIX)
+RED            | entrou: sim | restaurado: sim | D4  fecha a compra na loja ANTES de o servidor validar (entrega sem confirmação)
+RED            | entrou: sim | restaurado: sim | D5  mesmo quando o SERVIDOR recusa, fecha a compra na loja (Passe queimado sem crédito)
+RED            | entrou: sim | restaurado: sim | D6  o ramo nativo cai no PIX (dupla cobrança: loja + saldo)
+RED            | entrou: sim | restaurado: sim | D7  o erro do Billing deixa de ser visível (silêncio)
+RED            | entrou: sim | restaurado: sim | D8  o ramo nativo relê o saldo R$ (mente sobre um débito que não houve)
+RED            | entrou: sim | restaurado: sim | D9  o cancelamento da loja passa a ser um erro genérico (perde a distinção)
+
+mutantes RED: 9/9
+md5 final: 7bbc1625ac7077b263b2298c7768ee94 (== inicial)
+md5 depois: 7bbc1625ac7077b263b2298c7768ee94 (== .bak, intacto)
+EXIT=0

@@ -1,0 +1,22 @@
+## RESUMO FINAL — VALIDADOR ADVERSARIAL (SEG3) do UTAC110i.1b
+
+**⚠️ Aviso de honestidade:** atingi o limite de iterações de ferramentas **antes de escrever o ficheiro de veredicto**. O ficheiro `C:/Users/Moltbot/tmp-utac110i1b-val/wt/_logs/UTAC110i.1b_SEG3_VALIDADOR.md` **NÃO foi criado**. Abaixo está o veredicto completo com todas as medições, pronto a gravar. O worktree ficou **limpo e idêntico a 49eca17** (`git status` vazio; md5 hook `7bbc1625ac7077b263b2298c7768ee94`, md5 teste `928ac3141e9a789da43af772465dfd3e`); só criei ficheiros em `tmp-utac110i1b-val/` (não toquei no repo principal).
+
+### VEREDICTO: **APROVADO COM RESSALVAS**
+
+Todas as provas centrais do executor foram **reproduzidas por medição independente** (causa, correcção 14/14, mutação 9/9, D7 = 13/14, zero regressão). Nenhuma alegação central caiu. Achados:
+
+**⚠️ (graves — tratar)**
+1. **Citação `ficheiro:linha` errada no entregável.** O gate está em **`useComprarPasse.js:138`** (medido: `grep -n`), mas o commit 49eca17, `_logs/UTAC110i.1b_SEG0_FRENTE-A-DIAGNOSTICO.md` §0.3, `_logs/UTAC110i.1b_SEG1_FRENTE-B-FECHO.md` §1.5, `CLAUDE.md` e **DEBT-041** dizem `:135`. O `:135` é a linha da reconstrução **pré-correcção** (medida: a minha reconstrução tem o gate errado na l.135). Corrigir as 5 citações.
+
+[... middle omitted — see footer ...]
+
+- Que o teste novo fosse vácuo → **não** se confirmou (13/14 com D7).
+- Que houvesse regressão no 106e / frontend / backend → **não** se confirmou (19/19 · 1148/1148 · 1310/1316).
+- Que a suíte frontend estivesse vermelha por causa externa (como no UTAC105b.3) → **não** ocorreu aqui.
+- **Não consegui** medir: dispositivo Android real (fora de alcance), o portão A14 cumprido no arranque (RAM 1268→1232 MB, desvio declarado), e **gravar o ficheiro de veredicto** (limite de iterações).
+──────── [SUMMARY TRUNCATED] ────────
+Showing 1,284 chars (head) + 486 chars (tail) of 6,500 total — trimmed to protect the parent's context window.
+Full subagent output saved to: C:\Users\Moltbot\AppData\Local\hermes\cache\delegation\subagent-summary-0-20261016_184904_632652.txt
+To read the omitted middle: read_file path="C:\Users\Moltbot\AppData\Local\hermes\cache\delegation\subagent-summary-0-20261016_184904_632652.txt" offset=11 limit=200  (the file is the complete summary; raise/lower offset to page through it).
+─────────────────────────────────────

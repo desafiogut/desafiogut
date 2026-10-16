@@ -1,0 +1,1216 @@
+
+> desafiogut-frontend@1.0.0 build
+> vite build
+
+[33mBoth esbuild and oxc options were set. oxc options will be used and esbuild options will be ignored.[39m The following esbuild options were set: `{
+  pure: [ 'console.log', 'console.info', 'console.debug', 'console.trace' ]
+}`
+[36mvite v8.1.0 [32mbuilding client environment for production...[36m[39m
+
+[43m[30m WARN [39m[49m [36madvancedChunks[39m option is deprecated, please use [36mcodeSplitting[39m instead.
+
+
+[43m[30m WARN [39m[49m [36mmanualChunks[39m option is ignored because the [36mcodeSplitting[39m option is specified.
+
+[2Ktransforming...✓ 3659 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                        5.19 kB │ gzip:   2.15 kB
+dist/assets/index-B-PmSdF_.css                        51.12 kB │ gzip:  10.06 kB
+dist/assets/farcaster-mini-app-solana-BkA8BtKG.js      0.15 kB │ gzip:   0.13 kB
+dist/assets/glassTokens-BuenKzgO.js                    0.23 kB │ gzip:   0.18 kB
+dist/assets/useIsMobile-o2jZQE1c.js                    0.45 kB │ gzip:   0.28 kB
+dist/assets/BotaoLoginPrincipal-DJO8WyK6.js            0.79 kB │ gzip:   0.54 kB
+dist/assets/web-1KdZMBxl.js                            0.84 kB │ gzip:   0.40 kB
+dist/assets/EnderecoTruncado-BfSQNwV8.js               0.91 kB │ gzip:   0.57 kB
+dist/assets/rolldown-runtime-C_JxhDyB.js               0.93 kB │ gzip:   0.52 kB
+dist/assets/edicao-Bqe45aSk.js                         1.03 kB │ gzip:   0.58 kB
+dist/assets/ScheduleView-B9wl_YJa.js                   1.22 kB │ gzip:   0.69 kB
+dist/assets/EstadoVazio-BBV0y00k.js                    1.35 kB │ gzip:   0.70 kB
+dist/assets/LanceStatusBadge-D8ZAIryH.js               1.37 kB │ gzip:   0.65 kB
+dist/assets/PhCaretLeft-D3l3J8nn.js                    1.85 kB │ gzip:   0.90 kB
+dist/assets/PhCaretDown-jQVqA-Gs.js                    1.91 kB │ gzip:   0.93 kB
+dist/assets/PhCaretRight-CP6yOrTo.js                   1.93 kB │ gzip:   0.92 kB
+dist/assets/PhCaretUp-CucRlALv.js                      1.99 kB │ gzip:   0.91 kB
+dist/assets/PhArrowUpRight-B410VOJQ.js                 2.03 kB │ gzip:   0.99 kB
+dist/assets/PhArrowDown-nJ0jvPPz.js                    2.07 kB │ gzip:   0.99 kB
+dist/assets/PhPlus-NFDWPAv7.js                         2.08 kB │ gzip:   0.94 kB
+dist/assets/PhCheck-Cw7fp-Aq.js                        2.08 kB │ gzip:   0.96 kB
+dist/assets/PhArrowRight-B_adKefv.js                   2.08 kB │ gzip:   0.99 kB
+dist/assets/PhArrowLeft-Cc6CEe6v.js                    2.09 kB │ gzip:   0.98 kB
+dist/assets/PhArrowUp-AB8IXS06.js                      2.14 kB │ gzip:   0.98 kB
+dist/assets/PhBrowser-CQ1TdC7E.js                      2.18 kB │ gzip:   0.95 kB
+dist/assets/PhMagnifyingGlass-D6ZlsYhW.js              2.18 kB │ gzip:   1.06 kB
+dist/assets/PhDotsThree-CtoLl55v.js                    2.22 kB │ gzip:   0.92 kB
+dist/assets/PhCopy-DMi3w6T1.js                         2.33 kB │ gzip:   0.99 kB
+dist/assets/PhFunnelSimple-DlsNQHai.js                 2.33 kB │ gzip:   0.98 kB
+dist/assets/_ui-BVZcAwiu.js                            2.34 kB │ gzip:   1.07 kB
+dist/assets/PhClock-BrhyrWKG.js                        2.34 kB │ gzip:   1.01 kB
+dist/assets/imagem-CFAhoXQg.js                         2.36 kB │ gzip:   1.24 kB
+dist/assets/PhWarningCircle-WRElNDPT.js                2.40 kB │ gzip:   1.03 kB
+dist/assets/Toast-DlRsK04p.js                          2.42 kB │ gzip:   1.19 kB
+dist/assets/PhX-4ToaJElo.js                            2.47 kB │ gzip:   1.04 kB
+dist/assets/palpite-CbRtmU5Z.js                        2.52 kB │ gzip:   1.25 kB
+dist/assets/PhDeviceMobile-CihOiI0_.js                 2.54 kB │ gzip:   1.05 kB
+dist/assets/PhArrowClockwise-BJnO2NmQ.js               2.56 kB │ gzip:   1.17 kB
+dist/assets/GraficoLinha-DmctxHzz.js                   2.59 kB │ gzip:   1.10 kB
+dist/assets/PhUser-CFGzsjHv.js                         2.65 kB │ gzip:   1.25 kB
+dist/assets/PhEnvelope-DL4d-g6N.js                     2.66 kB │ gzip:   1.16 kB
+dist/assets/PhCircleHalf-CKFJhroY.js                   2.69 kB │ gzip:   1.20 kB
+dist/assets/PhSignOut-bF2jJnsm.js                      2.73 kB │ gzip:   1.14 kB
+dist/assets/PhInfo-DVt49oJJ.js                         2.74 kB │ gzip:   1.19 kB
+dist/assets/PhPower-CfpVQUc9.js                        2.75 kB │ gzip:   1.26 kB
+dist/assets/PhDesktop-DY55f0vo.js                      2.75 kB │ gzip:   1.10 kB
+dist/assets/PhArrowsLeftRight-ql0-br9O.js              2.77 kB │ gzip:   1.16 kB
+dist/assets/PhArrowCircleDown-CWMqhB6q.js              2.78 kB │ gzip:   1.16 kB
+dist/assets/usePontos-rsUxsoPk.js                      2.79 kB │ gzip:   1.24 kB
+dist/assets/PhQuestionMark-zhVCn5YD.js                 2.81 kB │ gzip:   1.28 kB
+dist/assets/PhArrowSquareOut-D_TddkHp.js               2.89 kB │ gzip:   1.23 kB
+dist/assets/PhArrowsDownUp-DTLzeZNr.js                 2.90 kB │ gzip:   1.16 kB
+dist/assets/PhCreditCard-a1OtCxIt.js                   2.90 kB │ gzip:   1.13 kB
+dist/assets/PhBank-7XFI8I9Q.js                         2.91 kB │ gzip:   1.23 kB
+dist/assets/PhVault-BsUayr1r.js                        2.93 kB │ gzip:   1.18 kB
+dist/assets/PhCompass-CTIMkOzj.js                      2.95 kB │ gzip:   1.26 kB
+dist/assets/PhPaperPlaneRight-Bgb8HgWI.js              3.06 kB │ gzip:   1.40 kB
+dist/assets/PhTrash-BpfhAnxS.js                        3.09 kB │ gzip:   1.17 kB
+dist/assets/PhCurrencyDollar-DdKPDcci.js               3.22 kB │ gzip:   1.32 kB
+dist/assets/pedidos-BSyQtw-0.js                        3.25 kB │ gzip:   1.60 kB
+dist/assets/EtiquetaEstadoLance-BSty1IVz.js            3.27 kB │ gzip:   1.65 kB
+dist/assets/PhQuestion-DPHUxLLs.js                     3.28 kB │ gzip:   1.43 kB
+dist/assets/PhImage-BtV6NqAb.js                        3.40 kB │ gzip:   1.43 kB
+dist/assets/utils-BnrdI-nC.js                          3.51 kB │ gzip:   1.52 kB
+dist/assets/LoginEmail-CIS9HUJI.js                     3.80 kB │ gzip:   1.69 kB
+dist/assets/PhArrowsClockwise-DogWdYOr.js              3.84 kB │ gzip:   1.58 kB
+dist/assets/PhWarning-BAAqiB4U.js                      3.88 kB │ gzip:   1.47 kB
+dist/assets/PhIdentificationCard-CaQzxA7-.js           4.19 kB │ gzip:   1.63 kB
+dist/assets/useRecursosApp-ygsMAiPN.js                 4.22 kB │ gzip:   1.98 kB
+dist/assets/ExcluirContaModal-CAPqUT0h.js              4.34 kB │ gzip:   2.02 kB
+dist/assets/PhSpinner-BShYqBkv.js                      4.42 kB │ gzip:   1.63 kB
+dist/assets/Cadastro-DCCPfQjQ.js                       4.42 kB │ gzip:   1.84 kB
+dist/assets/Aprovacoes-Cs75J0jO.js                     4.52 kB │ gzip:   1.85 kB
+dist/assets/GlassHeader-mO0AlSFY.js                    4.62 kB │ gzip:   1.74 kB
+dist/assets/PhLightbulb-BfmQEa6s.js                    4.88 kB │ gzip:   1.85 kB
+dist/assets/PhQrCode-DTcGHykZ.js                       4.89 kB │ gzip:   1.46 kB
+dist/assets/PhPuzzlePiece-DOCHDEIg.js                  5.34 kB │ gzip:   1.95 kB
+dist/assets/Comunicacao-CLoZZd5l.js                    5.62 kB │ gzip:   2.22 kB
+dist/assets/ExcluirConta-C1RNy8u9.js                   5.64 kB │ gzip:   2.18 kB
+dist/assets/PhGlobe-DwtZVqTU.js                        5.69 kB │ gzip:   1.91 kB
+dist/assets/features-B1gy4r0A.js                       5.73 kB │ gzip:   2.24 kB
+dist/assets/GestaoUsuarios-C8zulQN0.js                 6.28 kB │ gzip:   2.56 kB
+dist/assets/Cotas-BD_xA5N8.js                          6.41 kB │ gzip:   2.36 kB
+dist/assets/CartaoEdicao-DUXjnVuS.js                   6.63 kB │ gzip:   2.70 kB
+dist/assets/GestaoFinanceira-DNPsW4ur.js               6.67 kB │ gzip:   2.63 kB
+dist/assets/AdminAuthContext-BkR7-r3I.js               6.80 kB │ gzip:   2.69 kB
+dist/assets/LogsAuditoria-c1zNE16P.js                  7.17 kB │ gzip:   2.54 kB
+dist/assets/Configuracoes-DuK7REmS.js                  7.55 kB │ gzip:   2.79 kB
+dist/assets/dist-Df6p42cR.js                           7.74 kB │ gzip:   3.08 kB
+dist/assets/IdiomaContext-D0WYG9E2.js                  7.79 kB │ gzip:   2.77 kB
+dist/assets/VisaoGeral-Bp9HkvhM.js                     7.84 kB │ gzip:   2.88 kB
+dist/assets/ConfiguracoesAdmins-DalDQ41P.js            8.89 kB │ gzip:   2.99 kB
+dist/assets/esm-Ci1ogKuK.js                            8.95 kB │ gzip:   2.91 kB
+dist/assets/DetalheProduto-CiO0MSzE.js                 8.97 kB │ gzip:   3.24 kB
+dist/assets/PerfilUsuario-CMLTpoDW.js                  9.56 kB │ gzip:   2.75 kB
+dist/assets/Pedidos-CGNEAWKj.js                        9.99 kB │ gzip:   3.33 kB
+dist/assets/Operacoes-C7N7m7hD.js                     10.21 kB │ gzip:   3.51 kB
+dist/assets/SIWXUtil-D8Gbh-FI.js                      12.00 kB │ gzip:   4.51 kB
+dist/assets/PhSealCheck-BaHG5CCO.js                   12.07 kB │ gzip:   4.06 kB
+dist/assets/AdminLayout-BUHK4GyO.js                   13.82 kB │ gzip:   4.82 kB
+dist/assets/OfertasProgramadas-B1m-oeJB.js            14.23 kB │ gzip:   4.82 kB
+dist/assets/ConnectorUtil-DQyBryCI.js                 15.94 kB │ gzip:   6.47 kB
+dist/assets/property-BKqmXaKm.js                      16.17 kB │ gzip:   6.08 kB
+dist/assets/Privacidade-D8IBAw17.js                   17.17 kB │ gzip:   5.04 kB
+dist/assets/MercadoLances-CQqe-Ksa.js                 17.67 kB │ gzip:   5.87 kB
+dist/assets/RegrasOficiais-CGJuuc-1.js                22.38 kB │ gzip:   8.00 kB
+dist/assets/secp256k1-0EPqlAHl.js                     32.74 kB │ gzip:  12.93 kB
+dist/assets/MeusAtivos-BNEaOjaG.js                    33.54 kB │ gzip:   9.25 kB
+dist/assets/ConstantsUtil-DXLou1uU.js                 39.83 kB │ gzip:  12.49 kB
+dist/assets/router-E7mEnNxE.js                        41.98 kB │ gzip:  14.99 kB
+dist/assets/CardLance-Ds79kjt2.js                     44.15 kB │ gzip:  16.90 kB
+dist/assets/MinhaCarteira-LauUkbqh.js                 47.36 kB │ gzip:  13.06 kB
+dist/assets/index-BqW9rruc.js                         58.20 kB │ gzip:  19.78 kB
+dist/assets/AppContext-Dfd2St1C.js                    67.74 kB │ gzip:  26.30 kB
+dist/assets/wui-ux-by-reown-tPEc_f7o.js               76.43 kB │ gzip:  21.02 kB
+dist/assets/w3m-modal-B4NTZUyR.js                     79.11 kB │ gzip:  17.40 kB
+dist/assets/PrivyRoot-CSGq2e4A.js                    101.93 kB │ gzip:  29.86 kB
+dist/assets/ApiController-C6MDHqLS.js                114.93 kB │ gzip:  33.69 kB
+dist/assets/basic-DDbgzaPe.js                        118.19 kB │ gzip:  29.61 kB
+dist/assets/motion-DlDDV8N9.js                       128.68 kB │ gzip:  42.73 kB
+dist/assets/react-BQx8e5sa.js                        139.88 kB │ gzip:  45.36 kB
+dist/assets/dist-BDCWXOrT.js                         161.14 kB │ gzip:  41.51 kB
+dist/assets/dist-DXtmho5y.js                         201.28 kB │ gzip:  51.45 kB
+dist/assets/web3-kb1zal2c.js                         281.26 kB │ gzip: 104.46 kB
+dist/assets/dist-C_3k5MZc.js                         319.94 kB │ gzip: 123.22 kB
+dist/assets/core-CMQ0aHrF.js                         389.23 kB │ gzip: 107.69 kB
+dist/assets/sentry-CkNIPmXQ.js                       460.60 kB │ gzip: 150.95 kB
+dist/assets/privy-C6QEr4zh.js                      2,676.54 kB │ gzip: 806.49 kB
+
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/index-BIM3W67E.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/index-BIM3W67E.mjs at 71675..71688
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/index-BIM3W67E.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/index-BIM3W67E.mjs at 91984..91997
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/index-BIM3W67E.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/index-BIM3W67E.mjs at 184179..184192
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/index-BIM3W67E.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/index-BIM3W67E.mjs at 186082..186095
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/privy-context-DZKgfhd0.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/privy-context-DZKgfhd0.mjs at 8240..8253
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/privy-context-DZKgfhd0.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/privy-context-DZKgfhd0.mjs at 8892..8905
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/use-export-wallet-D_8FuCoc.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/use-export-wallet-D_8FuCoc.mjs at 13183..13196
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/TurnstileWrapper-Co-t5mTh.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/TurnstileWrapper-Co-t5mTh.mjs at 217..230
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/AffirmativeConsentScreen-B-0dNJtz.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/AffirmativeConsentScreen-B-0dNJtz.mjs at 1983..1996
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/AllowlistRejectionScreen-D37Qtqwt.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/AllowlistRejectionScreen-D37Qtqwt.mjs at 1525..1538
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/AccountNotFoundScreen-C_5pSDsV.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/AccountNotFoundScreen-C_5pSDsV.mjs at 1374..1387
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/InstallWalletScreen-DHBtivoH.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/InstallWalletScreen-DHBtivoH.mjs at 1245..1258
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/InstallWalletScreen-DHBtivoH.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/InstallWalletScreen-DHBtivoH.mjs at 2125..2138
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/ErrorScreen-CqYXkFQc.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/ErrorScreen-CqYXkFQc.mjs at 4240..4253
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/ErrorScreen-CqYXkFQc.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/ErrorScreen-CqYXkFQc.mjs at 4721..4734
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/AwaitingPasswordlessCodeScreen-BRvjtpjt.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/AwaitingPasswordlessCodeScreen-BRvjtpjt.mjs at 2781..2794
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/AwaitingPasswordlessCodeScreen-BRvjtpjt.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/AwaitingPasswordlessCodeScreen-BRvjtpjt.mjs at 5801..5814
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/HCaptchaWrapper-CUi9LJsp.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/HCaptchaWrapper-CUi9LJsp.mjs at 205..218
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/FarcasterSignerStatusScreen-C2IGisp6.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/FarcasterSignerStatusScreen-C2IGisp6.mjs at 4171..4184
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/FiatOnrampScreen-CMJk1Pu-.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/FiatOnrampScreen-CMJk1Pu-.mjs at 6210..6223
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/FiatOnrampScreen-CMJk1Pu-.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/FiatOnrampScreen-CMJk1Pu-.mjs at 8977..8990
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/EmbeddedWalletCreatedScreen-B6t5v-yw.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/EmbeddedWalletCreatedScreen-B6t5v-yw.mjs at 1631..1644
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/AuthenticateWithWalletScreen-bO8LSVrF.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/AuthenticateWithWalletScreen-bO8LSVrF.mjs at 1743..1756
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/EmbeddedWalletKeyExportScreen-DLk2jGfs.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/EmbeddedWalletKeyExportScreen-DLk2jGfs.mjs at 3208..3221
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/FundWithBankDepositScreen-BOKUaPNU.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/FundWithBankDepositScreen-BOKUaPNU.mjs at 2670..2683
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/FundWithBankDepositScreen-BOKUaPNU.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/FundWithBankDepositScreen-BOKUaPNU.mjs at 4340..4353
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/FundWithBankDepositScreen-BOKUaPNU.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/FundWithBankDepositScreen-BOKUaPNU.mjs at 10673..10686
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/ConnectOnlyLandingScreen-D_7jiVlz.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/ConnectOnlyLandingScreen-D_7jiVlz.mjs at 1599..1612
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/FundingEditAmountScreen-Dgcl54fd.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/FundingEditAmountScreen-Dgcl54fd.mjs at 1787..1800
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CaptchaScreen-DlKb2aAS.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CaptchaScreen-DlKb2aAS.mjs at 2115..2128
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CaptchaScreen-DlKb2aAS.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CaptchaScreen-DlKb2aAS.mjs at 3428..3441
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/OAuthStatusScreen-BHM-evdm.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/OAuthStatusScreen-BHM-evdm.mjs at 4269..4282
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/EmbeddedWalletPasswordUpdateScreen-T1Dd8I71.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/EmbeddedWalletPasswordUpdateScreen-T1Dd8I71.mjs at 2454..2467
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/RecoveryPasswordCreateScreen-D7o3BbJI.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/RecoveryPasswordCreateScreen-D7o3BbJI.mjs at 3483..3496
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CoinbaseOnrampStatusScreen-BpAjQHS-.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CoinbaseOnrampStatusScreen-BpAjQHS-.mjs at 3653..3666
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CoinbaseOnrampStatusScreen-BpAjQHS-.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CoinbaseOnrampStatusScreen-BpAjQHS-.mjs at 3976..3989
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CoinbaseOnrampStatusScreen-BpAjQHS-.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CoinbaseOnrampStatusScreen-BpAjQHS-.mjs at 4513..4526
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/FundingMethodSelectionScreen-B6j2A4YL.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/FundingMethodSelectionScreen-B6j2A4YL.mjs at 6953..6966
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/InAppBrowserLoginNotPossible-BuhbPaHi.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/InAppBrowserLoginNotPossible-BuhbPaHi.mjs at 1258..1271
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/LinkConflictScreen-BXjUklA4.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/LinkConflictScreen-BXjUklA4.mjs at 1803..1816
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/LinkConflictScreen-BXjUklA4.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/LinkConflictScreen-BXjUklA4.mjs at 3973..3986
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/LinkConflictScreen-BXjUklA4.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/LinkConflictScreen-BXjUklA4.mjs at 6688..6701
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/ConnectLedgerScreen-DE9jRA7z.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/ConnectLedgerScreen-DE9jRA7z.mjs at 3023..3036
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/SignRequestScreen-BmD3UmkU.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/SignRequestScreen-BmD3UmkU.mjs at 1742..1755
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/SignRequestScreen-BmD3UmkU.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/SignRequestScreen-BmD3UmkU.mjs at 3567..3580
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/UpdateEmailScreen-DpxlWl_W.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/UpdateEmailScreen-DpxlWl_W.mjs at 2885..2898
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/LinkEmailScreen-UlXwNUij.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/LinkEmailScreen-UlXwNUij.mjs at 2074..2087
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/PasskeySelectSignupOrLogin-B-cY5-C6.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/PasskeySelectSignupOrLogin-B-cY5-C6.mjs at 2060..2073
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/FundSolWalletWithExternalSolanaWallet-BzdJ_2PW.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/FundSolWalletWithExternalSolanaWallet-BzdJ_2PW.mjs at 2629..2642
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/LinkPasskeyScreen-C2ywsQ6d.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/LinkPasskeyScreen-C2ywsQ6d.mjs at 1992..2005
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/LinkPasskeyScreen-C2ywsQ6d.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/LinkPasskeyScreen-C2ywsQ6d.mjs at 2126..2139
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/TelegramAuthScreen-BX56xLIE.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/TelegramAuthScreen-BX56xLIE.mjs at 1895..1908
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/TelegramAuthScreen-BX56xLIE.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/TelegramAuthScreen-BX56xLIE.mjs at 4218..4231
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/ConnectionStatusScreen-DmwSG43J.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/ConnectionStatusScreen-DmwSG43J.mjs at 3162..3175
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/ConnectionStatusScreen-DmwSG43J.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/ConnectionStatusScreen-DmwSG43J.mjs at 9434..9447
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/LinkPhoneScreen-Dp8Zjxc_.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/LinkPhoneScreen-Dp8Zjxc_.mjs at 1316..1329
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/LinkPhoneScreen-Dp8Zjxc_.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/LinkPhoneScreen-Dp8Zjxc_.mjs at 1677..1690
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CrossAppAuthScreen-DA7nesSD.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CrossAppAuthScreen-DA7nesSD.mjs at 2050..2063
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/LoginFailedScreen-DaS2jNK3.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/LoginFailedScreen-DaS2jNK3.mjs at 1384..1397
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/PasswordRecoveryScreen-Bx_iHYUT.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/PasswordRecoveryScreen-Bx_iHYUT.mjs at 2509..2522
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/TransferFromWalletScreen-Cayx65zi.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/TransferFromWalletScreen-Cayx65zi.mjs at 3555..3568
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/RecoverySelectionScreen-B2hFN_KA.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/RecoverySelectionScreen-B2hFN_KA.mjs at 4089..4102
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/RecoverySelectionScreen-B2hFN_KA.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/RecoverySelectionScreen-B2hFN_KA.mjs at 4264..4277
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/RecoverySelectionScreen-B2hFN_KA.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/RecoverySelectionScreen-B2hFN_KA.mjs at 4440..4453
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/RecoveryOAuthStatusScreen-Bk40Fsv2.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/RecoveryOAuthStatusScreen-Bk40Fsv2.mjs at 8580..8593
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/StandardSignAndSendTransactionScreen-eKXCtVY6.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/StandardSignAndSendTransactionScreen-eKXCtVY6.mjs at 17069..17082
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/StandardSignAndSendTransactionScreen-eKXCtVY6.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/StandardSignAndSendTransactionScreen-eKXCtVY6.mjs at 18081..18094
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/SetAutomaticRecoveryScreen-CEOFKSqe.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/SetAutomaticRecoveryScreen-CEOFKSqe.mjs at 1862..1875
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/MoonpayStatusScreen-C5z-iZvj.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/MoonpayStatusScreen-C5z-iZvj.mjs at 2888..2901
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/MoonpayStatusScreen-C5z-iZvj.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/MoonpayStatusScreen-C5z-iZvj.mjs at 3720..3733
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/MoonpayStatusScreen-C5z-iZvj.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/MoonpayStatusScreen-C5z-iZvj.mjs at 4038..4051
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/MoonpayStatusScreen-C5z-iZvj.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/MoonpayStatusScreen-C5z-iZvj.mjs at 4834..4847
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/MfaAuthEnrollmentFlowScreen-cABNEaNs.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/MfaAuthEnrollmentFlowScreen-cABNEaNs.mjs at 3637..3650
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/MfaAuthEnrollmentFlowScreen-cABNEaNs.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/MfaAuthEnrollmentFlowScreen-cABNEaNs.mjs at 3883..3896
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/MfaAuthEnrollmentFlowScreen-cABNEaNs.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/MfaAuthEnrollmentFlowScreen-cABNEaNs.mjs at 4572..4585
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/MfaEnrollmentFlowScreen-XZ2AZq02.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/MfaEnrollmentFlowScreen-XZ2AZq02.mjs at 6703..6716
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/MfaEnrollmentFlowScreen-XZ2AZq02.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/MfaEnrollmentFlowScreen-XZ2AZq02.mjs at 7259..7272
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/MfaEnrollmentFlowScreen-XZ2AZq02.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/MfaEnrollmentFlowScreen-XZ2AZq02.mjs at 7891..7904
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/MfaEnrollmentFlowScreen-XZ2AZq02.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/MfaEnrollmentFlowScreen-XZ2AZq02.mjs at 8592..8605
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/UserLimitReachedScreen-Cijt4tjX.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/UserLimitReachedScreen-Cijt4tjX.mjs at 1765..1778
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/ManualTransferScreen-BklShjqt.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/ManualTransferScreen-BklShjqt.mjs at 5419..5432
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/UpdatePhoneScreen-DbpjqxM5.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/UpdatePhoneScreen-DbpjqxM5.mjs at 1325..1338
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/UpdatePhoneScreen-DbpjqxM5.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/UpdatePhoneScreen-DbpjqxM5.mjs at 1747..1760
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/index-BOKlTYUM.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/index-BOKlTYUM.mjs at 15389..15402
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/index-BOKlTYUM.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/index-BOKlTYUM.mjs at 18191..18204
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/index-BOKlTYUM.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/index-BOKlTYUM.mjs at 18457..18470
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/index-BOKlTYUM.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/index-BOKlTYUM.mjs at 20871..20884
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/TodoList-CgrU7uwu.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+    [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m node_modules/@privy-io/react-auth/dist/esm/TodoList-CgrU7uwu.mjs:15:228 [38;5;246m][0m
+    [38;5;246m│[0m
+ [38;5;246m15 │[0m [38;5;249m`[0m[38;5;249m;[0m[38;5;249mc[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249m [0m[38;5;249mc[0m[38;5;249m=[0m[38;5;249m([0m[38;5;249m{[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249mn[0m[38;5;249m,[0m[38;5;249mv[0m[38;5;249ma[0m[38;5;249mr[0m[38;5;249mi[0m[38;5;249ma[0m[38;5;249mn[0m[38;5;249mt[0m[38;5;249m:[0m[38;5;249ma[0m[38;5;249m=[0m[38;5;249m"[0m[38;5;249md[0m[38;5;249me[0m[38;5;249mf[0m[38;5;249ma[0m[38;5;249mu[0m[38;5;249ml[0m[38;5;249mt[0m[38;5;249m"[0m[38;5;249m,[0m[38;5;249mi[0m[38;5;249mc[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249mc[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m=[0m[38;5;249m>[0m[38;5;249m{[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249m [0m[38;5;249mp[0m[38;5;249m=[0m[38;5;249m([0m[38;5;249m)[0m[38;5;249m=[0m[38;5;249m>[0m[38;5;249m{[0m[38;5;249ms[0m[38;5;249mw[0m[38;5;249mi[0m[38;5;249mt[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249m([0m[38;5;249ma[0m[38;5;249m)[0m[38;5;249m{[0m[38;5;249mc[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m"[0m[38;5;249ms[0m[38;5;249mu[0m[38;5;249mc[0m[38;5;249mc[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249ms[0m[38;5;249m"[0m[38;5;249m:[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m"[0m[38;5;249mv[0m[38;5;249ma[0m[38;5;249mr[0m[38;5;249m([0m[38;5;249m-[0m[38;5;249m-[0m[38;5;249mp[0m[38;5;249mr[0m[38;5;249mi[0m[38;5;249mv[0m[38;5;249my[0m[38;5;249m-[0m[38;5;249mc[0m[38;5;249mo[0m[38;5;249ml[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249m-[0m[38;5;249mi[0m[38;5;249mc[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249m-[0m[38;5;249ms[0m[38;5;249mu[0m[38;5;249mc[0m[38;5;249mc[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249ms[0m[38;5;249m)[0m[38;5;249m"[0m[38;5;249m;[0m[38;5;249mc[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m"[0m[38;5;249me[0m[38;5;249mr[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249m"[0m[38;5;249m:[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m"[0m[38;5;249mv[0m[38;5;249ma[0m[38;5;249mr[0m[38;5;249m([0m[38;5;249m-[0m[38;5;249m-[0m[38;5;249mp[0m[38;5;249mr[0m[38;5;249mi[0m[38;5;249mv[0m[38;5;249my[0m[38;5;249m-[0m[38;5;249mc[0m[38;5;249mo[0m[38;5;249ml[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249m-[0m[38;5;249mi[0m[38;5;249mc[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249m-[0m[38;5;249me[0m[38;5;249mr[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249m)[0m[38;5;249m"[0m[38;5;249m;[0m[38;5;249md[0m[38;5;249me[0m[38;5;249mf[0m[38;5;249ma[0m[38;5;249mu[0m[38;5;249ml[0m[38;5;249mt[0m[38;5;249m:[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m"[0m[38;5;249mv[0m[38;5;249ma[0m[38;5;249mr[0m[38;5;249m([0m[38;5;249m-[0m[38;5;249m-[0m[38;5;249mp[0m[38;5;249mr[0m[38;5;249mi[0m[38;5;249mv[0m[38;5;249my[0m[38;5;249m-[0m[38;5;249mc[0m[38;5;249mo[0m[38;5;249ml[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249m-[0m[38;5;249mi[0m[38;5;249mc[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249m-[0m[38;5;249mm[0m[38;5;249mu[0m[38;5;249mt[0m[38;5;249me[0m[38;5;249md[0m[38;5;249m)[0m[38;5;249m"[0m[38;5;249m}[0m[38;5;249m}[0m[38;5;249m;[0m/*#__PURE__*/[38;5;249mr[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249mr[0m[38;5;249m([0m[38;5;249ml[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249m[[0m[38;5;249m/[0m[38;5;249m*[0m[38;5;249m#[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249mP[0m[38;5;249mU[0m[38;5;249mR[0m[38;5;249mE[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249m*[0m[38;5;249m/[0m[38;5;249me[0m[38;5;249m([0m[38;5;249ms[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249m$[0m[38;5;249mv[0m[38;5;249ma[0m[38;5;249mr[0m[38;5;249mi[0m[38;5;249ma[0m[38;5;249mn[0m[38;5;249mt[0m[38;5;249m:[0m[38;5;249ma[0m[38;5;249m,[0m[38;5;249m"[0m[38;5;249md[0m[38;5;249ma[0m[38;5;249mt[0m[38;5;249ma[0m[38;5;249m-[0m[38;5;249mv[0m[38;5;249ma[0m[38;5;249mr[0m[38;5;249mi[0m[38;5;249ma[0m[38;5;249mn[0m[38;5;249mt[0m[38;5;249m"[0m[38;5;249m:[0m[38;5;249ma[0m[38;5;249m,[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249m([0m[38;5;249m([0m[38;5;249m)[0m[38;5;249m=[0m[38;5;249m>[0m[38;5;249m{[0m[38;5;249mi[0m[38;5;249mf[0m[38;5;249m([0m[38;5;249mc[0m[38;5;249m)[0m
+ [38;5;240m   │[0m                                                                                                                                                                                                                                    ──────┬──────  
+ [38;5;240m   │[0m                                                                                                                                                                                                                                          ╰──────── comment ignored due to position
+ [38;5;240m   │[0m 
+ [38;5;240m   │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[38;5;246m────╯[0m
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/TodoList-CgrU7uwu.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+    [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m node_modules/@privy-io/react-auth/dist/esm/TodoList-CgrU7uwu.mjs:16:1 [38;5;246m][0m
+    [38;5;246m│[0m
+ [38;5;246m16 │[0m /*#__PURE__*/[38;5;249mr[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249mo[0m[38;5;249m.[0m[38;5;249mi[0m[38;5;249ms[0m[38;5;249mV[0m[38;5;249ma[0m[38;5;249ml[0m[38;5;249mi[0m[38;5;249md[0m[38;5;249mE[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249mm[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249mt[0m[38;5;249m([0m[38;5;249mc[0m[38;5;249m)[0m[38;5;249m?[0m[38;5;249m/[0m[38;5;249m*[0m[38;5;249m#[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249mP[0m[38;5;249mU[0m[38;5;249mR[0m[38;5;249mE[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249m*[0m[38;5;249m/[0m[38;5;249mo[0m[38;5;249m.[0m[38;5;249mc[0m[38;5;249ml[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249me[0m[38;5;249mE[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249mm[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249mt[0m[38;5;249m([0m[38;5;249mc[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mk[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249mp[0m[38;5;249m([0m[38;5;249m)[0m[38;5;249m,[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mk[0m[38;5;249me[0m[38;5;249mW[0m[38;5;249mi[0m[38;5;249md[0m[38;5;249mt[0m[38;5;249mh[0m[38;5;249m:[0m[38;5;249m2[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m:[0m[38;5;249mc[0m[38;5;249m;[0m[38;5;249ms[0m[38;5;249mw[0m[38;5;249mi[0m[38;5;249mt[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249m([0m[38;5;249ma[0m[38;5;249m)[0m[38;5;249m{[0m[38;5;249mc[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m"[0m[38;5;249ms[0m[38;5;249mu[0m[38;5;249mc[0m[38;5;249mc[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249ms[0m[38;5;249m"[0m[38;5;249m:[0m[38;5;249md[0m[38;5;249me[0m[38;5;249mf[0m[38;5;249ma[0m[38;5;249mu[0m[38;5;249ml[0m[38;5;249mt[0m[38;5;249m:[0m[38;5;249m/[0m[38;5;249m*[0m[38;5;249m#[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249mP[0m[38;5;249mU[0m[38;5;249mR[0m[38;5;249mE[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249m*[0m[38;5;249m/[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249me[0m[38;5;249m([0m[38;5;249mi[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249ms[0m[38;5;249mi[0m[38;5;249mz[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249m1[0m[38;5;249m2[0m[38;5;249m,[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mk[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249mp[0m[38;5;249m([0m[38;5;249m)[0m[38;5;249m,[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mk[0m[38;5;249me[0m[38;5;249mW[0m[38;5;249mi[0m[38;5;249md[0m[38;5;249mt[0m[38;5;249mh[0m[38;5;249m:[0m[38;5;249m3[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m;[0m[38;5;249mc[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m"[0m[38;5;249me[0m[38;5;249mr[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249m"[0m[38;5;249m:[0m[38;5;249m/[0m[38;5;249m*[0m[38;5;249m#[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249mP[0m[38;5;249mU[0m[38;5;249mR[0m[38;5;249mE[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249m*[0m[38;5;249m/[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249me[0m[38;5;249m([0m[38;5;249mt[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249ms[0m[38;5;249mi[0m[38;5;249mz[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249m1[0m[38;5;249m2[0m[38;5;249m,[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mk[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249mp[0m[38;5;249m([0m[38;5;249m)[0m[38;5;249m,[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mk[0m[38;5;249me[0m[38;5;249mW[0m[38;5;249mi[0m[38;5;249md[0m[38;5;249mt[0m[38;5;249mh[0m[38;5;249m:[0m[38;5;249m3[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m}[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m([0m[38;5;249m)[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m,[0m[38;5;249mn[0m[38;5;249m][0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m}[0m[38;5;249m;[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249m [0m[38;5;249ms[0m[38;5;249m=[0m[38;5;249mn[0m[38;5;249m.[0m[38;5;249md[0m[38;5;249mi[0m[38;5;249mv[0m[38;5;249m`[0m
+ [38;5;240m   │[0m ──────┬──────  
+ [38;5;240m   │[0m       ╰──────── comment ignored due to position
+ [38;5;240m   │[0m 
+ [38;5;240m   │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[38;5;246m────╯[0m
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/TodoList-CgrU7uwu.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+    [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m node_modules/@privy-io/react-auth/dist/esm/TodoList-CgrU7uwu.mjs:16:133 [38;5;246m][0m
+    [38;5;246m│[0m
+ [38;5;246m16 │[0m [38;5;249m/[0m[38;5;249m*[0m[38;5;249m#[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249mP[0m[38;5;249mU[0m[38;5;249mR[0m[38;5;249mE[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249m*[0m[38;5;249m/[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249mo[0m[38;5;249m.[0m[38;5;249mi[0m[38;5;249ms[0m[38;5;249mV[0m[38;5;249ma[0m[38;5;249ml[0m[38;5;249mi[0m[38;5;249md[0m[38;5;249mE[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249mm[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249mt[0m[38;5;249m([0m[38;5;249mc[0m[38;5;249m)[0m[38;5;249m?[0m[38;5;249m/[0m[38;5;249m*[0m[38;5;249m#[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249mP[0m[38;5;249mU[0m[38;5;249mR[0m[38;5;249mE[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249m*[0m[38;5;249m/[0m[38;5;249mo[0m[38;5;249m.[0m[38;5;249mc[0m[38;5;249ml[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249me[0m[38;5;249mE[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249mm[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249mt[0m[38;5;249m([0m[38;5;249mc[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mk[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249mp[0m[38;5;249m([0m[38;5;249m)[0m[38;5;249m,[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mk[0m[38;5;249me[0m[38;5;249mW[0m[38;5;249mi[0m[38;5;249md[0m[38;5;249mt[0m[38;5;249mh[0m[38;5;249m:[0m[38;5;249m2[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m:[0m[38;5;249mc[0m[38;5;249m;[0m[38;5;249ms[0m[38;5;249mw[0m[38;5;249mi[0m[38;5;249mt[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249m([0m[38;5;249ma[0m[38;5;249m)[0m[38;5;249m{[0m[38;5;249mc[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m"[0m[38;5;249ms[0m[38;5;249mu[0m[38;5;249mc[0m[38;5;249mc[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249ms[0m[38;5;249m"[0m[38;5;249m:[0m[38;5;249md[0m[38;5;249me[0m[38;5;249mf[0m[38;5;249ma[0m[38;5;249mu[0m[38;5;249ml[0m[38;5;249mt[0m[38;5;249m:[0m/*#__PURE__*/[38;5;249mr[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249me[0m[38;5;249m([0m[38;5;249mi[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249ms[0m[38;5;249mi[0m[38;5;249mz[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249m1[0m[38;5;249m2[0m[38;5;249m,[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mk[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249mp[0m[38;5;249m([0m[38;5;249m)[0m[38;5;249m,[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mk[0m[38;5;249me[0m[38;5;249mW[0m[38;5;249mi[0m[38;5;249md[0m[38;5;249mt[0m[38;5;249mh[0m[38;5;249m:[0m[38;5;249m3[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m;[0m[38;5;249mc[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m"[0m[38;5;249me[0m[38;5;249mr[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249m"[0m[38;5;249m:[0m[38;5;249m/[0m[38;5;249m*[0m[38;5;249m#[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249mP[0m[38;5;249mU[0m[38;5;249mR[0m[38;5;249mE[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249m*[0m[38;5;249m/[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249me[0m[38;5;249m([0m[38;5;249mt[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249ms[0m[38;5;249mi[0m[38;5;249mz[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249m1[0m[38;5;249m2[0m[38;5;249m,[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mk[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249mp[0m[38;5;249m([0m[38;5;249m)[0m[38;5;249m,[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mk[0m[38;5;249me[0m[38;5;249mW[0m[38;5;249mi[0m[38;5;249md[0m[38;5;249mt[0m[38;5;249mh[0m[38;5;249m:[0m[38;5;249m3[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m}[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m([0m[38;5;249m)[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m,[0m[38;5;249mn[0m[38;5;249m][0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m}[0m[38;5;249m;[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249m [0m[38;5;249ms[0m[38;5;249m=[0m[38;5;249mn[0m[38;5;249m.[0m[38;5;249md[0m[38;5;249mi[0m[38;5;249mv[0m[38;5;249m`[0m
+ [38;5;240m   │[0m                                                                                                                                     ──────┬──────  
+ [38;5;240m   │[0m                                                                                                                                           ╰──────── comment ignored due to position
+ [38;5;240m   │[0m 
+ [38;5;240m   │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[38;5;246m────╯[0m
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/TodoList-CgrU7uwu.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+    [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m node_modules/@privy-io/react-auth/dist/esm/TodoList-CgrU7uwu.mjs:16:205 [38;5;246m][0m
+    [38;5;246m│[0m
+ [38;5;246m16 │[0m [38;5;249m/[0m[38;5;249m*[0m[38;5;249m#[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249mP[0m[38;5;249mU[0m[38;5;249mR[0m[38;5;249mE[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249m*[0m[38;5;249m/[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249mo[0m[38;5;249m.[0m[38;5;249mi[0m[38;5;249ms[0m[38;5;249mV[0m[38;5;249ma[0m[38;5;249ml[0m[38;5;249mi[0m[38;5;249md[0m[38;5;249mE[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249mm[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249mt[0m[38;5;249m([0m[38;5;249mc[0m[38;5;249m)[0m[38;5;249m?[0m[38;5;249m/[0m[38;5;249m*[0m[38;5;249m#[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249mP[0m[38;5;249mU[0m[38;5;249mR[0m[38;5;249mE[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249m*[0m[38;5;249m/[0m[38;5;249mo[0m[38;5;249m.[0m[38;5;249mc[0m[38;5;249ml[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249me[0m[38;5;249mE[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249mm[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249mt[0m[38;5;249m([0m[38;5;249mc[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mk[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249mp[0m[38;5;249m([0m[38;5;249m)[0m[38;5;249m,[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mk[0m[38;5;249me[0m[38;5;249mW[0m[38;5;249mi[0m[38;5;249md[0m[38;5;249mt[0m[38;5;249mh[0m[38;5;249m:[0m[38;5;249m2[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m:[0m[38;5;249mc[0m[38;5;249m;[0m[38;5;249ms[0m[38;5;249mw[0m[38;5;249mi[0m[38;5;249mt[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249m([0m[38;5;249ma[0m[38;5;249m)[0m[38;5;249m{[0m[38;5;249mc[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m"[0m[38;5;249ms[0m[38;5;249mu[0m[38;5;249mc[0m[38;5;249mc[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249ms[0m[38;5;249m"[0m[38;5;249m:[0m[38;5;249md[0m[38;5;249me[0m[38;5;249mf[0m[38;5;249ma[0m[38;5;249mu[0m[38;5;249ml[0m[38;5;249mt[0m[38;5;249m:[0m[38;5;249m/[0m[38;5;249m*[0m[38;5;249m#[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249mP[0m[38;5;249mU[0m[38;5;249mR[0m[38;5;249mE[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249m*[0m[38;5;249m/[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249me[0m[38;5;249m([0m[38;5;249mi[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249ms[0m[38;5;249mi[0m[38;5;249mz[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249m1[0m[38;5;249m2[0m[38;5;249m,[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mk[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249mp[0m[38;5;249m([0m[38;5;249m)[0m[38;5;249m,[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mk[0m[38;5;249me[0m[38;5;249mW[0m[38;5;249mi[0m[38;5;249md[0m[38;5;249mt[0m[38;5;249mh[0m[38;5;249m:[0m[38;5;249m3[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m;[0m[38;5;249mc[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m"[0m[38;5;249me[0m[38;5;249mr[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249m"[0m[38;5;249m:[0m/*#__PURE__*/[38;5;249mr[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249me[0m[38;5;249m([0m[38;5;249mt[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249ms[0m[38;5;249mi[0m[38;5;249mz[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249m1[0m[38;5;249m2[0m[38;5;249m,[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mk[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249mp[0m[38;5;249m([0m[38;5;249m)[0m[38;5;249m,[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mk[0m[38;5;249me[0m[38;5;249mW[0m[38;5;249mi[0m[38;5;249md[0m[38;5;249mt[0m[38;5;249mh[0m[38;5;249m:[0m[38;5;249m3[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m}[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m([0m[38;5;249m)[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m,[0m[38;5;249mn[0m[38;5;249m][0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m}[0m[38;5;249m;[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249m [0m[38;5;249ms[0m[38;5;249m=[0m[38;5;249mn[0m[38;5;249m.[0m[38;5;249md[0m[38;5;249mi[0m[38;5;249mv[0m[38;5;249m`[0m
+ [38;5;240m   │[0m                                                                                                                                                                                                             ──────┬──────  
+ [38;5;240m   │[0m                                                                                                                                                                                                                   ╰──────── comment ignored due to position
+ [38;5;240m   │[0m 
+ [38;5;240m   │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[38;5;246m────╯[0m
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/FundWalletMethodHeader-BkqUohJ2.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/FundWalletMethodHeader-BkqUohJ2.mjs at 231..244
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/ModalHeader-ByY2wsBw.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/ModalHeader-ByY2wsBw.mjs at 503..516
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/ModalHeader-ByY2wsBw.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/ModalHeader-ByY2wsBw.mjs at 8954..8967
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/ModalHeader-ByY2wsBw.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+    [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m node_modules/@privy-io/react-auth/dist/esm/ModalHeader-ByY2wsBw.mjs:39:95 [38;5;246m][0m
+    [38;5;246m│[0m
+ [38;5;246m39 │[0m [38;5;249m`[0m[38;5;249m,[0m[38;5;249my[0m[38;5;249m=[0m[38;5;249m([0m[38;5;249m{[0m[38;5;249mv[0m[38;5;249ma[0m[38;5;249mr[0m[38;5;249mi[0m[38;5;249ma[0m[38;5;249mn[0m[38;5;249mt[0m[38;5;249m:[0m[38;5;249mo[0m[38;5;249m=[0m[38;5;249m"[0m[38;5;249mp[0m[38;5;249mr[0m[38;5;249mi[0m[38;5;249mm[0m[38;5;249ma[0m[38;5;249mr[0m[38;5;249my[0m[38;5;249m"[0m[38;5;249m,[0m[38;5;249ms[0m[38;5;249mi[0m[38;5;249mz[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249me[0m[38;5;249m=[0m[38;5;249m"[0m[38;5;249ml[0m[38;5;249mg[0m[38;5;249m"[0m[38;5;249m,[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249ma[0m[38;5;249m,[0m[38;5;249ms[0m[38;5;249mu[0m[38;5;249mc[0m[38;5;249mc[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249ms[0m[38;5;249m:[0m[38;5;249ml[0m[38;5;249m,[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249mc[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m=[0m[38;5;249m>[0m[38;5;249m{[0m[38;5;249ms[0m[38;5;249mw[0m[38;5;249mi[0m[38;5;249mt[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249m([0m[38;5;249mo[0m[38;5;249m)[0m[38;5;249m{[0m[38;5;249mc[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m"[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249mc[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249md[0m[38;5;249ma[0m[38;5;249mr[0m[38;5;249my[0m[38;5;249m"[0m[38;5;249m:[0m/*#__PURE__*/[38;5;249mr[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249mr[0m[38;5;249m([0m[38;5;249m$[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249ms[0m[38;5;249mi[0m[38;5;249mz[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249me[0m[38;5;249m,[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249mc[0m[38;5;249m,[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249ma[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m;[0m[38;5;249mc[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m"[0m[38;5;249me[0m[38;5;249mr[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249m"[0m[38;5;249m:[0m[38;5;249m/[0m[38;5;249m*[0m[38;5;249m#[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249mP[0m[38;5;249mU[0m[38;5;249mR[0m[38;5;249mE[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249m*[0m[38;5;249m/[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249mr[0m[38;5;249m([0m[38;5;249m$[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249m$[0m[38;5;249mw[0m[38;5;249ma[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249m![0m[38;5;249m0[0m[38;5;249m,[0m[38;5;249ms[0m[38;5;249mi[0m[38;5;249mz[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249me[0m[38;5;249m,[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249mc[0m[38;5;249m,[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249ma[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m;[0m[38;5;249mc[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m"[0m[38;5;249mm[0m[38;5;249mu[0m[38;5;249mt[0m[38;5;249me[0m[38;5;249md[0m[38;5;249m"[0m[38;5;249m:[0m[38;5;249m/[0m[38;5;249m*[0m[38;5;249m#[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249mP[0m[38;5;249mU[0m[38;5;249mR[0m[38;5;249mE[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249m*[0m[38;5;249m/[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249mr[0m[38;5;249m([0m[38;5;249mZ[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249ms[0m[38;5;249mi[0m[38;5;249mz[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249me[0m[38;5;249m,[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249mc[0m[38;5;249m,[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249ma[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m;[0m[38;5;249md[0m[38;5;249me[0m[38;5;249mf[0m[38;5;249ma[0m[38;5;249mu[0m[38;5;249ml[0m[38;5;249mt[0m[38;5;249m:[0m[38;5;249m/[0m[38;5;249m*[0m[38;5;249m#[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249mP[0m[38;5;249mU[0m[38;5;249mR[0m[38;5;249mE[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249m*[0m[38;5;249m/[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249mr[0m[38;5;249m([0m[38;5;249mm[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249ms[0m[38;5;249mi[0m[38;5;249mz[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249me[0m[38;5;249m,[0m[38;5;249ms[0m[38;5;249mu[0m[38;5;249mc[0m[38;5;249mc[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249ms[0m[38;5;249m:[0m[38;5;249ml[0m[38;5;249m,[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249mc[0m[38;5;249m,[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249ma[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m}[0m[38;5;249m}[0m[38;5;249m,[0m[38;5;249mf[0m[38;5;249m=[0m[38;5;249ma[0m[38;5;249m.[0m[38;5;249mb[0m[38;5;249mu[0m[38;5;249mt[0m[38;5;249mt[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249m`[0m
+ [38;5;240m   │[0m                                                                                               ──────┬──────  
+ [38;5;240m   │[0m                                                                                                     ╰──────── comment ignored due to position
+ [38;5;240m   │[0m 
+ [38;5;240m   │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[38;5;246m────╯[0m
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/ModalHeader-ByY2wsBw.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+    [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m node_modules/@privy-io/react-auth/dist/esm/ModalHeader-ByY2wsBw.mjs:39:157 [38;5;246m][0m
+    [38;5;246m│[0m
+ [38;5;246m39 │[0m [38;5;249m`[0m[38;5;249m,[0m[38;5;249my[0m[38;5;249m=[0m[38;5;249m([0m[38;5;249m{[0m[38;5;249mv[0m[38;5;249ma[0m[38;5;249mr[0m[38;5;249mi[0m[38;5;249ma[0m[38;5;249mn[0m[38;5;249mt[0m[38;5;249m:[0m[38;5;249mo[0m[38;5;249m=[0m[38;5;249m"[0m[38;5;249mp[0m[38;5;249mr[0m[38;5;249mi[0m[38;5;249mm[0m[38;5;249ma[0m[38;5;249mr[0m[38;5;249my[0m[38;5;249m"[0m[38;5;249m,[0m[38;5;249ms[0m[38;5;249mi[0m[38;5;249mz[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249me[0m[38;5;249m=[0m[38;5;249m"[0m[38;5;249ml[0m[38;5;249mg[0m[38;5;249m"[0m[38;5;249m,[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249ma[0m[38;5;249m,[0m[38;5;249ms[0m[38;5;249mu[0m[38;5;249mc[0m[38;5;249mc[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249ms[0m[38;5;249m:[0m[38;5;249ml[0m[38;5;249m,[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249mc[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m=[0m[38;5;249m>[0m[38;5;249m{[0m[38;5;249ms[0m[38;5;249mw[0m[38;5;249mi[0m[38;5;249mt[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249m([0m[38;5;249mo[0m[38;5;249m)[0m[38;5;249m{[0m[38;5;249mc[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m"[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249mc[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249md[0m[38;5;249ma[0m[38;5;249mr[0m[38;5;249my[0m[38;5;249m"[0m[38;5;249m:[0m[38;5;249m/[0m[38;5;249m*[0m[38;5;249m#[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249mP[0m[38;5;249mU[0m[38;5;249mR[0m[38;5;249mE[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249m*[0m[38;5;249m/[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249mr[0m[38;5;249m([0m[38;5;249m$[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249ms[0m[38;5;249mi[0m[38;5;249mz[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249me[0m[38;5;249m,[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249mc[0m[38;5;249m,[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249ma[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m;[0m[38;5;249mc[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m"[0m[38;5;249me[0m[38;5;249mr[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249m"[0m[38;5;249m:[0m/*#__PURE__*/[38;5;249mr[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249mr[0m[38;5;249m([0m[38;5;249m$[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249m$[0m[38;5;249mw[0m[38;5;249ma[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249m![0m[38;5;249m0[0m[38;5;249m,[0m[38;5;249ms[0m[38;5;249mi[0m[38;5;249mz[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249me[0m[38;5;249m,[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249mc[0m[38;5;249m,[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249ma[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m;[0m[38;5;249mc[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m"[0m[38;5;249mm[0m[38;5;249mu[0m[38;5;249mt[0m[38;5;249me[0m[38;5;249md[0m[38;5;249m"[0m[38;5;249m:[0m[38;5;249m/[0m[38;5;249m*[0m[38;5;249m#[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249mP[0m[38;5;249mU[0m[38;5;249mR[0m[38;5;249mE[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249m*[0m[38;5;249m/[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249mr[0m[38;5;249m([0m[38;5;249mZ[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249ms[0m[38;5;249mi[0m[38;5;249mz[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249me[0m[38;5;249m,[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249mc[0m[38;5;249m,[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249ma[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m;[0m[38;5;249md[0m[38;5;249me[0m[38;5;249mf[0m[38;5;249ma[0m[38;5;249mu[0m[38;5;249ml[0m[38;5;249mt[0m[38;5;249m:[0m[38;5;249m/[0m[38;5;249m*[0m[38;5;249m#[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249mP[0m[38;5;249mU[0m[38;5;249mR[0m[38;5;249mE[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249m*[0m[38;5;249m/[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249mr[0m[38;5;249m([0m[38;5;249mm[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249ms[0m[38;5;249mi[0m[38;5;249mz[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249me[0m[38;5;249m,[0m[38;5;249ms[0m[38;5;249mu[0m[38;5;249mc[0m[38;5;249mc[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249ms[0m[38;5;249m:[0m[38;5;249ml[0m[38;5;249m,[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249mc[0m[38;5;249m,[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249ma[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m}[0m[38;5;249m}[0m[38;5;249m,[0m[38;5;249mf[0m[38;5;249m=[0m[38;5;249ma[0m[38;5;249m.[0m[38;5;249mb[0m[38;5;249mu[0m[38;5;249mt[0m[38;5;249mt[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249m`[0m
+ [38;5;240m   │[0m                                                                                                                                                             ──────┬──────  
+ [38;5;240m   │[0m                                                                                                                                                                   ╰──────── comment ignored due to position
+ [38;5;240m   │[0m 
+ [38;5;240m   │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[38;5;246m────╯[0m
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/ModalHeader-ByY2wsBw.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+    [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m node_modules/@privy-io/react-auth/dist/esm/ModalHeader-ByY2wsBw.mjs:39:228 [38;5;246m][0m
+    [38;5;246m│[0m
+ [38;5;246m39 │[0m [38;5;249m`[0m[38;5;249m,[0m[38;5;249my[0m[38;5;249m=[0m[38;5;249m([0m[38;5;249m{[0m[38;5;249mv[0m[38;5;249ma[0m[38;5;249mr[0m[38;5;249mi[0m[38;5;249ma[0m[38;5;249mn[0m[38;5;249mt[0m[38;5;249m:[0m[38;5;249mo[0m[38;5;249m=[0m[38;5;249m"[0m[38;5;249mp[0m[38;5;249mr[0m[38;5;249mi[0m[38;5;249mm[0m[38;5;249ma[0m[38;5;249mr[0m[38;5;249my[0m[38;5;249m"[0m[38;5;249m,[0m[38;5;249ms[0m[38;5;249mi[0m[38;5;249mz[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249me[0m[38;5;249m=[0m[38;5;249m"[0m[38;5;249ml[0m[38;5;249mg[0m[38;5;249m"[0m[38;5;249m,[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249ma[0m[38;5;249m,[0m[38;5;249ms[0m[38;5;249mu[0m[38;5;249mc[0m[38;5;249mc[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249ms[0m[38;5;249m:[0m[38;5;249ml[0m[38;5;249m,[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249mc[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m=[0m[38;5;249m>[0m[38;5;249m{[0m[38;5;249ms[0m[38;5;249mw[0m[38;5;249mi[0m[38;5;249mt[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249m([0m[38;5;249mo[0m[38;5;249m)[0m[38;5;249m{[0m[38;5;249mc[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m"[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249mc[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249md[0m[38;5;249ma[0m[38;5;249mr[0m[38;5;249my[0m[38;5;249m"[0m[38;5;249m:[0m[38;5;249m/[0m[38;5;249m*[0m[38;5;249m#[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249mP[0m[38;5;249mU[0m[38;5;249mR[0m[38;5;249mE[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249m*[0m[38;5;249m/[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249mr[0m[38;5;249m([0m[38;5;249m$[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249ms[0m[38;5;249mi[0m[38;5;249mz[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249me[0m[38;5;249m,[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249mc[0m[38;5;249m,[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249ma[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m;[0m[38;5;249mc[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m"[0m[38;5;249me[0m[38;5;249mr[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249m"[0m[38;5;249m:[0m[38;5;249m/[0m[38;5;249m*[0m[38;5;249m#[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249mP[0m[38;5;249mU[0m[38;5;249mR[0m[38;5;249mE[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249m*[0m[38;5;249m/[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249mr[0m[38;5;249m([0m[38;5;249m$[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249m$[0m[38;5;249mw[0m[38;5;249ma[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249m![0m[38;5;249m0[0m[38;5;249m,[0m[38;5;249ms[0m[38;5;249mi[0m[38;5;249mz[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249me[0m[38;5;249m,[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249mc[0m[38;5;249m,[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249ma[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m;[0m[38;5;249mc[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m"[0m[38;5;249mm[0m[38;5;249mu[0m[38;5;249mt[0m[38;5;249me[0m[38;5;249md[0m[38;5;249m"[0m[38;5;249m:[0m/*#__PURE__*/[38;5;249mr[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249mr[0m[38;5;249m([0m[38;5;249mZ[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249ms[0m[38;5;249mi[0m[38;5;249mz[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249me[0m[38;5;249m,[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249mc[0m[38;5;249m,[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249ma[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m;[0m[38;5;249md[0m[38;5;249me[0m[38;5;249mf[0m[38;5;249ma[0m[38;5;249mu[0m[38;5;249ml[0m[38;5;249mt[0m[38;5;249m:[0m[38;5;249m/[0m[38;5;249m*[0m[38;5;249m#[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249mP[0m[38;5;249mU[0m[38;5;249mR[0m[38;5;249mE[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249m*[0m[38;5;249m/[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249mr[0m[38;5;249m([0m[38;5;249mm[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249ms[0m[38;5;249mi[0m[38;5;249mz[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249me[0m[38;5;249m,[0m[38;5;249ms[0m[38;5;249mu[0m[38;5;249mc[0m[38;5;249mc[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249ms[0m[38;5;249m:[0m[38;5;249ml[0m[38;5;249m,[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249mc[0m[38;5;249m,[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249ma[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m}[0m[38;5;249m}[0m[38;5;249m,[0m[38;5;249mf[0m[38;5;249m=[0m[38;5;249ma[0m[38;5;249m.[0m[38;5;249mb[0m[38;5;249mu[0m[38;5;249mt[0m[38;5;249mt[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249m`[0m
+ [38;5;240m   │[0m                                                                                                                                                                                                                                    ──────┬──────  
+ [38;5;240m   │[0m                                                                                                                                                                                                                                          ╰──────── comment ignored due to position
+ [38;5;240m   │[0m 
+ [38;5;240m   │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[38;5;246m────╯[0m
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/ModalHeader-ByY2wsBw.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+    [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m node_modules/@privy-io/react-auth/dist/esm/ModalHeader-ByY2wsBw.mjs:39:286 [38;5;246m][0m
+    [38;5;246m│[0m
+ [38;5;246m39 │[0m [38;5;249m`[0m[38;5;249m,[0m[38;5;249my[0m[38;5;249m=[0m[38;5;249m([0m[38;5;249m{[0m[38;5;249mv[0m[38;5;249ma[0m[38;5;249mr[0m[38;5;249mi[0m[38;5;249ma[0m[38;5;249mn[0m[38;5;249mt[0m[38;5;249m:[0m[38;5;249mo[0m[38;5;249m=[0m[38;5;249m"[0m[38;5;249mp[0m[38;5;249mr[0m[38;5;249mi[0m[38;5;249mm[0m[38;5;249ma[0m[38;5;249mr[0m[38;5;249my[0m[38;5;249m"[0m[38;5;249m,[0m[38;5;249ms[0m[38;5;249mi[0m[38;5;249mz[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249me[0m[38;5;249m=[0m[38;5;249m"[0m[38;5;249ml[0m[38;5;249mg[0m[38;5;249m"[0m[38;5;249m,[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249ma[0m[38;5;249m,[0m[38;5;249ms[0m[38;5;249mu[0m[38;5;249mc[0m[38;5;249mc[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249ms[0m[38;5;249m:[0m[38;5;249ml[0m[38;5;249m,[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249mc[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m=[0m[38;5;249m>[0m[38;5;249m{[0m[38;5;249ms[0m[38;5;249mw[0m[38;5;249mi[0m[38;5;249mt[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249m([0m[38;5;249mo[0m[38;5;249m)[0m[38;5;249m{[0m[38;5;249mc[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m"[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249mc[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249md[0m[38;5;249ma[0m[38;5;249mr[0m[38;5;249my[0m[38;5;249m"[0m[38;5;249m:[0m[38;5;249m/[0m[38;5;249m*[0m[38;5;249m#[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249mP[0m[38;5;249mU[0m[38;5;249mR[0m[38;5;249mE[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249m*[0m[38;5;249m/[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249mr[0m[38;5;249m([0m[38;5;249m$[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249ms[0m[38;5;249mi[0m[38;5;249mz[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249me[0m[38;5;249m,[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249mc[0m[38;5;249m,[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249ma[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m;[0m[38;5;249mc[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m"[0m[38;5;249me[0m[38;5;249mr[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249m"[0m[38;5;249m:[0m[38;5;249m/[0m[38;5;249m*[0m[38;5;249m#[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249mP[0m[38;5;249mU[0m[38;5;249mR[0m[38;5;249mE[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249m*[0m[38;5;249m/[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249mr[0m[38;5;249m([0m[38;5;249m$[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249m$[0m[38;5;249mw[0m[38;5;249ma[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249m![0m[38;5;249m0[0m[38;5;249m,[0m[38;5;249ms[0m[38;5;249mi[0m[38;5;249mz[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249me[0m[38;5;249m,[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249mc[0m[38;5;249m,[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249ma[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m;[0m[38;5;249mc[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m"[0m[38;5;249mm[0m[38;5;249mu[0m[38;5;249mt[0m[38;5;249me[0m[38;5;249md[0m[38;5;249m"[0m[38;5;249m:[0m[38;5;249m/[0m[38;5;249m*[0m[38;5;249m#[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249mP[0m[38;5;249mU[0m[38;5;249mR[0m[38;5;249mE[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249m*[0m[38;5;249m/[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249mr[0m[38;5;249m([0m[38;5;249mZ[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249ms[0m[38;5;249mi[0m[38;5;249mz[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249me[0m[38;5;249m,[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249mc[0m[38;5;249m,[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249ma[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m;[0m[38;5;249md[0m[38;5;249me[0m[38;5;249mf[0m[38;5;249ma[0m[38;5;249mu[0m[38;5;249ml[0m[38;5;249mt[0m[38;5;249m:[0m/*#__PURE__*/[38;5;249mr[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249mr[0m[38;5;249m([0m[38;5;249mm[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249ms[0m[38;5;249mi[0m[38;5;249mz[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249me[0m[38;5;249m,[0m[38;5;249ms[0m[38;5;249mu[0m[38;5;249mc[0m[38;5;249mc[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249ms[0m[38;5;249m:[0m[38;5;249ml[0m[38;5;249m,[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249m.[0m[38;5;249mc[0m[38;5;249m,[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249ma[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m}[0m[38;5;249m}[0m[38;5;249m,[0m[38;5;249mf[0m[38;5;249m=[0m[38;5;249ma[0m[38;5;249m.[0m[38;5;249mb[0m[38;5;249mu[0m[38;5;249mt[0m[38;5;249mt[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249m`[0m
+ [38;5;240m   │[0m                                                                                                                                                                                                                                                                                              ──────┬──────  
+ [38;5;240m   │[0m                                                                                                                                                                                                                                                                                                    ╰──────── comment ignored due to position
+ [38;5;240m   │[0m 
+ [38;5;240m   │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[38;5;246m────╯[0m
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/ModalHeader-ByY2wsBw.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/ModalHeader-ByY2wsBw.mjs at 10652..10665
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/ModalHeader-ByY2wsBw.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/ModalHeader-ByY2wsBw.mjs at 13081..13094
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/ModalHeader-ByY2wsBw.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/ModalHeader-ByY2wsBw.mjs at 13476..13489
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/ModalHeader-ByY2wsBw.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/ModalHeader-ByY2wsBw.mjs at 19738..19751
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/ScreenLayout-DGbEZh8t.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/ScreenLayout-DGbEZh8t.mjs at 341..354
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/ScreenLayout-DGbEZh8t.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/ScreenLayout-DGbEZh8t.mjs at 484..497
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/ScreenLayout-DGbEZh8t.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/ScreenLayout-DGbEZh8t.mjs at 581..594
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/BridgeNetworkSelectionView-DlkSaDDI.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/BridgeNetworkSelectionView-DlkSaDDI.mjs at 3988..4001
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/TransferOrBridgeLoadingScreen-DIcNoaWy.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/TransferOrBridgeLoadingScreen-DIcNoaWy.mjs at 846..859
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/NetworkIcon-B48ilzF8.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/NetworkIcon-B48ilzF8.mjs at 12201..12214
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/NetworkIcon-B48ilzF8.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/NetworkIcon-B48ilzF8.mjs at 12244..12257
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/ConnectEmailForm-iKktP_6O.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/ConnectEmailForm-iKktP_6O.mjs at 1614..1627
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CopyToClipboard-DSTf_eKU.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CopyToClipboard-DSTf_eKU.mjs at 2067..2080
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/WalletLink-Cw3j6GNA.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/WalletLink-Cw3j6GNA.mjs at 463..476
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/WalletLink-Cw3j6GNA.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/WalletLink-Cw3j6GNA.mjs at 594..607
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/WalletLink-Cw3j6GNA.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+   [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m node_modules/@privy-io/react-auth/dist/esm/WalletLink-Cw3j6GNA.mjs:2:264 [38;5;246m][0m
+   [38;5;246m│[0m
+ [38;5;246m2 │[0m [38;5;249m/[0m[38;5;249m*[0m[38;5;249m#[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249mP[0m[38;5;249mU[0m[38;5;249mR[0m[38;5;249mE[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249m*[0m[38;5;249m/[0m[38;5;249mr[0m[38;5;249m([0m[38;5;249mS[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249m[[0m[38;5;249m/[0m[38;5;249m*[0m[38;5;249m#[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249mP[0m[38;5;249mU[0m[38;5;249mR[0m[38;5;249mE[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249m*[0m[38;5;249m/[0m[38;5;249me[0m[38;5;249m([0m[38;5;249mg[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249m"[0m[38;5;249m<[0m[38;5;249m"[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m,[0m[38;5;249m"[0m[38;5;249m$[0m[38;5;249m0[0m[38;5;249m.[0m[38;5;249m0[0m[38;5;249m1[0m[38;5;249m"[0m[38;5;249m][0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m:[0m[38;5;249mm[0m[38;5;249m][0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m:[0m[38;5;249md[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m}[0m[38;5;249m,[0m[38;5;249mf[0m[38;5;249m=[0m[38;5;249m([0m[38;5;249m{[0m[38;5;249mq[0m[38;5;249mu[0m[38;5;249ma[0m[38;5;249mn[0m[38;5;249mt[0m[38;5;249mi[0m[38;5;249mt[0m[38;5;249mi[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249m:[0m[38;5;249mn[0m[38;5;249m,[0m[38;5;249mt[0m[38;5;249mo[0m[38;5;249mk[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249mP[0m[38;5;249mr[0m[38;5;249mi[0m[38;5;249mc[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249mo[0m[38;5;249m,[0m[38;5;249mt[0m[38;5;249mo[0m[38;5;249mk[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249mS[0m[38;5;249my[0m[38;5;249mm[0m[38;5;249mb[0m[38;5;249mo[0m[38;5;249ml[0m[38;5;249m:[0m[38;5;249ms[0m[38;5;249m=[0m[38;5;249m"[0m[38;5;249mS[0m[38;5;249mO[0m[38;5;249mL[0m[38;5;249m"[0m[38;5;249m,[0m[38;5;249mt[0m[38;5;249mo[0m[38;5;249mk[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249mD[0m[38;5;249me[0m[38;5;249mc[0m[38;5;249mi[0m[38;5;249mm[0m[38;5;249ma[0m[38;5;249ml[0m[38;5;249ms[0m[38;5;249m:[0m[38;5;249ma[0m[38;5;249m=[0m[38;5;249m9[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m=[0m[38;5;249m>[0m[38;5;249m{[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249m [0m[38;5;249ml[0m[38;5;249m=[0m[38;5;249mn[0m[38;5;249m.[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249md[0m[38;5;249mu[0m[38;5;249mc[0m[38;5;249me[0m[38;5;249m([0m[38;5;249m([0m[38;5;249m([0m[38;5;249me[0m[38;5;249m,[0m[38;5;249mt[0m[38;5;249m)[0m[38;5;249m=[0m[38;5;249m>[0m[38;5;249me[0m[38;5;249m+[0m[38;5;249mt[0m[38;5;249m)[0m[38;5;249m,[0m[38;5;249m0[0m[38;5;249mn[0m[38;5;249m)[0m[38;5;249m,[0m[38;5;249md[0m[38;5;249m=[0m[38;5;249mo[0m[38;5;249m&[0m[38;5;249m&[0m[38;5;249m"[0m[38;5;249mS[0m[38;5;249mO[0m[38;5;249mL[0m[38;5;249m"[0m[38;5;249m=[0m[38;5;249m=[0m[38;5;249m=[0m[38;5;249ms[0m[38;5;249m&[0m[38;5;249m&[0m[38;5;249m9[0m[38;5;249m=[0m[38;5;249m=[0m[38;5;249m=[0m[38;5;249ma[0m[38;5;249m?[0m[38;5;249mc[0m[38;5;249m([0m[38;5;249ml[0m[38;5;249m,[0m[38;5;249mo[0m[38;5;249m)[0m[38;5;249m:[0m[38;5;249mv[0m[38;5;249mo[0m[38;5;249mi[0m[38;5;249md[0m[38;5;249m [0m[38;5;249m0[0m[38;5;249m,[0m[38;5;249mp[0m[38;5;249m=[0m[38;5;249m"[0m[38;5;249mS[0m[38;5;249mO[0m[38;5;249mL[0m[38;5;249m"[0m[38;5;249m=[0m[38;5;249m=[0m[38;5;249m=[0m[38;5;249ms[0m[38;5;249m&[0m[38;5;249m&[0m[38;5;249m9[0m[38;5;249m=[0m[38;5;249m=[0m[38;5;249m=[0m[38;5;249ma[0m[38;5;249m?[0m[38;5;249mm[0m[38;5;249m([0m[38;5;249ml[0m[38;5;249m)[0m[38;5;249m:[0m[38;5;249m`[0m[38;5;249m$[0m[38;5;249m{[0m[38;5;249mi[0m[38;5;249m([0m[38;5;249ml[0m[38;5;249m,[0m[38;5;249ma[0m[38;5;249m)[0m[38;5;249m}[0m[38;5;249m [0m[38;5;249m$[0m[38;5;249m{[0m[38;5;249ms[0m[38;5;249m}[0m[38;5;249m`[0m[38;5;249m;[0m/*#__PURE__*/[38;5;249mr[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249me[0m[38;5;249m([0m[38;5;249mu[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249md[0m[38;5;249m?[0m[38;5;249m/[0m[38;5;249m*[0m[38;5;249m#[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249mP[0m[38;5;249mU[0m[38;5;249mR[0m[38;5;249mE[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249m*[0m[38;5;249m/[0m[38;5;249me[0m[38;5;249m([0m[38;5;249mt[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249m"[0m[38;5;249m<[0m[38;5;249m$[0m[38;5;249m0[0m[38;5;249m.[0m[38;5;249m0[0m[38;5;249m1[0m[38;5;249m"[0m[38;5;249m=[0m[38;5;249m=[0m[38;5;249m=[0m[38;5;249md[0m[38;5;249m?[0m
+ [38;5;240m  │[0m                                                                                                                                                                                                                                                                        ──────┬──────  
+ [38;5;240m  │[0m                                                                                                                                                                                                                                                                              ╰──────── comment ignored due to position
+ [38;5;240m  │[0m 
+ [38;5;240m  │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[38;5;246m───╯[0m
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/OpenLink-DZHy38vr.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+   [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m node_modules/@privy-io/react-auth/dist/esm/OpenLink-DZHy38vr.mjs:1:144 [38;5;246m][0m
+   [38;5;246m│[0m
+ [38;5;246m1 │[0m [38;5;249mi[0m[38;5;249mm[0m[38;5;249mp[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m{[0m[38;5;249mj[0m[38;5;249ms[0m[38;5;249mx[0m[38;5;249m [0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249m [0m[38;5;249mo[0m[38;5;249m}[0m[38;5;249mf[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mm[0m[38;5;249m"[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249ma[0m[38;5;249mc[0m[38;5;249mt[0m[38;5;249m/[0m[38;5;249mj[0m[38;5;249ms[0m[38;5;249mx[0m[38;5;249m-[0m[38;5;249mr[0m[38;5;249mu[0m[38;5;249mn[0m[38;5;249mt[0m[38;5;249mi[0m[38;5;249mm[0m[38;5;249me[0m[38;5;249m"[0m[38;5;249m;[0m[38;5;249mi[0m[38;5;249mm[0m[38;5;249mp[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m{[0m[38;5;249mu[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249mS[0m[38;5;249mt[0m[38;5;249ma[0m[38;5;249mt[0m[38;5;249me[0m[38;5;249m [0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249m [0m[38;5;249mr[0m[38;5;249m}[0m[38;5;249mf[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mm[0m[38;5;249m"[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249ma[0m[38;5;249mc[0m[38;5;249mt[0m[38;5;249m"[0m[38;5;249m;[0m[38;5;249mi[0m[38;5;249mm[0m[38;5;249mp[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m{[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249my[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249md[0m[38;5;249m [0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249m [0m[38;5;249me[0m[38;5;249m}[0m[38;5;249mf[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mm[0m[38;5;249m"[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249my[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249md[0m[38;5;249m-[0m[38;5;249mc[0m[38;5;249mo[0m[38;5;249mm[0m[38;5;249mp[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249mt[0m[38;5;249ms[0m[38;5;249m"[0m[38;5;249m;[0m[38;5;249mc[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249m [0m[38;5;249mn[0m[38;5;249m=[0m[38;5;249me[0m[38;5;249m=[0m[38;5;249m>[0m[38;5;249m{[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249m[[0m[38;5;249mn[0m[38;5;249m,[0m[38;5;249mi[0m[38;5;249m][0m[38;5;249m=[0m[38;5;249mr[0m[38;5;249m([0m[38;5;249m![0m[38;5;249m1[0m[38;5;249m)[0m[38;5;249m;[0m/*#__PURE__*/[38;5;249mr[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249mo[0m[38;5;249m([0m[38;5;249mt[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249mc[0m[38;5;249mo[0m[38;5;249ml[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249m:[0m[38;5;249me[0m[38;5;249m.[0m[38;5;249mc[0m[38;5;249mo[0m[38;5;249ml[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249m,[0m[38;5;249mh[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mf[0m[38;5;249m:[0m[38;5;249me[0m[38;5;249m.[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249ml[0m[38;5;249m,[0m[38;5;249mt[0m[38;5;249ma[0m[38;5;249mr[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249m:[0m[38;5;249m"[0m[38;5;249m_[0m[38;5;249mb[0m[38;5;249ml[0m[38;5;249ma[0m[38;5;249mn[0m[38;5;249mk[0m[38;5;249m"[0m[38;5;249m,[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249ml[0m[38;5;249m:[0m[38;5;249m"[0m[38;5;249mn[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mf[0m[38;5;249me[0m[38;5;249mr[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mr[0m[38;5;249m [0m[38;5;249mn[0m[38;5;249mo[0m[38;5;249mo[0m[38;5;249mp[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249me[0m[38;5;249mr[0m[38;5;249m"[0m[38;5;249m,[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249mC[0m[38;5;249ml[0m[38;5;249mi[0m[38;5;249mc[0m[38;5;249mk[0m[38;5;249m:[0m[38;5;249m([0m[38;5;249m)[0m[38;5;249m=[0m[38;5;249m>[0m[38;5;249m{[0m[38;5;249mi[0m[38;5;249m([0m[38;5;249m![0m[38;5;249m0[0m[38;5;249m)[0m[38;5;249m,[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mT[0m[38;5;249mi[0m[38;5;249mm[0m[38;5;249me[0m[38;5;249mo[0m[38;5;249mu[0m[38;5;249mt[0m[38;5;249m([0m[38;5;249m([0m[38;5;249m([0m[38;5;249m)[0m[38;5;249m=[0m[38;5;249m>[0m[38;5;249mi[0m[38;5;249m([0m[38;5;249m![0m[38;5;249m1[0m[38;5;249m)[0m[38;5;249m)[0m[38;5;249m,[0m[38;5;249m1[0m[38;5;249m5[0m[38;5;249m0[0m[38;5;249m0[0m[38;5;249m)[0m[38;5;249m}[0m[38;5;249m,[0m[38;5;249mj[0m[38;5;249mu[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249mO[0m[38;5;249mp[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249me[0m[38;5;249md[0m[38;5;249m:[0m[38;5;249mn[0m[38;5;249m,[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249me[0m[38;5;249m.[0m[38;5;249mt[0m[38;5;249me[0m[38;5;249mx[0m[38;5;249mt[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m}[0m[38;5;249m;[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249m [0m[38;5;249mt[0m[38;5;249m=[0m[38;5;249me[0m[38;5;249m.[0m[38;5;249ma[0m[38;5;249m`[0m
+ [38;5;240m  │[0m                                                                                                                                                ──────┬──────  
+ [38;5;240m  │[0m                                                                                                                                                      ╰──────── comment ignored due to position
+ [38;5;240m  │[0m 
+ [38;5;240m  │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[38;5;246m───╯[0m
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/QrCode-De3KTDSW.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/QrCode-De3KTDSW.mjs at 1506..1519
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/QrCode-De3KTDSW.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/QrCode-De3KTDSW.mjs at 1645..1658
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/QrCode-De3KTDSW.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/QrCode-De3KTDSW.mjs at 1905..1918
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/QrCode-De3KTDSW.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+    [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m node_modules/@privy-io/react-auth/dist/esm/QrCode-De3KTDSW.mjs:16:134 [38;5;246m][0m
+    [38;5;246m│[0m
+ [38;5;246m16 │[0m [38;5;249m`[0m[38;5;249m;[0m[38;5;249mc[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249m [0m[38;5;249mC[0m[38;5;249m=[0m[38;5;249mr[0m[38;5;249m=[0m[38;5;249m>[0m[38;5;249m{[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249m{[0m[38;5;249ma[0m[38;5;249mp[0m[38;5;249mp[0m[38;5;249me[0m[38;5;249ma[0m[38;5;249mr[0m[38;5;249ma[0m[38;5;249mn[0m[38;5;249mc[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249mo[0m[38;5;249m}[0m[38;5;249m=[0m[38;5;249mc[0m[38;5;249m([0m[38;5;249m)[0m[38;5;249m,[0m[38;5;249mt[0m[38;5;249m=[0m[38;5;249mr[0m[38;5;249m.[0m[38;5;249mb[0m[38;5;249mg[0m[38;5;249mC[0m[38;5;249mo[0m[38;5;249ml[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249m|[0m[38;5;249m|[0m[38;5;249m"[0m[38;5;249m#[0m[38;5;249mF[0m[38;5;249mF[0m[38;5;249mF[0m[38;5;249mF[0m[38;5;249mF[0m[38;5;249mF[0m[38;5;249m"[0m[38;5;249m,[0m[38;5;249ml[0m[38;5;249m=[0m[38;5;249mr[0m[38;5;249m.[0m[38;5;249mf[0m[38;5;249mg[0m[38;5;249mC[0m[38;5;249mo[0m[38;5;249ml[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249m|[0m[38;5;249m|[0m[38;5;249m"[0m[38;5;249m#[0m[38;5;249m0[0m[38;5;249m0[0m[38;5;249m0[0m[38;5;249m0[0m[38;5;249m0[0m[38;5;249m0[0m[38;5;249m"[0m[38;5;249m,[0m[38;5;249mi[0m[38;5;249m=[0m[38;5;249mr[0m[38;5;249m.[0m[38;5;249ms[0m[38;5;249mi[0m[38;5;249mz[0m[38;5;249me[0m[38;5;249m|[0m[38;5;249m|[0m[38;5;249m1[0m[38;5;249m6[0m[38;5;249m0[0m[38;5;249m,[0m[38;5;249mn[0m[38;5;249m=[0m[38;5;249m"[0m[38;5;249md[0m[38;5;249ma[0m[38;5;249mr[0m[38;5;249mk[0m[38;5;249m"[0m[38;5;249m=[0m[38;5;249m=[0m[38;5;249m=[0m[38;5;249mo[0m[38;5;249m.[0m[38;5;249mp[0m[38;5;249ma[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mt[0m[38;5;249me[0m[38;5;249m.[0m[38;5;249mc[0m[38;5;249mo[0m[38;5;249ml[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mS[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249me[0m[38;5;249mm[0m[38;5;249me[0m[38;5;249m?[0m[38;5;249mt[0m[38;5;249m:[0m[38;5;249ml[0m[38;5;249m;[0m/*#__PURE__*/[38;5;249mr[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249me[0m[38;5;249m([0m[38;5;249mx[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249m$[0m[38;5;249ms[0m[38;5;249mi[0m[38;5;249mz[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249mi[0m[38;5;249m,[0m[38;5;249m$[0m[38;5;249mb[0m[38;5;249mg[0m[38;5;249mC[0m[38;5;249mo[0m[38;5;249ml[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249m:[0m[38;5;249mt[0m[38;5;249m,[0m[38;5;249m$[0m[38;5;249mf[0m[38;5;249mg[0m[38;5;249mC[0m[38;5;249mo[0m[38;5;249ml[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249m:[0m[38;5;249ml[0m[38;5;249m,[0m[38;5;249m$[0m[38;5;249mb[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249md[0m[38;5;249me[0m[38;5;249mr[0m[38;5;249mC[0m[38;5;249mo[0m[38;5;249ml[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249m:[0m[38;5;249mn[0m[38;5;249m,[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249m/[0m[38;5;249m*[0m[38;5;249m#[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249mP[0m[38;5;249mU[0m[38;5;249mR[0m[38;5;249mE[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249m*[0m[38;5;249m/[0m[38;5;249me[0m[38;5;249m([0m[38;5;249mf[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249ml[0m[38;5;249m:[0m[38;5;249mr[0m[38;5;249m.[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249ml[0m[38;5;249m,[0m[38;5;249ml[0m[38;5;249mo[0m[38;5;249mg[0m[38;5;249mo[0m[38;5;249m:[0m[38;5;249m{[0m[38;5;249me[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249mm[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249mt[0m[38;5;249m:[0m[38;5;249mr[0m[38;5;249m.[0m[38;5;249ms[0m[38;5;249mq[0m[38;5;249mu[0m[38;5;249ma[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mL[0m[38;5;249mo[0m[38;5;249mg[0m[38;5;249mo[0m[38;5;249mE[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249mm[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249mt[0m[38;5;249m?[0m[38;5;249m?[0m[38;5;249ma[0m[38;5;249m}[0m[38;5;249m,[0m[38;5;249mo[0m[38;5;249mu[0m[38;5;249mt[0m[38;5;249mp[0m[38;5;249mu[0m[38;5;249mt[0m[38;5;249mS[0m[38;5;249mi[0m[38;5;249mz[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249mi[0m[38;5;249m,[0m[38;5;249mb[0m[38;5;249mg[0m[38;5;249mC[0m[38;5;249mo[0m[38;5;249ml[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249m:[0m[38;5;249mt[0m[38;5;249m,[0m[38;5;249mf[0m[38;5;249mg[0m[38;5;249mC[0m[38;5;249mo[0m[38;5;249ml[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249m:[0m[38;5;249ml[0m[38;5;249m,[0m[38;5;249me[0m[38;5;249mr[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mC[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mc[0m[38;5;249mt[0m[38;5;249mi[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249mL[0m[38;5;249me[0m[38;5;249mv[0m[38;5;249me[0m[38;5;249ml[0m[38;5;249m:[0m[38;5;249mr[0m[38;5;249m.[0m[38;5;249me[0m[38;5;249mr[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mC[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mc[0m[38;5;249mt[0m[38;5;249mi[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249mL[0m[38;5;249me[0m[38;5;249mv[0m[38;5;249me[0m[38;5;249ml[0m[38;5;249m|[0m[38;5;249m|[0m[38;5;249m"[0m[38;5;249mQ[0m[38;5;249m"[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m}[0m[38;5;249m;[0m[38;5;249me[0m[38;5;249mx[0m[38;5;249mp[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m{[0m[38;5;249mC[0m[38;5;249m [0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249m [0m[38;5;249mQ[0m[38;5;249m}[0m[38;5;249m;[0m
+ [38;5;240m   │[0m                                                                                                                                      ──────┬──────  
+ [38;5;240m   │[0m                                                                                                                                            ╰──────── comment ignored due to position
+ [38;5;240m   │[0m 
+ [38;5;240m   │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[38;5;246m────╯[0m
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CopyableText-BCytXyJL.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CopyableText-BCytXyJL.mjs at 690..703
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CopyableText-BCytXyJL.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CopyableText-BCytXyJL.mjs at 1133..1146
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/SetWalletPasswordForm-DeCWduRe.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/SetWalletPasswordForm-DeCWduRe.mjs at 2561..2574
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/SetWalletPasswordForm-DeCWduRe.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/SetWalletPasswordForm-DeCWduRe.mjs at 4792..4805
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/SetWalletPasswordForm-DeCWduRe.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/SetWalletPasswordForm-DeCWduRe.mjs at 7046..7059
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/SelectSourceAsset-DtAsz7CK.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/SelectSourceAsset-DtAsz7CK.mjs at 1434..1447
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/SelectSourceAsset-DtAsz7CK.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/SelectSourceAsset-DtAsz7CK.mjs at 1837..1850
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/SelectSourceAsset-DtAsz7CK.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+    [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m node_modules/@privy-io/react-auth/dist/esm/SelectSourceAsset-DtAsz7CK.mjs:70:241 [38;5;246m][0m
+    [38;5;246m│[0m
+ [38;5;246m70 │[0m [38;5;249m`[0m[38;5;249m;[0m[38;5;249mc[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249m [0m[38;5;249mb[0m[38;5;249m=[0m[38;5;249m([0m[38;5;249m{[0m[38;5;249mo[0m[38;5;249mp[0m[38;5;249mt[0m[38;5;249ms[0m[38;5;249m:[0m[38;5;249me[0m[38;5;249m,[0m[38;5;249mi[0m[38;5;249ms[0m[38;5;249mL[0m[38;5;249mo[0m[38;5;249ma[0m[38;5;249md[0m[38;5;249mi[0m[38;5;249mn[0m[38;5;249mg[0m[38;5;249m:[0m[38;5;249mo[0m[38;5;249m,[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249mS[0m[38;5;249me[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249mc[0m[38;5;249mt[0m[38;5;249mS[0m[38;5;249mo[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mc[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249mn[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m=[0m[38;5;249m>[0m[38;5;249m/[0m[38;5;249m*[0m[38;5;249m#[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249mP[0m[38;5;249mU[0m[38;5;249mR[0m[38;5;249mE[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249m*[0m[38;5;249m/[0m[38;5;249mt[0m[38;5;249m([0m[38;5;249mc[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249ms[0m[38;5;249mh[0m[38;5;249mo[0m[38;5;249mw[0m[38;5;249mC[0m[38;5;249ml[0m[38;5;249mo[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249m![0m[38;5;249m1[0m[38;5;249m,[0m[38;5;249ms[0m[38;5;249mh[0m[38;5;249mo[0m[38;5;249mw[0m[38;5;249mB[0m[38;5;249ma[0m[38;5;249mc[0m[38;5;249mk[0m[38;5;249m:[0m[38;5;249m![0m[38;5;249m0[0m[38;5;249m,[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249mB[0m[38;5;249ma[0m[38;5;249mc[0m[38;5;249mk[0m[38;5;249m:[0m[38;5;249m([0m[38;5;249m)[0m[38;5;249m=[0m[38;5;249m>[0m[38;5;249mn[0m[38;5;249m([0m[38;5;249me[0m[38;5;249m.[0m[38;5;249ms[0m[38;5;249mo[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mc[0m[38;5;249me[0m[38;5;249m.[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249mc[0m[38;5;249mt[0m[38;5;249me[0m[38;5;249md[0m[38;5;249mA[0m[38;5;249ms[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249m)[0m[38;5;249m,[0m[38;5;249mt[0m[38;5;249mi[0m[38;5;249mt[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249m"[0m[38;5;249mS[0m[38;5;249me[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249mc[0m[38;5;249mt[0m[38;5;249m [0m[38;5;249mc[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249mc[0m[38;5;249my[0m[38;5;249m"[0m[38;5;249m,[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249m/[0m[38;5;249m*[0m[38;5;249m#[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249mP[0m[38;5;249mU[0m[38;5;249mR[0m[38;5;249mE[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249m*[0m[38;5;249m/[0m[38;5;249mt[0m[38;5;249m([0m[38;5;249mx[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249me[0m[38;5;249m.[0m[38;5;249ms[0m[38;5;249mo[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mc[0m[38;5;249me[0m[38;5;249m.[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249ms[0m[38;5;249m.[0m[38;5;249mm[0m[38;5;249ma[0m[38;5;249mp[0m[38;5;249m([0m[38;5;249m([0m[38;5;249me[0m[38;5;249m=[0m[38;5;249m>[0m[38;5;249m{[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249m{[0m[38;5;249mi[0m[38;5;249mc[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249mi[0m[38;5;249m,[0m[38;5;249mn[0m[38;5;249ma[0m[38;5;249mm[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249ml[0m[38;5;249m}[0m[38;5;249m=[0m[38;5;249md[0m[38;5;249m[[0m[38;5;249me[0m[38;5;249m][0m[38;5;249m;[0m/*#__PURE__*/[38;5;249mr[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mu[0m[38;5;249mr[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249mt[0m[38;5;249m([0m[38;5;249mk[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249mC[0m[38;5;249ml[0m[38;5;249mi[0m[38;5;249mc[0m[38;5;249mk[0m[38;5;249m:[0m[38;5;249m([0m[38;5;249m)[0m[38;5;249m=[0m[38;5;249m>[0m[38;5;249mn[0m[38;5;249m([0m[38;5;249me[0m[38;5;249m)[0m[38;5;249m,[0m[38;5;249md[0m[38;5;249mi[0m[38;5;249ms[0m[38;5;249ma[0m[38;5;249mb[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249md[0m[38;5;249m:[0m[38;5;249mo[0m[38;5;249m,[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249m/[0m[38;5;249m*[0m[38;5;249m#[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249mP[0m[38;5;249mU[0m[38;5;249mR[0m[38;5;249mE[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249m*[0m[38;5;249m/[0m[38;5;249mr[0m[38;5;249m([0m[38;5;249mC[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249m[[0m[38;5;249m/[0m[38;5;249m*[0m[38;5;249m#[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249mP[0m[38;5;249mU[0m[38;5;249mR[0m[38;5;249mE[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249m*[0m[38;5;249m/[0m[38;5;249mt[0m[38;5;249m([0m[38;5;249mS[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249mi[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m,[0m[38;5;249m/[0m[38;5;249m*[0m[38;5;249m#[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249mP[0m[38;5;249mU[0m[38;5;249mR[0m[38;5;249mE[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249m*[0m[38;5;249m/[0m[38;5;249mr[0m[38;5;249m([0m[38;5;249mA[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249m[[0m[38;5;249m/[0m[38;5;249m*[0m[38;5;249m#[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249mP[0m[38;5;249mU[0m[38;5;249mR[0m[38;5;249mE[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249m*[0m[38;5;249m/[0m[38;5;249mt[0m[38;5;249m([0m[38;5;249mj[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249ml[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m,[0m[38;5;249m/[0m[38;5;249m*[0m[38;5;249m#[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249mP[0m[38;5;249mU[0m[38;5;249mR[0m[38;5;249mE[0m[38;5;249m_[0m[38;5;249m_[0m[38;5;249m*[0m[38;5;249m/[0m[38;5;249mt[0m[38;5;249m([0m[38;5;249mL[0m[38;5;249m,[0m[38;5;249m{[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249me[0m[38;5;249m.[0m[38;5;249mt[0m[38;5;249mo[0m[38;5;249mL[0m[38;5;249mo[0m[38;5;249mc[0m[38;5;249ma[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249mU[0m[38;5;249mp[0m[38;5;249mp[0m[38;5;249me[0m[38;5;249mr[0m[38;5;249mC[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m([0m[38;5;249m)[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m][0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m][0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m}[0m[38;5;249m,[0m[38;5;249me[0m[38;5;249m)[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m)[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m;[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249m [0m[38;5;249mx[0m[38;5;249m=[0m[38;5;249ms[0m[38;5;249m.[0m[38;5;249md[0m[38;5;249mi[0m[38;5;249mv[0m[38;5;249m`[0m
+ [38;5;240m   │[0m                                                                                                                                                                                                                                                 ──────┬──────  
+ [38;5;240m   │[0m                                                                                                                                                                                                                                                       ╰──────── comment ignored due to position
+ [38;5;240m   │[0m 
+ [38;5;240m   │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[38;5;246m────╯[0m
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/to-ui-error-BkZuXio1.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/to-ui-error-BkZuXio1.mjs at 2686..2699
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/to-ui-error-BkZuXio1.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/to-ui-error-BkZuXio1.mjs at 3931..3944
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/to-ui-error-BkZuXio1.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/to-ui-error-BkZuXio1.mjs at 4598..4611
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/PinInput-3SLvbnQa.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/PinInput-3SLvbnQa.mjs at 7218..7231
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/TransactionDetails-DIpXOQ2z.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/TransactionDetails-DIpXOQ2z.mjs at 1519..1532
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/TransactionDetails-DIpXOQ2z.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/TransactionDetails-DIpXOQ2z.mjs at 2286..2299
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/TransactionDetails-DIpXOQ2z.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/TransactionDetails-DIpXOQ2z.mjs at 2491..2504
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/TransactionDetails-DIpXOQ2z.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/TransactionDetails-DIpXOQ2z.mjs at 2727..2740
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/TransactionDetails-DIpXOQ2z.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/TransactionDetails-DIpXOQ2z.mjs at 3058..3071
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/TransactionDetails-DIpXOQ2z.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/TransactionDetails-DIpXOQ2z.mjs at 3210..3223
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/TransactionDetails-DIpXOQ2z.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+     [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m node_modules/@privy-io/react-auth/dist/esm/TransactionDetails-DIpXOQ2z.mjs:103:112 [38;5;246m][0m
+     [38;5;246m│[0m
+ [38;5;246m103 │[0m [38;5;249m`[0m[38;5;249m;[0m[38;5;249mc[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249m [0m[38;5;249m$[0m[38;5;249m=[0m[38;5;249m([0m[38;5;249m{[0m[38;5;249mf[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mm[0m[38;5;249m:[0m[38;5;249mt[0m[38;5;249m,[0m[38;5;249mt[0m[38;5;249mo[0m[38;5;249m:[0m[38;5;249mn[0m[38;5;249m,[0m[38;5;249mt[0m[38;5;249mx[0m[38;5;249mn[0m[38;5;249m:[0m[38;5;249mr[0m[38;5;249m,[0m[38;5;249mt[0m[38;5;249mr[0m[38;5;249ma[0m[38;5;249mn[0m[38;5;249ms[0m[38;5;249ma[0m[38;5;249mc[0m[38;5;249mt[0m[38;5;249mi[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249mI[0m[38;5;249mn[0m[38;5;249mf[0m[38;5;249mo[0m[38;5;249m:[0m[38;5;249md[0m[38;5;249m,[0m[38;5;249mt[0m[38;5;249mo[0m[38;5;249mk[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249mP[0m[38;5;249mr[0m[38;5;249mi[0m[38;5;249mc[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249ma[0m[38;5;249m,[0m[38;5;249mg[0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249m:[0m[38;5;249mc[0m[38;5;249m,[0m[38;5;249mt[0m[38;5;249mo[0m[38;5;249mk[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249mS[0m[38;5;249my[0m[38;5;249mm[0m[38;5;249mb[0m[38;5;249mo[0m[38;5;249ml[0m[38;5;249m:[0m[38;5;249ms[0m[38;5;249m}[0m[38;5;249m)[0m[38;5;249m=[0m[38;5;249m>[0m[38;5;249m{[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249m [0m[38;5;249mh[0m[38;5;249m=[0m[38;5;249mB[0m[38;5;249mi[0m[38;5;249mg[0m[38;5;249mI[0m[38;5;249mn[0m[38;5;249mt[0m[38;5;249m([0m[38;5;249mr[0m[38;5;249m?[0m[38;5;249m.[0m[38;5;249mv[0m[38;5;249ma[0m[38;5;249ml[0m[38;5;249mu[0m[38;5;249me[0m[38;5;249m|[0m[38;5;249m|[0m[38;5;249m0[0m[38;5;249m)[0m[38;5;249m;[0m/*#__PURE__*/
+ [38;5;240m    │[0m                                                                                                                ──────┬──────  
+ [38;5;240m    │[0m                                                                                                                      ╰──────── comment ignored due to position
+ [38;5;240m    │[0m 
+ [38;5;240m    │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[38;5;246m─────╯[0m
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/twitch-5IOe4sIQ.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/twitch-5IOe4sIQ.mjs at 64..77
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/twitch-5IOe4sIQ.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/twitch-5IOe4sIQ.mjs at 10025..10038
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/twitter-BoAxhlj6.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/twitter-BoAxhlj6.mjs at 7958..7971
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/twitter-BoAxhlj6.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/twitter-BoAxhlj6.mjs at 12540..12553
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/twitter-BoAxhlj6.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/twitter-BoAxhlj6.mjs at 13625..13638
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/twitter-BoAxhlj6.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/twitter-BoAxhlj6.mjs at 14609..14622
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/telegram-B-JqnkqZ.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/telegram-B-JqnkqZ.mjs at 64..77
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 2897..2910
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 3363..3376
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 7240..7253
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 9058..9071
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 9877..9890
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 12013..12026
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 12175..12188
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 12335..12348
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 12399..12412
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 12467..12480
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 12514..12527
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 12578..12591
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 12644..12657
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 12710..12723
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 12772..12785
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 12834..12847
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 12899..12912
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 12967..12980
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 13035..13048
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 13102..13115
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 13141..13154
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 13303..13316
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 13436..13449
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 14809..14822
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 17851..17864
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 18011..18024
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 18169..18182
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 18233..18246
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 18301..18314
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 18348..18361
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 18412..18425
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 18478..18491
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 18545..18558
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 18613..18626
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 18680..18693
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 18742..18755
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 18804..18817
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 18869..18882
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 18936..18949
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 18993..19006
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/CustomLandingScreenView-CBvh6dQb.mjs at 19609..19622
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/EnrollTotp-jc7AhWWI.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/EnrollTotp-jc7AhWWI.mjs at 3392..3405
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/EnrollTotp-jc7AhWWI.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/EnrollTotp-jc7AhWWI.mjs at 18514..18527
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/EnrollTotp-jc7AhWWI.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/EnrollTotp-jc7AhWWI.mjs at 20711..20724
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/JsonTree-aPaJmPx7.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/JsonTree-aPaJmPx7.mjs at 346..359
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/TransactionErrorView-Dccap26i.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/TransactionErrorView-Dccap26i.mjs at 1625..1638
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/TransactionErrorView-Dccap26i.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/TransactionErrorView-Dccap26i.mjs at 2009..2022
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/TransactionErrorView-Dccap26i.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/TransactionErrorView-Dccap26i.mjs at 2877..2890
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/TransactionErrorView-Dccap26i.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/TransactionErrorView-Dccap26i.mjs at 7540..7553
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/TransactionErrorView-Dccap26i.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/TransactionErrorView-Dccap26i.mjs at 11108..11121
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/@privy-io/react-auth/dist/esm/TransactionErrorView-Dccap26i.mjs" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+ - comment ignored due to position in node_modules/@privy-io/react-auth/dist/esm/TransactionErrorView-Dccap26i.mjs at 21272..21285
+ [38;5;240m │[0m 
+ [38;5;240m │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[39m
+[33m[31m[INVALID_ANNOTATION] [0mA comment "/*#__PURE__*/" in "node_modules/ox/_esm/core/Base64.js" contains an annotation that Rolldown cannot interpret due to the position of the comment.
+   [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m node_modules/ox/_esm/core/Base64.js:6:28 [38;5;246m][0m
+   [38;5;246m│[0m
+ [38;5;246m6 │[0m [38;5;249mc[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249m [0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249ma[0m[38;5;249mr[0m[38;5;249ma[0m[38;5;249mc[0m[38;5;249mt[0m[38;5;249me[0m[38;5;249mr[0m[38;5;249mT[0m[38;5;249mo[0m[38;5;249mI[0m[38;5;249mn[0m[38;5;249mt[0m[38;5;249me[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mr[0m[38;5;249m [0m[38;5;249m=[0m[38;5;249m [0m/*#__PURE__*/[38;5;249m [0m[38;5;249m{[0m
+ [38;5;240m  │[0m                            ──────┬──────  
+ [38;5;240m  │[0m                                  ╰──────── comment ignored due to position
+ [38;5;240m  │[0m 
+ [38;5;240m  │[0m [38;5;115mHelp[0m: For more information on how to use pure annotations correctly, check the documentation: https://rolldown.rs/in-depth/dead-code-elimination#pure
+[38;5;246m───╯[0m
+[39m
+[33m[33m[PLUGIN_TIMINGS] [0mYour build spent significant time in plugins. Here is a breakdown:
+  - rolldown:vite-resolve (28%)
+  - vite:asset (19%)
+  - vite:css-post (12%)
+  - @tailwindcss/vite:generate:build (7%)
+  - vite:build-import-analysis (7%)
+See https://rolldown.rs/reference/InputOptions.checks#plugintimings for more details.
+[39m
+[32m✓ built in 16.73s[39m
+BUILD_EXIT=0
