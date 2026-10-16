@@ -1,0 +1,14 @@
+md5 inicial: 7bbc1625ac7077b263b2298c7768ee94
+ocorrências do alvo D7: 1 (exige 1)
+CONTROLO POSITIVO — a mesma cena, sem mutação:
+  ℹ pass 14 | ℹ fail 0
+
+D7 aplicado — md5 do ficheiro mutado: 7bbcb4828030e12579c268a1bcc64d62
+  ℹ pass 13 | ℹ fail 1
+  testes VERMELHOS com D7: 3
+    ✖ o erro fica no ESTADO `erro` do hook (loja e servidor) e um sucesso posterior limpa-o (5.1787ms)
+    ✖ failing tests:
+    ✖ o erro fica no ESTADO `erro` do hook (loja e servidor) e um sucesso posterior limpa-o (5.1787ms)
+  local do teste que morde: test at src\__tests__\utac110i1-front-billing.test.mjs:285:1
+
+restaurado: 7bbc1625ac7077b263b2298c7768ee94 (== inicial)

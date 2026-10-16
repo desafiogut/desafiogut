@@ -1,0 +1,5 @@
+alvo: C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\src\hooks\useComprarPasse.js
+md5 inicial: a2cd84465231f4c8c1e427018c7c49e5
+
+ABORTA (exit 2): baseline não está verde -> null/null, fail null
+

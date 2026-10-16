@@ -37,6 +37,16 @@ const STUB_CONTEXTO = resolve(AQUI, "_stubs", "AppContext.jsx");
 const ALIASES = [
   { find: /^\.\.\/context\/AppContext\.jsx$/, replacement: STUB_CONTEXTO },
   { find: /^\.\.\/\.\.\/context\/AppContext\.jsx$/, replacement: STUB_CONTEXTO },
+  // ⚠️ UTAC110i.1 (FRENTE D) — FIXTURE ADITIVA, nenhuma asserção deste ficheiro foi alterada:
+  // `useComprarPasse` passou a ler a flag `isPagamentoNativoAtivo` de `useRecursosApp` para
+  // bifurcar entre PIX e Google Play Billing. Sem este duplo, o hook REAL corria o seu efeito de
+  // carga da config remota e fazia UMA ida à rede a mais na 1.ª montagem — que é exactamente o que
+  // a asserção `dup.chamadas.length === 1` mede (medido: 2 !== 1). O duplo devolve a mesma forma do
+  // hook real com `isPagamentoNativoAtivo: false`, ou seja, o ramo PIX — o comportamento que este
+  // UTAC testava e continua a testar. Mesmo padrão dos restantes aliases desta lista (o repo já
+  // tinha o duplo `_stubs/useRecursosApp.js` precisamente para os testes de página).
+  { find: /^\.\/useRecursosApp\.js$/, replacement: resolve(AQUI, "_stubs", "useRecursosApp.js") },
+  { find: /^\.\.\/hooks\/useRecursosApp\.js$/, replacement: resolve(AQUI, "_stubs", "useRecursosApp.js") },
   { find: /^\.\/useTrocarPorSenhas\.js$/, replacement: `${STUBS_106E}/useTrocarPorSenhas.js` },
   { find: /^\.\.\/hooks\/useTrocarPorSenhas\.js$/, replacement: `${STUBS_106E}/useTrocarPorSenhas.js` },
   { find: /^\.\.\/components\/ComprarFichasModal\.jsx$/, replacement: `${STUBS_106C}/child.jsx` },

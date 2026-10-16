@@ -1,25 +1,25 @@
-// _lib/comprar-passe-tipado.mjs — UTAC110d (dois Passes) + UTAC110e (ECOQUILDO). Handler partilhado.
+// _lib/comprar-passe-tipado.mjs — UTAC110d (dois Passes) + UTAC110e (ECOQUILDO) + UTAC110i.1 (Google Play).
+// Handler partilhado das compras do Passe Desafio.
 //
-// Usado por `comprar-passe-relampago.mjs` e `comprar-passe-programado.mjs` (o tipo vem do endpoint,
-// nunca do corpo). Fluxo POR LEITURA de `comprar-passe-pontos.mjs` (UTAC106d-v2):
-//   1) idempotência pela `ref` = `passe-<tipo>:<chave>` → 200 sem tocar no saldo;
-//   2) débito atómico de R$ 2,00 (CAS em `saldoRs.mjs`);
-//   3) +10 pontos de fidelidade (`tipo:"compra"` ⇒ contam para o cartão);
-//   4) SÓ Relâmpago: +1 CRÉDITO de lance (`ledger-lance.mjs`). Pontos de lance NUNCA (Art. 17º);
-//   5) UTAC110e — +1 ECOQUILDO (`eco-quildo.mjs`, R18-110e-1) + lastro em R$ (+R$ 1,00, Art. 47º);
-//   6) falha depois do débito → desfaz o que entrou + reembolso; reembolso falhado → alerta.
-// Retry de uma compra que ficou A MEIO (pontos sim, crédito/ECOQUILDO não) completa o que falta
-// sem voltar a cobrar.
+// DOIS PAGAMENTOS, UMA CADEIA DE CRÉDITO (R18-110i.1-1, decisão do operador):
+//   · PIX / saldo R$  → `comprarPasseTipado(req, tipoPasse)`, usado pelos endpoints
+//     `comprar-passe-relampago.mjs` e `comprar-passe-programado.mjs`. DEBITA R$ 2,00 (CAS em
+//     `saldoRs.mjs`) e reembolsa em qualquer falha.
+//   · Google Play     → `creditarPasseGoogle({ endereco, tipoPasse, ref })`, usado pelo endpoint
+//     `validar-compra-google.mjs` DEPOIS de o servidor ter validado o recibo contra a Google. NÃO
+//     debita nem reembolsa R$ (o dinheiro foi para a Google) — credita exactamente os mesmos
+//     benefícios, pela MESMA cadeia (`creditarBeneficios`), extraída para este efeito.
+// ⇒ O caminho PIX fica INTACTO (GATE 4): a extracção é uma refactorização sem mudança de
+//   comportamento, guardada pelos testes do 110d/110e (e pela prova de mutação deles).
 //
-// ⚠️ UTAC110e — PORQUE AQUI E NÃO NOS 2 ENDPOINTS: os dois endpoints são wrappers de 8/9 linhas deste
-//    handler (`export default (req) => respostaPreflight(req) ?? comprarPasseTipado(req, "…")`). O
-//    enunciado do 110e nomeia os dois ficheiros, mas o código real está aqui — creditar nos wrappers
-//    criaria dois caminhos que divergem. Declarado no `_logs/UTAC110e_SEG-1_MEDICAO.md` (conflito 1).
-//    ⇒ Os DOIS Passes passam a creditar 1 ECOQUILDO, com o MESMO `ref` da compra (idempotência herdada).
-// ⚠️ O ECOQUILDO é o ÚLTIMO passo de propósito: uma falha dele desfaz pontos + crédito de lance + R$,
-//    pelo que nenhuma compra fica entregue a meio só por causa do ECOQUILDO.
-// ⚠️ O motivo do ECOQUILDO depende do TIPO (`passe-relampago`/`passe-programado`) — é o que o
-//    `MOTIVOS_EMISSAO` da lib aceita; não há motivo genérico «compra».
+// Cadeia de benefícios de UM Passe (quaisquer que seja o pagamento):
+//   +10 pontos de fidelidade (`tipo:"compra"` ⇒ contam para o cartão; Art. 17º: pontos de lance NUNCA)
+//   +1 CRÉDITO de lance — SÓ no Relâmpago (`ledger-lance.mjs`)
+//   +1 ECOQUILDO + lastro em R$ (`eco-quildo.mjs`; Art. 47º-51º) — ÚLTIMO passo de propósito
+//
+// Idempotência: por `ref` em CADA ledger. No PIX a `ref` vem da `idempotencyKey` do cliente; no
+// Google Play vem do `purchaseToken` (hash) — ver `refGoogle` em `validar-compra-google.mjs`.
+// Um retry de uma compra A MEIO completa o que falta sem voltar a cobrar/creditar.
 //
 // 201 { ok, idempotent:false, tipo, pontosFidelidade, creditosLance?, ecoQuildo, saldoRsAntesCentavos, saldoRsDepoisCentavos }
 // 200 { ok, idempotent:true, tipo, pontosFidelidade, creditosLance?, ecoQuildo }
@@ -65,16 +65,151 @@ function chaveIdempotencia(req, body) {
 
 const temRef = (lista, ref) => Array.isArray(lista) && lista.some((h) => h?.ref === ref);
 
-/** Handler da compra de um Passe tipado (`tipoPasse` ∈ TIPOS_PASSE, fixado pelo endpoint). */
+/** Contexto de um tipo de Passe (o que a cadeia precisa de saber do tipo). */
+function contexto(tipoPasse) {
+  return {
+    tipoPasse,
+    ehRelampago: tipoPasse === "relampago",
+    nome: `comprar-passe-${tipoPasse}`,
+    // `MOTIVOS_EMISSAO` não tem um motivo genérico «compra»: o do ECOQUILDO é o tipo do Passe.
+    motivoEco: `passe-${tipoPasse}`,
+  };
+}
+
+/** Estado da compra com esta `ref`: completa, a meio (falta o crédito e/ou o ECOQUILDO) ou inexistente. */
+async function estadoDaCompra(ctx, endereco, ref) {
+  const reg = await lerPontos(endereco);
+  const fid = temRef(reg?.historico, ref);
+  if (!fid) return { fid: false, reg };
+  const eco = await lerEcoQuildo(endereco);
+  const ecoFeito = temRef(eco.historico, ref);
+  if (!ctx.ehRelampago) return { fid: true, completa: ecoFeito, reg, eco };
+  const led = await lerLedgerLance(endereco);
+  return { fid: true, completa: ecoFeito && temRef(led.historico, ref), reg, eco, led };
+}
+
+/** Credita o ECOQUILDO do Passe (+ lastro em R$) — idempotente pelo `ref` da compra. */
+async function garantirEcoDoPasse(ctx, endereco, ref) {
+  const ec = await creditarEcoQuildo(endereco, ECOQUILDO_POR_PASSE, ctx.motivoEco, ref).catch(() => ({ ok: false, code: "ERRO_DB" }));
+  if (!ec.ok) return { ok: false, code: ec.code };
+  if (ec.criado === true) {
+    const el = await registarEmissaoNoLastro(ECOQUILDO_POR_PASSE).catch(() => ({ ok: false, code: "ERRO_DB" }));
+    if (!el.ok) {
+      // ECOQUILDO sem lastro em R$ não existe (Art. 50º): desfaz a emissão antes de desistir.
+      const rev = await reverterEcoQuildo(endereco, ref).catch(() => ({ ok: false, code: "ERRO_DB" }));
+      if (!(rev.ok && rev.revertido)) {
+        captureSecurityAlert(`${ctx.nome}_reversao_eco_falhou`, { code: rev.code ?? null }, "error").catch(() => {});
+      }
+      return { ok: false, code: `lastro:${el.code}`, ecoDesfeito: rev.ok === true && rev.revertido === true };
+    }
+  }
+  return { ok: true, saldo: ec.saldo };
+}
+
+/**
+ * Completa o que FALTA numa compra cuja `ref` já entrou nos pontos (sem cobrar nada): o crédito de
+ * lance (só Relâmpago) e o ECOQUILDO. É o que permite a um retry fechar uma compra a meio.
+ * @returns {Promise<{ok:true, pontos:number, creditosLance:number|undefined, ecoQuildo:number}|{ok:false, etapa:string, code:string}>}
+ */
+async function completarPendentes(ctx, endereco, ref, st) {
+  let creditosLance;
+  if (ctx.ehRelampago) {
+    if (st.completa || temRef(st.led?.historico, ref)) creditosLance = st.led.creditos;
+    else {
+      const c = await creditarCreditoLance(endereco, ref);
+      if (!c.ok) return { ok: false, etapa: "lance", code: c.code ?? "ERRO_DB" };
+      creditosLance = c.creditos;
+    }
+  }
+  const g = await garantirEcoDoPasse(ctx, endereco, ref);
+  if (!g.ok) return { ok: false, etapa: "eco", code: g.code, creditosLance };
+  return { ok: true, pontos: Number(st.reg?.pontos ?? 0), creditosLance, ecoQuildo: g.saldo };
+}
+
+/**
+ * CADEIA DE CRÉDITO dos benefícios de um Passe. **Não cobra e não reembolsa nada** — o pagamento é
+ * do chamador (R$ no PIX, Google no Billing). Idempotente por `ref`.
+ * @returns {Promise<{ok:true, pontos:number, creditosLance:number|undefined, ecoQuildo:number}|
+ *                   {ok:false, etapa:"pontos"|"lance"|"eco", code:string|null,
+ *                    jaExistia?:boolean, pontos?:number, pontosDesfeitos?:boolean, creditosLance?:number}>}
+ */
+async function creditarBeneficios(ctx, endereco, ref) {
+  let p;
+  try { p = await creditarPontos(endereco, PONTOS_FIDELIDADE_POR_PASSE, TIPO_COMPRA, ref); }
+  catch { p = { ok: false, code: "ERRO_DB" }; }
+
+  if (!p.ok || !p.criado) {
+    // Falha, ou a `ref` já existia (corrida/retry): quem paga decide o que fazer com o dinheiro.
+    return { ok: false, etapa: "pontos", code: p.code ?? null, jaExistia: p.ok === true && p.criado === false, pontos: p.pontos };
+  }
+
+  let creditosLance;
+  if (ctx.ehRelampago) {
+    let c;
+    try { c = await creditarCreditoLance(endereco, ref); }
+    catch { c = { ok: false, code: "ERRO_DB" }; }
+    if (!c.ok) {
+      // Sem o lance, o Passe Relâmpago não foi entregue: desfaz os 10 pontos (o pagamento é do chamador).
+      const rev = await reverterMovimento(endereco, ref).catch(() => ({ ok: false, code: "ERRO_DB" }));
+      if (!(rev.ok && rev.revertido)) {
+        captureSecurityAlert(`${ctx.nome}_reversao_pontos_falhou`, { code: rev.code ?? null }, "error").catch(() => {});
+      }
+      return { ok: false, etapa: "lance", code: c.code ?? "ERRO_DB", pontos: p.pontos, pontosDesfeitos: rev.ok === true && rev.revertido === true };
+    }
+    creditosLance = c.creditos;
+  }
+
+  const eco = await garantirEcoDoPasse(ctx, endereco, ref);
+  if (!eco.ok) return { ok: false, etapa: "eco", code: eco.code, pontos: p.pontos, creditosLance };
+  return { ok: true, pontos: p.pontos, creditosLance, ecoQuildo: eco.saldo };
+}
+
+/**
+ * Desfaz TUDO o que a compra creditou (ECOQUILDO, crédito de lance, pontos) no âmbito do pagamento
+ * indicado por `reembolsar`. ⚠️ O lastro NÃO é tocado: a única emissão possível é a do ECOQUILDO,
+ * que reverte a sua própria emissão quando o lastro falha — e é o ÚLTIMO passo.
+ */
+async function desfazerCompra(ctx, endereco, ref, reembolsar) {
+  const revEco = await reverterEcoQuildo(endereco, ref).catch(() => ({ ok: false, code: "ERRO_DB" }));
+  let revLance = { ok: true, revertido: false };
+  if (ctx.ehRelampago) revLance = await reverterMovimentoLance(endereco, ref).catch(() => ({ ok: false, code: "ERRO_DB" }));
+  const revPontos = await reverterMovimento(endereco, ref).catch(() => ({ ok: false, code: "ERRO_DB" }));
+  const reembolsado = await reembolsar();
+  if (!(revEco.ok && revLance.ok && revPontos.ok)) {
+    captureSecurityAlert(`${ctx.nome}_reversao_falhou`, {
+      eco: revEco.code ?? null, lance: revLance.code ?? null, pontos: revPontos.code ?? null,
+    }, "error").catch(() => {});
+  }
+  return {
+    reembolsado,
+    ecoDesfeito: revEco.ok === true && revEco.revertido === true,
+    lanceDesfeito: revLance.ok === true && revLance.revertido === true,
+    pontosDesfeitos: revPontos.ok === true && revPontos.revertido === true,
+  };
+}
+
+/** A compra já existe: completa o que falta (sem cobrar) e responde 200. */
+async function respostaIdempotente(ctx, endereco, ref, st) {
+  const c = await completarPendentes(ctx, endereco, ref, st);
+  if (!c.ok) {
+    return c.etapa === "lance"
+      ? jsonError(502, "creditar_credito_lance_falhou", "não foi possível creditar o lance", { motivo: c.code })
+      : jsonError(502, "creditar_eco_quildo_falhou", "não foi possível creditar o ECOQUILDO", { motivo: c.code });
+  }
+  return jsonResponse({
+    ok: true, idempotent: true, tipo: ctx.tipoPasse, pontosFidelidade: c.pontos,
+    ...(ctx.ehRelampago ? { creditosLance: c.creditosLance } : {}),
+    ecoQuildo: c.ecoQuildo,
+  }, 200);
+}
+
+/** Handler da compra de um Passe tipado por SALDO R$ (`tipoPasse` ∈ TIPOS_PASSE, fixado pelo endpoint). */
 export async function comprarPasseTipado(req, tipoPasse) {
   if (!TIPOS_PASSE.includes(tipoPasse)) throw new Error(`tipo de Passe desconhecido: ${tipoPasse}`);
-  const ehRelampago = tipoPasse === "relampago";
-  const nome = `comprar-passe-${tipoPasse}`;
-  /** Motivo do ECOQUILDO (= tipo do Passe; `MOTIVOS_EMISSAO` não tem um motivo genérico «compra»). */
-  const motivoEco = `passe-${tipoPasse}`;
+  const ctx = contexto(tipoPasse);
 
   if (req.method !== "POST") return jsonError(405, "metodo_invalido", "use POST", { allowed: ["POST"] });
-  const rl = await aplicarRateLimit(req, nome, 5);
+  const rl = await aplicarRateLimit(req, ctx.nome, 5);
   if (rl) return rl;
   if (sistemaPausado(await lerEstadoSistema())) {
     return jsonError(503, "sistema_pausado", "Sistema em manutenção. Tente novamente em breve.");
@@ -92,148 +227,98 @@ export async function comprarPasseTipado(req, tipoPasse) {
   if (!idempotencyKey) return jsonError(400, "idempotencyKey_invalida", "envie { idempotencyKey } (8–180 chars [A-Za-z0-9._:-])");
   const ref = refPasse(tipoPasse, idempotencyKey);
 
-  /** Estado da compra com esta `ref`: completa, a meio (falta o crédito e/ou o ECOQUILDO) ou inexistente. */
-  async function estado() {
-    const reg = await lerPontos(endereco);
-    const fid = temRef(reg?.historico, ref);
-    if (!fid) return { fid: false, reg };
-    const eco = await lerEcoQuildo(endereco);
-    const ecoFeito = temRef(eco.historico, ref);
-    if (!ehRelampago) return { fid: true, completa: ecoFeito, reg, eco };
-    const led = await lerLedgerLance(endereco);
-    return { fid: true, completa: ecoFeito && temRef(led.historico, ref), reg, eco, led };
-  }
-
-  /** Credita o ECOQUILDO do Passe (+ lastro em R$) — idempotente pelo `ref` da compra. */
-  async function garantirEcoQuildo() {
-    const ec = await creditarEcoQuildo(endereco, ECOQUILDO_POR_PASSE, motivoEco, ref).catch(() => ({ ok: false, code: "ERRO_DB" }));
-    if (!ec.ok) return { ok: false, code: ec.code };
-    if (ec.criado === true) {
-      const el = await registarEmissaoNoLastro(ECOQUILDO_POR_PASSE).catch(() => ({ ok: false, code: "ERRO_DB" }));
-      if (!el.ok) {
-        // ECOQUILDO sem lastro em R$ não existe (Art. 50º): desfaz a emissão antes de desistir.
-        const rev = await reverterEcoQuildo(endereco, ref).catch(() => ({ ok: false, code: "ERRO_DB" }));
-        if (!(rev.ok && rev.revertido)) {
-          captureSecurityAlert(`${nome}_reversao_eco_falhou`, { code: rev.code ?? null }, "error").catch(() => {});
-        }
-        return { ok: false, code: `lastro:${el.code}`, ecoDesfeito: rev.ok === true && rev.revertido === true };
-      }
-    }
-    return { ok: true, saldo: ec.saldo };
-  }
-
-  /** A compra já existe: completa o que falta (sem cobrar) e responde 200. */
-  async function respostaIdempotente(st) {
-    let creditosLance;
-    if (ehRelampago) {
-      if (st.completa || temRef(st.led.historico, ref)) creditosLance = st.led.creditos;
-      else {
-        const c = await creditarCreditoLance(endereco, ref);
-        if (!c.ok) return jsonError(502, "creditar_credito_lance_falhou", "não foi possível creditar o lance", { motivo: c.code });
-        creditosLance = c.creditos;
-      }
-    }
-    const g = await garantirEcoQuildo();
-    if (!g.ok) return jsonError(502, "creditar_eco_quildo_falhou", "não foi possível creditar o ECOQUILDO", { motivo: g.code });
-    return jsonResponse({
-      ok: true, idempotent: true, tipo: tipoPasse, pontosFidelidade: Number(st.reg?.pontos ?? 0),
-      ...(ehRelampago ? { creditosLance } : {}),
-      ecoQuildo: g.saldo,
-    }, 200);
-  }
-
   let st;
-  try { st = await estado(); }
+  try { st = await estadoDaCompra(ctx, endereco, ref); }
   catch { return jsonError(503, "store_indisponivel", "não foi possível ler os pontos"); }
-  if (st.fid) return respostaIdempotente(st);
+  if (st.fid) return respostaIdempotente(ctx, endereco, ref, st);
 
-  const debito = await debitarSaldoRs({ endereco, valorCentavos: VALOR_PASSE_CENTAVOS, motivo: nome });
+  const debito = await debitarSaldoRs({ endereco, valorCentavos: VALOR_PASSE_CENTAVOS, motivo: ctx.nome });
   if (!debito.ok) {
     if (debito.code === "saldo_insuficiente") {
       // Cliques concorrentes na MESMA chave: o vencedor já debitou e creditou.
-      const st2 = await estado().catch(() => null);
-      if (st2?.fid) return respostaIdempotente(st2);
+      const st2 = await estadoDaCompra(ctx, endereco, ref).catch(() => null);
+      if (st2?.fid) return respostaIdempotente(ctx, endereco, ref, st2);
       return jsonError(402, "saldo_insuficiente", "saldo R$ insuficiente para o Passe (R$ 2,00)");
     }
     return jsonError(502, "debito_falhou", "não foi possível debitar o saldo R$", { motivo: debito.code });
   }
 
   const reembolsar = async () => {
-    const r = await reembolsarSaldoRs({ endereco, valorCentavos: VALOR_PASSE_CENTAVOS, motivo: nome });
-    if (!r.ok) captureSecurityAlert(`${nome}_reembolso_falhou`, { code: r.code }, "error").catch(() => {});
+    const r = await reembolsarSaldoRs({ endereco, valorCentavos: VALOR_PASSE_CENTAVOS, motivo: ctx.nome });
+    if (!r.ok) captureSecurityAlert(`${ctx.nome}_reembolso_falhou`, { code: r.code }, "error").catch(() => {});
     return r.ok;
   };
 
-  /**
-   * Desfaz TUDO o que esta compra creditou (ECOQUILDO, crédito de lance, pontos) e devolve os R$ 2,00.
-   * ⚠️ O lastro NÃO é tocado aqui: a única emissão possível é a do passo 5 (`garantirEcoQuildo`), que
-   *    já reverte a sua própria emissão quando o lastro falha — e é o ÚLTIMO passo, logo não há
-   *    emissão posterior por desfazer. `reverterEcoQuildo` é chamado à mesma (é no-op sem entrada).
-   */
-  async function desfazerCompra() {
-    const revEco = await reverterEcoQuildo(endereco, ref).catch(() => ({ ok: false, code: "ERRO_DB" }));
-    let revLance = { ok: true, revertido: false };
-    if (ehRelampago) revLance = await reverterMovimentoLance(endereco, ref).catch(() => ({ ok: false, code: "ERRO_DB" }));
-    const revPontos = await reverterMovimento(endereco, ref).catch(() => ({ ok: false, code: "ERRO_DB" }));
-    const reembolsado = await reembolsar();
-    if (!(revEco.ok && revLance.ok && revPontos.ok)) {
-      captureSecurityAlert(`${nome}_reversao_falhou`, {
-        eco: revEco.code ?? null, lance: revLance.code ?? null, pontos: revPontos.code ?? null,
-      }, "error").catch(() => {});
-    }
-    return {
-      reembolsado,
-      ecoDesfeito: revEco.ok === true && revEco.revertido === true,
-      lanceDesfeito: revLance.ok === true && revLance.revertido === true,
-      pontosDesfeitos: revPontos.ok === true && revPontos.revertido === true,
-    };
-  }
+  const cred = await creditarBeneficios(ctx, endereco, ref);
 
-  let p;
-  try { p = await creditarPontos(endereco, PONTOS_FIDELIDADE_POR_PASSE, TIPO_COMPRA, ref); }
-  catch { p = { ok: false, code: "ERRO_DB" }; }
-
-  if (!p.ok || !p.criado) {
-    // Falha, ou a `ref` já existia (corrida): devolve os R$ 2,00 — nunca cobra duas vezes.
-    const reembolsado = await reembolsar();
-    if (p.ok) {
-      const st3 = await estado().catch(() => null);
-      return st3?.fid ? respostaIdempotente(st3) : jsonResponse({ ok: true, idempotent: true, tipo: tipoPasse, reembolsado }, 200);
-    }
-    return jsonError(502, "creditar_pontos_falhou", "não foi possível creditar os pontos", { reembolsado });
-  }
-
-  let creditosLance;
-  if (ehRelampago) {
-    let c;
-    try { c = await creditarCreditoLance(endereco, ref); }
-    catch { c = { ok: false, code: "ERRO_DB" }; }
-    if (!c.ok) {
-      // Sem o lance, o Passe Relâmpago não foi entregue: desfaz os 10 pontos E devolve o dinheiro.
-      const rev = await reverterMovimento(endereco, ref);
+  if (!cred.ok) {
+    // ── pontos ──────────────────────────────────────────────────────────────────────────────────
+    if (cred.etapa === "pontos") {
+      // Nada foi creditado: devolve os R$ 2,00 — nunca cobra duas vezes.
       const reembolsado = await reembolsar();
-      if (!(rev.ok && rev.revertido)) {
-        captureSecurityAlert(`${nome}_reversao_pontos_falhou`, { code: rev.code ?? null }, "error").catch(() => {});
+      if (cred.jaExistia) {
+        const st3 = await estadoDaCompra(ctx, endereco, ref).catch(() => null);
+        return st3?.fid ? respostaIdempotente(ctx, endereco, ref, st3) : jsonResponse({ ok: true, idempotent: true, tipo: tipoPasse, reembolsado }, 200);
       }
-      return jsonError(502, "creditar_credito_lance_falhou", "não foi possível creditar o lance",
-        { reembolsado, pontosDesfeitos: rev.ok === true && rev.revertido === true });
+      return jsonError(502, "creditar_pontos_falhou", "não foi possível creditar os pontos", { reembolsado });
     }
-    creditosLance = c.creditos;
-  }
-
-  // ── UTAC110e / FRENTE C — ECOQUILDO (Art. 47º-51º; R18-110e-1: 1 por Passe) ──────────────────────
-  const eco = await garantirEcoQuildo();
-  if (!eco.ok) {
-    const desfeito = await desfazerCompra();
+    // ── crédito de lance (só Relâmpago) ─────────────────────────────────────────────────────────
+    if (cred.etapa === "lance") {
+      const reembolsado = await reembolsar();
+      return jsonError(502, "creditar_credito_lance_falhou", "não foi possível creditar o lance",
+        { reembolsado, pontosDesfeitos: cred.pontosDesfeitos === true });
+    }
+    // ── ECOQUILDO ───────────────────────────────────────────────────────────────────────────────
+    const desfeito = await desfazerCompra(ctx, endereco, ref, reembolsar);
     return jsonError(502, "creditar_eco_quildo_falhou", "não foi possível creditar o ECOQUILDO",
-      { motivo: eco.code, ...desfeito });
+      { motivo: cred.code, ...desfeito });
   }
 
   return jsonResponse({
-    ok: true, idempotent: false, tipo: tipoPasse, pontosFidelidade: p.pontos,
-    ...(ehRelampago ? { creditosLance } : {}),
-    ecoQuildo: eco.saldo,
+    ok: true, idempotent: false, tipo: tipoPasse, pontosFidelidade: cred.pontos,
+    ...(ctx.ehRelampago ? { creditosLance: cred.creditosLance } : {}),
+    ecoQuildo: cred.ecoQuildo,
     saldoRsAntesCentavos: debito.resultado.saldoAntesCentavos,
     saldoRsDepoisCentavos: debito.resultado.saldoDepoisCentavos,
   }, 201);
+}
+
+/**
+ * UTAC110i.1 (FRENTE C) — CREDITA um Passe pago no GOOGLE PLAY, **sem débito nem reembolso de R$**.
+ * Chamado por `validar-compra-google.mjs` SÓ depois de a Google Play Developer API ter confirmado o
+ * recibo (`purchaseState === 0`). R18-110i.1-1: reusa a MESMA cadeia de crédito do PIX.
+ *
+ * @param {{endereco:string, tipoPasse:"relampago"|"programado", ref:string}} args
+ *   `ref` = derivada do `purchaseToken` (a idempotência é do recibo, não do clique).
+ * @returns {Promise<{ok:true, idempotent:boolean, pontos:number, creditosLance:number|undefined,
+ *                    ecoQuildo:number} | {ok:false, etapa:string, code:string}>}
+ */
+export async function creditarPasseGoogle({ endereco, tipoPasse, ref }) {
+  if (!TIPOS_PASSE.includes(tipoPasse)) return { ok: false, etapa: "pedido", code: "tipo_invalido" };
+  if (typeof ref !== "string" || ref.length === 0 || ref.length > 200) return { ok: false, etapa: "pedido", code: "ref_invalida" };
+  const ctx = contexto(tipoPasse);
+
+  let st;
+  try { st = await estadoDaCompra(ctx, endereco, ref); }
+  catch { return { ok: false, etapa: "store", code: "store_indisponivel" }; }
+  if (st.fid) {
+    const c = await completarPendentes(ctx, endereco, ref, st);
+    if (!c.ok) return c;
+    return { ok: true, idempotent: true, pontos: c.pontos, creditosLance: c.creditosLance, ecoQuildo: c.ecoQuildo };
+  }
+
+  const cred = await creditarBeneficios(ctx, endereco, ref);
+  if (!cred.ok) {
+    if (cred.etapa === "pontos" && cred.jaExistia) {
+      // Corrida: outra tentativa creditou os pontos entre a leitura e a escrita — completa o resto.
+      const st2 = await estadoDaCompra(ctx, endereco, ref).catch(() => null);
+      if (st2?.fid) {
+        const c = await completarPendentes(ctx, endereco, ref, st2);
+        if (!c.ok) return c;
+        return { ok: true, idempotent: true, pontos: c.pontos, creditosLance: c.creditosLance, ecoQuildo: c.ecoQuildo };
+      }
+    }
+    return cred;
+  }
+  return { ok: true, idempotent: false, pontos: cred.pontos, creditosLance: cred.creditosLance, ecoQuildo: cred.ecoQuildo };
 }

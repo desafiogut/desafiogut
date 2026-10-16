@@ -1,0 +1,41 @@
+##### (1) 106e — rede de segurança (esperado 19/19) — RAM 1752/1746 MB
+✔ RENDER · 502 → mensagem CLARA no balão (não em silêncio) e o balão fica aberto (76.1268ms)
+✔ RENDER · durante a compra: SPINNER no Passe escolhido e TODOS os botões desactivados (1.2659ms)
+✔ RENDER · o balão mostra os pontos de CARTÃO «X / 50» (o mesmo número da barra das Ofertas) (3.6667ms)
+✔ RENDER · alvos de toque: os botões do balão têm ≥ 48 px (1.0203ms)
+ℹ tests 19
+ℹ suites 0
+ℹ pass 19
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5717.2129
+decorrido=6s
+
+##### (2) 110d + 110e — rede de segurança do SEG1 (esperado 45/45) — RAM 1645/1642 MB
+✔ C7 ciclo completo: comprar 3 Passes → usar 2 no site → saldo 1 e lastro (3, 2, 100) (11.9656ms)
+✔ C8 compra a MEIO (pontos + crédito sim, ECOQUILDO não) → o retry completa o ECOQUILDO sem cobrar (3.0096ms)
+✔ B2b usar: se o LASTRO falhar, o ECOQUILDO é DEVOLVIDO ao saldo (502 lastro_falhou) (4.1172ms)
+✔ B4b creditar (admin): se o LASTRO falhar, a EMISSÃO é desfeita (nunca moeda sem lastro) (1.7498ms)
+ℹ tests 45
+ℹ suites 0
+ℹ pass 45
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 651.3255
+decorrido=1s
+
+##### (3) SUÍTE FRONTEND COMPLETA — RAM 1577/1573 MB
+frontend: VERDE 1148/1148 pass
+VEREDITO: VERDE
+decorrido=354s
+
+##### (4) SUÍTE BACKEND COMPLETA — RAM 1778/1758 MB
+backend: VERDE 1310/1316 pass
+VEREDITO: VERDE
+decorrido=20s
+
+RAM no fim: 1724/1723 MB
