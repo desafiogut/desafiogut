@@ -93,7 +93,7 @@ function vencedoresNoEcra(html) {
  */
 function trofeusNaLista(html) {
   const ini = html.indexOf("Filtrar:");
-  const fim = html.indexOf("Art. 25", ini);
+  const fim = html.indexOf("Art. 14º", ini); // UTAC110j — o rodapé passou de «Art. 25» ao v5 (Art. 14º)
   assert.ok(ini >= 0 && fim > ini, "controlo: não encontrei a lista de lances na página");
   return html.slice(ini, fim).split("🏆").length - 1;
 }
@@ -213,7 +213,11 @@ describe("UTAC107g · Meus Ativos — secção «Senhas antigas»", () => {
     const s = secao(renderizar({ contexto: { ...SESSAO, saldoSenhas: 3, saldoSenhasStatus: "ok" } }));
     assert.equal(estadoDe(s), "dados");
     assert.match(texto(s), /Você tem 3 senhas antigas\s?\./ /* o `texto()` troca </strong> por espaço */);
-    assert.match(texto(s), /Lance Programado do Menor Lance Único/);
+    // UTAC110j (R18-110j-1-A/B) — «São usadas no Lance Programado do Menor Lance Único» saiu (esse
+    // ramo é legado e inalcançável desde o UTAC108e.1); a secção diz agora que ficam on-chain (legado).
+    assert.match(texto(s), /Ficam registradas on-chain \(legado\)\./);
+    assert.doesNotMatch(texto(s), /Lance Programado/, "voltou a promessa do ramo legado");
+    assert.match(s, /Senhas antigas \(on-chain, legado\)/, "o título perdeu «(on-chain, legado)»");
     assert.doesNotMatch(s, /<button|<a\b/, "a secção ganhou um botão/link (R18-D: só texto)");
     // ℹ️ do validador (V12): a contagem em ROXO, a cor semântica de senhas (`COR.senhas`).
     assert.match(s, /<strong[^>]*color:\s*#a78bfa[^>]*>3 senhas antigas<\/strong>/i, "a contagem não está em roxo #a78bfa");

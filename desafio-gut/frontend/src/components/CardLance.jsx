@@ -31,6 +31,10 @@ import { estadoCreditosLance, rotuloCreditos } from "../lib/passes.js";
 
 const SEPOLIA_CHAIN_ID = CHAIN_ID_DEC;
 
+// UTAC110j (R18-110j-1-B) — mensagem única do ramo Programado LEGADO (inalcançável desde o
+// UTAC108e.1). Substitui a copy do modelo antigo (senha a R$ 2,00 / conversão R$ → senha).
+export const MSG_PROGRAMADO_LEGADO = "Esta modalidade não está disponível.";
+
 // MC28.1 R9 — blindagem ativa só em mainnet. No Sepolia/localhost (MAINNET=false)
 // todo o fluxo abaixo é byte-idêntico ao legado (zero regressão).
 const MAINNET = import.meta.env.VITE_NETWORK_STAGE === "mainnet";
@@ -101,6 +105,10 @@ export default function CardLance({
     FASES.AUTENTICANDO, FASES.HASHING, FASES.ASSINANDO, FASES.ENVIANDO,
     FASES.CONVERTENDO,
   ].includes(fase);
+  // UTAC110j (R18-110j-1-B) — ramo PROGRAMADO = LEGADO / INALCANÇÁVEL desde o UTAC108e.1:
+  // `modalidade` nasce "flash" no AppContext e `setModalidade` deixou de ter chamador (o seletor
+  // saiu). A copy do modelo antigo («consome 1 senha», «converte R$ 2,00 → 1 senha», Art. 20) saiu
+  // por não bater com o Regulamento v5; o CÓDIGO fica até haver decisão de limpeza (DEBT.md).
   const isProgramado = modalidade === "programado";
 
   const saldoCarregando = isProgramado &&
@@ -158,7 +166,7 @@ export default function CardLance({
 
     const valorCentavos = sanitizeLance(valor);
     if (valorCentavos === null) {
-      setErro("Valor inválido. Use um inteiro entre 1 e 999999 (centavos). Art. 26: mín R$ 0,01.");
+      setErro("Valor inválido. Use um inteiro entre 1 e 999999 (centavos).");
       return;
     }
 
@@ -177,7 +185,7 @@ export default function CardLance({
         return;
       }
       if (saldoSenhas == null || saldoSenhas <= 0) {
-        setErro("Saldo de senhas insuficiente na blockchain. Aguarde crédito da coordenacao após confirmação do PIX (Art. 20).");
+        setErro(MSG_PROGRAMADO_LEGADO);
         return;
       }
     }
@@ -191,19 +199,19 @@ export default function CardLance({
         // Sem senha on-chain, converte R$ → senha automaticamente (R$ 2,00/senha).
         if (isProgramado && MAINNET && (saldoSenhas == null || saldoSenhas < 1)) {
           if (saldoRsCentavos != null && saldoRsCentavos < 200) {
-            setErro("Sem senhas on-chain e saldo R$ insuficiente para converter (R$ 2,00/senha). Recarregue via PIX.");
+            setErro(MSG_PROGRAMADO_LEGADO);
             setFase(FASES.ERRO);
             return;
           }
           setFase(FASES.CONVERTENDO);
           const conv = await trocarPorSenhas(1);
           if (!conv.ok) {
-            setErro(conv.message || "Falha ao converter R$ em senha. Tente novamente.");
+            setErro(MSG_PROGRAMADO_LEGADO);
             setFase(FASES.ERRO);
             return;
           }
           if (conv.assincrono) {
-            setErro("Conversão R$ → senha em processamento on-chain. Aguarde a confirmação e tente novamente.");
+            setErro(MSG_PROGRAMADO_LEGADO);
             setFase(FASES.ERRO);
             return;
           }
@@ -244,7 +252,7 @@ export default function CardLance({
             token_expirado:           "Sessão expirada — nova autenticação necessária na próxima tentativa.",
             token_invalido:           "Falha na autenticação. Tente novamente.",
             endereco_nao_corresponde: "Endereço divergente. Saia e entre novamente.",
-            senhas_insuficientes:     "Saldo de senhas insuficiente — converta R$ em senhas (R$ 2,00/senha) ou recarregue via PIX.",
+            senhas_insuficientes:     MSG_PROGRAMADO_LEGADO, // UTAC110j — código do ramo legado
             // UTAC110d-front — os códigos novos do consumo de crédito (`lance-relampago.mjs`).
             sem_creditos_lance:       "Sem créditos de lance. Adquira um Passe Relâmpago na Carteira para dar um lance.",
             consumo_credito_falhou:   "Não foi possível usar seu crédito de lance. Tente novamente.",
@@ -293,10 +301,10 @@ export default function CardLance({
     } catch (err) {
       const reasonRaw = err?.revert?.args?.[0] ?? err?.reason ?? null;
       const traduzirRevert = {
-        "Voce nao possui senhas disponiveis": "Saldo insuficiente na blockchain. Aguarde crédito da coordenacao após confirmação do PIX.",
+        "Voce nao possui senhas disponiveis": MSG_PROGRAMADO_LEGADO, // UTAC110j — revert do ramo legado
         "Edicao nao esta ativa":              "Edição não está ativa on-chain. Aguarde a coordenacao reabrir.",
         "Prazo da edicao encerrado":          "Prazo da edição encerrado on-chain. Aguarde nova rodada.",
-        "Lance minimo e R$ 0,01":             "Lance mínimo é R$ 0,01 (Art. 26).",
+        "Lance minimo e R$ 0,01":             "Lance mínimo é R$ 0,01.",
       };
       const msg =
         traduzirRevert[reasonRaw] ??
@@ -354,9 +362,7 @@ export default function CardLance({
   const tooltipBotao =
     saldoErro       ? "Erro ao ler saldo. Verifique sua conexão." :
     saldoCarregando ? "Aguardando leitura do saldo on-chain." :
-    semFichas       ? (saldoRsCentavos != null && saldoRsCentavos >= 200
-                        ? "Sem senhas on-chain — o app converte R$ 2,00 automaticamente ao lançar"
-                        : "Sem senhas e sem saldo R$ para converter — recarregue via PIX") :
+    semFichas       ? MSG_PROGRAMADO_LEGADO :
     semCreditosFlash ? creditos.mensagem :
     "";
 
@@ -366,9 +372,9 @@ export default function CardLance({
         { f: FASES.ENVIANDO,     label: "⚡ Creditando on-chain…" },
       ]
     : [
-        { f: FASES.CONVERTENDO, label: "🔄 Convertendo R$ → senha (R$ 2,00)…" },
+        { f: FASES.CONVERTENDO, label: "⏳ Processando…" },
         { f: FASES.AUTENTICANDO, label: "🔐 Autenticando carteira…" },
-        { f: FASES.ENVIANDO,    label: "Registrando lance blindado · −1 senha..." },
+        { f: FASES.ENVIANDO,    label: "Registrando lance blindado…" },
       ];
 
   const labelBotao = fase === FASES.AUTENTICANDO
@@ -379,10 +385,6 @@ export default function CardLance({
       ? "⚠ Erro ao ler saldo"
     : saldoCarregando
       ? "⏳ Carregando saldo..."
-    : isProgramado
-      ? (saldoSenhas != null && saldoSenhas < 1)
-        ? "🔄 Converter R$ → senha e Lançar"
-        : "🎫 Confirmar Lance (−1 senha)"
     : "Dar lance"; // UTAC109e (R18-B) — o mesmo verbo do cartão: «Dar lance» (MLC) / «Dar palpite» (OP)
 
   // MC29.1 — skeleton de conformidade (não monta o formulário on-chain).
@@ -442,7 +444,7 @@ export default function CardLance({
         )}
         <p style={estilos.hintConexao}>
           {isProgramado
-            ? "Lance programado consome 1 senha (Art. 20: R$ 2,00) — sem senha, o app converte R$ 2,00 do saldo automaticamente."
+            ? MSG_PROGRAMADO_LEGADO
             : "Cada lance consome 1 crédito de lance (Passe Relâmpago) · menor lance único vence."}
         </p>
       </div>
@@ -468,7 +470,7 @@ export default function CardLance({
           />
           {valorReais && <span style={estilos.valorPreview}>{valorReais}</span>}
         </div>
-        <p style={estilos.hintInput}>Art. 26: Mín R$ 0,01 · Máx 5 lances/min · Cooldown 3s</p>
+        <p style={estilos.hintInput}>Mín R$ 0,01 · Máx 5 lances/min · Cooldown 3s</p>
       </div>
 
       {ocupado && (
@@ -488,7 +490,7 @@ export default function CardLance({
       {fase === FASES.SUCESSO && (
         <div style={estilos.boxSucesso}>
           <p style={{ margin: 0, fontWeight: "600" }}>
-            {isProgramado ? "🎫 Lance registrado! (−1 senha)" : "✅ Lance registrado!"}
+            ✅ Lance registrado!
           </p>
           {ultimaTxIsOnChain && ultimaTx ? (
             <>
@@ -546,10 +548,7 @@ export default function CardLance({
           borderRadius: "10px", padding: "0.75rem 1rem",
           color: "#f5a623", fontSize: "0.85rem", fontWeight: "600", textAlign: "center",
         }}>
-          🎫 Sem senhas on-chain —{" "}
-          {saldoRsCentavos != null && saldoRsCentavos >= 200
-            ? "o app converte R$ 2,00 automaticamente ao lançar"
-            : "recarregue via PIX para converter R$ 2,00 → 1 senha (Art. 20)"}
+          {MSG_PROGRAMADO_LEGADO}
         </div>
       )}
 

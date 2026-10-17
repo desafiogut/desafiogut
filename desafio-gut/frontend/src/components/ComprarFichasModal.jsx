@@ -305,7 +305,7 @@ export default function ComprarFichasModal({ aberto, onFechar, address, email, o
       <div style={{ ...cabecalho, ...(!isMobile && { paddingTop: "0.25rem" }) }}>
           <div style={{ minWidth: 0 }}>
             <h2 style={titulo}>💰 Depositar PIX</h2>
-            <p style={subTitulo}>Saldo R$ disponível para Lance Relâmpago ou troca por senhas</p>
+            <p style={subTitulo}>O saldo em R$ serve para comprar o Passe Desafio</p>
           </div>
           <button onClick={fechar} aria-label="Fechar" style={btnFechar} disabled={loading}>×</button>
         </div>
@@ -321,11 +321,15 @@ export default function ComprarFichasModal({ aberto, onFechar, address, email, o
 
         {etapa === "quantia" && (
           <>
-            <label style={labelInput}>Quantas senhas?</label>
+            {/* UTAC110j (R18-110j-1-E) — só COPY: o depósito credita saldo em R$; a unidade
+                «senhas» era do modelo antigo. O comportamento (qtd × R$ 2,00 enviado ao backend) fica igual. */}
+            {/* R1 do validador: o campo conta UNIDADES de R$ 2,00 (escrever «10» = R$ 20,00) —
+                o rótulo diz-o, e o total em R$ aparece logo abaixo. */}
+            <label style={labelInput}>Quanto quer depositar? (em múltiplos de R$ 2,00)</label>
             <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem" }}>
               {PRESETS.map((p) => (
                 <button key={p} onClick={() => setQtd(p)} style={presetBtn(qtd === p)}>
-                  {p}
+                  R$ {(p * VALOR_POR_SENHA_BRL).toFixed(2).replace(".", ",")}
                 </button>
               ))}
             </div>
@@ -340,7 +344,7 @@ export default function ComprarFichasModal({ aberto, onFechar, address, email, o
                 setQtd(Math.max(MIN_QTD, Math.min(MAX_QTD, v)));
               }}
               style={inputNum}
-              aria-label="Quantidade de senhas"
+              aria-label="Número de depósitos de R$ 2,00"
             />
 
             <div style={valorBox}>
@@ -351,7 +355,7 @@ export default function ComprarFichasModal({ aberto, onFechar, address, email, o
                 R$ {valorBRL.toFixed(2)}
               </div>
               <div style={{ fontSize: "0.72rem", color: COR.muted, marginTop: "0.3rem" }}>
-                {qtd} {qtd === 1 ? "senha" : "senhas"} × R$ {VALOR_POR_SENHA_BRL.toFixed(2)}
+                {qtd} × R$ {VALOR_POR_SENHA_BRL.toFixed(2)}
               </div>
             </div>
 
@@ -364,7 +368,7 @@ export default function ComprarFichasModal({ aberto, onFechar, address, email, o
             </button>
             {!address && (
               <p style={{ fontSize: "0.72rem", color: COR.muted, textAlign: "center", marginTop: "0.5rem" }}>
-                Faça login para comprar fichas.
+                Faça login para depositar.
               </p>
             )}
           </>
@@ -384,7 +388,7 @@ export default function ComprarFichasModal({ aberto, onFechar, address, email, o
                 R$ {valorBRL.toFixed(2)}
               </div>
               <div style={{ fontSize: "0.72rem", color: COR.muted, marginTop: "0.3rem" }}>
-                {qtd} {qtd === 1 ? "senha" : "senhas"}
+                {qtd} × R$ {VALOR_POR_SENHA_BRL.toFixed(2)}
               </div>
             </div>
 
@@ -428,7 +432,7 @@ export default function ComprarFichasModal({ aberto, onFechar, address, email, o
                 R$ {Number(pedido.valorBRL).toFixed(2)}
               </div>
               <div style={{ fontSize: "0.72rem", color: COR.muted, marginTop: "0.3rem" }}>
-                {pedido.qtd} {pedido.qtd === 1 ? "senha" : "senhas"} · provider: {pedido.provider}
+                {pedido.qtd} × R$ {VALOR_POR_SENHA_BRL.toFixed(2)} · provider: {pedido.provider}
               </div>
             </div>
 
@@ -487,7 +491,8 @@ export default function ComprarFichasModal({ aberto, onFechar, address, email, o
         {etapa === "sucesso" && resultado && (
           <>
             {/* Modelo dual (Frente B.9): PIX aprovado credita R$ no blob saldo-rs.
-                UTAC107c: para o Lance Programado o app converte R$ 2,00 em 1 senha sozinho (CardLance). */}
+                UTAC110j: a dica do «Lance Programado» (ramo legado do CardLance) saiu — o saldo R$
+                serve para comprar o Passe Desafio (comprar-passe-relampago/-programado). */}
             <div style={{
               textAlign: "center", padding: "1rem 0 0.5rem",
             }}>
@@ -544,7 +549,7 @@ export default function ComprarFichasModal({ aberto, onFechar, address, email, o
               color: COR.gold, fontSize: "0.76rem", lineHeight: 1.45,
               marginBottom: "1rem",
             }}>
-              💡 Para o Lance Programado, o app converte R$ 2,00 em 1 senha automaticamente.
+              💡 Use o saldo para comprar o Passe Desafio na Carteira.
             </div>
 
             <button onClick={fecharComSucesso} style={btnPrimario(false)}>

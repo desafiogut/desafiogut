@@ -631,7 +631,9 @@ export default function ChatbotWidget() {
             }}>
               {mensagens.length === 0 && (
                 <div style={{ color: COR.muted, fontSize: "0.85rem", textAlign: "center", padding: "1rem 0" }}>
-                  Pergunte sobre regras, cotas, pagamentos, vouchers ou o sistema "Indique e Ganhe".
+                  {/* UTAC110j (R18-110j-2) — «cotas» saiu: no v5 são pacotes de patrocínio do lojista
+                      (Arts. 12/24), não algo que o comprador adquire. */}
+                  Pergunte sobre regras, pagamentos, vouchers ou o sistema "Indique e Ganhe".
                 </div>
               )}
               {mensagens.map((m, i) => {

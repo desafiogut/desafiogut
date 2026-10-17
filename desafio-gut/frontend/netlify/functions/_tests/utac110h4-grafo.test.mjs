@@ -339,3 +339,30 @@ test("GRAFO/estático: `Sentry.capture*` só DENTRO dos dois wrappers (nada esca
   assert.deepEqual(fora, [],
     `chamam Sentry DIRECTAMENTE (fora dos wrappers mascaradores) — o payload sai sem mascarar:\n${fora.join("\n")}`);
 });
+
+// ══ UTAC110j (R18-110j-5c) — DEBT-034: a aresta do grafo deixou de sair na RESPOSTA de API ═════════
+// O campo `indicador` (endereço COMPLETO de quem deu o código = dado pessoal de terceiro) foi removido
+// da resposta de `POST /referral?acao=usar-codigo`. Medido no SEG-1: zero consumidores. Comportamental
+// (handler REAL): a resposta não tem o campo NEM o endereço do indicante em lado nenhum do corpo — e o
+// resto do contrato que o `ReferralRegistrar` lê (`sucesso`, `idempotent`, `conversao`) continua igual.
+test("UTAC110j · DEBT-034: a resposta do usar-codigo NÃO devolve o indicador; o resto do contrato fica", async () => {
+  const { codigo } = await R.gerarCodigoIndicacao(A);
+  const r = await usar(codigo, B);
+  restaurarConsole();
+  assert.equal(r.status, 200);
+  // Controlo positivo: o corpo é o da conversão real (senão «sem indicador» seria verde por vazio).
+  assert.equal(r.corpo.sucesso, true);
+  assert.equal(r.corpo.codigo, codigo);
+  assert.equal(r.corpo.indicado, B, "o indicado (o próprio titular) continua na resposta");
+  assert.equal(r.corpo.conversao.ok, true, "a conversão deixou de vir na resposta");
+  assert.equal(typeof r.corpo.idempotent, "boolean");
+  // A remoção:
+  assert.ok(!Object.hasOwn(r.corpo, "indicador"), "a resposta voltou a trazer o campo `indicador`");
+  assert.ok(!JSON.stringify(r.corpo).toLowerCase().includes(A.toLowerCase()),
+    "o endereço COMPLETO do indicante saiu na resposta (por outro campo)");
+  // SEG4 (R3 do validador) — `indicante: mascararEndereco(...)` passava: a resposta só pode ter as
+  // chaves do contrato que o cliente lê (nenhuma chave nova com a aresta, nem mascarada).
+  assert.deepEqual(Object.keys(r.corpo).sort(),
+    ["codigo", "conversao", "idempotent", "indicado", "pontosLance", "sucesso"],
+    "a resposta ganhou/perdeu chaves — rever se sai alguma aresta do grafo");
+});

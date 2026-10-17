@@ -51,11 +51,13 @@ test("UTAC108f (R18-D) · a Vitrine já não tem ramos do lojista (grelha intern
   assert.doesNotMatch(c, /corporativo|VitrineHeaderLojista|bannerSvg|Valor de contrato|Exclusividade/);
 });
 
-test("MC99.1/SEG6 · CONTROLO — o utilizador comum NÃO perdeu a informação das cotas", () => {
-  // Esta guarda existe para travar a tentação de gatear tudo: o MC99 ensinou que se mede o
-  // que o utilizador PERDE, não onde se disse que a informação estava. As cotas continuam
-  // visíveis no cartão da lista (SlotCard), com decisão anterior a documentá-lo (MC39.3.1 #8).
+// UTAC110j (R18-110j-2) — CONTRATO INVERTIDO por decisão do operador. Esta guarda do MC99.1 exigia
+// que o comprador continuasse a ver «Cotas: N de M» (MC39.3.1 #8). Com o Regulamento v5 (Arts.
+// 12/18/24/30) as cotas são pacotes de PATROCÍNIO do lojista, não informação do comprador ⇒ a linha
+// saiu do cartão da Vitrine (que é do comprador). A metade que continua a valer: o «Tipo» fica.
+test("UTAC110j (R18-110j-2) · a Vitrine do comprador já não mostra cotas; o «Tipo» continua", () => {
   const c = codigo(ler("src/pages/Vitrine.jsx"));
-  assert.match(c, /<Info\s+label="Cotas"/, "as cotas desapareceram TAMBÉM do cartão da lista — o comum perdeu a informação");
+  assert.doesNotMatch(c, /<Info\s+label="Cotas"/, "voltou a linha «Cotas» no cartão do comprador");
+  assert.doesNotMatch(c, /sistema de cotas Diamante/, "voltou o aviso do sistema de cotas (informação de patrocínio)");
   assert.match(c, /<Info label="Tipo"/, "o «Tipo» (modalidade) desapareceu do cartão da lista");
 });

@@ -115,7 +115,7 @@ export default function CardEdicaoEspecial({
   const alvo = alvoDaContagem(edicao, estado);
   const restanteMs = Number.isFinite(offsetMs) && alvo != null ? alvo - agora : null;
   const badge = BADGE[estado];
-  const produto = edicao.produto || t("edicao.especial.premio", "Prêmio especial");
+  const produto = edicao.produto || t("edicao.especial.premio", "Produto especial");
   // O alt do banner diz o que a imagem mostra (o produto), não só que existe.
   const altArte = `${t("edicao.especial.altArte", "Arte da edição especial")}: ${produto}`;
   const semRelogio = !Number.isFinite(offsetMs);
@@ -180,7 +180,7 @@ export default function CardEdicaoEspecial({
         <EdicaoBanner edicao={edicao} size={size} alt={altArte} />
 
         <div style={{ minWidth: 0 }}>
-          <div style={ROTULO}>{t("edicao.especial.premioEmDisputa", "Prêmio em disputa")}</div>
+          <div style={ROTULO}>{t("edicao.especial.premioEmDisputa", "Produto em disputa")}</div>
           <div style={{ fontSize: isMobile ? "0.95rem" : "1.05rem", color: COR.text, fontWeight: 800, lineHeight: 1.25 }}>
             {produto}
           </div>
@@ -190,7 +190,7 @@ export default function CardEdicaoEspecial({
             </div>
           )}
           <div style={{ fontSize: "0.66rem", color: COR.muted, lineHeight: 1.3 }}>
-            {t("edicao.especial.regra", "Lance relâmpago · vence o menor lance único · a partir de R$ 0,01 (debita do saldo)")}
+            {t("edicao.especial.regra", "Lance relâmpago · vence o menor lance único · cada lance consome 1 crédito de lance")}
           </div>
         </div>
       </div>

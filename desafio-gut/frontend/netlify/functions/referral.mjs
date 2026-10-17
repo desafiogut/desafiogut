@@ -216,7 +216,10 @@ async function handleUsarCodigo(req) {
     sucesso:    true,
     idempotent: !!r.idempotent,
     codigo,
-    indicador:  r.indicador,
+    // UTAC110j (R18-110j-5c · DEBT-034) — o campo `indicador` (endereço de carteira COMPLETO de quem
+    // deu o código = dado pessoal de TERCEIRO, aresta do grafo social) saiu da resposta. Medido: zero
+    // consumidores (o `ReferralRegistrar` só lê `idempotent` e `conversao`; 0 nos testes). Excepção ao
+    // HI9 autorizada pelo operador.
     indicado:   endereco,
     conversao: conversao
       ? { ok: !!conversao.ok, idempotent: !!conversao.idempotent, code: conversao.code || null }

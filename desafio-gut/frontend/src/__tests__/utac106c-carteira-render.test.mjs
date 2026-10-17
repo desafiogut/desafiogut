@@ -259,13 +259,15 @@ test("UTAC106c/RENDER · barra e rail: 4 principais na ordem canónica e 5 secun
 
 // ═══ UTAC107g (Frente B) — indicador DISCRETO das senhas antigas na Carteira ══════════════════
 // Só com senhas > 0 (número conhecido); leva a «Meus Ativos», a casa das senhas (Via A).
-const INDICADOR = "senhas antigas → ver em Meus Ativos";
+// UTAC110j (R18-110j-1-A) — o texto passou a dizer «(on-chain, legado)»: são as senhas antigas da
+// Via A, que só existem on-chain. O resto do contrato (sítio, cor, alvo, destino, estados) é o mesmo.
+const INDICADOR = "senhas antigas (on-chain, legado) → ver em Meus Ativos";
 
 test("UTAC107g/RENDER · com senhas > 0: «Você tem 7 senhas antigas → ver em Meus Ativos», DENTRO do vidro e muted", async () => {
   const { html, botaoCom } = await montarCarteira(CONECTADO); // saldoSenhas: 7
   const b = botaoCom(INDICADOR);
   assert.ok(b, "o indicador não aparece com 7 senhas");
-  assert.equal(texto(b), "Você tem 7 senhas antigas → ver em Meus Ativos");
+  assert.equal(texto(b), "Você tem 7 senhas antigas (on-chain, legado) → ver em Meus Ativos");
   assert.equal(b.props.style.color, "#6b7db8", "o indicador não está na cor muted");
   assert.ok(!b.props.style.background || b.props.style.background === "none", "o indicador ganhou fundo (devia ser discreto)");
   assert.ok(parseFloat(b.props.style.minHeight) >= 44, "alvo de toque < 44 px");
@@ -295,7 +297,7 @@ test("UTAC107g/RENDER · com senhas > 0: «Você tem 7 senhas antigas → ver em
 
 test("UTAC107g/RENDER · singular: 1 senha → «Você tem 1 senha antiga → …»", async () => {
   const { botaoCom } = await montarCarteira({ ...CONECTADO, saldoSenhas: 1 });
-  assert.equal(texto(botaoCom("ver em Meus Ativos")), "Você tem 1 senha antiga → ver em Meus Ativos");
+  assert.equal(texto(botaoCom("ver em Meus Ativos")), "Você tem 1 senha antiga (on-chain, legado) → ver em Meus Ativos");
 });
 
 test("UTAC107g/RENDER · CLICAR o indicador NAVEGA para /ativos", async () => {
@@ -323,7 +325,7 @@ test("UTAC107g/RENDER · NÃO aparece com 0, null, não-inteiro, «7» (string) 
 // a mesma regra de Meus Ativos (`estadoSenhasAntigas`: stale → «dados»). Fixado aqui.
 test("UTAC107g/RENDER · status «stale» com senhas > 0: o indicador aparece (valor conhecido)", async () => {
   const { html } = await montarCarteira({ ...CONECTADO, saldoSenhasStatus: "stale" });
-  assert.ok(html().includes("Você tem 7 senhas antigas → ver em Meus Ativos"), "com «stale» o indicador sumiu");
+  assert.ok(html().includes("Você tem 7 senhas antigas (on-chain, legado) → ver em Meus Ativos"), "com «stale» o indicador sumiu");
 });
 
 // UTAC107g.1 — o app é pt-BR: o indicador não pode voltar ao pt-PT («Tens…»/«não tens…»).

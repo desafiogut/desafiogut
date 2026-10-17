@@ -122,14 +122,18 @@ test("o v4 é legível e tem os artigos citados (guarda contra medição vazia)"
   }
 });
 
-test("cada (Art. Nº) na UI aponta para o artigo certo — palavra-chave na mesma linha", () => {
+// UTAC110j (R18-110j-4) — o alinhamento regulamento ↔ app foi feito: TODA a UI passa a citar o
+// Regulamento v5.0 (Art. 20 → 6º; Art. 7/8 → 14º; Art. 25/26 sem correspondente → citação removida).
+// A regra deste ficheiro mantém-se igual (assunto do artigo na janela da citação; o desconhecido
+// REPROVA); muda o mapa: era o do v4 (`EXIGIDO`, que fica só como registo histórico verificado
+// contra o v4), passa a ser o do v5 (`EXIGIDO_V5`) — e o assunto tem de constar do artigo no v5.
+test("cada (Art. Nº) na UI aponta para o artigo certo do v5 — palavra-chave na mesma linha", () => {
   const fs_ = ficheirosUI();
   assert.ok(fs_.length > 100, `a varredura viu ${fs_.length} ficheiros — demasiado poucos, medição suspeita`);
   const problemas = [];
   let total = 0;
   for (const f of fs_) {
-    // UTAC110h.1 — o gate legal cita o Regulamento v5.0 (verificado no teste próprio, abaixo);
-    // o resto da UI ainda cita o v4 (alinhamento regulamento ↔ app = UTAC110j).
+    // O gate tem o seu teste próprio (abaixo), com o mesmo mapa.
     if (f === GATE) continue;
     const lista = citacoes(ler(f));
     // ⚠️ CITAÇÕES COLECTIVAS: uma legenda como «Proteção de dados … — Art. 9 e Art. 10 do
@@ -145,8 +149,8 @@ test("cada (Art. Nº) na UI aponta para o artigo certo — palavra-chave na mesm
       total++;
       const grupo = porLinha.get(c.linha);
       const chaves = grupo.length >= 2
-        ? grupo.flatMap((n) => EXIGIDO[n] || [])
-        : EXIGIDO[c.artigo];
+        ? grupo.flatMap((n) => EXIGIDO_V5[n] || [])
+        : EXIGIDO_V5[c.artigo];
       // ⚠️ O DEFAULT É REPROVAR, não ignorar. A 1.ª versão fazia `continue` para artigos fora
       // do mapa — e a mutação do validador (`Art. 7º` -> `Art. 9º`) SOBREVIVEU por isso mesmo:
       // o 9 não estava mapeado, logo não era julgado. Uma citação que o teste não sabe verificar
@@ -158,6 +162,11 @@ test("cada (Art. Nº) na UI aponta para o artigo certo — palavra-chave na mesm
       const linha = c.texto.toLowerCase();
       if (!chaves.some((k) => linha.includes(k.toLowerCase()))) {
         problemas.push(`${f}:${c.linha + 1} cita Art. ${c.artigo}º sem nenhuma de [${chaves.join(", ")}]`);
+      }
+      // E o assunto tem de estar no PRÓPRIO artigo do v5 (não basta o mapa dizer).
+      const art = V5.match(new RegExp("^Art\\. " + c.artigo + "º — .*", "m"));
+      if (!art || !chaves.some((k) => art[0].toLowerCase().includes(k.toLowerCase()))) {
+        problemas.push(`${f}:${c.linha + 1} Art. ${c.artigo}º: o v5 não trata de [${chaves.join(", ")}]`);
       }
     }
   }

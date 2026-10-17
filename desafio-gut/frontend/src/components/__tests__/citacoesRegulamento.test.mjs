@@ -132,28 +132,26 @@ test("o gate liga para o v5 integral em /regras-oficiais, e a rota é pública (
   assert.match(m[1], /"\/regras-oficiais"/, "a /regras-oficiais não é pública — o link do gate devolvia o próprio gate");
 });
 
-// ⚠️ UTAC110h.1 — estes ficheiros AINDA citam o v4 (alinhamento regulamento ↔ app = UTAC110j, P4).
-// O teste fica como estava: guarda contra o artigo ERRADO dentro da numeração que cada um usa.
-test("os outros ficheiros que citam o Regulamento continuam alinhados, ocorrência a ocorrência", () => {
-  // ⚠️ Este bloco já foi mais fraco: verificava só a PRESENÇA do número correcto no
-  // ficheiro. O CardLance tem TRÊS ocorrências, e a mutação mostrou que alterar UMA
-  // deixava as outras a satisfazer a asserção — o mutante sobrevivia.
+// UTAC110j (R18-110j-4) — estes ficheiros citavam o v4 (Arts. 7/8/20/25/26) e passaram ao v5:
+// Art. 20 → Art. 6º (Passe R$ 2,00); Art. 7/8 → Art. 14º (menor lance único); Arts. 25 e 26 não
+// existem no v5 → a citação saiu (e o texto que só dependia dela). A guarda continua OCORRÊNCIA A
+// OCORRÊNCIA (a lição do mutante que sobrevivia quando se verificava só a presença) e ganha a outra
+// direcção: nenhuma citação v4 órfã pode voltar.
+test("os outros ficheiros que citam o Regulamento estão no v5, ocorrência a ocorrência", () => {
+  const ORFAOS_V4 = /Art\.\s*(?:7|8|20|25|26)\b(?!º)/;
   const casos = [
-    ["src/components/CardLance.jsx",
-      [/Art\. 26: mín R\$ 0,01/, /\(Art\. 26\)/, /Art\. 26: Mín R\$ 0,01/], /Art\. 27/],
-    // UTAC107d (R18-D, mockup completo) — o rodapé «🔒 Dados sanitizados · Art. 25: apuração
-    // automática» saiu da tabela. A citação continua nos outros ficheiros desta lista
-    // (Configurações, Meus Ativos); aqui fica só a guarda contra o artigo ERRADO.
-    ["src/components/TabelaLances.jsx", [], /Art\. 26: apuração/],
-    ["src/pages/Configuracoes.jsx",
-      [/\["Art\. 26",\s+"Lance mínimo/, /\["Art\. 25",\s+"Apuração automática/], /\["Art\. 27"/],
-    ["src/pages/MeusAtivos.jsx",
-      [/Art\. 25: Apuração automática · Art\. 7: Menor lance único ganha/], /Art\. 26: Apuração/],
-    // UTAC108f — `Seguranca.jsx` (só do lojista) foi apagada com o painel do lojista.
+    ["src/components/CardLance.jsx",          [/Mín R\$ 0,01 · Máx 5 lances\/min/]],
+    ["src/components/glass/ComingSoonHero.jsx", [/Menor lance único vence · Art\. 14º/]],
+    ["src/pages/Configuracoes.jsx",           [/\["Art\. 6º",\s+"Passe Desafio: R\$ 2,00\."\]/]],
+    ["src/pages/MeusAtivos.jsx",              [/Art\. 14º: Menor lance único ganha/]],
+    ["src/pages/MinhaCarteira.jsx",           [/Passe Desafio: R\$ \{VALOR_POR_SENHA_BRL\.toFixed\(2\)\} \(Art\. 6º\)/]],
+    // UTAC107d — o rodapé da TabelaLances já tinha saído; fica a guarda contra o regresso.
+    ["src/components/TabelaLances.jsx",       []],
   ];
-  for (const [f, devem, naoDeve] of casos) {
-    const t = ler(f);
-    for (const re of devem) assert.match(t, re, `${f}: perdeu a citação correcta ${re}`);
-    assert.doesNotMatch(t, naoDeve, `${f}: voltou a citar o artigo errado ${naoDeve}`);
+  for (const [f, devem] of casos) {
+    // Comentários fora (os comentários de UTAC citam os números antigos de propósito).
+    const t = ler(f).replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|\s)\/\/[^\n]*/g, " ");
+    for (const re of devem) assert.match(t, re, `${f}: perdeu a citação v5 ${re}`);
+    assert.doesNotMatch(t, ORFAOS_V4, `${f}: voltou a citar um artigo do v4 (7/8/20/25/26)`);
   }
 });

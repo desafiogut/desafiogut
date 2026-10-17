@@ -30,7 +30,13 @@ function codigo(src) {
     .join("\n");
 }
 
-const FRASE_NOVA = "Para o Lance Programado, o app converte R$ 2,00 em 1 senha automaticamente.";
+// UTAC110j (R18-110j-1-B/E) — a frase do UTAC107c («Para o Lance Programado, o app converte R$ 2,00
+// em 1 senha automaticamente.») SAIU: o Lance Programado é um ramo legado e inalcançável desde o
+// UTAC108e.1, logo a frase prometia o que o ecrã não deixa fazer. O saldo R$ serve, hoje, para
+// comprar o Passe Desafio (`comprar-passe-relampago`/`-programado`). Invariante mantida: o ecrã de
+// sucesso diz, como TEXTO, o que fazer com o saldo — e isso tem de ser verdade.
+const FRASE_ANTIGA = "Para o Lance Programado, o app converte R$ 2,00 em 1 senha automaticamente.";
+const FRASE_NOVA = "Use o saldo para comprar o Passe Desafio na Carteira.";
 
 test("controlo positivo: o stripper apaga a frase quando ela está só num comentário", () => {
   const so_comentario = `{/* ${FRASE_NOVA} */}\n<p>outra coisa</p>`;
@@ -52,8 +58,12 @@ test("a instrução obsoleta «Trocar R$ por Senhas» desapareceu do ficheiro in
   assert.doesNotMatch(cru, /Trocar R\$ por Senhas/, "a instrução obsoleta continua no modal");
 });
 
-test("coerência: o CardLance faz mesmo a conversão automática que o texto promete", () => {
-  const card = codigo(ler("src/components/CardLance.jsx"));
-  assert.match(card, /o app converte R\$ 2,00 do saldo automaticamente/,
-    "o CardLance deixou de dizer que converte R$ 2,00 sozinho — o texto do depósito ficaria a mentir");
+test("coerência: a frase antiga (conversão no Lance Programado) não voltou, e a Carteira tem mesmo a compra do Passe", () => {
+  const modal = codigo(ler("src/components/ComprarFichasModal.jsx"));
+  assert.ok(!modal.includes(FRASE_ANTIGA), "voltou a promessa do ramo legado");
+  assert.doesNotMatch(modal, /converte R\$ 2,00 em 1 senha|Quantas senhas|troca por senhas/,
+    "o modal de depósito voltou a falar em comprar/converter senhas");
+  // O que a frase nova promete tem de existir: o botão de compra do Passe na Carteira.
+  assert.match(codigo(ler("src/pages/MinhaCarteira.jsx")), /Comprar Passe Desafio/,
+    "a Carteira já não tem a compra do Passe — o texto do depósito ficaria a mentir");
 });

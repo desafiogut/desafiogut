@@ -178,8 +178,14 @@ describe("UTAC109e · as páginas usam o cartão único com a acção certa (cab
     const c = codigo(ler("components/CardLance.jsx"));
     assert.match(c, /: "Dar lance";/);
     assert.doesNotMatch(c, /⚡ Lance Relâmpago/);
-    for (const s of ["⏳ Processando...", "🎫 Confirmar Lance (−1 senha)", "🔄 Converter R$ → senha e Lançar"]) {
+    // UTAC110j (R18-110j-1-B) — os dois rótulos do ramo Programado («🎫 Confirmar Lance (−1 senha)»,
+    // «🔄 Converter R$ → senha e Lançar») SAÍRAM: o ramo é legado/inalcançável e a copy prometia a
+    // conversão R$ → senha do modelo antigo. Os estados vivos do botão continuam.
+    for (const s of ["⏳ Processando...", "🔐 Autenticando…", "⏳ Carregando saldo..."]) {
       assert.ok(c.includes(s), `estado do botão perdido: ${s}`);
+    }
+    for (const s of ["🎫 Confirmar Lance (−1 senha)", "🔄 Converter R$ → senha e Lançar"]) {
+      assert.ok(!c.includes(s), `voltou a copy do ramo legado: ${s}`);
     }
   });
 });

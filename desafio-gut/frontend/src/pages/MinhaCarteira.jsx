@@ -563,7 +563,7 @@ export default function MinhaCarteira() {
                 margin: "0.75rem 0 0", fontSize: "0.68rem", color: COR.muted, lineHeight: 1.45,
               }}>
                 Depósito por PIX via Mercado Pago — <strong style={{ color: COR.blue300 }}>desafiogut@gmail.com</strong>{" "}
-                (crédito automático após a aprovação). Custo de cada senha: R$ {VALOR_POR_SENHA_BRL.toFixed(2)} por edição (Art. 20).
+                (crédito automático após a aprovação). Passe Desafio: R$ {VALOR_POR_SENHA_BRL.toFixed(2)} (Art. 6º).
               </p>
 
               {saldoRsStatus === "error" && (
@@ -587,7 +587,7 @@ export default function MinhaCarteira() {
                     color: COR.muted, fontSize: "0.72rem", textAlign: "left", cursor: "pointer",
                   }}
                 >
-                  Você tem {senhasAntigas} {senhasAntigas === 1 ? "senha antiga" : "senhas antigas"} → ver em Meus Ativos
+                  Você tem {senhasAntigas} {senhasAntigas === 1 ? "senha antiga" : "senhas antigas"} (on-chain, legado) → ver em Meus Ativos
                 </button>
               )}
             </GlassCard>

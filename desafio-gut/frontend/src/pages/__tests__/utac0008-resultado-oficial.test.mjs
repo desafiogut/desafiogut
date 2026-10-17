@@ -97,7 +97,7 @@ function vencedoresNoEcra(html) {
 /** Quantos 🏆 a LISTA desenha (linha vencedora = 🏆 na posição E no selo). */
 function trofeusNaLista(html) {
   const ini = html.indexOf("Filtrar:");
-  const fim = html.indexOf("Art. 25", ini);
+  const fim = html.indexOf("Art. 14º", ini); // UTAC110j — o rodapé passou de «Art. 25» ao v5 (Art. 14º)
   assert.ok(ini >= 0 && fim > ini, "controlo: não encontrei a lista de lances na página");
   return html.slice(ini, fim).split("🏆").length - 1;
 }

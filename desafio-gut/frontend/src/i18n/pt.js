@@ -115,18 +115,20 @@ export default {
   "ativos.palpites.titulo": "🎯 Meus palpites",
   "ativos.palpites.placeholder": "Esta área ainda não está disponível. Seus palpites vão aparecer aqui quando o recurso for lançado.",
   // MC94.2 — edição especial (Dashboard). pt = fallbacks dos componentes.
-  "edicao.especial.premio": "Prêmio especial",
+  // UTAC110j (R18-110j-5a) — «Prêmio especial/em disputa» → «Produto» (produto físico patrocinado, v5).
+  "edicao.especial.premio": "Produto especial",
   "edicao.especial.abreEm": "Abre em",
   "edicao.especial.abrindo": "Abrindo em instantes…",
   "edicao.especial.fechaEm": "Fecha em",
   "edicao.especial.titulo": "🎁 Edição especial",
   "edicao.especial.altArte": "Arte da edição especial",
-  "edicao.especial.premioEmDisputa": "Prêmio em disputa",
+  "edicao.especial.premioEmDisputa": "Produto em disputa",
   "edicao.especial.brasilia": "(horário de Brasília)",
   // MC94.4.1 — R18: a especial é RELÂMPAGO e debita SALDO (a partir de R$ 0,01). O texto
   // anterior ("Rodada programada · ... cada lance usa 1 senha (R$ 2,00)") descrevia o
   // comportamento ANTIGO e era a causa visível do desvio reportado pelo operador.
-  "edicao.especial.regra": "Lance relâmpago · vence o menor lance único · a partir de R$ 0,01 (debita do saldo)",
+  // UTAC110j (R18-110j-3, achado B1 do validador) — o lance já não debita R$ (UTAC110d): consome 1 crédito de lance.
+  "edicao.especial.regra": "Lance relâmpago · vence o menor lance único · cada lance consome 1 crédito de lance",
   "edicao.especial.badgeEmBreve": "🕒 Em breve",
   "edicao.especial.badgeAbrindo": "⏳ Abrindo",
   "edicao.especial.badgeAberta": "🟢 Aberta",

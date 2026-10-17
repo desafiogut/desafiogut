@@ -122,7 +122,7 @@ function formatarTimer(segundosRestantes) {
   return `${pad(m)}:${pad(s)}`;
 }
 
-function SlotCard({ slot, isMobile, sticky, hrefOverride, status, timer, cotaInfo, produtos }) {
+function SlotCard({ slot, isMobile, sticky, hrefOverride, status, timer, produtos }) {
   return (
     <GlassCard
       as="article"
@@ -198,12 +198,9 @@ function SlotCard({ slot, isMobile, sticky, hrefOverride, status, timer, cotaInf
       </header>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.4rem 0.75rem" }}>
-        <Info
-          label="Cotas"
-          value={cotaInfo?.atribuidas != null
-            ? `${cotaInfo.atribuidas} de ${cotaInfo.total}`
-            : `${slot.cotasDisponiveis}`}
-        />
+        {/* UTAC110j (R18-110j-2) — a linha «Cotas: N de M» saiu: a Vitrine é do COMPRADOR e, no v5,
+            as cotas são pacotes de patrocínio do lojista (Arts. 12/24). O `cotaInfo` continua a chegar
+            (prop) — só deixou de ser mostrado. */}
         <Info label="Tipo" value={slot.modalidade} small />
         {/* UTAC108f (R18-D) — «Contrato»/«Mín. produto» (dados internos do lojista, MC39.3.1 #8) saíram. */}
       </div>
@@ -350,18 +347,8 @@ function VitrineDetalhe({ slot, isMobile }) {
           </ul>
         </div>
 
-        <div style={{
-          padding: "0.85rem 1rem",
-          background: "rgba(13,18,53,0.25)",
-          borderRadius: "10px",
-          border: "1px dashed rgba(255,255,255,0.1)",
-          fontSize: "0.78rem", color: "#94a3b8", lineHeight: 1.5,
-        }}>
-          ⚠ <strong style={{ color: "#fbbf24" }}>Aviso</strong>: o sistema de cotas Diamante/Ouro/Prata/Bronze
-          ainda não está ativo no contrato. O CTA abaixo leva à edição atual
-          em produção (Edição R-1) — quando as 4 edições paralelas da spec
-          forem implementados, cada slot terá seu próprio destino.
-        </div>
+        {/* UTAC110j (R18-110j-2) — saiu o aviso «o sistema de cotas Diamante/Ouro/Prata/Bronze ainda
+            não está ativo no contrato»: era informação de patrocínio (lojista), não do comprador. */}
 
         <Link
           to="/mercado"

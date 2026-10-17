@@ -170,9 +170,10 @@ export default function Configuracoes() {
             ["Proteção",    "Cada lance é assinado e protegido no seu dispositivo."],
             ["Anti-abuso",  "Limite de velocidade por conta contra automações."],
             ["Privacidade", "Todos os campos são higienizados contra ataques."],
-            ["Art. 20",     "Senha: R$ 2,00 por edição."],
-            ["Art. 26",     "Lance mínimo: R$ 0,01 · máx. 2 casas decimais."],
-            ["Art. 25",     "Apuração automática pelo Painel interno."],
+            // UTAC110j (R18-110j-4) — Art. 20 (v4) → Art. 6º (v5). As linhas «Art. 26» (lance
+            // mínimo) e «Art. 25» (apuração automática) saíram: esses artigos do v4 não existem no v5
+            // e o texto da linha dependia só da citação.
+            ["Art. 6º",     "Passe Desafio: R$ 2,00."],
           ].map(([nome, desc]) => (
             <div key={nome} style={{ display: "flex", gap: "0.6rem", alignItems: "flex-start" }}>
               <span style={{

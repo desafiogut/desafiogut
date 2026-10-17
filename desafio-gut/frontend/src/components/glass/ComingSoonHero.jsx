@@ -52,7 +52,7 @@ export default function ComingSoonHero({ isMobile, edicao }) {
         margin: 0,
         fontSize: isMobile ? "0.72rem" : "0.82rem",
         color: COR.muted, letterSpacing: "0.02em",
-      }}>Menor lance único vence · Art. 8</p>
+      }}>Menor lance único vence · Art. 14º</p>{/* UTAC110j (R18-110j-4) — Art. 8 (v4) → Art. 14º (v5) */}
     </div>
   );
 }

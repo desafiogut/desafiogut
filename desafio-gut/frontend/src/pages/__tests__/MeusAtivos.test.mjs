@@ -110,8 +110,10 @@ describe("MC94 · MeusAtivos — HARD GATE 5: nada regride", () => {
     const t = texto(renderizar());
     assert.match(t, /Meus Ativos/);
     assert.match(t, /Histórico de lances/i);
-    assert.match(t, /Art\. 25/, "perdeu a nota do Art. 25");
-    assert.match(t, /Art\. 7/,  "perdeu a nota do Art. 7");
+    // UTAC110j (R18-110j-4) — o rodapé passou ao v5: «Art. 7» → «Art. 14º»; a nota do «Art. 25»
+    // (apuração automática) saiu, por não haver artigo correspondente no v5.
+    assert.match(t, /Art\. 14º: Menor lance único ganha/, "perdeu a nota do Art. 14º (v5)");
+    assert.doesNotMatch(t, /Art\. 25|Art\. 7\b/, "voltou uma citação do v4 no rodapé");
   });
 
   test("os filtros continuam lá", () => {

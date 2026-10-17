@@ -1,0 +1,43 @@
+schema: utac/1
+name: UTAC110j
+title: "Alinhar a UI ao Regulamento v5 (vocabulário, artigos, promessas) + DEBT-034"
+type: saneamento
+baseline: 0c99cc9
+motivo: >-
+  A UI ainda usa vocabulário e artigos do v4 (senha, Art. 20/25/26, «Lance programado
+  consome 1 senha») enquanto o Regulamento v5, a página /regras-oficiais e o gate já estão no v5.
+  A DEBT-034 (campo `indicador` na resposta do /referral) está aberta.
+frentes:
+  - id: A
+    nome: Vocabulário + artigos v4 -> v5 em src/ (só texto)
+    entrega: [src/components, src/pages, src/i18n, teste de vocabulário + mutação]
+  - id: B
+    nome: Promessas desalinhadas (senha R$ 2,00, lance em R$, prémio)
+    entrega: [src/components/CardLance.jsx, ComprarFichasModal.jsx, Configuracoes.jsx]
+  - id: C
+    nome: DEBT-034 — medir e PROPOR (o operador decide)
+    entrega: [_logs/UTAC110j_SEG-1_MEDICAO.md §-1.6]
+  - id: D
+    nome: Coerência das ligações às Regras Oficiais
+    entrega: [verificação, sem código se já coerente]
+autoriza:
+  - editar textos em src/pages, src/components, src/widgets, src/i18n
+  - src/lib/api.js só se a DEBT-034 o exigir
+  - criar testes de vocabulário (com mutação)
+  - validador adversarial em worktree próprio (A13)
+proibe:
+  - git add -A; commit/push sem autorização do operador; deploy em background
+  - CLAUDE.md (é do Hermes); _logs/DEBT.md sem aprovação (só registar)
+  - docs/REGULAMENTO-v5.md, gate legal, GUTO, contratos on-chain, fluxo PIX/Billing
+  - backend (excepto DEBT-034, e só com decisão do operador — HI9)
+  - criar funcionalidade
+dependencias:
+  - UTAC110h / 110h.1 / 110h.3 fechados (v5 no repo, gate e GUTO alinhados)
+regras_activas: [E, T, G, L, S, A, P, AU, ST, HI]
+regras_extra: [A14]
+stop_conditions_extra: []
+ressalvas:
+  - A14 — RAM < 1500 MB → libertar/escalar
+  - conflito UI × Regulamento v5 → PARAR e reportar
+  - DEBT-034 com mudança de contrato de API → PARAR (HI9)
+  - HI5 — 2 h

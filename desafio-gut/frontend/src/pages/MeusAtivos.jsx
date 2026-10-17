@@ -250,7 +250,7 @@ export default function MeusAtivos() {
           (Via A). Discreta: contagem + onde se usam, sem botão (decisão R18-D). Roxo = cor
           semântica de senhas em todo o app (`_estilo.js`). */}
       <section style={{ ...caixa(isMobile), marginBottom: sectionGap }} data-secao="senhas-antigas" data-estado={senhas.estado}>
-        <h2 style={tituloSecao(isMobile)}>🎫 Senhas antigas</h2>
+        <h2 style={tituloSecao(isMobile)}>🎫 Senhas antigas (on-chain, legado)</h2>
         <p style={legenda(isMobile)}>
           {senhas.estado === "sem-sessao" && "Entre na sua conta para ver as senhas antigas."}
           {senhas.estado === "carregando" && "Verificando as senhas…"}
@@ -259,7 +259,9 @@ export default function MeusAtivos() {
           {senhas.estado === "dados" && (
             <>
               Você tem <strong style={{ color: COR_SECAO.senhas }}>{senhas.n} {senhas.n === 1 ? "senha antiga" : "senhas antigas"}</strong>.
-              {" "}São usadas no Lance Programado do Menor Lance Único.
+              {/* UTAC110j (R18-110j-1-B) — «São usadas no Lance Programado» saiu: esse ramo é legado e
+                  inalcançável desde o UTAC108e.1. */}
+              {" "}Ficam registradas on-chain (legado).
             </>
           )}
         </p>
@@ -353,7 +355,9 @@ export default function MeusAtivos() {
         borderTop: "1px solid rgba(245,166,35,0.08)",
         fontSize: "0.7rem", color: "#6b7db8", textAlign: "center", lineHeight: 1.5,
       }}>
-        Art. 25: Apuração automática · Art. 7: Menor lance único ganha
+        {/* UTAC110j (R18-110j-4) — «Art. 25: Apuração automática» saiu (o Art. 25 do v4 não tem
+            correspondente no v5); Art. 7 (v4) → Art. 14º (v5). */}
+        Art. 14º: Menor lance único ganha
       </p>
     </div>
   );
