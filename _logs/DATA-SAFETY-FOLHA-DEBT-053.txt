@@ -1,0 +1,282 @@
+================================================================================
+DEBT-053 — FOLHA DE CORRESPONDÊNCIA DO DATA SAFETY (Play Console)
+DesafioGUT · REVISÃO 2 — 2026-10-17 (pós-decisões D-1/D-2/D-3/D-7) · base: 5cc7958
+Arquivo de TRABALHO — NÃO COMMITAR (untracked em _logs/)
+Material confidencial de trabalho interno: não é a política publicada, não é o
+formulário submetido. É o mapa para o preencher sem interpretar.
+================================================================================
+
+ESTADO EM UMA LINHA
+  Formulário: pronto a preencher, com 3 decisões ainda abertas (D-4, D-5, D-6) e
+  2 bloqueios operacionais que NÃO são meus (E-1 e-email do DPO; E-3 deploy +
+  re-aceite). A política foi corrigida no repo (§8) — mas a URL publicada só
+  muda depois do deploy.
+
+LEGENDA
+  [OK]    valor fechado — tem linha de código que o sustenta
+  [DEC]   exige DECISÃO DO DONO
+  [FECH]  decisão do dono já tomada nesta revisão
+  [?]     ambíguo na taxonomia da Google
+  [ESC]   escalado — fora do escopo autorizado, precisa de autorização
+
+REGRA APLICADA: nenhum valor sem `ficheiro:linha`.
+Caminhos relativos a desafio-gut/frontend/, salvo indicação.
+
+================================================================================
+§1. PERGUNTAS GERAIS (primeiro ecrã do formulário)
+================================================================================
+campo | valor | fonte | observação
+------|-------|-------|------------
+A app recolhe ou partilha algum tipo de dados exigido pelo formulário? | SIM (recolhe e partilha num ponto — §3) | package.json (@privy-io, @supabase, @sentry, @fingerprintjs, web-vitals) + AndroidManifest.xml:80 | —
+Todos os dados são encriptados em trânsito? | SIM | netlify.toml:82 (CSP só https/wss) | `http://127.0.0.1:8545` no CSP é o nó local de dev; não existe no AAB.
+A app fornece mecanismo de eliminação de dados? | SIM — in-app + recurso web | src/App.jsx:347 · src/Boot.jsx:54 · netlify/functions/_lib/conta-delete.mjs:146 | GET /excluir-conta → 200 (medido 17/10).
+A app está comprometida com a Política Famílias? | NÃO | src/components/TermosConsentimento.jsx:26,35 | Gate de maioridade obrigatório.
+Público-alvo | 18+ / adulto | idem | —
+URL da política de privacidade | https://silly-stardust-ca71bc.netlify.app/privacidade | src/App.jsx:350 · src/Boot.jsx:54 | 200 medido. ⚠️ O texto desta URL é o ANTIGO até ao próximo deploy — ver E-3.
+URL de eliminação de conta | https://silly-stardust-ca71bc.netlify.app/excluir-conta | idem | 200 medido; nomeia app + developer (src/pages/ExcluirConta.jsx:47-50).
+A app usa dados de localização? | NÃO | AndroidManifest.xml:80 · grep `geolocation` em src/ = 0 | IP não é usado para localizar (ver 3.8 da política).
+
+================================================================================
+§2. TIPOS DE DADOS — uma linha por SUBCATEGORIA declarada
+Valor = Recolhido? / Partilhado? / Obrigatório ou opcional?
+================================================================================
+campo | valor | fonte | observação
+------|-------|-------|------------
+2.1 LOCALIZAÇÃO (aproximada e precisa) | NÃO | AndroidManifest.xml:80 | Nada a declarar.
+2.2 Info pessoais → Nome | SIM / não partilhado / obrigatório só no resgate | src/components/ResgatarCartaoModal.jsx · _lib/pedidos.mjs:64-67 · src/PrivyRoot.jsx:182 | —
+2.2 Info pessoais → E-mail | SIM / NÃO partilhado (D-2: MP é processador) / obrigatório | src/pages/MinhaCarteira.jsx:93-94 → src/components/ComprarFichasModal.jsx:188 → netlify/functions/iniciar-pagamento.mjs:84 | Vai também como destinatário do e-mail transaccional (SendGrid, processador). Não persistido em `resgates` (resgatar-cartao.mjs:16-21).
+2.2 Info pessoais → Endereço (postal) | SIM / não partilhado / OPCIONAL | ResgatarCartaoModal.jsx:78-112 · _lib/pedidos.mjs:64-84 · resgatar-cartao.mjs:163,181 | Corrigido no rascunho (era «NÃO»).
+2.2 Info pessoais → Telefone | [FECH D-7] SIM / não partilhado / OPCIONAL | ResgatarCartaoModal.jsx:112 · _lib/pedidos.mjs:80-85 | Política corrigida: §3.7 (Privacidade.jsx:140) + nota na §4 (Privacidade.jsx:178).
+2.2 Info pessoais → ID fiscal (CPF) | SIM / NÃO partilhado / obrigatório no resgate | ResgatarCartaoModal.jsx:73 · _lib/pedidos.mjs:68 · `resgates.morada` | [DEC D-4] Onde o declarar: «Info pessoais → Outras» (recomendado) ou «Financeiras → Outras». A Google não tem «Government ID».
+2.2 Info pessoais → IDs de utilizador | SIM / não partilhado / obrigatório | endereço de carteira (Privy embedded wallet) · `endereco` em todas as tabelas (exportar-dados.mjs:116-133) | Declarar o endereço de carteira SÓ aqui (não duplicar em «Outras»).
+2.2 Info pessoais → Outras informações pessoais | NÃO | — | Após remover a duplicação do endereço de carteira que o rascunho fazia.
+2.3 Financeiras → Histórico de compras | SIM / NÃO partilhado / obrigatório | compras PIX + Google Play · `passes`, `pontos`, `google_play_compras` · _lib/google-play-billing.mjs:174 | Política §3.2 agora nomeia as compras Google Play (Privacidade.jsx:99).
+2.3 Financeiras → Informações de pagamento do utilizador | NÃO | Privacidade.jsx:100 · ComprarFichasModal.jsx:25-28 | Não se guarda cartão nem chave PIX.
+2.3 Financeiras → Outras informações financeiras | SIM / não partilhado / obrigatório | `saldo_rs`, `eco_quildo`, `pontos`, `troco_senhas` (exportar-dados.mjs:116-133) | —
+2.4 Saúde e condição física | NÃO | manifest + grep em src/ | —
+2.5 Mensagens (mensagens no app) → GUTO | [FECH D-3] SIM / PARTILHADO com o fornecedor de IA / opcional | ChatbotWidget.jsx → netlify/functions/chatbot.mjs:65 (`api.deepseek.com`), :1327 (texto), :1340-1346 (`messages`), :1477 (histórico) | Não persistido em nossos servidores (0 escritas de `pergunta`). Declarar partilha. Política §3.9 (Privacidade.jsx:160) + §5 (Privacidade.jsx:203).
+2.5 Mensagens → SMS/MMS | NÃO | 0 permissões de SMS no manifest | A política §4 distingue os dois casos (Privacidade.jsx:178).
+2.6 Fotos e vídeos | NÃO | manifest | —
+2.7 Ficheiros de áudio | NÃO | manifest | —
+2.8 Ficheiros e documentos | NÃO | manifest | —
+2.9 Calendário | NÃO | manifest | —
+2.10 Contactos | NÃO | manifest | —
+2.11 Atividade no app → Interações no app | SIM / não partilhado / opcional | src/lib/analytics.js:22-30 → analytics.mjs:64-104 (Blob `analytics:{minuto}:{visitorId}`) | pageview, clique, scroll, tempo de sessão.
+2.11 Atividade no app → Conteúdo gerado pelo utilizador | SIM / não partilhado / obrigatório para participar | lances (hash Argon2id), palpites (`palpites`), presença (`atividade_utilizadores`) | Palpites faltavam no rascunho.
+2.11 Atividade no app → Histórico de pesquisa | NÃO | 0 resultados em src/pages/Vitrine.jsx | Não há caixa de pesquisa.
+2.12 Navegação na web | NÃO | — | Sem WebView de web aberta.
+2.13 Desempenho → Relatórios de falhas | SIM / não partilhado / opcional | src/lib/sentryLazy.js:79-113 · src/Boot.jsx:74-75 | O formulário não tem «só com consentimento»: marcar opcional; a condição vive na política §3.6.
+2.13 Desempenho → Diagnósticos | SIM / não partilhado / opcional | sentryLazy.js:102 (`tracesSampleRate`) · :113 (replay só em erro, mascarado) · src/lib/webVitals.js:16,23 | Declarar «Diagnósticos», não só «falhas». Política §3.6 agora cita web-vitals (Privacidade.jsx:134).
+2.13 Desempenho → Outros dados de desempenho | NÃO | — | Coberto por Diagnósticos.
+2.14 IDs de dispositivo ou outros | SIM / não partilhado / obrigatório | src/lib/fingerprint.js:11,27-38 (visitorId) · AppContext.jsx:794 (`X-Visitor-ID`) · analytics.mjs:64 · rate-limiter.mjs:59-62 (IP) | visitorId + IP. O «Android ID» do rascunho não existe no código. Política §3.8 (Privacidade.jsx:151).
+2.15 Outros tipos de dados | NÃO | — | —
+
+================================================================================
+§3. PARTILHA — quem recebe o quê, e o que se declara
+REGRA OFICIAL (citada): só se declara «partilha» quando os dados vão para um
+terceiro. Transferências para um «service provider» que processa em nome do
+developer NÃO se declaram como partilha.
+Fonte: Play Console Help 10787469 — «The following types of data transfers do
+not need to be disclosed as "sharing": Service providers. Transferring user
+data to a "service provider" that processes it on behalf of the developer.»
+================================================================================
+fornecedor | o que sai da app | fonte | Declarar partilha?
+-----------|------------------|-------|--------------------
+Privy | e-mail, identificador de conta, endereço de carteira, assinaturas | src/PrivyRoot.jsx:182 | NÃO — processador (D-1).
+Supabase | todas as tabelas do §2 | exportar-dados.mjs:116-133 | NÃO — processador (D-1).
+Netlify | tudo o que passa nas funções; Blobs de analytics/rate-limit | analytics.mjs:22-34 · rate-limiter.mjs:25,41 | NÃO — processador (D-1).
+Mercado Pago | e-mail do pagador + dados da transacção. CPF do UTILIZADOR: NÃO (ver §9/REFUTAÇÃO) | ComprarFichasModal.jsx:188 → iniciar-pagamento.mjs:84-86 → _lib/pix-provider/mercadopago.mjs:41 | [FECH D-2] NÃO. O e-mail vai como processador.
+Google Play (Billing) | purchaseToken, productId, orderId | _lib/google-play-billing.mjs:174 · `google_play_compras` | NÃO — processador (D-1).
+SendGrid (Twilio) | e-mail do destinatário + corpo da confirmação (nome+morada no resgate) | _lib/email.mjs:30-37 · resgatar-cartao.mjs:214-225 | NÃO — processador (D-1).
+Sentry | stack traces, breadcrumbs, web-vitals, IP no alerta de rate-limit | sentryLazy.js:79-130 · rate-limiter.mjs:72 | NÃO — processador (D-1). Endereços mascarados antes do envio (sentryLazy.js:125-130).
+DeepSeek | texto da pergunta + histórico do chat | chatbot.mjs:65,1327,1340-1346 | [FECH D-3] SIM — declarar «Mensagens no app» partilhadas.
+Frenet | apenas o código de rastreio | _lib/rastreio-frenet.mjs:70 | NÃO — não recebe dado pessoal.
+Blockchain Ethereum | endereço, valores, timestamps | contrato LeilaoGUT | [DEC D-6] Recomendo NÃO declarar partilha + cobrir na política (§3.5).
+FingerprintJS (biblioteca) | nada sai — o SDK corre no aparelho | src/lib/fingerprint.js:17-38 | NÃO — não há chamada ao fornecedor.
+Transportadora / fornecedor do cartão | nome + morada + telefone (CPF não vai no e-mail) | _lib/nota-tecnica.mjs:76-104 · resgatar-cartao.mjs:214-225 | [DEC D-5] O código envia a Nota Técnica ao E-MAIL DO TITULAR; se ela for reencaminhada para a transportadora, passa a partilha.
+
+================================================================================
+§4. FINALIDADES a marcar por tipo
+================================================================================
+tipo | finalidades
+-----|-------------
+Info pessoais | Funcionalidade da app · Gestão de conta · Prevenção de fraude
+Financeiras | Funcionalidade da app · Prevenção de fraude
+Atividade no app | Funcionalidade da app · Análise · Prevenção de fraude
+Mensagens (chat) | Funcionalidade da app
+Desempenho | Análise · Funcionalidade da app (estabilidade)
+IDs de dispositivo | Funcionalidade da app · Prevenção de fraude · Análise
+Publicidade | NÃO em nenhum tipo (0 SDK de ads em package.json)
+Personalização | NÃO em nenhum tipo
+
+================================================================================
+§5. SEGURANÇA, RETENÇÃO E ELIMINAÇÃO (texto de apoio)
+================================================================================
+item | valor | fonte
+-----|-------|------
+Encriptação em trânsito | TLS em toda a stack | netlify.toml:82
+Apagado na exclusão | pontos, palpites, lances (fora de edição aberta), atividade, notificações, google_play_compras, stores de indicação | _lib/conta-delete.mjs · docs/lgpd-politica-retencao.md §1.1
+Anonimizado | `resgates` (morada → «[Conta Deletada]», endereço → `anon:<sha256>`), `cotas_pagas`, `eco_quildo` | idem
+Retido | registos fiscais (10 anos) · lances on-chain (imutáveis) · lances de edição AINDA ABERTA (DEBT-049) | _logs/DEBT.md (DEBT-049, DEBT-055)
+Como exercer | in-app (Configurações) + web /excluir-conta sem sessão | src/App.jsx:347 · src/pages/ExcluirConta.jsx
+Portabilidade | «Baixar meus dados» (JSON/CSV), 18 tabelas + Blobs | exportar-dados.mjs:116-133
+
+================================================================================
+§6. DECLARAÇÃO DE FUNCIONALIDADES FINANCEIRAS (ecrã separado)
+================================================================================
+campo | valor | fonte
+------|-------|------
+A app permite compras? | SIM | Google Play Billing (_lib/google-play-billing.mjs) + PIX (iniciar-pagamento.mjs)
+Tipo | bens/serviços digitais (Passe Desafio) + resgate de cartão com pontos | comprar-passe*.mjs · resgatar-cartao.mjs
+Transações on-chain? | SIM — declarar como transações DA APP | contrato LeilaoGUT
+É exchange / converte fiat↔cripto / empréstimos / títulos? | NÃO | 0 código de exchange
+Permissões financeiras proibidas? | NENHUMA | AndroidManifest.xml:80 (só INTERNET)
+Aviso (fora do Data Safety) | A compra por PIX dentro do AAB pode colidir com a Payments policy; hoje o hook bifurca por `isPagamentoNativoAtivo` | src/hooks/useComprarPasse.js
+
+================================================================================
+§7. DECISÕES DO DONO — tomadas em 2026-10-17
+================================================================================
+D-1 [FECH] Processadores NÃO contam como partilha.
+    Efeito: Privy, Supabase, Netlify, Google Play, SendGrid e Sentry entram como
+    «recolhido, não partilhado». A citação oficial está em §3.
+
+D-2 [FECH] Mercado Pago NÃO é partilha.
+    Efeito: e-mail do pagador vai como processador; nada de «partilhado» para
+    Informações financeiras nem para E-mail por causa do MP.
+
+D-3 [FECH] O chat é funcionalidade do produto — DECLARAR.
+    Efeito: «Mensagens no app» = recolhido + PARTILHADO com o fornecedor de IA.
+    Política: nova §3.9 e nova linha na §5 (feito — §8).
+
+D-7 [FECH] Telefone — DECLARAR e corrigir a política.
+    Efeito: «Telefone» = SIM, opcional. Política: §3.7 + nota na §4 (feito — §8).
+
+AINDA ABERTAS
+D-4 Onde colocar o CPF: «Info pessoais → Outras» (recomendado) ou
+    «Financeiras → Outras». Não bloqueia o resto do formulário, mas fecha-o.
+D-5 A Nota Técnica é reencaminhada para a transportadora/fornecedor?
+    (a) não — só o titular a recebe  /  (b) sim — então «Nome» e «Endereço»
+    passam a PARTILHADOS. Depende do processo real, não do código.
+D-6 Blockchain conta como partilha? Recomendo NÃO + política (já coberta §3.5).
+
+================================================================================
+§8. O QUE FOI CORRIGIDO NO REPO NESTA REVISÃO (código de conteúdo legal)
+================================================================================
+Ficheiro único tocado: desafio-gut/frontend/src/pages/Privacidade.jsx
+(alterações NÃO commitadas; o deploy é teu)
+
+# | onde | o que mudou
+--|------|-------------
+1 | §3.6 (l.130-137) | passou a declarar as métricas de desempenho (LCP/INP/CLS/TTFB via web-vitals) e a dizer que o serviço só carrega depois do aceite.
+2 | §3.7 (l.140) NOVO | dados de entrega do cartão: nome, CPF, CEP, logradouro, número, complemento, bairro, cidade, UF e telefone opcional; finalidade, base legal e o que acontece na exclusão.
+3 | §3.8 (l.151) NOVO | visitante/visitorId do FingerprintJS (calculado no aparelho, a biblioteca não transmite nada) e o IP (rate-limit/segurança, sem uso de localização).
+4 | §3.9 (l.160) NOVO | mensagens do assistente GUTO: texto + histórico enviados ao fornecedor de IA; não são guardadas nos nossos servidores; uso opcional; aviso para não escrever dados sensíveis.
+5 | §4 (l.171-185) | saiu «dados de telefone» da lista de NÃO recolhidos; entrou a nota de que o telefone existe (opcional, §3.7) e de que o chat não é SMS/MMS.
+6 | §5 (l.190-212) | Mercado Pago passou a incluir o e-mail do pagador; entraram Google Play (faturamento), SendGrid, DeepSeek e Frenet; a introdução deixou de dizer «partilhados exclusivamente com prestadores» (o chat tem tratamento próprio).
+7 | §3.2 (l.99) | o histórico de compras passou a nomear as compras efetuadas pelo Google Play.
+
+Verificação feita (não presumida):
+- JSX compila (transform oxc via vite) — 35 002 bytes de saída.
+- Guardas de texto que tocam nesta página, corridas uma a uma, TODAS verdes:
+  utac110k1 11/11 · utac110h1+utac110h2+utac110j 21/21 · utac109b+utac107g2+utac110h3 17/17.
+- Zero ocorrências de «senha(s)» na página (guarda utac110h2/D1).
+
+NÃO mudou (de propósito):
+- A data «Última atualização: 15 de outubro de 2026» (l.45). Está pinada por
+  teste (utac110h3:155-157) e por um script de mutação (utac110h3-prova-mutacao.mjs:67).
+  Subir a data exige tocar em 2 ficheiros de teste — [ESC E-2].
+
+================================================================================
+§9. O QUE FALTA NO FORMULÁRIO / DIVERGÊNCIAS RESIDUAIS
+================================================================================
+# | item | estado
+--|------|-------
+1 | Rascunho docs/MC90.2-DATA-SAFETY-RASCUNHO.txt ainda diz «Android ID» e «Telefone — NÃO» e omite visitante/chat/SendGrid | NÃO corrigido nesta revisão (não me pediste; e há um teste que fixa uma das frases — ver E-3). Ao transpor, usa ESTA folha, não o rascunho.
+2 | Endereço de carteira declarado duas vezes (IDs de utilizador + Outras) | Limpar no formulário: deixar só em «IDs de utilizador».
+3 | Palpites ausentes no rascunho | Declarar em «Conteúdo gerado pelo utilizador».
+4 | Política §13 diz que a data de actualização está «no início do documento» | A data ficou em 15/10 por causa de E-2 — a frase fica imprecisa até se decidir.
+5 | Política publicada na URL | Continua a ser o texto ANTIGO até ao deploy — ver E-3.
+
+### REFUTAÇÃO MANTIDA À VISTA — CPF no Mercado Pago (DEBT-053)
+A DEBT-053 afirmava: «`iniciar-pagamento.mjs:86` envia o CPF ao Mercado Pago».
+MEDIDO — FALSO no que respeita ao CPF DO UTILIZADOR:
+  - :86 valida `body.pagador.cpf` SE vier; o campo é opcional («quando o frontend
+    os coletar», comentário do próprio ficheiro).
+  - O único chamador envia só e-mail: ComprarFichasModal.jsx:188.
+  - O componente documenta: «CPF do pagador NÃO é digitado» (:25-27).
+  - O documento cai no fallback do OPERADOR: mercadopago.mjs:41
+    (`normalizarDoc(cpf) || normalizarDoc(process.env.MP_PAYER_ID_NUMBER)`).
+CONSEQUÊNCIA: o CPF é recolhido (resgate) mas NÃO é partilhado com o MP; o MP
+recebe o CPF do próprio operador, que é dado de um terceiro (o dono da conta).
+ERRO DO MEU INSTRUMENTO (declarado): confirmei a linha do endpoint antes de ir
+ver quem a chama. «O endpoint aceita» ≠ «o utilizador envia».
+
+================================================================================
+§10. ESCALADO — não fiz, precisa da tua autorização
+================================================================================
+E-1  E-MAIL DO DPO: não são 3 lugares, são 5 ficheiros + 3 asserções.
+     `desafiogut.com.br` é NXDOMAIN (medido). `grupouniaoetrabalho.com.br`
+     RESOLVE e TEM MX (mx.zoho.com, mx2, mx3 + SPF zohomail) ⇒ a caixa é viável.
+     Ocorrências a mudar para dpo@grupouniaoetrabalho.com.br:
+       1. src/pages/Privacidade.jsx:351-352        (autorizado — NÃO feito)
+       2. src/pages/ExcluirConta.jsx:64,168        (autorizado — NÃO feito)
+       3. src/components/ExcluirContaModal.jsx:138 (FORA do escopo)
+       4. netlify/functions/exportar-dados.mjs:321 (FORA — vai no JSON de portabilidade entregue ao titular)
+       5. docs/lgpd-politica-retencao.md:106,118   (FORA — documento legal)
+       + testes: utac110k1:95,130 · utac110j2:155
+     PORQUE PAREI: mudar só (1) e (2) deixaria o MODAL do app e o JSON de
+     portabilidade a indicar um domínio morto — pior que hoje, porque passaria a
+     haver dois endereços de DPO em contradição dentro do produto. É exactamente
+     o tipo de trade-off que manda parar.
+     NOTA: a política JÁ oferece hoje uma alternativa que resolve:
+     «contato@grupouniaoetrabalho.com.br com o assunto «DPO»» (Privacidade.jsx:355-356).
+     Autoriza os 5+testes e faço em ~10 min.
+
+E-2  DATA DA POLÍTICA. Subir «Última atualização» para 17/10/2026 exige tocar em
+     utac110h3-pendencias-front.test.mjs:155-157 e em utac110h3-prova-mutacao.mjs:67.
+     Sem isso, a data fica a 15/10 com conteúdo novo (a §13 promete a data no topo).
+
+E-3  DEPLOY + RE-ACEITE. A política editada está no repo; a URL pública continua
+     com o texto antigo. Se o formulário for submetido antes do deploy, a Google
+     lê a política antiga e a contradição mantém-se. Além disso: a política mudou
+     materialmente — decidir se sobe `VERSAO_CONSENTIMENTO` (re-aceite do gate)
+     ou não.
+
+E-4  O TESTE QUE FIXA A PREMISSA REFUTADA. utac110k1:79 exige, no rascunho do
+     Data Safety, a string `iniciar-pagamento.mjs:86` como «finalidade (a):
+     identificação do pagador no PIX» — ou seja, uma guarda que OBRIGA o
+     documento a manter a afirmação que refutei. Corrigir o rascunho exige
+     corrigir esta asserção (é o caso da régua a governar o documento).
+     Este é o único sítio onde a refutação ainda não chegou; o rascunho não é
+     usado para preencher (usa-se esta folha), mas fica o aviso.
+
+================================================================================
+§11. MEDIÇÕES FEITAS (evidência bruta)
+================================================================================
+- commit base: 5cc7958
+- GET .../privacidade → 200 · GET .../excluir-conta → 200 (17/10/2026)
+- desafiogut.com.br → NXDOMAIN (nslookup 8.8.8.8) · grupouniaoetrabalho.com.br →
+  resolve + MX Zoho + SPF zohomail
+- AndroidManifest.xml: `android.permission.INTERNET` é a única permissão (l.80)
+- package.json: @privy-io, @supabase, @sentry, @fingerprintjs, web-vitals,
+  capacitor-plugin-cdv-purchase. ZERO SDK de publicidade.
+- hosts externos do backend: api.mercadopago.com · androidpublisher + oauth2
+  (Google) · api.deepseek.com · api.frenet.com.br
+- Guardas corridas após a edição: 11/11 + 21/21 + 17/17 (ver §8)
+
+================================================================================
+§12. ORDEM DE PREENCHIMENTO
+================================================================================
+1. Fechar D-4, D-5, D-6 (D-4 é a única que toca o texto do formulário).
+2. Preencher: §1 → §2 → §3 → §6. Não copiar do rascunho antigo (ver §9.1).
+3. Resolver E-1 (DPO) e E-3 (deploy + re-aceite) ANTES de submeter.
+4. Confirmar que a política publicada já contém §3.7, §3.8, §3.9 e a §5 nova.
+5. Guardar comprovativo do submetido (print/PDF).
+
+O QUE NÃO FECHEI (por desenho):
+- PDF v5.1, Data Safety no browser, aceite do Marinho, migração — teus.
+- A1–A4 (Ruan) e perfil de pagamentos — teus.
+- Sem commit. `git status` mostra Privacidade.jsx modificado e esta folha untracked.
+================================================================================
+FIM
+================================================================================
