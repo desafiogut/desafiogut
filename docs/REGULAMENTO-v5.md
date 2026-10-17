@@ -1,5 +1,5 @@
 > **REGULAMENTO OFICIAL DO DESAFIOGUT**
-> **Versão 5.0 · Vigente a partir de 02 de novembro de 2026**
+> **Versão 5.1 · Vigente a partir de 02 de novembro de 2026**
 >
 > Este é o Regulamento Oficial do DesafioGUT.
 > Fonte de verdade para o repo, o app e o GUTO.
@@ -14,7 +14,7 @@ REGULAMENTO OFICIAL DO DESAFIOGUT
 
 Programa de Fidelidade Gamificado
 
-Versão 5.0 · Vigente a partir de 02 de novembro de 2026
+Versão 5.1 · Vigente a partir de 02 de novembro de 2026
 
 CAPÍTULO I — DISPOSIÇÕES PRELIMINARES
 
@@ -86,7 +86,7 @@ Art. 16º — O lance é registado em pontos de lance, obtidos por engajamento n
 
 - VI — Bónus incluído na aquisição do Passe Relâmpago.
 
-Art. 17º — Os pontos de lance não são comprados com dinheiro real — são ganhos por atividade no aplicativo.
+Art. 17º — O Passe Desafio (R$ 2,00) é a transação principal que dá acesso a métricas, GUTO, ECOQUILDO e 1 crédito de lance. O crédito de lance é um benefício suplementar e subordinado à compra do Passe, não uma taxa separada.
 
 Secção IV — Da Aquisição do Produto
 
@@ -280,4 +280,4 @@ Art. 72º — Este Regulamento rege-se pela Lei nº 5.768/1971, pelo Decreto nº
 
 Documento oficial — Associação Recreativa dos Nordestinos no Amazonas (CNPJ
 
-23.040.066/0001-00). Versão 5.0 — vigente a partir de 02 de novembro de 2026.
+23.040.066/0001-00). Versão 5.1 — vigente a partir de 02 de novembro de 2026.

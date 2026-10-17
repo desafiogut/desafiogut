@@ -216,16 +216,26 @@ export default function Privacidade() {
           </ul>
           <p style={{ ...pStyle, fontWeight: 700, color: COR.text }}>O que é apagado (hard-delete):</p>
           <ul style={{ margin: "0 0 0.75rem", paddingLeft: "1.2rem" }}>
-            <li style={liStyle}>Dados pessoais de conta, atividade (atividade_utilizadores), lances, saldos, histórico e ficheiros associados à conta (Supabase + Blobs).</li>
+            <li style={liStyle}>Dados de conta (nome, e-mail, identificadores), atividade no app, <strong style={{ color: COR.text }}>palpites</strong>, <strong style={{ color: COR.text }}>pontuações e rankings</strong>, saldo em R$, pacotes de patrocínio do lojista, wallet, ficheiros associados à conta, código e vínculos de indicação do próprio titular (Supabase + Blobs).</li>
+            <li style={liStyle}>Notificações, sessões, cache de chatbot e registos de consentimento.</li>
           </ul>
-          <p style={{ ...pStyle, fontWeight: 700, color: COR.text }}>O que é ANONIMIZADO e retido por obrigação legal:</p>
+          <p style={{ ...pStyle, fontWeight: 700, color: COR.text }}>O que é PSEUDONIMIZADO e retido por obrigação legal:</p>
           <ul style={{ margin: "0 0 0.75rem", paddingLeft: "1.2rem" }}>
-            <li style={liStyle}>Registos fiscais de pagamentos PIX (valor, data, pedido) — o vínculo com o utilizador é removido (substituído por endereço anónimo) e os registos são retidos pelo prazo exigido pela legislação fiscal brasileira.</li>
+            <li style={liStyle}>Registos fiscais de pagamentos PIX e de compras na Google Play (valor, data, referência) — o endereço da carteira é substituído por um <strong style={{ color: COR.text }}>identificador pseudónimo derivado dela</strong>.</li>
+            <li style={liStyle}>Registo de entrega do cartão colecionável (o que foi entregue, quando) — a <strong style={{ color: COR.text }}>morada passa a «[Conta Deletada]»</strong>; o registo da transacção fica como prova de entrega.</li>
+            <li style={liStyle}>Saldo de ECOQUILDO e lastro contabilístico — o valor fica, o titular sai.</li>
+            <li style={liStyle}>Lances de uma edição ainda em curso — não podem ser pseudonimizados sem quebrar a apuração dessa edição; ficam com a carteira até ela fechar, e a exclusão avisa quantos são.</li>
           </ul>
           <p style={{ ...pStyle, fontWeight: 700, color: COR.text }}>O que é retido por impossibilidade técnica (declarado):</p>
-          <ul style={{ margin: 0, paddingLeft: "1.2rem" }}>
+          <ul style={{ margin: "0 0 0.75rem", paddingLeft: "1.2rem" }}>
             <li style={liStyle}>Dados on-chain no smart contract (blockchain Ethereum) — imutáveis e pseudónimos; não é tecnicamente possível apagá-los.</li>
           </ul>
+          <p style={{ ...pStyle, marginTop: "0.75rem" }}>
+            <strong style={{ color: COR.text }}>Pseudonimização não é anonimização</strong> (ANPD): nos
+            registos pseudonimizados o dado permanece pessoal e o titular mantém, sobre eles, os
+            direitos do artigo 18 da LGPD — incluindo pedir informação e oposição pelo contacto do
+            Encarregado (secção 14).
+          </p>
           <p style={{ ...pStyle, marginTop: "0.75rem" }}>
             Congelamento de conta não é utilizado como substituto de eliminação: o pedido de
             eliminação resulta na exclusão efetiva dos dados pessoais.
@@ -291,9 +301,23 @@ export default function Privacidade() {
         </GlassCard>
 
         <GlassCard className="p-5 mb-5">
-          <h3 style={h2Style}>14. CONTACTO E AUTORIDADE DE CONTROLO</h3>
+          <h3 style={h2Style}>14. ENCARREGADO DE PROTEÇÃO DE DADOS (DPO) E CONTACTO</h3>
+          <p style={{ ...pStyle, color: COR.text, fontWeight: 700 }}>
+            Encarregado de Proteção de Dados: Francisco Canindé Marinho
+            <br />
+            Contacto:{" "}
+            <a href="mailto:dpo@desafiogut.com.br" style={{ color: COR.blue300 }}>
+              dpo@desafiogut.com.br
+            </a>
+          </p>
           <p style={pStyle}>
-            Para qualquer questão de privacidade ou proteção de dados, contacte:{" "}
+            Alternativa: <em>contato@grupouniaoetrabalho.com.br</em> com o assunto «DPO». O
+            Encarregado é o canal para exercer os direitos do artigo 18 da LGPD (confirmação,
+            acesso, correção, eliminação, portabilidade, informação sobre partilha e oposição),
+            incluindo sobre os registos pseudonimizados descritos na secção 8.
+          </p>
+          <p style={pStyle}>
+            Para questões gerais de privacidade ou proteção de dados, contacte também:{" "}
             <a href="mailto:desafiogut01@gmail.com" style={{ color: COR.blue300 }}>
               desafiogut01@gmail.com
             </a>

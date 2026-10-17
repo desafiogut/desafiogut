@@ -127,8 +127,16 @@ export default function ExcluirContaModal({ aberto, onFechar, address, authToken
 
           <p style={{ margin: "0 0 1rem", color: COR.text, fontSize: "0.92rem", lineHeight: 1.55 }}>
             Ao excluir sua conta, os seus dados pessoais são <strong>eliminados</strong> ou
-            <strong> anonimizados</strong> (deixam de identificar você). O que a lei obriga a guardar
-            fica retido nos termos abaixo. Esta ação <strong>não pode ser desfeita</strong>.
+            <strong> pseudonimizados</strong>. O que a lei obriga a guardar fica retido nos termos
+            abaixo. Esta ação <strong>não pode ser desfeita</strong>.
+            <br />
+            <span style={{ fontSize: "0.84rem", color: COR.muted }}>
+              Pseudonimizar não é o mesmo que tornar anónimo: nos registos que ficam, o seu endereço
+              é substituído por um identificador derivado dele (um hash), mas o registo{" "}
+              <strong style={{ color: COR.text }}>ainda é dado pessoal</strong> e você mantém
+              sobre ele os direitos da LGPD — pode pedir informação, correção ou oposição ao
+              Encarregado (dpo@desafiogut.com.br).
+            </span>
           </p>
 
           {/* UTAC110j.1 — o que sai, item a item (antes era «todos os dados pessoais», absoluto e falso) */}

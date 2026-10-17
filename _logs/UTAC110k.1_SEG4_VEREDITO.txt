@@ -1,0 +1,8 @@
+UTAC110k.1 — CORRIDA FINAL DEFINITIVA (após a última alteração de texto: Privacidade §8 «permanece pessoal»)
+Comando: node scripts/mc966-suite-harness.mjs ambos · 2026-10-17 03:04
+Substitui a corrida anterior, que era anterior a essa alteração.
+RAM_antes_MB=1781
+frontend: VERDE 1176/1176 pass
+backend: VERDE 1341/1347 pass
+VEREDITO: VERDE
+EXIT_SUITE=0

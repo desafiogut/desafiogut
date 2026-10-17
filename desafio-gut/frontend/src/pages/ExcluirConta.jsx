@@ -58,8 +58,10 @@ export default function ExcluirConta() {
             padding: "0.6rem 0.9rem", background: "rgba(239,68,68,0.08)",
           }}>
             ⚠️ Esta ação é <strong>irreversível</strong>. Ao confirmar, a conta é encerrada e os
-            dados pessoais são <strong>eliminados ou anonimizados</strong> logo após a confirmação (ver as listas
-            abaixo: o que sai e o que a lei obriga a reter).
+            dados pessoais são <strong>eliminados ou pseudonimizados</strong> logo após a confirmação
+            (ver as listas abaixo: o que sai e o que a lei obriga a reter). <strong>Pseudonimizado não é
+            anónimo</strong>: o registro que fica ainda é dado pessoal, e você mantém sobre ele os
+            direitos da LGPD — incluindo falar com o Encarregado (dpo@desafiogut.com.br).
           </p>
         </header>
 
@@ -102,7 +104,7 @@ export default function ExcluirConta() {
           <ol style={{ margin: 0, paddingLeft: "1.2rem", color: COR.muted, fontSize: "0.84rem", lineHeight: 1.55 }}>
             <li>Entre nesta página com a mesma conta (Google ou e-mail) que usa no app.</li>
             <li>Toque em «Excluir minha conta» e marque a confirmação.</li>
-            <li>A conta e os dados pessoais são eliminados logo após a confirmação; o que a lei obriga a guardar fica retido (lista acima), sem o identificar.</li>
+            <li>A conta e os dados pessoais são eliminados ou pseudonimizados logo após a confirmação; o que a lei obriga a guardar fica retido (lista acima) com um identificador pseudónimo, não anónimo.</li>
             <li>Se não conseguir entrar, peça por e-mail para desafiogut01@gmail.com — atendido em até 15 dias.</li>
           </ol>
         </GlassCard>
@@ -160,6 +162,11 @@ export default function ExcluirConta() {
           <a href="/privacidade" style={{ color: COR.blue300 }}>Política de Privacidade</a>
           {" · "}
           <a href="mailto:desafiogut01@gmail.com" style={{ color: COR.blue300 }}>Dúvidas: desafiogut01@gmail.com</a>
+          <br />
+          <span style={{ fontSize: "0.78rem", color: COR.muted }}>
+            Encarregado de Proteção de Dados (DPO): Francisco Canindé Marinho —{" "}
+            <a href="mailto:dpo@desafiogut.com.br" style={{ color: COR.blue300 }}>dpo@desafiogut.com.br</a>
+          </span>
         </p>
         <p style={{ textAlign: "center", marginTop: "1.5rem" }}>
           <a href="/" style={{ color: COR.muted, fontSize: "0.82rem" }}>← Voltar ao app</a>

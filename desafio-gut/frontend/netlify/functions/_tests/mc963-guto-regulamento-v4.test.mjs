@@ -112,7 +112,7 @@ test("(c) `_lib/guto-regulamento.mjs` é o documento tal e qual (controlo de vit
   assert.equal(REGULAMENTO_TEXTO, DOC,
     "o módulo que o runtime importa DIVERGIU de " + REGULAMENTO_FONTE +
     " — regenerar (ver cabeçalho do módulo)");
-  assert.equal(REGULAMENTO_VERSAO, "5.0");
+  assert.equal(REGULAMENTO_VERSAO, "5.1", "UTAC110k.1: o Regulamento passou a v5.1 (Art. 17º) — o módulo do GUTO acompanha");
 });
 
 test("(c2) o texto que vai no prompt está LIMPO das marcas de formatação (UTAC110c-1b)", () => {

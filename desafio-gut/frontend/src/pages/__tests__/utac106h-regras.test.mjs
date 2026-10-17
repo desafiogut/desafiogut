@@ -64,7 +64,7 @@ test("FONTE · o corpo de docs/REGULAMENTO-v5.md é IGUAL, byte a byte, ao de do
 test("FONTE · o cabeçalho declara versão, vigência e a regra de alteração", () => {
   const cab = MD_V5.slice(0, MD_V5.indexOf("\n---\n\n"));
   assert.match(cab, /REGULAMENTO OFICIAL DO DESAFIOGUT/);
-  assert.match(cab, /Versão 5\.0 · Vigente a partir de 02 de novembro de 2026/);
+  assert.match(cab, /Versão 5\.1 · Vigente a partir de 02 de novembro de 2026/);
   assert.match(cab, /Fonte de verdade para o repo, o app e o GUTO\./);
   assert.match(cab, /Não alterar sem aprovação do operador\./);
 });
@@ -110,11 +110,11 @@ test("ACESSIBILIDADE · os alvos de toque da página (sumário e «Voltar») tê
 });
 
 // ── 3. Estrutura: 12 capítulos, 72 artigos ──────────────────────────────────────────────────────
-test("ESTRUTURA · um <h1> com o título e a vigência do v5.0", () => {
+test("ESTRUTURA · um <h1> com o título e a vigência do v5.1", () => {
   assert.equal((html.match(/<h1[\s>]/g) || []).length, 1);
   assert.match(html, /<h1[^>]*>REGULAMENTO OFICIAL DO DESAFIOGUT<\/h1>/);
-  assert.ok(texto.includes("Versão 5.0 · Vigente a partir de 02 de novembro de 2026"));
-  assert.equal(mod.VERSAO_REGULAMENTO, "5.0");
+  assert.ok(texto.includes("Versão 5.1 · Vigente a partir de 02 de novembro de 2026"));
+  assert.equal(mod.VERSAO_REGULAMENTO, "5.1");
 });
 
 test("ESTRUTURA · os 12 capítulos em <h2>, pela ordem do documento", () => {
@@ -143,7 +143,7 @@ test("PARSER · as frases partidas pelo PDF são unidas e os itens ficam no arti
   assert.ok(arts["Art. 42º"].texto.includes("confirmação do resultado da edição, antes do despacho"));
   assert.ok(arts["Art. 53º"].texto.includes("produto patrocinado do Relâmpago) poderá ser realizada via PIX"));
   assert.deepEqual([13, 22, 25, 43, 48].map((n) => arts[`Art. ${n}º`].itens.length), [5, 6, 5, 6, 2]);
-  assert.match(mod.REGULAMENTO.rodape, /\(CNPJ 23\.040\.066\/0001-00\)\. Versão 5\.0 — vigente a partir de 02 de novembro de 2026\.$/);
+  assert.match(mod.REGULAMENTO.rodape, /\(CNPJ 23\.040\.066\/0001-00\)\. Versão 5\.1 — vigente a partir de 02 de novembro de 2026\.$/);
   assert.equal(mod.REGULAMENTO.capitulos.flatMap((c) => c.blocos).filter((b) => b.tipo === "paragrafo").length, 0);
 });
 

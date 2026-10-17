@@ -71,10 +71,10 @@ test("BIDIRECCIONAL: as frases ANTIGAS (verbatim) são reprovadas; as novas pass
   assert.match(semComentarios(ler("netlify/functions/resgatar-cartao.mjs")), /pontos de fidelidade para resgatar o cartão/);
 });
 
-test("versão do aceite: gate e servidor em \"3.0\" (R18-110h.1-B — o v4 deixou de valer)", () => {
+test("versão do aceite: gate e servidor em \"3.1\" (R18-110k.1 — o Regulamento passou a v5.1)", () => {
   const front = ler("src/components/TermosConsentimento.jsx").match(/export const VERSAO_CONSENTIMENTO = "([^"]+)"/);
   const back = ler("netlify/functions/_lib/consentimento.mjs").match(/export const VERSAO_GATE = "([^"]+)"/);
   assert.ok(front && back, "não encontrei as constantes de versão");
-  assert.equal(front[1], "3.0", "o gate não subiu de versão — quem aceitou o v4 não volta a ver o gate");
-  assert.equal(back[1], "3.0", "o servidor recusaria o aceite do gate novo (versao_invalida)");
+  assert.equal(front[1], "3.1", "o gate tem de subir com a versão do Regulamento (R18-110k.1: v5.1)");
+  assert.equal(back[1], "3.1", "o servidor recusaria o aceite do gate novo (versao_invalida)");
 });

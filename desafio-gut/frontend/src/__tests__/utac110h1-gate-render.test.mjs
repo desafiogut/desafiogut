@@ -73,14 +73,17 @@ test("controlo positivo: o gate renderiza com 4 caixas, desmarcadas, e o botão 
   assert.match(g.html(), /Regulamento Oficial v5\.0/);
 });
 
-test("as 4 caixas marcadas ligam o botão; aceitar grava a versão 3.0 com as 4 declarações", async () => {
+test("as 4 caixas marcadas ligam o botão; aceitar grava a versão do termo com as 4 declarações", async () => {
   const g = await montarGate();
   for (const i of [0, 1, 2, 3]) await g.marcar(i);
   assert.equal(g.botao().props.disabled, false, "com as 4 caixas o botão continua desligado");
   await g.aceitar();
   assert.equal(g.aceites.length, 1, "onAceitar não foi chamado");
   const salvo = JSON.parse(armazem.get(mod.CHAVE_CONSENTIMENTO));
-  assert.equal(salvo.versao, "3.0", "o aceite não foi gravado com a versão do v5");
+  // UTAC110k.1: a versão subiu para 3.1 (Regulamento v5.1). O teste passou a comparar com a
+  // CONSTANTE — uma literal aqui obrigaria a editar o teste a cada versão nova, sem medir nada.
+  assert.equal(salvo.versao, mod.VERSAO_CONSENTIMENTO, "o aceite não foi gravado com a versão vigente do termo");
+  assert.equal(salvo.versao, "3.1", "controlo: a versão vigente hoje é a do Regulamento v5.1");
   assert.deepEqual(salvo.aceitos, { lido: true, maiores: true, termos: true, privacidade: true });
 });
 

@@ -47,24 +47,31 @@ R: SIM — coletado.
   - Nome (via login Google/Privy) — SIM
   - E-mail — SIM
   - IDs de usuário — SIM (identificador interno + endereço de carteira)
-  - Endereço — NÃO
+  - Endereço — **SIM** *(corrigido no UTAC110k.1: estava declarado «NÃO»)*. Recolhido
+    **apenas quando o utilizador resgata o cartão colecionável físico**: nome, CPF,
+    CEP, logradouro, número, complemento, bairro, cidade e UF
+    (`_lib/pedidos.mjs:68-84`, `validarMorada`; guardado em `resgates.morada`).
+    Não é usado para publicidade nem para localização.
   - Telefone — NÃO
   - Raça/etnia, crenças, orientação sexual — NÃO
   - Outras informações pessoais — SIM (endereço público de carteira Ethereum,
     usado como identificador on-chain)
   Compartilhado com terceiros? SIM — com Privy (autenticação), Supabase
-  (armazenamento), Netlify (backend), e de forma pseudónima/publica na
+  (armazenamento), Netlify (backend), transportadora/fornecedor do cartão
+  (apenas para a entrega, com nome/endereço/CPF) e de forma pseudónima na
   blockchain Ethereum (endereço da carteira).
-  É essencial para o funcionamento do app? SIM (conta e lances).
+  É essencial para o funcionamento do app? SIM (conta e lances); o endereço é
+  essencial **apenas** para o resgate do cartão (o resto do app funciona sem ele).
   Criptografado em trânsito? SIM (HTTPS).
-  O usuário pode solicitar a eliminação? SIM (delete-account apaga os dados
-  pessoais; o endereço on-chain é pseudónimo e imutável — declarado na
-  política).
+  O usuário pode solicitar a eliminação? SIM. Na exclusão de conta: a morada é
+  **anonimizada** (substituída por «[Conta Deletada]») e o registo de entrega é
+  retido apenas pelo prazo fiscal; o endereço on-chain é pseudónimo e imutável
+  (declarado na política).
 
 [3] INFORMAÇÕES FINANCEIRAS
 R: SIM — coletado.
   Subcategorias declaradas:
-  - Histórico de compras — SIM (compras de senhas, PIX)
+  - Histórico de compras — SIM (compra do Passe Desafio: PIX e Google Play)
   - Número de cartão de crédito/débito — NÃO (pagamentos processados
     exclusivamente pelo Mercado Pago, que não partilha dados de cartão com o
     app)
@@ -74,8 +81,12 @@ R: SIM — coletado.
   (armazenamento), Netlify (funções).
   Essencial? SIM (compras).
   Criptografado em trânsito? SIM.
-  Eliminação? SIM (hard-delete) — exceto registos fiscais anonimizados
-  retidos por obrigação legal (declarado na política).
+  Eliminação? SIM (hard-delete) — exceto os registos fiscais, que ficam
+  **pseudonimizados** e são retidos por obrigação legal (10 anos). O valor e a
+  data persistem como prova contabilística; o endereço da carteira passa a um
+  identificador pseudónimo derivado dela. **Pseudonimização não é anonimização**
+  (ANPD): esses registos continuam a ser dado pessoal e o titular mantém os
+  direitos do art. 18 sobre eles.
 
 [4] SAÚDE E APTIDÃO FÍSICA
 R: NÃO coletado.
@@ -147,8 +158,19 @@ R: SIM — coletado.
   Eliminação? SIM (delete-account remove identificadores da conta).
 
 [15] INFORMAÇÕES FINANCEIRAS DO GOVERNO (NIF/CPF)
-R: NÃO coletado. (O app não coleta CPF; a entidade tem CNPJ próprio, mas o
-CPF do utilizador não é coletado.)
+R: **SIM — coletado** *(corrigido no UTAC110k.1: estava declarado «NÃO»)*.
+  O CPF do próprio titular é recolhido em dois momentos, ambos com finalidade
+  declarada:
+  (a) **Pagamento por PIX** — enviado ao Mercado Pago como identificação do
+      pagador (`iniciar-pagamento.mjs:86`);
+  (b) **Entrega do cartão colecionável** — faz parte da morada
+      (`_lib/pedidos.mjs:68`, `validarCPF`), por exigência logística da entrega.
+  Não é recolhido em nenhum outro fluxo. Não é usado para scoring, publicidade
+  ou perfilamento. Não é partilhado com terceiros além do processador de
+  pagamento e do fornecedor/transportadora do cartão.
+  Eliminação: na exclusão de conta o CPF **desaparece** — a morada é
+  substituída por «[Conta Deletada]» e o registo de pagamento fica pseudonimizado
+  (o valor e a data persistem por obrigação fiscal; o CPF não).
 
 [16] OUTROS TIPOS DE DADOS NÃO LISTADOS
 R: NÃO aplicável (declarar apenas o acima; a política de privacidade cobre
@@ -199,7 +221,16 @@ CHECKLIST DE CONSISTÊNCIA (verificação cruzada)
 [OK] As categorias "Não coletado" batem com o manifest (só INTERNET).
 [OK] Coleta de atividade_utilizadores declarada (atividade no app).
 [OK] Eliminação de dados declarada de forma idêntica à política (hard-delete +
-     anonimização fiscal + retenção on-chain).
+     pseudonimização fiscal + retenção on-chain).
+[CORRIGIDO 110k.1] Endereço passou de «NÃO» para «SIM» (morada de entrega do
+     cartão, `validarMorada`) — a declaração anterior era falsa e é bloqueante
+     para a Play Console.
+[CORRIGIDO 110k.1] CPF passou de «NÃO» para «SIM» (identificação do pagador no
+     Mercado Pago + entrega do cartão) — idem.
+[CORRIGIDO 110k.1] «Anonimizado» → «pseudonimizado» onde o que existe é hash de
+     dado público, com a nota de que permanece dado pessoal (ANPD).
+[OK] DPO designado e divulgado (ver política de privacidade §5): Francisco
+     Canindé Marinho — dpo@desafiogut.com.br (R18-110k.1-DPO).
 [OK] Consentimento LGPD declarado na política (gate no app).
 [PENDENTE] URL da política — depende do GAP 1 (operador).
 ================================================================================

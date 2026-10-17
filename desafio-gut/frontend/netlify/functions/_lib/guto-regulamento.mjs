@@ -1,4 +1,4 @@
-// _lib/guto-regulamento.mjs — FONTE DE CONHECIMENTO DO GUTO (Regulamento Oficial, versao 5.0).
+// _lib/guto-regulamento.mjs — FONTE DE CONHECIMENTO DO GUTO (Regulamento Oficial, versao 5.1).
 //
 // ⚠️ FICHEIRO DERIVADO — NAO EDITAR A MAO.
 // Fonte de verdade: `docs/GUTO-REGULAMENTO.md` (transcricao do PDF oficial do operador).
@@ -25,7 +25,7 @@
 // memoria de quem edita.
 
 /** Versao do Regulamento Oficial transcrita aqui. */
-export const REGULAMENTO_VERSAO = "5.0";
+export const REGULAMENTO_VERSAO = "5.1";
 
 /** Caminho, dentro do repo, da transcricao que este modulo espelha. */
 export const REGULAMENTO_FONTE = "docs/GUTO-REGULAMENTO.md";
@@ -33,7 +33,7 @@ export const REGULAMENTO_FONTE = "docs/GUTO-REGULAMENTO.md";
 /** Texto INTEGRAL do Regulamento Oficial (12 capitulos, 72 artigos). */
 export const REGULAMENTO_TEXTO = `# Regulamento Oficial do DesafioGUT — Programa de Fidelidade Gamificado
 
-> **Versão 5.0** · **vigente a partir de 02 de novembro de 2026**
+> **Versão 5.1** · **vigente a partir de 02 de novembro de 2026**
 >
 > **Fonte de verdade para o GUTO. Não alterar sem actualizar o regulamento oficial.**
 >
@@ -74,7 +74,7 @@ REGULAMENTO OFICIAL DO DESAFIOGUT
 
 Programa de Fidelidade Gamificado
 
-Versão 5.0 · Vigente a partir de 02 de novembro de 2026
+Versão 5.1 · Vigente a partir de 02 de novembro de 2026
 
 CAPÍTULO I — DISPOSIÇÕES PRELIMINARES
 
@@ -146,7 +146,7 @@ Art. 16º — O lance é registado em pontos de lance, obtidos por engajamento n
 
 - VI — Bónus incluído na aquisição do Passe Relâmpago.
 
-Art. 17º — Os pontos de lance não são comprados com dinheiro real — são ganhos por atividade no aplicativo.
+Art. 17º — O Passe Desafio (R$ 2,00) é a transação principal que dá acesso a métricas, GUTO, ECOQUILDO e 1 crédito de lance. O crédito de lance é um benefício suplementar e subordinado à compra do Passe, não uma taxa separada.
 
 Secção IV — Da Aquisição do Produto
 
@@ -340,5 +340,5 @@ Art. 72º — Este Regulamento rege-se pela Lei nº 5.768/1971, pelo Decreto nº
 
 Documento oficial — Associação Recreativa dos Nordestinos no Amazonas (CNPJ
 
-23.040.066/0001-00). Versão 5.0 — vigente a partir de 02 de novembro de 2026.
+23.040.066/0001-00). Versão 5.1 — vigente a partir de 02 de novembro de 2026.
 `;

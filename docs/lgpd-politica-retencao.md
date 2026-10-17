@@ -17,6 +17,33 @@ Este documento formaliza a política de retenção de dados pessoais e a base le
 | **Endereço on-chain + lances** | Sepolia testnet (`LeilaoGUT`) | **Imutável** | Natureza da blockchain | Dados imutáveis na rede pública; titular é informado no termo de consentimento. |
 | **Fingerprint anti-Sybil** | `fingerprint:{visitorId}` | **24 horas** | Legítimo interesse (art. 7, IX) | Detecção de farming/Sybil; janela curta minimiza retenção de identificador comportamental. |
 
+### 1.1. Exclusão de conta — o que se apaga, o que se pseudonimiza, o que se retém
+
+A tabela do §1 define **prazos**. Esta secção define o **destino de cada categoria quando o titular
+pede a exclusão da conta** (implementado no UTAC110j.1; o ecrã de exclusão lista isto ao utilizador):
+
+| Dados | Destino na exclusão | Porquê |
+|---|---|---|
+| Conta, e-mail, identificadores, atividade, notificações, sessões, consent-log | **APAGADOS** | sem obrigação de retenção |
+| `palpites`, `pontuacoes`, `rankings_ciclo`, cotas, `wallet`, saldo em R$ | **APAGADOS** | sem obrigação de retenção |
+| Código e vínculos de indicação **do próprio titular** | **APAGADOS** | sem obrigação de retenção |
+| Vínculo de indicação de um **terceiro** em que o titular é o indicador | **PSEUDONIMIZADO** (só o campo `indicador`) | o vínculo é do terceiro; apagá-lo destruiria dado alheio |
+| Registos de pagamento PIX e Google Play | **PSEUDONIMIZADOS** (endereço → hash derivado) | prova fiscal — 10 anos |
+| `resgates` (entrega do cartão: morada com nome, **CPF**, CEP, logradouro) | **PSEUDONIMIZADOS** — a morada passa a «[Conta Deletada]»; data, produto e valor ficam | prova de entrega / obrigação contabilística |
+| `eco_quildo` (saldo e histórico com lastro em R$) | **PSEUDONIMIZADO** (titular → identificador derivado; o lastro fica) | passivo contabilístico da Associação |
+| `passes`, `cotas_pagas`, `fila_tarefas`, `wallet_idem` | **PSEUDONIMIZADOS** no conteúdo pessoal | registo da operação |
+| Logs de auditoria de edições (`auditoria`) | **PSEUDONIMIZADOS** (o endereço sai do evento) | Marco Civil, art. 15 — 13 meses |
+| Lances de uma edição **ainda em curso** | **RETIDOS** com a carteira até a edição fechar | apurar a edição; o ecrã avisa quantos |
+| Dados on-chain (`LeilaoGUT`) | **RETIDOS** (imutáveis) | natureza da blockchain |
+
+**Pseudonimização não é anonimização** (ANPD): nos registos pseudonimizados o dado continua a ser
+pessoal e o titular mantém os direitos do art. 18 — incluindo pedir informação, correção e oposição
+ao Encarregado (DPO, §5). O hash usado é derivado do endereço da carteira, que é **público**: quem
+conhecer a carteira pode recalcular o identificador. É por isso que o texto não promete anonimato.
+
+**Fora do alcance do fluxo por endereço (declarado):** `cota_fingerprints` (chave `visitor_id`) não é
+atingível pela exclusão por carteira — pendência registada em DEBT-050.
+
 ## 2. Procedimentos automatizados
 
 ### 2.1. Purge programado
@@ -76,7 +103,11 @@ Eventos de segurança capturados pelo Sentry (`security_alert` tags: `rate_limit
 
 ## 5. Pontos de contato
 
-- Encarregado de Dados (DPO): a designar — `desafiogut@uniaoetrabalho.org`
+- **Encarregado de Dados (DPO): Francisco Canindé Marinho** — `dpo@desafiogut.com.br`
+  (alternativa: `contato@grupouniaoetrabalho.com.br` com o assunto «DPO»)
+  · Designado por **R18-110k.1-DPO** (2026-10-17), nos termos do art. 41 da LGPD.
+  · Identidade e contacto divulgados publicamente: aqui, na Política de Privacidade
+    da app e na página de exclusão de conta.
 - Coordenação operacional: gerenciada pelo address `coordenacao()` no contrato `LeilaoGUT`.
 
 ## 6. Histórico de versões
@@ -84,3 +115,6 @@ Eventos de segurança capturados pelo Sentry (`security_alert` tags: `rate_limit
 | Versão | Data | Mudança |
 |---|---|---|
 | 1.0 | 2026-05-15 | Versão inicial — Mega Comando 3 (Sentry alerts + purge-logs + exportar-dados + fingerprint anti-Sybil). |
+| 1.1 | 2026-10-17 | **DPO designado e divulgado** (art. 41): Francisco Canindé Marinho — `dpo@desafiogut.com.br` (R18-110k.1-DPO). Deixa de estar «a designar». |
+| 1.3 | 2026-10-17 | **Secção 1.1 — política de exclusão por tabela**: o documento passa a dizer o que acontece a `resgates` (morada com CPF → «[Conta Deletada]»), `eco_quildo`, `palpites`, `passes`, `cotas_pagas`, `fila_tarefas`, `wallet_idem` e `auditoria`. Antes desta data a política só definia prazos e não cobria a entrega do cartão. |
+| 1.2 | 2026-10-17 | **Pseudonimização ≠ anonimização** (ANPD): onde o identificador é hash de dado público, o texto passa a dizer «pseudonimizado» e a declarar que o registo continua a ser dado pessoal, com os direitos do art. 18. |

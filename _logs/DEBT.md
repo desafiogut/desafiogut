@@ -160,3 +160,30 @@ maioria dos altos foram **corrigidos na mesma ronda** (ver `_logs/UTAC110j.1_SEG
 |---|---|---|---|---|---|
 | **DEBT-049** | **Lances de uma edição AINDA ABERTA sobrevivem à exclusão com a carteira e o nome de exibição, e o endpoint responde 200.** É a decisão DEC-104.3-4 (anonimizar um lance de edição aberta elegeria `anon:…` como vencedor e quebraria a apuração). O manifesto **conta-os** em `blobs.pendente` e o ecrã de sucesso passou a **dizer quantos ficaram e porquê** (antes dizia «dados pessoais removidos»). Falta o desenho: anonimizar no fecho da edição (job) ou excluir bids pseudónimos da apuração. | Validador 1.ª ronda (`poc-lances-abertos.mjs`) | **alta** | **aberta** — mitigada no texto, não resolvida | operador |
 | **DEBT-050** | **`cota_fingerprints` (chave `visitor_id` → lista de CNPJs) fica fora da exclusão.** A chave é o visitorId, não o endereço: não há como a atingir no fluxo por endereço. Precisa de decisão de desenho (TTL de 24 h, como a política de retenção já declara, ou pedido por visitorId). **`wallet_idem` deixou de estar aqui**: a 2.ª ronda do validador mediu que `wallet.mjs` grava `{transacaoId, endereco, …}` e a tabela passou a ser anonimizada (com teste). `fila_tarefas_legado` está coberta como OPCIONAL (ausência = 0, sem erro). | Validador 1.ª/2.ª ronda | média | **aberta** — decisão de desenho | operador |
+
+---
+
+## UTAC110k.1 — conformidade pré-AAB (2026-10-17)
+
+O UTAC110k (dossier do advogado) expôs 4 tensões. Este UTAC fechou as que são de engenharia e
+registou as que são de decisão. **Nada aqui foi decidido pelo executor sobre matéria jurídica.**
+
+| ID | Dívida | Origem | Severidade | Estado | Owner |
+|---|---|---|---|---|---|
+| **DEBT-051** | **FECHADA — v5.1 emitida no repo (2026-10-17).** A primeira tentativa emendou **só** a transcrição e foi revertida ao descobrir a invariante testada `corpo(v5) == corpo(GUTO)` (`utac106h-regras`, «FONTE»): emendar um lado parte a garantia «app e GUTO dizem o mesmo». Com autorização explícita do operador (R18-110k.1, opção «emitir v5.1»), o Art. 17º novo foi aplicado **nos dois ficheiros**, a versão subiu a **5.1** (corpo e cabeçalho) e os corpos voltaram a ser **byte a byte iguais** (17 183 chars). O gate de aceite subiu de **3.0 → 3.1** (`VERSAO_GATE` e `VERSAO_CONSENTIMENTO`), pelo que **quem aceitou a 5.0 volta a ver o gate** — consequência inevitável de mudar o Regulamento. **Fica pendente:** regenerar o **PDF oficial v5.1** (fora do repo) e comunicar a nova versão. | UTAC110k.1 (R18-110k.1) | alta | **FECHADA no repo · PDF por emitir** | operador |
+| **DEBT-052** | **A tensão Art. 17º × Arts. 16º/18º/23º não está resolvida — só sinalizada.** O Art. 17º passou a falar de «crédito de lance» (o que o app consome); os Arts. 16º, 18º e 23º continuam a falar de «pontos de lance». Pior: o **Art. 18º mostra que são conceitos distintos** — o valor do lance é o **preço do produto** (1 ponto = R$ 0,01), enquanto o crédito é o **direito de dar um lance**. A errata do v5 tem de definir os dois termos e a relação entre eles. **Não foi resolvido por interpretação** — seria decidir Direito sem o advogado. | UTAC110k.1 (medido em SEG-1) | média | **aberta** — errata do v5.1 | advogado → operador |
+| **DEBT-042** | *(atualizada)* O 110k.1 corrigiu **só o Art. 17º**; a cisão «pontos de lance» × «crédito de lance» continua nos Arts. 16º/18º/23º. Ver DEBT-052 para a parte conceptual. | UTAC110j → 110k.1 | média | **aberta** — parcial | operador |
+| **DEBT-053** | **O Data Safety declarava duas categorias FALSAS**: «Endereço — NÃO» e «CPF — NÃO», quando `validarMorada` recolhe nome/CPF/CEP/logradouro/nº/bairro/cidade/UF para entregar o cartão e `iniciar-pagamento.mjs:86` envia o CPF ao Mercado Pago. **Corrigido** para SIM nos dois, com finalidade e prova (`docs/MC90.2-DATA-SAFETY-RASCUNHO.txt`). **Falta:** transpor para o formulário do Play Console (é preenchimento no browser, não código) e confirmar que a Política de Privacidade publicada (URL) tem o mesmo texto. | UTAC110k.1 (bloqueante do AAB) | **alta** | **corrigida no repo · pendente no Play Console** | operador |
+| **DEBT-054** | **A designação do DPO (R18-110k.1-DPO: Francisco Canindé Marinho, `dpo@desafiogut.com.br`) foi feita por decisão do operador, mas o próprio não foi ouvido.** O executor não tem como verificar a aceitação do cargo. **Falta:** o operador obter o aceite do nomeado, garantir que a caixa `dpo@desafiogut.com.br` existe e recebe, e publicar o mesmo contacto no site institucional. Se o nomeado não aceitar, o texto tem de voltar atrás (as três páginas dizem o nome). | UTAC110k.1 (R18-110k.1-DPO) | **alta** | **aberta** — aceite e caixa de e-mail por confirmar | operador |
+| **DEBT-050** | *(atualizada)* `cota_fingerprints` continua fora do alcance do fluxo por endereço. A Política de Retenção passou a **declará-lo** (§1.1) em vez de o omitir. | Validador 110j.1 → 110k.1 | média | **aberta** — decisão de desenho | operador |
+
+### Correções de texto deste UTAC (não são dívida — ficam registadas para auditoria)
+
+- `ExcluirContaModal.jsx`/`ExcluirConta.jsx`: saiu «(deixam de identificar você)» e «sem o identificar»;
+  entrou «pseudonimizados» + a frase de que **o registo continua a ser dado pessoal** e o canal do DPO.
+- `Privacidade.jsx` §8: as listas passaram a bater com o que o backend faz (palpites/pontuações/rankings
+  apagados; PIX, Google Play, `resgates`, `eco_quildo` pseudonimizados; lances de edição aberta retidos).
+- `Privacidade.jsx` §14: passou de «Contacto e autoridade de controlo» a **«Encarregado de Proteção de
+  Dados (DPO) e contacto»**, com nome, e-mail dedicado e âmbito do art. 18.
+- `docs/lgpd-politica-retencao.md`: ganhou a **§1.1** (política de exclusão por tabela) — antes só tinha
+  prazos e não cobria a entrega do cartão (`resgates`), que é o único sítio onde há CPF e morada.
