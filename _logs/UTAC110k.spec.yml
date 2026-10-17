@@ -1,0 +1,26 @@
+schema: utac/1
+name: UTAC110k
+title: "Dossiê jurídico para o advogado (B-2) — natureza do jogo, quem vende, saldos presos, LGPD"
+type: documentacao-juridica
+baseline: 26fd0dc
+motivo: >-
+  O AAB tem um bloqueador jurídico: o modelo (menor lance único com Passe pago) precisa de parecer
+  sobre a sua natureza, o vendedor legal tem de estar claro, há valores de clientes presos (R$ 23,75
+  em 7 contas + 12 senhas on-chain) e a LGPD tem pontos em aberto (DPO não designado, pseudonimização).
+  O advogado não tem hoje um documento de factos organizado por blocos de decisão.
+ambito_decidido_por: "R18 (operador, 2026-10-17) — DOSSIÊ COMPLETO: A natureza + B quem vende + C saldos + D LGPD + E loja"
+entrega:
+  - _logs/UTAC110k_DOSSIE-ADVOGADO.md  (fonte, no repo)
+  - Desktop/UTAC110k-DOSSIE-ADVOGADO.txt (versão para enviar ao advogado)
+regras:
+  - nenhum número estimado: todo o valor citado tem medição e data
+  - não concluir Direito; formular perguntas com espaço de resposta
+  - tensões internas do produto ficam À VISTA (ex.: Art. 17º vs Passe de R$ 2,00 / DEBT-042)
+proibe:
+  - inventar base legal, prazo ou artigo
+  - apresentar o documento como parecer jurídico
+  - alterar código (é documentação)
+dependencias:
+  - UTAC110j (v5 na UI) e UTAC110j.1 (exclusão de conta) fechados
+  - MC103 (medição dos saldos) — números de 2026-09-30, a re-medir antes de decidir
+estado: entregue para revisão do operador · NÃO commitado (sem autorização)
