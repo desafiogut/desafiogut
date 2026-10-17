@@ -217,3 +217,11 @@ formulário **não** depende do rascunho (usa `_logs/DATA-SAFETY-FOLHA-DEBT-053.
   Dados (DPO) e contacto»**, com nome, e-mail dedicado e âmbito do art. 18.
 - `docs/lgpd-politica-retencao.md`: ganhou a **§1.1** (política de exclusão por tabela) — antes só tinha
   prazos e não cobria a entrega do cartão (`resgates`), que é o único sítio onde há CPF e morada.
+
+---
+
+## DEBT-056 — `main` escrita fora do fluxo de PR (2026-10-17)
+
+| ID | Dívida | Origem | Severidade | Estado | Owner |
+|---|---|---|---|---|---|
+| **DEBT-056** | **A `main` foi escrita com `git push` directo, fora do fluxo de PR.** O push do commit `571b77a` (Data Safety / política / gate 3.2) foi aceite com «Bypassed rule violations for refs/heads/main: Changes must be made through a pull request · 2 of 2 required status checks are expected». **A protecção ESTÁ activa — mas não é onde se procuraria:** `/branches/main/protection` devolve **404 «Branch not protected»** (não há *classic branch protection*); o que existe é um **ruleset** `protecacao-main` (id **16463466**, `enforcement: active`, criado 2026-05-15, actualizado 2026-05-16, condição `~DEFAULT_BRANCH`) com as regras `deletion`, `non_fast_forward`, `pull_request` (0 aprovações exigidas, `require_last_push_approval`, `required_review_thread_resolution`) e `required_status_checks` **estritos** (`ci / build`, `security-scan / npm-audit-frontend`). O bypass vem de `bypass_actors: [{actor_type: "RepositoryRole", actor_id: 5, bypass_mode: "always"}]` — o papel **admin** do repositório pode saltar sempre as regras, e a conta usada (`desafiogut`) é admin. **Risco operacional (não bloqueante hoje):** qualquer sessão futura com esta conta pode voltar a escrever em `main` sem PR e **sem os checks correrem** — o CI (`ci / build`, `npm-audit-frontend`) fica de fora exactamente nos commits que mais precisam dele. **Não corrigido** (mexer no ruleset é decisão do dono). Verificação: `gh api repos/desafiogut/desafiogut/rules/branches/main` e `gh api repos/desafiogut/desafiogut/rulesets/16463466`. | Fecho da DEBT-053 (2026-10-17) | **média** | **aberta** — decisão do operador (manter o bypass do admin ou retirar `actor_id: 5` dos `bypass_actors`) | operador |
