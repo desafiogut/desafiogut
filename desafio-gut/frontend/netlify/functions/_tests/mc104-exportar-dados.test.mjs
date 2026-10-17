@@ -38,6 +38,12 @@ const SCHEMA = {
   pontuacoes: ["ciclo_id", "endereco", "pontos"], rankings_ciclo: ["ciclo_id", "endereco", "posicao"],
   cotas: ["cliente_id", "endereco", "email"],
   passes: ["id", "endereco", "edicao_id", "produto_id", "comprado_em", "palpite_usado", "cupons_ids", "status"], // MC105a.1
+  // UTAC110j.2 — esquema REAL das tabelas que a exportação passou a cobrir (DEBT-046).
+  pontos: ["endereco", "pontos", "historico"], palpites: ["id", "endereco", "edicao_id", "valor", "apurado", "resultado"],
+  resgates: ["id", "endereco", "cartao_id", "morada", "status"],
+  eco_quildo: ["endereco", "saldo", "historico"],
+  google_play_compras: ["purchase_token", "order_id", "produto_id", "tipo_passe", "endereco", "estado", "pontos"],
+  cotas_pagas: ["pedido_id", "payload"], wallet_idem: ["idem_key", "payload"],
 };
 function exigirColuna(tabela, col) {
   const base = col.split("->>")[0];
@@ -127,7 +133,38 @@ function semear() {
     rankings_ciclo: [{ ciclo_id: "R-1", endereco: TITULAR, posicao: 1 }, { ciclo_id: "R-1", endereco: OUTRO, posicao: 2 }],
     passes: [{ id: "ps1", endereco: TITULAR, edicao_id: "P-1", produto_id: "prod-1", status: "activo" }, { id: "ps2", endereco: OUTRO, edicao_id: "P-1", produto_id: "prod-1", status: "activo" }],
     cotas: [{ cliente_id: TITULAR, endereco: TITULAR, email: "t@x" }, { cliente_id: "outro-id", endereco: TITULAR, email: "t2@x" }, { cliente_id: TITULAR, endereco: null, email: "t3@x" }, { cliente_id: OUTRO, endereco: OUTRO, email: "o@x" }],
+    // UTAC110j.2 — cada uma tem uma linha do TITULAR e uma do OUTRO: se o filtro falhar, o teste vê.
+    pontos: [{ endereco: TITULAR, pontos: 42, historico: [{ tipo: "credito", n: 10 }] }, { endereco: OUTRO, pontos: 7, historico: [] }],
+    palpites: [{ id: 1, endereco: TITULAR, edicao_id: "P-1", valor: 12, apurado: true, resultado: "mais_proximo" }, { id: 2, endereco: OUTRO, edicao_id: "P-1", valor: 9 }],
+    resgates: [{ id: 1, endereco: TITULAR, cartao_id: "c-1", morada: { nome: "Ana", cpf: "111", cep: "69000-000" }, status: "enviado" },
+               { id: 2, endereco: OUTRO, cartao_id: "c-2", morada: { nome: "Bob", cpf: "222" }, status: "pendente" }],
+    eco_quildo: [{ endereco: TITULAR, saldo: 40, historico: [{ tipo: "lastro" }] }, { endereco: OUTRO, saldo: 5, historico: [] }],
+    google_play_compras: [{ purchase_token: "tok-1", order_id: "GPA.1", produto_id: "passe_relampago", tipo_passe: "relampago", endereco: TITULAR, estado: "creditada", pontos: 10 },
+                          { purchase_token: "tok-2", order_id: "GPA.2", produto_id: "passe_relampago", tipo_passe: "relampago", endereco: OUTRO, estado: "creditada", pontos: 10 }],
+    cotas_pagas: [{ pedido_id: "cp1", payload: { endereco: TITULAR, valorCentavos: 55000 } }, { pedido_id: "cp2", payload: { endereco: OUTRO, valorCentavos: 100 } }],
+    wallet_idem: [{ idem_key: "w1", payload: { endereco: TITULAR, transacaoId: "t1" } }, { idem_key: "w2", payload: { endereco: OUTRO, transacaoId: "t2" } }],
   };
+  // Indicações: titular como indicador E como indicado; um terceiro PARECIDO que não é dele.
+  blob("referral-codes", `referral-code:${TITULAR}`, { codigo: "ABC123", endereco: TITULAR, criadoEm: "2026-10-01T00:00:00Z" });
+  blob("referral-codes", "referral-code-reverso:ABC123", { endereco: TITULAR, criadoEm: "2026-10-01T00:00:00Z" });
+  blob("referral-codes", `referral-code:${OUTRO}`, { codigo: "ZZZQQQ", endereco: OUTRO });
+  blob("referral-links", `referral:ABC123:${OUTRO}`, { codigo: "ABC123", indicador: TITULAR, indicado: OUTRO, criadoEm: "2026-10-02T00:00:00Z", status: "convertido" });
+  blob("referral-links", `referral:ZZZQQQ:${TITULAR}`, { codigo: "ZZZQQQ", indicador: OUTRO, indicado: TITULAR, criadoEm: "2026-10-03T00:00:00Z", status: "pendente" });
+  blob("referral-links", `referral:ZZZQQQ:${PARECIDO}`, { codigo: "ZZZQQQ", indicador: OUTRO, indicado: PARECIDO });
+  blob("referral-links", "referral-convertido:ABC123:" + OUTRO, { txHash: "0xfeed", em: "2026-10-04T00:00:00Z" });
+  blob("referral-links", "referral-fraud:ZZZQQQ:" + TITULAR, { motivo: "mesmo-dispositivo", em: "2026-10-05T00:00:00Z" });
+  blob("referral-bonus", `referral-bonus:${TITULAR}`, { total: 3, ultimos: [{ endereco: OUTRO, em: "2026-10-02T00:00:00Z" }], atualizadoEm: "2026-10-06T00:00:00Z" });
+  blob("referral-bonus", `referral-monthly:${TITULAR}:2026-10`, { conversoes: 2 });
+  blob("referral-bonus", `referral-monthly:${OUTRO}:2026-10`, { conversoes: 9 });
+  blob("referral-log", "log:2026-10-02", { eventos: [
+    { tipo: "conversao", indicador: TITULAR, indicado: OUTRO },
+    { tipo: "conversao", indicador: OUTRO, indicado: PARECIDO },
+  ] });
+  blob("referral-induzido", `${TITULAR}:2026-10-02`, { n: 2 });
+  blob("referral-induzido", `${OUTRO}:2026-10-02`, { n: 9 });
+  // Store `auditoria` (UTAC110j.1): um evento com o titular, outro sem.
+  blob("auditoria", "2026-10-02T10:00:00Z", { acao: "edicao-criada", endereco: TITULAR, edicaoId: "R-1" });
+  blob("auditoria", "2026-10-02T11:00:00Z", { acao: "edicao-criada", endereco: OUTRO, edicaoId: "R-2" });
 }
 
 beforeEach(() => { blobs.clear(); db = {}; ctx.configurado = true; ctx.falharTabela = null; });
@@ -157,7 +194,16 @@ test("titular com dados → pedidos (morada/CPF/NF-e), lances, pontos, consentim
   assert.deepEqual(t.saldo_rs_debitos.map((r) => r.operacao_id), ["d0"]);
   assert.deepEqual(t.lojistas.map((r) => r.id), [7]);
   assert.deepEqual(t.passes.map((r) => r.id), ["ps1"], "MC105a.1: passes do titular (e só dele)");
-  assert.deepEqual(Object.keys(t).sort(), ["atividade_utilizadores", "cotas", "lances", "lojistas", "passes", "pontuacoes", "rankings_ciclo", "saldo_rs", "saldo_rs_creditos", "saldo_rs_debitos", "troco_senhas", "wallet"]);
+  // UTAC110j.2 (DEBT-046): as 7 tabelas em falta entraram — e cada uma traz SÓ a linha do titular.
+  assert.deepEqual(t.pontos.map((r) => r.pontos), [42], "pontos de fidelidade do titular");
+  assert.deepEqual(t.palpites.map((r) => r.valor), [12], "palpites do titular");
+  assert.deepEqual(t.resgates.map((r) => r.cartao_id), ["c-1"], "resgates do titular");
+  assert.equal(t.resgates[0].morada.nome, "Ana", "a morada é dado DELE: sai inteira");
+  assert.deepEqual(t.eco_quildo.map((r) => r.saldo), [40], "ECOQUILDO do titular");
+  assert.deepEqual(t.google_play_compras.map((r) => r.order_id), ["GPA.1"], "compras Google Play do titular");
+  assert.deepEqual(t.cotas_pagas.map((r) => r.pedido_id), ["cp1"], "pagamentos de cotas do titular");
+  assert.deepEqual(t.wallet_idem.map((r) => r.idem_key), ["w1"], "idempotência de carteira do titular");
+  assert.deepEqual(Object.keys(t).sort(), ["atividade_utilizadores", "cotas", "cotas_pagas", "eco_quildo", "google_play_compras", "lances", "lojistas", "palpites", "passes", "pontos", "pontuacoes", "rankings_ciclo", "resgates", "saldo_rs", "saldo_rs_creditos", "saldo_rs_debitos", "troco_senhas", "wallet", "wallet_idem"]);
   assert.deepEqual(d.supabase.erros, []);
 });
 

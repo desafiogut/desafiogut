@@ -18,6 +18,9 @@ const COR = {
 export default function Configuracoes() {
   const isMobile = useIsMobile();
   const { isConnected, address, userLabel, authToken, desconectar, abrirModal } = useAppContext();
+  // UTAC110j.2 (LGPD art. 18, V — portabilidade): pedido in-app, entrega imediata por download.
+  const [baixandoDados, setBaixandoDados] = useState(false);
+  const [avisoDados, setAvisoDados] = useState(null); // { tipo: "ok"|"erro", texto }
   const { t } = useIdioma();
   const navigate = useNavigate();
 
@@ -26,6 +29,50 @@ export default function Configuracoes() {
   const [notifPix,       setNotifPix]       = useState(false);
   const [salvo,          setSalvo]          = useState(false);
   const [modalExcluir,   setModalExcluir]   = useState(false);
+
+  /**
+   * UTAC110j.2 — LGPD, artigo 18, inciso V (portabilidade) e artigo 19, inciso II (prazo).
+   * Pede o JSON ao backend autenticado e entrega-o como download imediato. Não passa pelo `apiPost`
+   * porque esse helper devolve JSON parseado — aqui o corpo É o ficheiro.
+   * Se falhar, o utilizador fica com o canal alternativo por e-mail (o mesmo da exclusão).
+   */
+  async function baixarMeusDados() {
+    if (!address || !authToken) {
+      setAvisoDados({ tipo: "erro", texto: "Faça login para baixar os seus dados." });
+      return;
+    }
+    setBaixandoDados(true);
+    setAvisoDados(null);
+    try {
+      const resp = await fetch("/.netlify/functions/exportar-dados", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ endereco: address }),
+      });
+      if (!resp.ok) {
+        let msg = `HTTP ${resp.status}`;
+        try { const j = await resp.json(); if (j?.message) msg = j.message; } catch { /* corpo não-JSON */ }
+        throw new Error(msg);
+      }
+      const ficheiro = await resp.blob();
+      const url = URL.createObjectURL(ficheiro);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `desafio-gut-meus-dados-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setAvisoDados({ tipo: "ok", texto: "Arquivo gerado. Guarde-o: é a sua cópia dos dados (LGPD, artigo 18, inciso V)." });
+    } catch (err) {
+      setAvisoDados({
+        tipo: "erro",
+        texto: `Não foi possível gerar o arquivo (${err?.message ?? "erro"}). Pode pedir por e-mail: desafiogut01@gmail.com.`,
+      });
+    } finally {
+      setBaixandoDados(false);
+    }
+  }
 
   function handleSalvar() {
     setSalvo(true);
@@ -71,13 +118,23 @@ export default function Configuracoes() {
                 className={`${isMobile ? "w-full" : ""} !border-[#ef4444]/30 !bg-[#ef4444]/[0.1] !text-[#ef4444]`}>
                 {t("config.desconectar")}
               </Button>
+              <Button variant="ghost" size="md" onClick={baixarMeusDados} disabled={baixandoDados}
+                className={isMobile ? "w-full" : ""}>
+                {baixandoDados ? "⏳ Gerando…" : "⬇️ Baixar meus dados"}
+              </Button>
               <Button variant="ghost" size="md" onClick={() => setModalExcluir(true)}
                 className={`${isMobile ? "w-full" : ""} !border-[#ef4444]/40 !text-[#ef4444]`}>
                 🗑️ Excluir conta
               </Button>
             </div>
+            {avisoDados && (
+              <p style={{ marginTop: "0.6rem", fontSize: "0.78rem", lineHeight: 1.45,
+                color: avisoDados.tipo === "ok" ? COR.success : COR.danger }}>
+                {avisoDados.texto}
+              </p>
+            )}
             <p style={{ marginTop: "0.6rem", fontSize: "0.72rem", color: COR.muted, lineHeight: 1.4 }}>
-              A exclusão remove permanentemente seus dados pessoais.{" "}
+              A exclusão elimina ou pseudonimiza seus dados pessoais (o que a lei obriga a guardar fica retido).{" "}
               <a href="/excluir-conta" style={{ color: COR.blue300 }}>Saiba mais</a>.
             </p>
           </div>

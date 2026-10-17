@@ -1,0 +1,8 @@
+UTAC110j.2 — CORRIDA FINAL (cobertura das 6 tabelas + metadados + CSV + UI)
+Comando: node scripts/mc966-suite-harness.mjs ambos · 2026-10-17
+
+RAM_antes_MB=1737
+frontend: VERDE 1181/1181 pass
+backend: VERDE 1351/1357 pass
+VEREDITO: VERDE
+EXIT_SUITE=0
