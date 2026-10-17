@@ -72,13 +72,17 @@ test("C/Data Safety: Endereço passa a «SIM» — e o fluxo que o recolhe está
   assert.match(DS, /resgates\.morada/);
 });
 
-test("C/Data Safety: CPF passa a «SIM», com as duas finalidades reais", () => {
+test("C/Data Safety: CPF passa a «SIM», com a finalidade real (E-4: a premissa do MP foi refutada)", () => {
   assert.doesNotMatch(DS, /\[15\][\s\S]{0,200}NÃO coletado[\s\S]{0,120}CPF do utilizador não é coletado/,
     "a negação do CPF não pode voltar");
   assert.match(DS, /\[15\] INFORMAÇÕES FINANCEIRAS DO GOVERNO \(NIF\/CPF\)[\s\S]{0,120}\*\*SIM — coletado\*\*/);
-  assert.match(DS, /iniciar-pagamento\.mjs:86/, "finalidade (a): identificação do pagador no PIX");
+  // E-4 (2026-10-17): esta asserção exigia a premissa REFUTADA («o CPF vai ao Mercado Pago»).
+  // Passa a exigir a VERDADE — e a impedir que a premissa falsa volte.
+  assert.doesNotMatch(DS, /\(a\) \*\*Pagamento por PIX\*\*/, "a finalidade falsa não pode voltar");
+  assert.match(DS, /REFUTADO no fecho da DEBT-053 \(2026-10-17\)/, "a refutação tem de ficar registada");
+  assert.match(DS, /Não é partilhado com o processador de pagamento/, "o rascunho tem de dizer a verdade sobre o MP");
   assert.match(DS, /validarCPF[\s\S]{0,200}entrega|entrega[\s\S]{0,200}validarCPF/,
-    "finalidade (b): entrega do cartão");
+    "finalidade: entrega do cartão");
 });
 
 test("C/Data Safety: deixa de chamar «anonimizado» ao que é pseudonimizado", () => {
@@ -92,7 +96,7 @@ test("C/Data Safety: deixa de chamar «anonimizado» ao que é pseudonimizado", 
 test("D/DPO: nome e contacto divulgados na política, na app e na página de exclusão (art. 41)", () => {
   for (const [nome, src] of [["política de retenção", POLITICA], ["Política de Privacidade", PRIV], ["página de exclusão", PAGINA]]) {
     assert.match(src, /Francisco Canindé Marinho/, `o DPO tem de estar nomeado em ${nome}`);
-    assert.match(src, /dpo@desafiogut\.com\.br/, `o contacto do DPO tem de estar em ${nome}`);
+    assert.match(src, /dpo@grupouniaoetrabalho\.com\.br/, `o contacto do DPO tem de estar em ${nome}`);
   }
   // A lacuna formal que isto fecha: «a designar» não pode voltar.
   assert.doesNotMatch(POLITICA, /DPO\): a designar/, "«a designar» era a lacuna do art. 41");
@@ -127,7 +131,7 @@ test("E/modal renderizado: o utilizador lê «pseudonimizados» e o aviso da LGP
     { aberto: true, onFechar: () => {}, address: "0xabc", authToken: "t", onExcluido: () => {} }));
   assert.match(t, /pseudonimizados/i, "o texto renderizado tem de dizer pseudonimizados");
   assert.match(t, /ainda é dado pessoal/, "o aviso tem de chegar ao ecrã, não só ao fonte");
-  assert.match(t, /dpo@desafiogut\.com\.br/, "o canal do Encarregado tem de estar no ecrã");
+  assert.match(t, /dpo@grupouniaoetrabalho\.com\.br/, "o canal do Encarregado tem de estar no ecrã");
   assert.doesNotMatch(t, /deixam de identificar você/i);
 });
 

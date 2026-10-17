@@ -318,7 +318,7 @@ function metadados(endereco, papel) {
       nome: "Associação Recreativa dos Nordestinos no Amazonas",
       nomeFantasia: "Grupo União e Trabalho",
       cnpj: "23.040.066/0001-00",
-      encarregado: "Francisco Canindé Marinho — dpo@desafiogut.com.br",
+      encarregado: "Francisco Canindé Marinho — dpo@grupouniaoetrabalho.com.br",
     },
     direito: "LGPD art. 18, II (acesso) e V (portabilidade); art. 19, II (prazo de 30 dias)",
     formatos: ["JSON (este documento)", "CSV (?formato=csv — uma linha por campo)"],

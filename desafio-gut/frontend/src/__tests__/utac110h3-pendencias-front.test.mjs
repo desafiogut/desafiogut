@@ -152,8 +152,9 @@ test("P3 controlo positivo: o varrimento vê as chaves reais (não é um passe a
 });
 
 // ── P4: data da Privacidade ──────────────────────────────────────────────────────────────────────
-test("P4: a Política de Privacidade diz 15 de outubro de 2026 (e não a data antiga)", () => {
+test("P4: a Política de Privacidade diz 17 de outubro de 2026 (e não as datas antigas)", () => {
   const txt = ler("pages/Privacidade.jsx");
-  assert.match(txt, /Última atualização: 15 de outubro de 2026/, "a data não foi actualizada");
+  assert.match(txt, /Última atualização: 17 de outubro de 2026/, "a data não foi actualizada");
+  assert.doesNotMatch(txt, /15 de outubro de 2026/, "a data anterior ainda está lá");
   assert.doesNotMatch(txt, /15 de agosto de 2026/, "a data antiga ainda está lá");
 });

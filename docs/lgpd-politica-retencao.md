@@ -103,7 +103,7 @@ Eventos de segurança capturados pelo Sentry (`security_alert` tags: `rate_limit
 
 ## 5. Pontos de contato
 
-- **Encarregado de Dados (DPO): Francisco Canindé Marinho** — `dpo@desafiogut.com.br`
+- **Encarregado de Dados (DPO): Francisco Canindé Marinho** — `dpo@grupouniaoetrabalho.com.br`
   (alternativa: `contato@grupouniaoetrabalho.com.br` com o assunto «DPO»)
   · Designado por **R18-110k.1-DPO** (2026-10-17), nos termos do art. 41 da LGPD.
   · Identidade e contacto divulgados publicamente: aqui, na Política de Privacidade
@@ -115,6 +115,6 @@ Eventos de segurança capturados pelo Sentry (`security_alert` tags: `rate_limit
 | Versão | Data | Mudança |
 |---|---|---|
 | 1.0 | 2026-05-15 | Versão inicial — Mega Comando 3 (Sentry alerts + purge-logs + exportar-dados + fingerprint anti-Sybil). |
-| 1.1 | 2026-10-17 | **DPO designado e divulgado** (art. 41): Francisco Canindé Marinho — `dpo@desafiogut.com.br` (R18-110k.1-DPO). Deixa de estar «a designar». |
+| 1.1 | 2026-10-17 | **DPO designado e divulgado** (art. 41): Francisco Canindé Marinho — `dpo@grupouniaoetrabalho.com.br` (R18-110k.1-DPO). Deixa de estar «a designar». |
 | 1.3 | 2026-10-17 | **Secção 1.1 — política de exclusão por tabela**: o documento passa a dizer o que acontece a `resgates` (morada com CPF → «[Conta Deletada]»), `eco_quildo`, `palpites`, `passes`, `cotas_pagas`, `fila_tarefas`, `wallet_idem` e `auditoria`. Antes desta data a política só definia prazos e não cobria a entrega do cartão. |
 | 1.2 | 2026-10-17 | **Pseudonimização ≠ anonimização** (ANPD): onde o identificador é hash de dado público, o texto passa a dizer «pseudonimizado» e a declarar que o registo continua a ser dado pessoal, com os direitos do art. 18. |

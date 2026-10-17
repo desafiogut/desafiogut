@@ -42,7 +42,7 @@ export default function Privacidade() {
             Política de Privacidade — DesafioGUT
           </h1>
           <p style={{ margin: 0, color: COR.muted, fontSize: "0.9rem" }}>
-            Última atualização: 15 de outubro de 2026
+            Última atualização: 17 de outubro de 2026
           </p>
         </header>
 
@@ -96,7 +96,7 @@ export default function Privacidade() {
             3.2. Informações financeiras
           </p>
           <ul style={{ margin: "0 0 0.75rem", paddingLeft: "1.2rem" }}>
-            <li style={liStyle}>Histórico de compras de Passes Desafio e transações de pagamento PIX processadas através do Mercado Pago (instituição de pagamento).</li>
+            <li style={liStyle}>Histórico de compras de Passes Desafio, incluindo as efetuadas pelo Google Play na app Android, e transações de pagamento PIX processadas através do Mercado Pago (instituição de pagamento).</li>
             <li style={liStyle}>Os dados de pagamento (PIX) são processados pelo Mercado Pago; o DesafioGUT não armazena chaves PIX nem dados de cartão.</li>
             <li style={liStyle}>Finalidade: processamento de pagamentos, prevenção de fraude e obrigações fiscais/legais.</li>
             <li style={liStyle}>Obrigatório para o funcionamento do app (compras). Base legal: execução do contrato e obrigação legal (legislação fiscal brasileira).</li>
@@ -129,10 +129,41 @@ export default function Privacidade() {
           <p style={{ ...pStyle, fontWeight: 700, color: COR.text }}>
             3.6. Informações de desempenho e dispositivo (crash logs)
           </p>
-          <ul style={{ margin: 0, paddingLeft: "1.2rem" }}>
+          <ul style={{ margin: "0 0 0.75rem", paddingLeft: "1.2rem" }}>
             <li style={liStyle}>Dados de diagnóstico e relatórios de falhas (crash logs), processados pelo Sentry quando habilitado.</li>
-            <li style={liStyle}>Finalidade: monitorização da estabilidade e correção de erros.</li>
-            <li style={liStyle}>Coleta opcional, com consentimento; não é utilizada para publicidade nem associada a identificadores persistentes de dispositivo.</li>
+            <li style={liStyle}>Métricas de desempenho da aplicação (LCP, INP, CLS e TTFB), recolhidas pela biblioteca <em>web-vitals</em> e enviadas ao mesmo serviço de diagnóstico.</li>
+            <li style={liStyle}>Finalidade: monitorização da estabilidade, do desempenho e correção de erros.</li>
+            <li style={liStyle}>Coleta opcional, com consentimento: o serviço só é carregado depois do aceite do Gate de Consentimento. Não é utilizada para publicidade nem associada a identificadores de publicidade.</li>
+          </ul>
+
+          <p style={{ ...pStyle, fontWeight: 700, color: COR.text }}>
+            3.7. Dados de entrega do cartão colecionável (opcional)
+          </p>
+          <ul style={{ margin: "0 0 0.75rem", paddingLeft: "1.2rem" }}>
+            <li style={liStyle}>Recolhidos apenas quando o utilizador pede o envio do cartão colecionável: nome do destinatário, CPF, CEP, logradouro, número, complemento, bairro, cidade, estado (UF) e, opcionalmente, telefone com DDD.</li>
+            <li style={liStyle}>Armazenados na base de dados Supabase (registo do resgate) e utilizados exclusivamente para a entrega do cartão e para a prova dessa entrega. Não são usados para publicidade, perfilamento nem avaliação de crédito.</li>
+            <li style={liStyle}>O CPF é recolhido apenas neste fluxo — não é pedido no registo, no login nem no pagamento — e é exigido pela logística de entrega.</li>
+            <li style={liStyle}>Base legal: execução do contrato. O restante funcionamento do app não depende destes dados.</li>
+            <li style={liStyle}>Na eliminação da conta, a morada passa a «[Conta Deletada]», o CPF é eliminado e o registo da transacção é mantido como prova de entrega (secção 8).</li>
+          </ul>
+
+          <p style={{ ...pStyle, fontWeight: 700, color: COR.text }}>
+            3.8. Identificadores de dispositivo e de rede
+          </p>
+          <ul style={{ margin: "0 0 0.75rem", paddingLeft: "1.2rem" }}>
+            <li style={liStyle}>Identificador de dispositivo calculado localmente (visitorId da biblioteca FingerprintJS, executada no próprio aparelho): guardado no armazenamento local do dispositivo e enviado nas chamadas ao servidor para prevenção de abuso e de contas múltiplas. A biblioteca não transmite dados ao seu fornecedor.</li>
+            <li style={liStyle}>Endereço IP: utilizado para limitar a taxa de pedidos e para alertas de segurança, em janelas de um minuto. Não é utilizado para determinar a localização do utilizador.</li>
+            <li style={liStyle}>Finalidade: segurança, prevenção de fraude e funcionamento do serviço. Base legal: interesse legítimo e execução do contrato.</li>
+          </ul>
+
+          <p style={{ ...pStyle, fontWeight: 700, color: COR.text }}>
+            3.9. Mensagens escritas no assistente do app (GUTO)
+          </p>
+          <ul style={{ margin: 0, paddingLeft: "1.2rem" }}>
+            <li style={liStyle}>O texto que o utilizador escreve no assistente do app e o histórico recente da conversa são enviados a um fornecedor de inteligência artificial (atualmente DeepSeek) para gerar a resposta (secção 5).</li>
+            <li style={liStyle}>Estas mensagens não são guardadas nos nossos servidores; o histórico recente fica no próprio dispositivo do utilizador e desaparece quando os dados do app são limpos.</li>
+            <li style={liStyle}>Finalidade: funcionalidade do app. A utilização do assistente é opcional.</li>
+            <li style={liStyle}>Não escreva no assistente dados sensíveis, palavras-passe, chaves ou dados de pagamento.</li>
           </ul>
         </GlassCard>
 
@@ -140,9 +171,13 @@ export default function Privacidade() {
           <h3 style={h2Style}>4. DADOS QUE NÃO SÃO COLETADOS</h3>
           <p style={pStyle}>
             O DesafioGUT NÃO coleta: localização (GPS), fotos, vídeos, áudio, ficheiros e
-            documentos, calendário, contactos, mensagens SMS/MMS, dados de telefone,
-            histórico de navegação web, dados de saúde, raça/etnia, opiniões políticas ou
-            religiosas, nem orientação sexual.
+            documentos, calendário, contactos, mensagens SMS/MMS, histórico de navegação web,
+            dados de saúde, raça/etnia, opiniões políticas ou religiosas, nem orientação sexual.
+          </p>
+          <p style={pStyle}>
+            Nota: o telefone com DDD é recolhido apenas, e a título opcional, no envio do cartão
+            colecionável (secção 3.7). As mensagens escritas no assistente do app não são SMS/MMS
+            e estão descritas na secção 3.9.
           </p>
           <p style={pStyle}>
             O app declara apenas a permissão Android INTERNET (necessária para a ligação à
@@ -154,20 +189,27 @@ export default function Privacidade() {
         <GlassCard className="p-5 mb-5">
           <h3 style={h2Style}>5. COMPARTILHAMENTO COM TERCEIROS (SDKs E SERVIÇOS)</h3>
           <p style={pStyle}>
-            Os seus dados são partilhados exclusivamente com prestadores de serviços
-            essenciais ao funcionamento do app, sob contrato, e nunca são vendidos:
+            Os seus dados são tratados pelos prestadores de serviços essenciais ao
+            funcionamento do app, sob contrato, e nunca são vendidos nem cedidos para
+            publicidade:
           </p>
           <ul style={{ margin: "0 0 0.75rem", paddingLeft: "1.2rem" }}>
             <li style={liStyle}><strong style={{ color: COR.text }}>Privy (privy.io)</strong> — autenticação e carteira embutida: nome, e-mail, endereço da carteira, identificador de utilizador.</li>
             <li style={liStyle}><strong style={{ color: COR.text }}>Supabase (supabase.com)</strong> — base de dados e armazenamento: dados de conta, lances, histórico, atividade, saldos.</li>
             <li style={liStyle}><strong style={{ color: COR.text }}>Netlify (netlify.com)</strong> — backend serverless (funções): dados transitórios necessários às funções (ex.: processamento de pagamento e lances).</li>
-            <li style={liStyle}><strong style={{ color: COR.text }}>Mercado Pago (mercadopago.com.br)</strong> — processamento de pagamentos PIX: dados de transação de pagamento (valor, data, referência).</li>
+            <li style={liStyle}><strong style={{ color: COR.text }}>Mercado Pago (mercadopago.com.br)</strong> — processamento de pagamentos PIX: dados de transação de pagamento (valor, data, referência) e o e-mail do pagador.</li>
+            <li style={liStyle}><strong style={{ color: COR.text }}>Google Play (faturamento)</strong> — compras efetuadas na app Android: identificador do pedido e token de compra, validados junto do Google para confirmar o pagamento.</li>
+            <li style={liStyle}><strong style={{ color: COR.text }}>SendGrid (Twilio)</strong> — envio de e-mail transacional: endereço de e-mail do destinatário e o texto da confirmação, que no resgate do cartão inclui o nome e a morada indicados na secção 3.7.</li>
+            <li style={liStyle}><strong style={{ color: COR.text }}>DeepSeek</strong> — assistente do app: o texto da pergunta e o histórico recente da conversa (secção 3.9), processados para gerar a resposta.</li>
+            <li style={liStyle}><strong style={{ color: COR.text }}>Frenet</strong> — rastreio de entregas: apenas o código de rastreio; não recebe nome, morada nem CPF.</li>
             <li style={liStyle}><strong style={{ color: COR.text }}>Sentry (sentry.io)</strong> — monitorização de erros: relatórios de falha e diagnóstico (se habilitado).</li>
             <li style={liStyle}><strong style={{ color: COR.text }}>Alchemy (RPC)</strong> — acesso à rede Ethereum: endereços e transações públicas on-chain.</li>
           </ul>
           <p style={pStyle}>
             O DesafioGUT não vende dados pessoais e não utiliza dados pessoais para
-            publicidade comportamental.
+            publicidade comportamental. Quando o fornecedor trata os dados por conta
+            própria — como o fornecedor de inteligência artificial do assistente — a
+            transferência é a indicada na descrição respetiva.
           </p>
         </GlassCard>
 
@@ -306,8 +348,8 @@ export default function Privacidade() {
             Encarregado de Proteção de Dados: Francisco Canindé Marinho
             <br />
             Contacto:{" "}
-            <a href="mailto:dpo@desafiogut.com.br" style={{ color: COR.blue300 }}>
-              dpo@desafiogut.com.br
+            <a href="mailto:dpo@grupouniaoetrabalho.com.br" style={{ color: COR.blue300 }}>
+              dpo@grupouniaoetrabalho.com.br
             </a>
           </p>
           <p style={pStyle}>

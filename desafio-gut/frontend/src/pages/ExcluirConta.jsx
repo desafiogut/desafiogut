@@ -61,7 +61,7 @@ export default function ExcluirConta() {
             dados pessoais são <strong>eliminados ou pseudonimizados</strong> logo após a confirmação
             (ver as listas abaixo: o que sai e o que a lei obriga a reter). <strong>Pseudonimizado não é
             anónimo</strong>: o registro que fica ainda é dado pessoal, e você mantém sobre ele os
-            direitos da LGPD — incluindo falar com o Encarregado (dpo@desafiogut.com.br).
+            direitos da LGPD — incluindo falar com o Encarregado (dpo@grupouniaoetrabalho.com.br).
           </p>
         </header>
 
@@ -165,7 +165,7 @@ export default function ExcluirConta() {
           <br />
           <span style={{ fontSize: "0.78rem", color: COR.muted }}>
             Encarregado de Proteção de Dados (DPO): Francisco Canindé Marinho —{" "}
-            <a href="mailto:dpo@desafiogut.com.br" style={{ color: COR.blue300 }}>dpo@desafiogut.com.br</a>
+            <a href="mailto:dpo@grupouniaoetrabalho.com.br" style={{ color: COR.blue300 }}>dpo@grupouniaoetrabalho.com.br</a>
           </span>
         </p>
         <p style={{ textAlign: "center", marginTop: "1.5rem" }}>

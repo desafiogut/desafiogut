@@ -15,7 +15,7 @@ import { Modal } from "@/components/ui";
 // UTAC110h.1 (R18-110h.1-B) — "2.0" (v4) -> "3.0" (v5): quem aceitou o v4 volta a ver o gate.
 // Tem de ser igual a VERSAO_GATE de netlify/functions/_lib/consentimento.mjs (há teste).
 export const CHAVE_CONSENTIMENTO  = "gut_consentimento";
-export const VERSAO_CONSENTIMENTO = "3.1";
+export const VERSAO_CONSENTIMENTO = "3.2";
 
 export default function TermosConsentimento({ onAceitar }) {
   const [lido,       setLido]       = useState(false);

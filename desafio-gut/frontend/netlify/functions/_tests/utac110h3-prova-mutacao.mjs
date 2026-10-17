@@ -64,7 +64,7 @@ const MUTANTES = [
     "  return { dia, totalConversoes, topIndicadores, anomalias, falhasTransitorias: falhas.length, texto };", "back"],
   // ── P4 — data da Privacidade ───────────────────────────────────────────────────────────────────
   ["P4a a data da Privacidade volta a agosto de 2026", PV,
-    "Última atualização: 15 de outubro de 2026", "Última atualização: 15 de agosto de 2026", "front"],
+    "Última atualização: 17 de outubro de 2026", "Última atualização: 15 de outubro de 2026", "front"],
   // ── P5 — o bug dos endereços mascarados (DEBT-025) ─────────────────────────────────────────────
   ["P5a o endpoint volta a passar endereços MASCARADOS (o bug)", EP,
     "{ codigo, indicador: r.indicador, indicado: endereco },",

@@ -15,7 +15,7 @@ export const STORE_CONSENTIMENTO = "consent-log";
 export const CONTEXTO_GATE = "gate-legal";
 
 // Tem de ser igual a VERSAO_CONSENTIMENTO de src/components/TermosConsentimento.jsx (há teste que o exige).
-export const VERSAO_GATE = "3.1"; // UTAC110k.1 (R18-110k.1): Regulamento v5.1 (Art. 17º corrigido) — invalida os aceites de 3.0 de propósito
+export const VERSAO_GATE = "3.2"; // 2026-10-17 (E-3): a Política de Privacidade mudou materialmente (dados de entrega, visitante, mensagens do assistente) — invalida os aceites de 3.0 e 3.1 de propósito
 
 // As 4 declarações do gate, pela ordem do ecrã.
 export const DECLARACOES_GATE = Object.freeze(["lido", "maiores", "termos", "privacidade"]);

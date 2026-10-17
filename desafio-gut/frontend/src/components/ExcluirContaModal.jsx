@@ -135,7 +135,7 @@ export default function ExcluirContaModal({ aberto, onFechar, address, authToken
               é substituído por um identificador derivado dele (um hash), mas o registo{" "}
               <strong style={{ color: COR.text }}>ainda é dado pessoal</strong> e você mantém
               sobre ele os direitos da LGPD — pode pedir informação, correção ou oposição ao
-              Encarregado (dpo@desafiogut.com.br).
+              Encarregado (dpo@grupouniaoetrabalho.com.br).
             </span>
           </p>
 

@@ -83,7 +83,7 @@ test("as 4 caixas marcadas ligam o botão; aceitar grava a versão do termo com 
   // UTAC110k.1: a versão subiu para 3.1 (Regulamento v5.1). O teste passou a comparar com a
   // CONSTANTE — uma literal aqui obrigaria a editar o teste a cada versão nova, sem medir nada.
   assert.equal(salvo.versao, mod.VERSAO_CONSENTIMENTO, "o aceite não foi gravado com a versão vigente do termo");
-  assert.equal(salvo.versao, "3.1", "controlo: a versão vigente hoje é a do Regulamento v5.1");
+  assert.equal(salvo.versao, "3.2", "controlo: a versão vigente hoje é a da Política revista (E-3)");
   assert.deepEqual(salvo.aceitos, { lido: true, maiores: true, termos: true, privacidade: true });
 });
 

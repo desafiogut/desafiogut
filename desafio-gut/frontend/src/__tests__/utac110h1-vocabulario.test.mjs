@@ -75,6 +75,6 @@ test("versão do aceite: gate e servidor em \"3.1\" (R18-110k.1 — o Regulament
   const front = ler("src/components/TermosConsentimento.jsx").match(/export const VERSAO_CONSENTIMENTO = "([^"]+)"/);
   const back = ler("netlify/functions/_lib/consentimento.mjs").match(/export const VERSAO_GATE = "([^"]+)"/);
   assert.ok(front && back, "não encontrei as constantes de versão");
-  assert.equal(front[1], "3.1", "o gate tem de subir com a versão do Regulamento (R18-110k.1: v5.1)");
-  assert.equal(back[1], "3.1", "o servidor recusaria o aceite do gate novo (versao_invalida)");
+  assert.equal(front[1], "3.2", "o gate tem de subir com a Política de Privacidade revista (E-3: 3.2)");
+  assert.equal(back[1], "3.2", "o servidor recusaria o aceite do gate novo (versao_invalida)");
 });

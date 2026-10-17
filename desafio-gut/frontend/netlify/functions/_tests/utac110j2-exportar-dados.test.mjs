@@ -152,7 +152,7 @@ test("METADADOS: schema, controlador com CNPJ e DPO, base legal e retenção", a
   assert.equal(corpo.schema, "2.0");
   const m = corpo.exportacao;
   assert.equal(m.controlador.cnpj, "23.040.066/0001-00");
-  assert.match(m.controlador.encarregado, /dpo@desafiogut\.com\.br/);
+  assert.match(m.controlador.encarregado, /dpo@grupouniaoetrabalho\.com\.br/);
   assert.match(m.direito, /art\. 18, II.*art\. 19, II/s);
   assert.ok(Object.keys(m.baseLegalPorCategoria).length >= 6, "base legal por categoria");
   assert.match(m.notaPseudonimizacao, /Pseudonimização NÃO é anonimização/);

@@ -159,15 +159,22 @@ R: SIM — coletado.
 
 [15] INFORMAÇÕES FINANCEIRAS DO GOVERNO (NIF/CPF)
 R: **SIM — coletado** *(corrigido no UTAC110k.1: estava declarado «NÃO»)*.
-  O CPF do próprio titular é recolhido em dois momentos, ambos com finalidade
-  declarada:
-  (a) **Pagamento por PIX** — enviado ao Mercado Pago como identificação do
-      pagador (`iniciar-pagamento.mjs:86`);
-  (b) **Entrega do cartão colecionável** — faz parte da morada
-      (`_lib/pedidos.mjs:68`, `validarCPF`), por exigência logística da entrega.
+  O CPF do próprio titular é recolhido num único momento:
+  (a) **Entrega do cartão colecionável** — faz parte da morada
+      (`_lib/pedidos.mjs:68`, `validarCPF`), por exigência logística da entrega;
+      fica guardado em `resgates.morada`.
   Não é recolhido em nenhum outro fluxo. Não é usado para scoring, publicidade
-  ou perfilamento. Não é partilhado com terceiros além do processador de
-  pagamento e do fornecedor/transportadora do cartão.
+  ou perfilamento. Não é partilhado com o processador de pagamento.
+  **REFUTADO no fecho da DEBT-053 (2026-10-17).** A redacção anterior desta
+  alínea dizia que o CPF era «enviado ao Mercado Pago como identificação do
+  pagador» (`iniciar-pagamento.mjs:86`). Medido: `iniciar-pagamento.mjs:86`
+  valida `body.pagador.cpf` **se ele vier** (campo opcional), mas o único
+  chamador no frontend envia só o e-mail (`ComprarFichasModal.jsx:188` →
+  `body.pagador = { email }`) e o componente documenta «CPF do pagador NÃO é
+  digitado» (`:25-27`); o documento cai no fallback do operador
+  (`_lib/pix-provider/mercadopago.mjs:41` → `MP_PAYER_ID_NUMBER`). O CPF do
+  utilizador **não** sai para o Mercado Pago. A Nota Técnica de Envio gerada
+  pelo código leva nome e morada, não o CPF (`_lib/nota-tecnica.mjs:76-104`).
   Eliminação: na exclusão de conta o CPF **desaparece** — a morada é
   substituída por «[Conta Deletada]» e o registo de pagamento fica pseudonimizado
   (o valor e a data persistem por obrigação fiscal; o CPF não).
