@@ -1,0 +1,12 @@
+UTAC110j.1 — saída literal da corrida canónica final (node scripts/mc966-suite-harness.mjs ambos)
+Data: 2026-10-16 · script: C:\Users\Moltbot\AppData\Local\Temp\utac110j1\rodar-suite.sh (fora do repo, executado em foreground dentro do ficheiro)
+
+=== RAM antes ===
+livre_MB=1364
+=== SUITE ===
+frontend: VERDE 1163/1163 pass
+backend: VERDE 1326/1332 pass
+VEREDITO: VERDE
+EXIT_SUITE=0
+=== RAM depois ===
+livre_MB=1433

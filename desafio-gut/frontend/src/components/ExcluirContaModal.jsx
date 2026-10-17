@@ -20,23 +20,42 @@ const COR = {
 
 // MC104.3 (DEC-104.3-2): NF-e + histórico anonimizado + auditoria on-chain. O consent-log NÃO entra: o
 // conta-delete apaga-o na exclusão (decisão do operador: omitir a linha que o daria como retido).
-const RETIDOS = [
+// UTAC110j.1 (R18-110j.1-3): o texto é o espelho de `POLITICA_EXCLUSAO`/`DADOS_RETIDOS` em
+// `netlify/functions/_lib/conta-delete.mjs`. O teste `utac110j1-texto-exclusao.test.mjs` compara os
+// dois lados e falha se o ecrã prometer algo que o backend não faz (ou esconder algo que faz).
+export const APAGADOS = [
+  "Saldo em R$, registro off-chain de senhas e carteira.",
+  "Perfil, atividade registada e pontos de fidelidade.",
+  "Palpites do Passe Desafio.",
+  "Código de indicação, vínculos de indicação, bónus e histórico mensal de indicações.",
+];
+
+export const RETIDOS = [
   "NF-e (número, série e chave de acesso) — mantida por 5 anos (obrigação fiscal, CTN arts. 173 e 174).",
-  "Histórico de pedidos — mantido em forma anonimizada.",
-  "Registros de pagamento (PIX) são anonimizados e mantidos pelo prazo fiscal exigido por lei.",
-  "Dados de auditoria on-chain (txHash, commitmentHash), saldo de senhas e lances já registrados na blockchain são públicos e imutáveis e não podem ser apagados (identificados apenas pela carteira).",
+  "Histórico de pedidos — mantido em forma anonimizada (sem nome, CPF, morada ou telefone).",
+  "Registros de pagamento PIX e de compras na Google Play — mantidos pelo prazo fiscal exigido por lei com um identificador pseudônimo no lugar da sua carteira.",
+  "Resgates do cartão colecionável — o registo da entrega (data e produto) fica e a morada passa a «[Conta Deletada]» (obrigação contabilística).",
+  "Registo do Passe Desafio e do saldo de ECOQUILDO — o registo contabilístico fica, o seu endereço passa a um identificador pseudônimo.",
+  "Dados de auditoria on-chain (txHash, commitmentHash), saldo de senhas on-chain (legado) e lances já registrados na blockchain são públicos e imutáveis e não podem ser apagados (identificados apenas pela carteira).",
+  "Logs de auditoria, incluindo o registo de indicações — 13 meses (Marco Civil da Internet, Lei 12.965/2014), sem o seu endereço.",
 ];
 
 export default function ExcluirContaModal({ aberto, onFechar, address, authToken, onExcluido }) {
   const [confirmado, setConfirmado] = useState(false);
   const [etapa, setEtapa] = useState("confirmar"); // confirmar | processando | sucesso | erro
   const [erro, setErro] = useState("");
+  // UTAC110j.1 (achado do validador adversarial) — o backend pode devolver ok:true com PENDENTE:
+  // lances de uma edição AINDA ABERTA não podem ser anonimizados sem quebrar a apuração, e o
+  // manifesto conta-os em `blobs.pendente`. Nesse caso «Seus dados pessoais foram removidos» era
+  // FALSO. O ecrã passa a dizê-lo: o que ficou, quanto, e porquê.
+  const [pendente, setPendente] = useState(null);
 
   useEffect(() => {
     if (!aberto) return;
     setConfirmado(false);
     setEtapa("confirmar");
     setErro("");
+    setPendente(null);
   }, [aberto]);
 
   async function handleExcluir() {
@@ -54,9 +73,14 @@ export default function ExcluirContaModal({ aberto, onFechar, address, authToken
         setEtapa("erro");
         return;
       }
+      const p = resp.data?.manifesto?.blobs?.pendente;
+      const total = p && typeof p === "object"
+        ? Object.values(p).reduce((s, v) => s + (Number(v) || 0), 0)
+        : 0;
+      setPendente(total > 0 ? total : null);
       setEtapa("sucesso");
-      // Dá ao usuário ~2s para ler a confirmação antes do logout+redirect.
-      setTimeout(() => { onExcluido?.(); }, 2200);
+      // Dá ao usuário tempo para ler a confirmação antes do logout+redirect (mais, se houver pendência).
+      setTimeout(() => { onExcluido?.(total > 0 ? total : 0); }, total > 0 ? 6000 : 2200);
     } catch (e) {
       setErro(e?.message || "Erro de rede ao excluir a conta.");
       setEtapa("erro");
@@ -74,8 +98,23 @@ export default function ExcluirContaModal({ aberto, onFechar, address, authToken
             Conta excluída
           </h2>
           <p style={{ margin: 0, color: COR.muted, fontSize: "0.9rem", lineHeight: 1.5 }}>
-            Seus dados pessoais foram removidos. Você será desconectado…
+            {pendente
+              ? "Sua conta foi encerrada. Veja abaixo o que ficou pendente."
+              : "Conta encerrada. Os seus dados pessoais foram eliminados ou anonimizados — o que a lei obriga a guardar está na lista acima. Você será desconectado…"}
           </p>
+          {/* UTAC110j.1 — PENDÊNCIA DECLARADA (achado do validador): lances de uma edição ainda aberta
+              não podem ser anonimizados sem quebrar a apuração; o backend conta-os em `pendente`. */}
+          {pendente ? (
+            <p role="status" style={{
+              margin: "0.75rem 0 0", padding: "0.6rem 0.8rem", borderRadius: "8px", textAlign: "left",
+              background: "rgba(245,166,35,0.10)", border: "1px solid rgba(245,166,35,0.35)",
+              color: COR.gold, fontSize: "0.8rem", lineHeight: 1.45,
+            }}>
+              {pendente} lance(s) de uma edição ainda em curso ficaram com a sua carteira associada:
+              não podem ser anonimizados sem quebrar a apuração dessa edição. Os restantes dados
+              pessoais foram removidos.
+            </p>
+          ) : null}
         </div>
       ) : (
         <div>
@@ -87,10 +126,23 @@ export default function ExcluirContaModal({ aberto, onFechar, address, authToken
           </h2>
 
           <p style={{ margin: "0 0 1rem", color: COR.text, fontSize: "0.92rem", lineHeight: 1.55 }}>
-            Ao excluir sua conta, <strong>todos os dados pessoais serão permanentemente
-            removidos</strong> (saldo em R$, senhas, histórico de lances e perfil).
-            Esta ação <strong>não pode ser desfeita</strong>.
+            Ao excluir sua conta, os seus dados pessoais são <strong>eliminados</strong> ou
+            <strong> anonimizados</strong> (deixam de identificar você). O que a lei obriga a guardar
+            fica retido nos termos abaixo. Esta ação <strong>não pode ser desfeita</strong>.
           </p>
+
+          {/* UTAC110j.1 — o que sai, item a item (antes era «todos os dados pessoais», absoluto e falso) */}
+          <div style={{
+            background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.25)",
+            borderRadius: "10px", padding: "0.75rem 0.9rem", marginBottom: "0.75rem",
+          }}>
+            <p style={{ margin: "0 0 0.4rem", fontSize: "0.74rem", fontWeight: 800, color: COR.danger, letterSpacing: "0.03em" }}>
+              O QUE É ELIMINADO
+            </p>
+            <ul style={{ margin: 0, paddingLeft: "1.1rem", color: COR.muted, fontSize: "0.8rem", lineHeight: 1.5 }}>
+              {APAGADOS.map((r) => <li key={r} style={{ marginBottom: "0.3rem" }}>{r}</li>)}
+            </ul>
+          </div>
 
           {/* Disclosure — dados retidos por imposição legal/técnica */}
           <div style={{

@@ -1,0 +1,59 @@
+schema: utac/1
+name: UTAC110j.2
+title: "exportar-dados (LGPD art. 18, V) cobre TODAS as tabelas e stores que a exclusão trata"
+type: conformidade-lgpd
+baseline: "o commit do UTAC110j.1 (a fixar no fecho desse UTAC)"
+motivo: >-
+  Medido no UTAC110j.1 (DEBT-046): `exportar-dados.mjs` só exporta saldo_rs, troco_senhas, wallet,
+  saldo_rs_creditos, saldo_rs_debitos, lances, lojistas, atividade_utilizadores, pontuacoes,
+  rankings_ciclo, passes (+ cotas, por query própria) e os Blobs de pedidos/lances/consentimento.
+  NÃO exporta `pontos`, `palpites`, `resgates`, `eco_quildo`, `google_play_compras` nem os stores de
+  indicação (referral-*). Ao mesmo tempo, o `conta-delete` do 110j.1 passou a APAGAR ou ANONIMIZAR
+  exactamente essas tabelas. Resultado: o titular pode pedir a eliminação de dados que a
+  portabilidade nunca lhe mostrou — assimetria que o Data Safety do Google Play também vai
+  questionar (a app declara que o titular pode pedir a exportação dos seus dados).
+porque_antes_do_aab: >-
+  O envio do Android App Bundle (AAB) é o momento em que o formulário do Data Safety é declarado.
+  Se o 110j.2 não estiver fechado antes, a declaração fica falsa no acto do envio.
+frentes:
+  - id: A
+    nome: Medição — inventário exportado vs tratado (tabela e store, campo a campo)
+    entrega: [_logs/UTAC110j.2_SEG-1_MEDICAO.md, teste de deriva exportar <-> conta-delete]
+  - id: B
+    nome: Backend — acrescentar as tabelas e os stores em falta ao exportador
+    entrega:
+      - netlify/functions/exportar-dados.mjs (SUPA_POR_COLUNA + stores referral-*)
+      - só o titular (mesma regra anti-IDOR do 110j.1: endereço do JWT)
+      - registos anonimizados (anon:<sha256>) NÃO entram na exportação de OUTRA pessoa
+  - id: C
+    nome: Testes — prova de que o exportado cobre tudo o que a exclusão apaga ou anonimiza
+    entrega: [teste novo com mutação, deriva exportar <-> POLITICA_EXCLUSAO]
+  - id: D
+    nome: Texto — a Política de Privacidade e o texto da exclusão dizem o mesmo que o exportador
+    entrega: [src/pages/Privacidade.jsx, coerência com ExcluirConta.jsx/Modal]
+autoriza:
+  - netlify/functions/exportar-dados.mjs
+  - testes novos (backend + frontend) e respectiva prova de mutação
+  - _logs/ e Desktop (relatório)
+proibe:
+  - git add -A; commit/push sem autorização do operador; deploy em background
+  - alterar o que o `conta-delete` apaga/anonimiza (é contrato do UTAC110j.1)
+  - CLAUDE.md (é do Hermes)
+  - expor dados de UM titular a OUTRO (a exportação continua owner-only ou admin)
+  - exportar tokens de anonimização como se fossem dados do titular de outra conta
+dependencias:
+  - UTAC110j.1 fechado (decisão R18-110j.1-4 registada e código commitado)
+regras_activas: [E, T, G, L, S, A, P, AU, ST, HI]
+regras_extra: [A14]
+stop_conditions_extra:
+  - conflito entre o que se exporta e o que se apaga -> PARAR e reportar ao operador
+  - dados de terceiros alcançáveis pela exportação -> PARAR (é incidente, não tarefa)
+ressalvas:
+  - A14 — RAM < 1500 MB -> libertar/escalar (medir 3x)
+  - HI5 — 2 h
+  - o exportador NÃO pode passar a exigir o Supabase em baixo (fail-soft mantém-se, com erros[])
+aberto_por: "UTAC110j.1 (DEBT-046) — decisão do operador de 2026-10-16: abrir ANTES do AAB"
+execucao: >-
+  ADIADA (R18-110j.1-5.4, 2026-10-17): não se abre frente nova enquanto o UTAC110j.1 não estiver
+  fechado (3.º validador + commit). A spec fica registada para não se perder o âmbito; a execução
+  começa depois do fecho do 110j.1 e ANTES do AAB.

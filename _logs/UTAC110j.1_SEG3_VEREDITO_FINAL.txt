@@ -1,0 +1,14 @@
+UTAC110j.1 — saída literal da corrida canónica FINAL (após R18-110j.1-4b: resgates anonimizado)
+Comando: node scripts/mc966-suite-harness.mjs ambos · 2026-10-16 · em foreground dentro de ficheiro
+(script em C:\Users\Moltbot\AppData\Local\Temp\utac110j1b/rodar.sh, fora do repo). A corrida anterior, ANTES das correcções do 4b, está registada
+em _logs/UTAC110j.1_SEG3_VEREDITO.txt (era VERDE, mas de um código anterior).
+
+=== RAM antes ===
+livre_MB=1867
+=== SUITE (harness canonico) ===
+frontend: VERDE 1163/1163 pass
+backend: VERDE 1332/1338 pass
+VEREDITO: VERDE
+EXIT_SUITE=0
+=== RAM depois ===
+livre_MB=1301

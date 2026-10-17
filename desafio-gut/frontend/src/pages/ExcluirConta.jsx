@@ -40,6 +40,15 @@ export default function ExcluirConta() {
           <p style={{ margin: 0, color: COR.muted, fontSize: "0.92rem", lineHeight: 1.5 }}>
             Solicite a remoção permanente da sua conta e dos seus dados pessoais.
           </p>
+          {/* UTAC110j.1 (FRENTE D) — a política «Exclusão de conta e dados» do Google Play exige que a
+              página pública nomeie a APP e o DESENVOLVEDOR, para quem chega aqui sem a app instalada
+              saber que está no sítio certo. */}
+          <p style={{ margin: "0.5rem 0 0", color: COR.muted, fontSize: "0.78rem", lineHeight: 1.5 }}>
+            App: <strong style={{ color: COR.text }}>DesafioGUT</strong>
+            <br />
+            Desenvolvedor: <strong style={{ color: COR.text }}>Associação Recreativa dos Nordestinos no Amazonas</strong>
+            {" "}(Grupo União e Trabalho) — CNPJ 23.040.066/0001-00
+          </p>
           {/* MC90.3 — aviso de irreversibilidade (User Data policy 2026: o pedido
               de eliminação é efetivo e definitivo; congelamento não é substituto). */}
           <p style={{
@@ -48,8 +57,9 @@ export default function ExcluirConta() {
             border: "1px solid rgba(239,68,68,0.35)", borderRadius: "10px",
             padding: "0.6rem 0.9rem", background: "rgba(239,68,68,0.08)",
           }}>
-            ⚠️ Esta ação é <strong>irreversível</strong>. Ao confirmar, a conta e todos
-            os dados pessoais associados serão apagados permanentemente.
+            ⚠️ Esta ação é <strong>irreversível</strong>. Ao confirmar, a conta é encerrada e os
+            dados pessoais são <strong>eliminados ou anonimizados</strong> logo após a confirmação (ver as listas
+            abaixo: o que sai e o que a lei obriga a reter).
           </p>
         </header>
 
@@ -62,8 +72,13 @@ export default function ExcluirConta() {
             🗑️ Eliminado ou anonimizado:
           </p>
           <ul style={{ margin: "0 0 1rem", paddingLeft: "1.2rem", color: COR.muted, fontSize: "0.84rem", lineHeight: 1.55 }}>
-            <li>Saldo em R$ e senhas disponíveis</li>
-            <li>Perfil, preferências e vínculos de indicação</li>
+            {/* UTAC110j (R18-110j-1-D) — alinhado ao que `_lib/conta-delete.mjs` APAGA de facto:
+                `saldo_rs`, `troco_senhas` (registro off-chain) e `wallet`. As senhas on-chain NÃO são
+                apagadas (ficam na lista «Retido», abaixo) — «senhas disponíveis» aqui era falso.
+                UTAC110j.1 — entram `pontos`, `palpites`, `resgates` (com a morada) e as indicações. */}
+            <li>Saldo em R$ e registro off-chain de senhas (legado)</li>
+            <li>Perfil, preferências, código e vínculos de indicação (bónus e histórico mensal)</li>
+            <li>Pontos de fidelidade e palpites do Passe Desafio</li>
             <li>Nome, CPF, endereço de entrega e telefone — anonimizados nos pedidos.</li>
             <li>Notificações e lances Relâmpago — sua carteira é substituída por um identificador pseudônimo.</li>
           </ul>
@@ -73,12 +88,24 @@ export default function ExcluirConta() {
           <ul style={{ margin: 0, paddingLeft: "1.2rem", color: COR.muted, fontSize: "0.84rem", lineHeight: 1.55 }}>
             <li>NF-e (número, série e chave de acesso) — 5 anos (obrigação fiscal, CTN arts. 173 e 174).</li>
             <li>Histórico de pedidos — em forma anonimizada.</li>
-            <li>Registros de pagamento (PIX) — mantidos pelo prazo fiscal exigido por lei, sem vínculo com sua identidade.</li>
-            <li>Dados de auditoria on-chain (txHash, commitmentHash), saldo de senhas e lances gravados na blockchain — públicos e imutáveis por natureza, identificados apenas pela carteira.</li>
+            <li>Registros de pagamento (PIX) — mantidos pelo prazo fiscal exigido por lei, com um identificador pseudônimo derivado da carteira no lugar dos seus dados.</li>
+            <li>Compras feitas na Google Play — registo contabilístico com um identificador pseudônimo derivado da carteira.</li>
+            <li>Resgates do cartão colecionável — o registo da entrega fica; a morada passa a «[Conta Deletada]».</li>
+            <li>Registo do Passe Desafio e saldo de ECOQUILDO — o valor contabilístico fica com um identificador pseudônimo no lugar da carteira.</li>
+            <li>Logs de auditoria, incluindo os registos de indicação — 13 meses (Marco Civil da Internet, Lei 12.965/2014), sem o seu endereço.</li>
+            <li>Dados de auditoria on-chain (txHash, commitmentHash), saldo de senhas on-chain (legado) e lances gravados na blockchain — públicos e imutáveis por natureza, identificados apenas pela carteira.</li>
           </ul>
+          <p style={{ margin: "1rem 0 0.4rem", fontSize: "0.86rem", color: COR.blue300, fontWeight: 700 }}>
+            Passos para pedir a exclusão
+          </p>
+          {/* UTAC110j.1 (FRENTE D) — a Google exige os PASSOS na página pública. */}
+          <ol style={{ margin: 0, paddingLeft: "1.2rem", color: COR.muted, fontSize: "0.84rem", lineHeight: 1.55 }}>
+            <li>Entre nesta página com a mesma conta (Google ou e-mail) que usa no app.</li>
+            <li>Toque em «Excluir minha conta» e marque a confirmação.</li>
+            <li>A conta e os dados pessoais são eliminados logo após a confirmação; o que a lei obriga a guardar fica retido (lista acima), sem o identificar.</li>
+            <li>Se não conseguir entrar, peça por e-mail para desafiogut01@gmail.com — atendido em até 15 dias.</li>
+          </ol>
         </GlassCard>
-
-        {/* Ação */}
         <GlassCard className="p-5 mb-5">
           <h3 style={{ margin: "0 0 0.75rem", fontSize: "0.9rem", fontWeight: 800, color: COR.blue300, letterSpacing: "0.03em" }}>
             SOLICITAR EXCLUSÃO
@@ -86,7 +113,9 @@ export default function ExcluirConta() {
 
           {concluido ? (
             <p style={{ margin: 0, color: COR.success, fontSize: "0.92rem", lineHeight: 1.5 }}>
-              ✅ Sua conta foi excluída. Os dados pessoais foram removidos.
+              {typeof concluido === "number"
+                ? `✅ Conta encerrada. ${concluido} lance(s) de uma edição ainda em curso ficaram com a sua carteira associada — não podem ser anonimizados sem quebrar a apuração dessa edição. Os restantes dados pessoais foram eliminados ou anonimizados.`
+                : "✅ Conta encerrada. Os dados pessoais foram eliminados ou anonimizados; o que a lei obriga a guardar está na lista acima."}
             </p>
           ) : isConnected ? (
             <div>
@@ -142,7 +171,7 @@ export default function ExcluirConta() {
         onFechar={() => setModal(false)}
         address={address}
         authToken={authToken}
-        onExcluido={() => { setModal(false); setConcluido(true); desconectar(); }}
+        onExcluido={(pend) => { setModal(false); setConcluido(pend > 0 ? pend : true); desconectar(); }}
       />
     </div>
   );

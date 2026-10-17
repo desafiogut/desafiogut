@@ -1,0 +1,11 @@
+UTAC110j.1 — CORRIDA FINAL DE FECHO (depois das 4 ressalvas do 3.º validador)
+Comando: node scripts/mc966-suite-harness.mjs ambos · 2026-10-17
+RAM antes: 1600 MB — portão A14 CUMPRIDO.
+ESTA é a corrida que acompanha o commit.
+
+livre_MB=1600
+frontend: VERDE 1165/1165 pass
+backend: VERDE 1341/1347 pass
+VEREDITO: VERDE
+EXIT_SUITE=0
+livre_MB_depois=1425

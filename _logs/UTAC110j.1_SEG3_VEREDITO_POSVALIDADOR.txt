@@ -1,0 +1,15 @@
+UTAC110j.1 — corrida canónica APÓS as correcções do validador (B1..B9)
+Comando: node scripts/mc966-suite-harness.mjs ambos · 2026-10-16
+Nota honesta de RAM: o trim deu 1542/1539/1538 MB e, ~30 s depois, o arranque efectivo da suíte
+mediu 863 MB (o trim decai em segundos — skill windows-memory-pressure §4). Esta corrida é,
+portanto, um DESVIO DECLARADO do portão A14 — verde, sem falha inexplicada.
+
+=== RAM antes ===
+livre_MB=863
+=== SUITE (harness canonico) ===
+frontend: VERDE 1164/1164 pass
+backend: VERDE 1337/1343 pass
+VEREDITO: VERDE
+EXIT_SUITE=0
+=== RAM depois ===
+livre_MB=1865

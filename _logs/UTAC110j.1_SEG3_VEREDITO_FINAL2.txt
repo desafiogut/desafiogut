@@ -1,0 +1,14 @@
+UTAC110j.1 — CORRIDA FINAL (depois das correcções da 2.ª ronda do validador)
+Comando: node scripts/mc966-suite-harness.mjs ambos · 2026-10-17
+RAM antes: 1820 MB — portão A14 (>=1500) CUMPRIDO nesta ronda.
+Substitui UTAC110j.1_SEG3_VEREDITO_POSVALIDADOR.txt (medido antes do B2-residual/wallet_idem).
+
+=== RAM antes ===
+livre_MB=1820
+=== SUITE (harness canonico) ===
+frontend: VERDE 1164/1164 pass
+backend: VERDE 1340/1346 pass
+VEREDITO: VERDE
+EXIT_SUITE=0
+=== RAM depois ===
+livre_MB=1561
