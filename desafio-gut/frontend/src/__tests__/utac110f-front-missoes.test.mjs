@@ -6,7 +6,7 @@
 //   E — a Carteira mostra o bloco nos 4 estados (✓✓ · ✓⏳ · ⏳✓ · ⏳⏳), BIDIRECCIONAL: cada missão aparece feita
 //       num estado e pendente noutro; rodapé «Você ganhou X pontos hoje.» e «Volte amanhã!» SÓ com as duas feitas;
 //   N — neutro: a carregar «…», erro/ilegível «—» — nunca «feito» nem «pendente» inventados;
-//   S — o bloco vive DENTRO do 1.º vidro, depois dos 3 saldos e antes dos botões; não tem controlo (só visualização);
+//   S — o bloco vive DENTRO do 1.º vidro, depois dos botões e dos 3 saldos (UTAC110j.3); não tem controlo (só visualização);
 //       os 3 saldos continuam com o mesmo texto;
 //   C — cor: ✓ e +N feitos em amarelo #f5a623 (R18-110f-front-A, nada de verde); contraste AA dos pares do bloco.
 // ⚠️ LIMITE DECLARADO: sem DOM real — render estático (SSR); o layout/toque mede-se nas capturas do browser.
@@ -190,13 +190,14 @@ test("N · sem sessão (authToken null) → nenhum pedido e bloco neutro", async
 });
 
 // ═══ S — sítio e estrutura ═════════════════════════════════════════════════════════
-test("S · dentro do 1.º vidro, DEPOIS dos 3 saldos e ANTES dos botões; só visualização (sem controlos)", async () => {
+// UTAC110j.3 (R18-110j.3-B): os 4 botões passaram para CIMA dos saldos ⇒ a ordem é botões → saldos → missões.
+test("S · dentro do 1.º vidro, DEPOIS dos botões e dos 3 saldos; só visualização (sem controlos)", async () => {
   const h = await carteiraCom(pontosCom(missoes(true, false)));
   const vidro = h.indexOf("gut-glass-standard");
   const saldos = h.indexOf('data-saldo="eco-quildo"');
   const bloco = h.indexOf("data-missoes-hoje");
   const botaoPix = h.indexOf("Depositar PIX");
-  assert.ok(vidro > 0 && vidro < saldos && saldos < bloco && bloco < botaoPix,
+  assert.ok(vidro > 0 && vidro < botaoPix && botaoPix < saldos && saldos < bloco,
     `ordem errada: vidro ${vidro} · saldos ${saldos} · bloco ${bloco} · PIX ${botaoPix}`);
   // O bloco fecha antes do 2.º vidro (Regra 1: dentro do 1.º).
   const segundoVidro = h.indexOf("gut-glass-standard", vidro + 1);

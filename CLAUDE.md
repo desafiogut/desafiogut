@@ -6428,3 +6428,13 @@ Autorizado pelo operador. **Migracao** `utac110d_ledger_lance` aplicada em produ
 **DEBT:** fecha **DEBT-030** (com a premissa refutada E a ressalva do SEG5 à vista) e **DEBT-031** (com a subestimação 1→8 E os 3+1 sítios do SEG5 declarados); abre **DEBT-032** (o marcador sela a conversão quando a quota bloqueia), **DEBT-033** (a quota não é atómica/TOCTOU), **DEBT-034** (o campo `indicador` sai na resposta de API), **DEBT-035** (`scripts/liberar-ram.ps1` não existe) e **DEBT-036 (ALTA — a escrita do contador falha em aberto)**.
 
 **Erros dos meus instrumentos, 2.ª ronda (declarados):** (6) o **`grep` de uma linha** para caçar logs — perdeu 13 ocorrências com payload multi-linha; (7) a **allowlist por NOME** na guarda — o critério certo é o VALOR, e foi o validador que o provou; (8) **comando inline em background não tem tty** (E-1) — o harness devolve log de 26 bytes com `EXIT=1`, que se lê como «falhou» quando é «NÃO MEDI»**;** o validador apanhou a mesma armadilha na sessão dele, o que a torna reprodutível. (9) **um import inserido no meio de um bloco de comentários** e **uma guarda apagada por uma âncora errada** (`if (!address) return false;` no `sentry-alerts.js`) — apanhada e restaurada na mesma sessão.
+
+## R14 (append) -- UTAC110j.3 -- GUTO ANIMADO NO GATE LEGAL + CARTEIRA COM OS 4 BOTOES PRIMEIRO (Claude Code, Opus 5.5)
+
+**Tipo:** CODIGO (frontend + testes). **Baseline:** `973c003`. **Sem commit/push** (aguarda autorizacao do operador).
+**A14:** 934 MB -> R18-110j.3-A «feche o necessario» -> 7 servidores MCP desta sessao fechados -> 1820-1981 MB.
+**Decisoes (R18):** **B** Carteira = Saldo R$ -> 4 botoes -> Pontos · Creditos · ECOQUILDO · Missoes (aviso 402 colado aos botoes) · **C** «Resgatar cartao» depois das Missoes.
+**Feito:** gate com `CarrosselGUTO` + `GUTO_GATE = [SLIDES[6]]` (o GUTO animado 7 das edicoes), 96 px, `role="img"`; o `CarrosselGUTO` (nao alterado) ja da loop/muted/playsInline/play() e poster de fallback. Carteira: bloco dos botoes + aviso 402 movido acima dos saldos (so posicao + 2 margens + comentarios).
+**Testes:** `utac110j3-gate-carteira` (8) novo; S de `utac110g1-carteira-resgate` e `utac110f-front-missoes` com a ordem nova (invariante mantida). Mutacao **7/7**. Suite **1189/1189 · 1351/1357 VERDE**. Browser 375/1280: video a tocar, overflow 0, 0 erros.
+**Validador: APROVADO COM RESSALVAS, 0 bloqueantes** -- A1 +599 KB no 1.o ecra; A2 preload orfao de `guto-bemvindo.png` (`index.html` + `mc993`, fora do AUTORIZA); A3 nota PIX longe do botao; A6 texto do gate sem teste (pre-existente); A7 corrigido.
+**Registo:** `_logs/UTAC110j.3_SEG-1_MEDICAO.md` · `_logs/UTAC110j.3-gate-carteira.md` · `_logs/UTAC110j.3_SEG3_VALIDADOR.md` · `Desktop/RELATORIO-UTAC110j.3-GATE-CARTEIRA.txt`.

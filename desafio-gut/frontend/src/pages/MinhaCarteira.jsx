@@ -301,152 +301,9 @@ export default function MinhaCarteira() {
                 </span>
               </div>
 
-              {/* UTAC110d-front (Frente A) — os DOIS saldos do programa, separados, DENTRO do vidro
-                  do saldo (Regra 1): pontos de fidelidade (rumo ao cartão, X / 50 + barra) e
-                  créditos de lance (cada lance no Menor Lance Único consome 1). */}
-              <div data-saldos-passe="" style={{
-                // UTAC110e — 3 saldos: lado a lado no desktop; empilhados no telemóvel (3 colunas
-                // a 375 px apertariam o texto dos rótulos).
-                display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: "0.6rem", marginBottom: "0.95rem",
-              }}>
-                <div data-saldo="fidelidade" style={{
-                  padding: "0.65rem 0.75rem", borderRadius: "12px",
-                  background: "rgba(245,166,35,0.06)", border: "1px solid rgba(245,166,35,0.25)",
-                }}>
-                  <div style={{ fontSize: "0.7rem", color: COR.text, fontWeight: 700 }}>🎟️ Pontos de fidelidade</div>
-                  <div style={{ fontSize: "1.25rem", fontWeight: 900, color: COR.gold, lineHeight: 1.2 }}>
-                    {textoSaldo(pontosCartao)} / {metaCartao}
-                  </div>
-                  <div
-                    role="progressbar"
-                    aria-label="Progresso para o cartão"
-                    aria-valuemin={0}
-                    aria-valuemax={metaCartao}
-                    aria-valuenow={saldosIlegiveis ? undefined : Math.min(pontosCartao, metaCartao)}
-                    style={{
-                      height: "6px", borderRadius: "999px", marginTop: "0.4rem",
-                      background: "rgba(245,166,35,0.15)", overflow: "hidden",
-                    }}
-                  >
-                    {/* Barra de progresso (não é botão): o preenchimento usa o amarelo único. */}
-                    <div data-barra-cartao="" style={{ width: `${progressoCartao}%`, height: "100%", background: COR.primary }} />
-                  </div>
-                </div>
-                <div data-saldo="creditos" style={{
-                  padding: "0.65rem 0.75rem", borderRadius: "12px",
-                  background: "rgba(245,166,35,0.06)", border: "1px solid rgba(245,166,35,0.25)",
-                }}>
-                  <div style={{ fontSize: "0.7rem", color: COR.text, fontWeight: 700 }}>⚡ Créditos de lance</div>
-                  <div style={{ fontSize: "1.25rem", fontWeight: 900, color: COR.gold, lineHeight: 1.2 }}>
-                    {textoSaldo(creditosLance)}
-                  </div>
-                  <div style={{ fontSize: "0.68rem", color: COR.text, opacity: 0.85, marginTop: "0.25rem" }}>
-                    {!saldosIlegiveis && creditosLance === 1 ? "disponível" : "disponíveis"}
-                  </div>
-                </div>
-                {/* UTAC110e (Frente D2) — ECOQUILDO: SÓ leitura. Sem botão de compra (Art. 49º: não
-                    se compra, não se converte em dinheiro, não se transfere); usa-se no site oficial. */}
-                <div data-saldo="eco-quildo" style={{
-                  padding: "0.65rem 0.75rem", borderRadius: "12px",
-                  background: "rgba(245,166,35,0.06)", border: "1px solid rgba(245,166,35,0.25)",
-                }}>
-                  <div style={{ fontSize: "0.7rem", color: COR.text, fontWeight: 700 }}>🪙 ECOQUILDO</div>
-                  <div style={{ fontSize: "1.25rem", fontWeight: 900, color: COR.gold, lineHeight: 1.2 }}>
-                    {textoSaldo(saldoEco, ecoCarregando, ecoErro)}
-                  </div>
-                  <div style={{ fontSize: "0.68rem", color: COR.text, opacity: 0.85, marginTop: "0.25rem" }}>
-                    Usável no site oficial
-                  </div>
-                </div>
-              </div>
-              {pontosErro && (
-                <p style={{ margin: "-0.5rem 0 0.8rem", fontSize: "0.72rem", color: COR.danger, lineHeight: 1.4 }}>
-                  ⚠️ Não foi possível ler seus pontos e créditos agora.
-                </p>
-              )}
-              {ecoErro && (
-                <p data-erro-eco-quildo="" style={{ margin: "-0.5rem 0 0.8rem", fontSize: "0.72rem", color: COR.danger, lineHeight: 1.4 }}>
-                  ⚠️ {ecoErro === "Sessão expirada" ? "Sessão expirada." : "Não foi possível ler seu ECOQUILDO agora."}
-                </p>
-              )}
-
-              {/* UTAC110f-front — «Missões de hoje»: DENTRO do 1.º vidro (Regra 1), a seguir aos 3 saldos e antes dos
-                  botões. Só visualização (sem botão — não há acção aqui). Os 3 saldos acima NÃO foram tocados. */}
-              <section data-missoes-hoje="" data-estado={estadoMissoes} aria-labelledby="missoes-hoje-titulo" style={{
-                padding: "0.65rem 0.75rem", borderRadius: "12px", marginBottom: "0.95rem",
-                border: "1px solid rgba(245,166,35,0.25)",
-              }}>
-                <h4 id="missoes-hoje-titulo" style={{
-                  margin: "0 0 0.45rem", fontSize: "0.75rem", color: COR.gold, fontWeight: 700,
-                  textTransform: "uppercase", letterSpacing: "0.06em",
-                }}><span aria-hidden="true">🎯 </span>Missões de hoje</h4>
-                {estadoMissoes !== "ok" ? (
-                  <p style={{ margin: 0, fontSize: "0.8rem", color: COR.text, opacity: 0.85 }}>
-                    {estadoMissoes === "carregando" ? "…" : "—"}
-                  </p>
-                ) : (
-                  <>
-                    <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: "0.35rem", maxWidth: "26rem" }}>
-                      {MISSOES.map((m) => (
-                        <li
-                          key={m.id}
-                          data-missao={m.id}
-                          data-feito={m.feito ? "true" : "false"}
-                          style={{ display: "flex", alignItems: "center", gap: "0.55rem", fontSize: "0.8rem", lineHeight: 1.4 }}
-                        >
-                          <span aria-hidden="true" style={{
-                            width: "1.25rem", textAlign: "center", flex: "none", fontWeight: 900,
-                            color: m.feito ? COR.gold : COR.muted,
-                          }}>{m.feito ? "✓" : "⏳"}</span>
-                          <span style={{ flex: 1, minWidth: 0, color: COR.text, opacity: m.feito ? 1 : 0.85 }}>
-                            {m.rotulo}
-                            <span style={{ position: "absolute", width: 1, height: 1, margin: -1, padding: 0, overflow: "hidden", clip: "rect(0 0 0 0)", whiteSpace: "nowrap", border: 0 }}>
-                              {m.feito ? " — feito" : " — pendente"}
-                            </span>
-                          </span>
-                          <span style={{ flex: "none", fontWeight: 800, color: m.feito ? COR.gold : COR.muted }}>
-                            +{m.pontos}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                    <p data-missoes-rodape="" style={{ margin: "0.5rem 0 0", fontSize: "0.75rem", color: COR.text, opacity: 0.85 }}>
-                      {`Você ganhou ${missoesHoje.pontosHoje} pontos hoje.`}{todasFeitas ? " Volte amanhã!" : ""}
-                    </p>
-                  </>
-                )}
-              </section>
-
-              {/* UTAC110g.1 (R18-110g.1-2 / decisão D-110g-4) — o botão «Resgatar cartão» MUDOU DE
-                  CASA: saiu do vidro do cartão das Ofertas Programadas e passa a viver aqui, a
-                  seguir aos 3 saldos e às «Missões de hoje», antes dos botões de compra.
-                  ⚠️ COR: o botão das Ofertas era DOURADO SÓLIDO, mas na Carteira isso violaria a
-                  R18-109h.2/109h.3 («uma só cor de destaque»; nenhum CTA cheio) — regra do operador
-                  para ESTE ecrã, guardada pelo teste `utac109h2-carteira` §8. Aqui usa-se o MESMO
-                  padrão tingido dos outros quatro botões da Carteira (PIX, Passe, MLC, OP):
-                  o AMARELO único `#f5a623` fica no contorno e no texto.
-                  Aparece SÓ quando o SERVIDOR diz que pode (`podeResgatarCartao` = pontosCartao ≥ 50,
-                  pontos de COMPRA). Sem ele, não há botão — nem desactivado: a Carteira é um ecrã de
-                  saldos e o «faltam N pontos» diz-se na barra de progresso, que já existe acima. */}
-              {podeResgatarCartao && (
-                <button
-                  type="button"
-                  data-acao="resgatar-cartao"
-                  aria-label="Resgatar cartão"
-                  onClick={() => setResgateAberto(true)}
-                  style={{
-                    ...botaoPrimario,
-                    marginBottom: "0.6rem",
-                    background: "rgba(245,166,35,0.14)",
-                    border: "1px solid rgba(245,166,35,0.4)",
-                    color: COR.gold,
-                    boxShadow: "none",
-                  }}
-                >
-                  🎁 Resgatar cartão colecionável
-                </button>
-              )}
-
+              {/* UTAC110j.3 (R18-110j.3-B) — os 4 botões e o aviso 402 vêm ANTES dos saldos: o vidro lê-se
+                  «Saldo R$ → 4 botões → Pontos · Créditos · ECOQUILDO → Missões → Resgatar». Só mudou a posição;
+                  o conteúdo, o estilo e o comportamento dos botões são os mesmos. */}
               {/* UTAC107b — ordem decidida pelo operador (decisão 4):
                   Depositar PIX → Comprar Passe Desafio → Menor Lance Único → Ofertas Programadas.
                   R18-E: a frase de apoio do saldo saiu (texto técnico) e o botão «Trocar R$ 2,00
@@ -455,6 +312,7 @@ export default function MinhaCarteira() {
                 display: "grid",
                 gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
                 gap: "0.6rem",
+                marginBottom: "0.95rem",
               }}>
                 <button
                   onClick={() => setComprarAberto(true)}
@@ -532,7 +390,8 @@ export default function MinhaCarteira() {
                   utilizador está. Conteúdo: «⚠️ Saldo insuficiente.» + atalho «Carregar agora (PIX)». */}
               {passeSemSaldo && (
                 <div role="status" style={{
-                  marginTop: "0.85rem", padding: "0.7rem 0.85rem", borderRadius: "10px",
+                  // UTAC110j.3 — colado à grelha (que já dá 0.95rem por baixo) e com folga para os saldos.
+                  margin: "-0.35rem 0 0.95rem", padding: "0.7rem 0.85rem", borderRadius: "10px",
                   background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.3)",
                 }}>
                   <p style={{ margin: 0, fontSize: "0.82rem", color: COR.danger, lineHeight: 1.4, fontWeight: 700 }}>
@@ -549,6 +408,153 @@ export default function MinhaCarteira() {
                     </button>
                   </p>
                 </div>
+              )}
+
+              {/* UTAC110d-front (Frente A) — os DOIS saldos do programa, separados, DENTRO do vidro
+                  do saldo (Regra 1): pontos de fidelidade (rumo ao cartão, X / 50 + barra) e
+                  créditos de lance (cada lance no Menor Lance Único consome 1). */}
+              <div data-saldos-passe="" style={{
+                // UTAC110e — 3 saldos: lado a lado no desktop; empilhados no telemóvel (3 colunas
+                // a 375 px apertariam o texto dos rótulos).
+                display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: "0.6rem", marginBottom: "0.95rem",
+              }}>
+                <div data-saldo="fidelidade" style={{
+                  padding: "0.65rem 0.75rem", borderRadius: "12px",
+                  background: "rgba(245,166,35,0.06)", border: "1px solid rgba(245,166,35,0.25)",
+                }}>
+                  <div style={{ fontSize: "0.7rem", color: COR.text, fontWeight: 700 }}>🎟️ Pontos de fidelidade</div>
+                  <div style={{ fontSize: "1.25rem", fontWeight: 900, color: COR.gold, lineHeight: 1.2 }}>
+                    {textoSaldo(pontosCartao)} / {metaCartao}
+                  </div>
+                  <div
+                    role="progressbar"
+                    aria-label="Progresso para o cartão"
+                    aria-valuemin={0}
+                    aria-valuemax={metaCartao}
+                    aria-valuenow={saldosIlegiveis ? undefined : Math.min(pontosCartao, metaCartao)}
+                    style={{
+                      height: "6px", borderRadius: "999px", marginTop: "0.4rem",
+                      background: "rgba(245,166,35,0.15)", overflow: "hidden",
+                    }}
+                  >
+                    {/* Barra de progresso (não é botão): o preenchimento usa o amarelo único. */}
+                    <div data-barra-cartao="" style={{ width: `${progressoCartao}%`, height: "100%", background: COR.primary }} />
+                  </div>
+                </div>
+                <div data-saldo="creditos" style={{
+                  padding: "0.65rem 0.75rem", borderRadius: "12px",
+                  background: "rgba(245,166,35,0.06)", border: "1px solid rgba(245,166,35,0.25)",
+                }}>
+                  <div style={{ fontSize: "0.7rem", color: COR.text, fontWeight: 700 }}>⚡ Créditos de lance</div>
+                  <div style={{ fontSize: "1.25rem", fontWeight: 900, color: COR.gold, lineHeight: 1.2 }}>
+                    {textoSaldo(creditosLance)}
+                  </div>
+                  <div style={{ fontSize: "0.68rem", color: COR.text, opacity: 0.85, marginTop: "0.25rem" }}>
+                    {!saldosIlegiveis && creditosLance === 1 ? "disponível" : "disponíveis"}
+                  </div>
+                </div>
+                {/* UTAC110e (Frente D2) — ECOQUILDO: SÓ leitura. Sem botão de compra (Art. 49º: não
+                    se compra, não se converte em dinheiro, não se transfere); usa-se no site oficial. */}
+                <div data-saldo="eco-quildo" style={{
+                  padding: "0.65rem 0.75rem", borderRadius: "12px",
+                  background: "rgba(245,166,35,0.06)", border: "1px solid rgba(245,166,35,0.25)",
+                }}>
+                  <div style={{ fontSize: "0.7rem", color: COR.text, fontWeight: 700 }}>🪙 ECOQUILDO</div>
+                  <div style={{ fontSize: "1.25rem", fontWeight: 900, color: COR.gold, lineHeight: 1.2 }}>
+                    {textoSaldo(saldoEco, ecoCarregando, ecoErro)}
+                  </div>
+                  <div style={{ fontSize: "0.68rem", color: COR.text, opacity: 0.85, marginTop: "0.25rem" }}>
+                    Usável no site oficial
+                  </div>
+                </div>
+              </div>
+              {pontosErro && (
+                <p style={{ margin: "-0.5rem 0 0.8rem", fontSize: "0.72rem", color: COR.danger, lineHeight: 1.4 }}>
+                  ⚠️ Não foi possível ler seus pontos e créditos agora.
+                </p>
+              )}
+              {ecoErro && (
+                <p data-erro-eco-quildo="" style={{ margin: "-0.5rem 0 0.8rem", fontSize: "0.72rem", color: COR.danger, lineHeight: 1.4 }}>
+                  ⚠️ {ecoErro === "Sessão expirada" ? "Sessão expirada." : "Não foi possível ler seu ECOQUILDO agora."}
+                </p>
+              )}
+
+              {/* UTAC110f-front — «Missões de hoje»: DENTRO do 1.º vidro (Regra 1), a seguir aos 3 saldos (UTAC110j.3:
+                  os botões passaram para cima dos saldos). Só visualização (sem botão — não há acção aqui). Os 3 saldos acima NÃO foram tocados. */}
+              <section data-missoes-hoje="" data-estado={estadoMissoes} aria-labelledby="missoes-hoje-titulo" style={{
+                padding: "0.65rem 0.75rem", borderRadius: "12px", marginBottom: "0.95rem",
+                border: "1px solid rgba(245,166,35,0.25)",
+              }}>
+                <h4 id="missoes-hoje-titulo" style={{
+                  margin: "0 0 0.45rem", fontSize: "0.75rem", color: COR.gold, fontWeight: 700,
+                  textTransform: "uppercase", letterSpacing: "0.06em",
+                }}><span aria-hidden="true">🎯 </span>Missões de hoje</h4>
+                {estadoMissoes !== "ok" ? (
+                  <p style={{ margin: 0, fontSize: "0.8rem", color: COR.text, opacity: 0.85 }}>
+                    {estadoMissoes === "carregando" ? "…" : "—"}
+                  </p>
+                ) : (
+                  <>
+                    <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: "0.35rem", maxWidth: "26rem" }}>
+                      {MISSOES.map((m) => (
+                        <li
+                          key={m.id}
+                          data-missao={m.id}
+                          data-feito={m.feito ? "true" : "false"}
+                          style={{ display: "flex", alignItems: "center", gap: "0.55rem", fontSize: "0.8rem", lineHeight: 1.4 }}
+                        >
+                          <span aria-hidden="true" style={{
+                            width: "1.25rem", textAlign: "center", flex: "none", fontWeight: 900,
+                            color: m.feito ? COR.gold : COR.muted,
+                          }}>{m.feito ? "✓" : "⏳"}</span>
+                          <span style={{ flex: 1, minWidth: 0, color: COR.text, opacity: m.feito ? 1 : 0.85 }}>
+                            {m.rotulo}
+                            <span style={{ position: "absolute", width: 1, height: 1, margin: -1, padding: 0, overflow: "hidden", clip: "rect(0 0 0 0)", whiteSpace: "nowrap", border: 0 }}>
+                              {m.feito ? " — feito" : " — pendente"}
+                            </span>
+                          </span>
+                          <span style={{ flex: "none", fontWeight: 800, color: m.feito ? COR.gold : COR.muted }}>
+                            +{m.pontos}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p data-missoes-rodape="" style={{ margin: "0.5rem 0 0", fontSize: "0.75rem", color: COR.text, opacity: 0.85 }}>
+                      {`Você ganhou ${missoesHoje.pontosHoje} pontos hoje.`}{todasFeitas ? " Volte amanhã!" : ""}
+                    </p>
+                  </>
+                )}
+              </section>
+
+              {/* UTAC110g.1 (R18-110g.1-2 / decisão D-110g-4) — o botão «Resgatar cartão» MUDOU DE
+                  CASA: saiu do vidro do cartão das Ofertas Programadas e passa a viver aqui, a
+                  seguir aos 3 saldos e às «Missões de hoje» (UTAC110j.3, R18-110j.3-C: os botões de
+                  compra passaram para cima dos saldos; o resgate fica junto dos pontos).
+                  ⚠️ COR: o botão das Ofertas era DOURADO SÓLIDO, mas na Carteira isso violaria a
+                  R18-109h.2/109h.3 («uma só cor de destaque»; nenhum CTA cheio) — regra do operador
+                  para ESTE ecrã, guardada pelo teste `utac109h2-carteira` §8. Aqui usa-se o MESMO
+                  padrão tingido dos outros quatro botões da Carteira (PIX, Passe, MLC, OP):
+                  o AMARELO único `#f5a623` fica no contorno e no texto.
+                  Aparece SÓ quando o SERVIDOR diz que pode (`podeResgatarCartao` = pontosCartao ≥ 50,
+                  pontos de COMPRA). Sem ele, não há botão — nem desactivado: a Carteira é um ecrã de
+                  saldos e o «faltam N pontos» diz-se na barra de progresso, que já existe acima. */}
+              {podeResgatarCartao && (
+                <button
+                  type="button"
+                  data-acao="resgatar-cartao"
+                  aria-label="Resgatar cartão"
+                  onClick={() => setResgateAberto(true)}
+                  style={{
+                    ...botaoPrimario,
+                    marginBottom: "0.6rem",
+                    background: "rgba(245,166,35,0.14)",
+                    border: "1px solid rgba(245,166,35,0.4)",
+                    color: COR.gold,
+                    boxShadow: "none",
+                  }}
+                >
+                  🎁 Resgatar cartão colecionável
+                </button>
               )}
 
               {/* MC99 (correcção do HARD GATE 4) — o card "Dados para Pagamento (Art. 21)"

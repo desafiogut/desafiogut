@@ -1,5 +1,14 @@
 import { useState } from "react";
 import { Modal } from "@/components/ui";
+import CarrosselGUTO, { SLIDES } from "./CarrosselGUTO.jsx";
+
+// UTAC110j.3 — o GUTO do gate passa a ser o GUTO ANIMADO 7, o mesmo das edições Relâmpago e Programada
+// (`CartaoEdicao.jsx`, `GUTO_ANIMADO_7`). O `CarrosselGUTO` já traz loop + muted + playsInline e cai no
+// poster do próprio vídeo (`guto-7.png`) quando o vídeo falha, antes da 1.ª pintura e com reduced-motion.
+// Array de módulo: referência estável para o `memo` do carrossel. Não se importa o `CartaoEdicao` aqui
+// (puxaria o cartão inteiro para o chunk do arranque).
+export const GUTO_GATE = Object.freeze([SLIDES[6]]);
+export const TAMANHO_GUTO_GATE = 96;
 
 /**
  * TermosConsentimento — Gate de compliance LGPD · DesafioGUT
@@ -53,14 +62,9 @@ export default function TermosConsentimento({ onAceitar }) {
         {/* Cabeçalho */}
         <div style={estilos.header}>
           <div style={estilos.logoArea}>
-            <div style={estilos.gutoWrapper}>
-              <img
-                src="/assets/guto/custom/guto-bemvindo.png"
-                alt="GUTO mascote - pensativo"
-                width={96}
-                height={96}
-                style={{ imageRendering: "auto" }}
-              />
+            {/* UTAC110j.3 — o carrossel é aria-hidden; o invólucro guarda o nome acessível que o <img> tinha. */}
+            <div style={estilos.gutoWrapper} role="img" aria-label="GUTO mascote" data-testid="guto-gate">
+              <CarrosselGUTO size={TAMANHO_GUTO_GATE} slides={GUTO_GATE} />
             </div>
             <div>
               <h2 style={estilos.titulo}>DesafioGUT</h2>

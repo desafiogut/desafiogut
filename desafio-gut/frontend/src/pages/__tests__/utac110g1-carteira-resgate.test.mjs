@@ -10,8 +10,7 @@
 //   · R1 — `pontos` (TOTAL, com o bónus do palpite) NÃO decide: 50 totais com 48 de compra ⇒ sem botão;
 //   · INVARIANTE — 50 de compra + palpite PERDEDOR ⇒ o botão continua a existir (Google Play: o
 //     cartão é jogo de habilidade por pontos de COMPRA, não pelo palpite);
-//   · S — vive DENTRO do 1.º vidro, DEPOIS dos 3 saldos e das «Missões de hoje», ANTES dos botões de
-//     compra;
+//   · S — vive DENTRO do 1.º vidro, DEPOIS dos botões de compra (UTAC110j.3), dos 3 saldos e das «Missões de hoje»;
 //   · C — cor: padrão AMARELO TINGIDO (R18-109h.2/109h.3) — nunca CTA cheio de `#f5a623`;
 //   · BIDIRECIONAL — as guardas MORDEM (controlo negativo explícito em cada par).
 //
@@ -172,7 +171,9 @@ test("BIDIRECIONAL · controlo NEGATIVO: a guarda APANHA o estado errado (o test
 });
 
 // ═══ S — SÍTIO E ESTRUTURA ═══════════════════════════════════════════════════════════════════════
-test("S · DENTRO do 1.º vidro, depois dos 3 saldos e das missões, ANTES dos botões de compra", async () => {
+// UTAC110j.3 (R18-110j.3-B/C): os 4 botões de compra passaram para CIMA dos saldos; o resgate continua junto
+// dos pontos, depois das missões. Invariante preservada: dentro do 1.º vidro, depois das missões.
+test("S · DENTRO do 1.º vidro, depois dos botões de compra, dos 3 saldos e das missões", async () => {
   const c = await carteira({
     status: 200,
     json: LEITURA({ missoesHoje: { dia: "2026-10-14", loginFeito: true, lanceFeito: false, pontosHoje: 5 } }),
@@ -186,7 +187,7 @@ test("S · DENTRO do 1.º vidro, depois dos 3 saldos e das missões, ANTES dos b
     const pix = h.indexOf("Depositar PIX");
     assert.ok(vidro > 0 && saldos > 0 && missoes > 0 && resgate > 0 && pix > 0,
       `faltou uma âncora: vidro ${vidro} · saldos ${saldos} · missões ${missoes} · resgate ${resgate} · PIX ${pix}`);
-    assert.ok(vidro < saldos && saldos < missoes && missoes < resgate && resgate < pix,
+    assert.ok(vidro < pix && pix < saldos && saldos < missoes && missoes < resgate,
       `ordem errada: vidro ${vidro} · saldos ${saldos} · missões ${missoes} · resgate ${resgate} · PIX ${pix}`);
     // e continua dentro do 1.º vidro (fecha antes do 2.º)
     const segundoVidro = h.indexOf("gut-glass-standard", vidro + 1);
