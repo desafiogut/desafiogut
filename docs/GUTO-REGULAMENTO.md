@@ -305,6 +305,4 @@ Art. 71º — O foro para dirimir qualquer controvérsia relacionada com este Re
 
 Art. 72º — Este Regulamento rege-se pela Lei nº 5.768/1971, pelo Decreto nº 70.951/1972, pelo Código de Defesa do Consumidor, pela LGPD e pelas políticas da Google Play Store.
 
-Documento oficial — Associação Recreativa dos Nordestinos no Amazonas (CNPJ
-
-23.040.066/0001-00). Versão 5.1 — vigente a partir de 02 de novembro de 2026.
+Documento oficial — Associação Recreativa dos Nordestinos no Amazonas (CNPJ 23.040.066/0001-00). Versão 5.1 — vigente a partir de 02 de novembro de 2026.
