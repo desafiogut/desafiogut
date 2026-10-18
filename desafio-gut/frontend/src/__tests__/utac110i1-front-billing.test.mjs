@@ -155,22 +155,36 @@ test("(b) iOS com a flag ligada ⇒ PIX (a loja do Google não existe em iOS)", 
   assert.equal(REGISTO.order.length, 0);
 });
 
-test("(b) Android nativo mas SEM o plugin nativo ⇒ PIX (fail-closed)", async () => {
+test("(b) Android nativo mas SEM o plugin nativo ⇒ SEM compra (o APK não vende por PIX) — UTAC110i.2/C", async () => {
+  // ⚠️ CONTRATO ANTERIOR (UTAC110i.1) — REFUTADO por decisão de conformidade, mantido À VISTA:
+  //   o teste chamava-se «(b) Android nativo mas SEM o plugin nativo ⇒ PIX (fail-closed)» e a
+  //   asserção era `assert.match(dup.chamadas[0].url, URL_PIX_RELAMPAGO)` — ou seja, exigia que o
+  //   APK fosse ao endpoint PIX. Deixou de ser verdade em 2026-10-18 (UTAC110i.2, FRENTE C, opção
+  //   «c»): no APK o Passe é produto digital e a Play exige o Billing, logo o PIX não é fallback. A
+  //   asserção está INVERTIDA abaixo, de propósito.
   reiniciarDuploCapacitor({ plataforma: "android", nativo: true, pluginDisponivel: false });
   definirRecursos({ isPagamentoNativoAtivo: true, plataforma: "android" });
-  const { dup } = await comprar(() => ({ status: 201, json: { ok: true, pontosFidelidade: 10 } }));
-  assert.equal(dup.chamadas.length, 1);
-  assert.match(dup.chamadas[0].url, URL_PIX_RELAMPAGO);
+  const { r, dup } = await comprar(() => ({ status: 201, json: { ok: true, pontosFidelidade: 10 } }));
+  assert.equal(r.ok, false);
+  assert.equal(r.code, "pix_indisponivel_no_apk");
+  assert.match(r.message, /desafiogut\.com/, "a mensagem tem de remeter para o site");
+  assert.equal(dup.chamadas.filter((c) => /comprar-passe/.test(c.url)).length, 0,
+    "o APK foi ao endpoint PIX — é exactamente a violação da Play");
 });
 
-// ═══ (c) flag DESLIGADA ⇒ PIX (estado de hoje em produção) ══════════════════════════════════════
-test("(c) Android nativo com a flag DESLIGADA ⇒ PIX (zero regressão no APK actual)", async () => {
+// ═══ (c) flag DESLIGADA no APK ⇒ SEM compra (a flag é o interruptor do BILLING, não do PIX) ══════
+test("(c) Android nativo com a flag DESLIGADA ⇒ SEM compra (nem Billing nem PIX) — UTAC110i.2/C", async () => {
+  // ⚠️ CONTRATO ANTERIOR (UTAC110i.1) — REFUTADO, mantido À VISTA: chamava-se «(c) Android nativo
+  //   com a flag DESLIGADA ⇒ PIX (zero regressão no APK actual)» e exigia
+  //   `assert.match(dup.chamadas[0].url, URL_PIX_RELAMPAGO)`. Deixou de ser o contrato em
+  //   2026-10-18: a flag desliga a LOJA (kill-switch), não autoriza PIX no APK.
   ARRANCAR_ANDROID();
   definirRecursos({ isPagamentoNativoAtivo: false, plataforma: "android" });
-  const { dup } = await comprar(() => ({ status: 201, json: { ok: true, pontosFidelidade: 10 } }));
-  assert.equal(dup.chamadas.length, 1);
-  assert.match(dup.chamadas[0].url, URL_PIX_RELAMPAGO, "o APK actual deixou de comprar por PIX");
-  assert.equal(REGISTO.order.length, 0);
+  const { r, dup } = await comprar(() => ({ status: 201, json: { ok: true, pontosFidelidade: 10 } }));
+  assert.equal(r.ok, false);
+  assert.equal(r.code, "pix_indisponivel_no_apk");
+  assert.equal(dup.chamadas.length, 0, "nenhuma ida à rede: nem PIX nem validação");
+  assert.equal(REGISTO.order.length, 0, "não se abre a loja com a flag desligada");
 });
 
 // ═══ (d)(e) desfechos do fluxo nativo ════════════════════════════════════════════════════════════
@@ -262,10 +276,17 @@ test("sem `authToken` ⇒ `sem_sessao` nos dois ramos, sem rede", async () => {
   }
 });
 
-test("corrida no MESMO tick ⇒ só uma compra, nos dois ramos", async () => {
-  for (const ligado of [false, true]) {
-    ARRANCAR_ANDROID();
-    definirRecursos({ isPagamentoNativoAtivo: ligado, plataforma: "android" });
+test("corrida no MESMO tick ⇒ só uma compra, nos dois ramos que restam (PIX/web + Billing)", async () => {
+  // ⚠️ UTAC110i.2/C — o ramo «android nativo + flag desligada ⇒ PIX» DEIXOU DE EXISTIR (ver o teste
+  // (c) acima). Os dois ramos de compra que restam são: PIX no browser e Billing no APK. O ramo
+  // bloqueado (APK sem loja) é coberto em separado, em baixo.
+  for (const cenario of [
+    { nome: "PIX (browser)", android: false, ligado: false, pix: true },
+    { nome: "Billing (APK, flag ligada)", android: true, ligado: true, pix: false },
+  ]) {
+    const { android, ligado, pix, nome } = cenario;
+    if (android) ARRANCAR_ANDROID(); else reiniciarDuploCapacitor();
+    definirRecursos({ isPagamentoNativoAtivo: ligado, plataforma: android ? "android" : "pwa" });
     billing._reiniciarParaTeste();
     reiniciarBillingDuplo({ transacaoAprovada: { ...COMPRA_OK } });
     const corpos = [];
@@ -277,14 +298,56 @@ test("corrida no MESMO tick ⇒ só uma compra, nos dois ramos", async () => {
       const c = montar(useComprarPasse, []);
       await c.assentar();
       const [r1, r2] = await Promise.all([c.resultado().comprar("relampago"), c.resultado().comprar("programado")]);
-      assert.equal(r1.ok, true, `ligado=${ligado}`);
-      assert.equal(r2.ok, false, `ligado=${ligado}`);
-      assert.equal(r2.code, "em_curso");
-      assert.equal(corpos.length, 1, `ligado=${ligado}: ${corpos.length} idas à rede`);
-      assert.equal(REGISTO.order.length, ligado ? 1 : 0,
-        `ligado=${ligado}: encomendas na loja (esperado ${ligado ? 1 : 0} — no ramo PIX a loja não é tocada)`);
+      assert.equal(r1.ok, true, `${nome}: ${JSON.stringify(r1)}`);
+      assert.equal(r2.ok, false, nome);
+      assert.equal(r2.code, "em_curso", nome);
+      assert.equal(corpos.length, 1, `${nome}: ${corpos.length} idas à rede`);
+      assert.equal(REGISTO.order.length, pix ? 0 : 1,
+        `${nome}: encomendas na loja (esperado ${pix ? 0 : 1} — no ramo PIX a loja não é tocada)`);
     } finally { dup.restaurar(); }
   }
+});
+
+test("corrida no MESMO tick no ramo BLOQUEADO (APK sem loja) ⇒ um erro, zero rede, zero loja", async () => {
+  reiniciarDuploCapacitor({ plataforma: "android", nativo: true, pluginDisponivel: false });
+  definirRecursos({ isPagamentoNativoAtivo: true, plataforma: "android" });
+  billing._reiniciarParaTeste();
+  reiniciarBillingDuplo();
+  const corpos = [];
+  const dup = duploDeFetch((url) => { corpos.push(String(url)); return { status: 201, json: RESPOSTA_SERVIDOR_OK }; });
+  try {
+    const c = montar(useComprarPasse, []);
+    await c.assentar();
+    const [r1, r2] = await Promise.all([c.resultado().comprar("relampago"), c.resultado().comprar("programado")]);
+    for (const r of [r1, r2]) {
+      assert.equal(r.ok, false);
+      // o 2.º pode apanhar a guarda `em_curso`; o 1.º tem de ser o bloqueio da frente C
+      assert.ok(["pix_indisponivel_no_apk", "em_curso"].includes(r.code), `code=${r.code}`);
+    }
+    assert.equal(corpos.length, 0, `o ramo bloqueado foi à rede: ${corpos}`);
+    assert.equal(REGISTO.order.length, 0);
+  } finally { dup.restaurar(); }
+});
+
+// ═══ UTAC110i.2/C — o erro do BLOQUEIO tem de chegar ao ESTADO do hook (o ecrã pinta-o) ═════════
+// ⚠️ ACRESCENTADO depois do veredicto do validador adversarial: o mutante que remove o
+// `setErro(MSG_PIX_NO_APK)` do bloco da frente C **sobrevivia** à bateria anterior (pass=58 fail=0),
+// porque as asserções liam o objecto DEVOLVIDO por `comprar()` e nenhuma lia o `erro` do hook — que é
+// o que o balão (`ComprarPasseModal`, `role="alert"`) e a Carteira (toast) apresentam. É o mesmo
+// buraco que o UTAC110i.1b fechou para o ramo nativo (mutante D7).
+test("(C/estado) o bloqueio da frente C põe a mensagem no ESTADO `erro` do hook", async () => {
+  reiniciarDuploCapacitor({ plataforma: "android", nativo: true, pluginDisponivel: false });
+  definirRecursos({ isPagamentoNativoAtivo: true, plataforma: "android" });
+  const dup = duploDeFetch(() => ({ status: 201, json: { ok: true } }));
+  try {
+    const c = montar(useComprarPasse, []);
+    await c.assentar();
+    const r = await c.resultado().comprar("relampago");
+    assert.equal(r.ok, false);
+    assert.equal(r.code, "pix_indisponivel_no_apk");
+    assert.match(c.resultado().erro, /desafiogut\.com/,
+      "o erro do bloqueio não chegou ao estado que o balão pinta (utilizador veria um balão mudo)");
+  } finally { dup.restaurar(); }
 });
 
 // ═══ o erro fica VISÍVEL no estado do hook (é o `erro` que o ecrã mostra) ═══════════════════════
@@ -312,8 +375,13 @@ test("o erro fica no ESTADO `erro` do hook (loja e servidor) e um sucesso poster
     assert.equal(c.resultado().erro, "Não foi possível concluir a compra na loja. Tente de novo.",
       "a falha da loja não chegou ao estado `erro` (o utilizador não vê nada)");
 
-    // (2) nova tentativa por PIX (flag desligada) e bem sucedida ⇒ o erro ANTIGO tem de LIMPAR.
-    definirRecursos({ isPagamentoNativoAtivo: false, plataforma: "android" });
+    // (2) nova tentativa no BROWSER (PIX, que continua a existir fora do APK) e bem sucedida ⇒ o
+    //     erro ANTIGO tem de LIMPAR.
+    // ⚠️ UTAC110i.2/C — antes este passo era «Android nativo + flag desligada ⇒ PIX»; esse ramo
+    //    deixou de existir (o APK não vende o Passe por PIX). O objectivo do teste — o erro antigo
+    //    limpar num sucesso posterior — mantém-se, agora exercido no ramo PIX do browser.
+    reiniciarDuploCapacitor(); // browser: é aqui que o PIX vive
+    definirRecursos({ isPagamentoNativoAtivo: false, plataforma: "pwa" });
     billing._reiniciarParaTeste();
     reiniciarBillingDuplo();
     await c.actualizar();
@@ -322,6 +390,7 @@ test("o erro fica no ESTADO `erro` do hook (loja e servidor) e um sucesso poster
     assert.equal(c.resultado().erro, "", "o erro antigo ficou no ecrã depois de uma compra bem sucedida");
 
     // (3) recusa do SERVIDOR no ramo nativo ⇒ o erro do 409 também tem de estar no ESTADO.
+    ARRANCAR_ANDROID(); // repõe a ponte nativa (o passo 2 passou-a a browser)
     definirRecursos({ isPagamentoNativoAtivo: true, plataforma: "android" });
     billing._reiniciarParaTeste();
     reiniciarBillingDuplo({ transacaoAprovada: { ...COMPRA_OK } });

@@ -88,6 +88,29 @@ export function billingDisponivel() {
   }
 }
 
+/**
+ * Estamos num APK ANDROID (nativo)? — FONTE ÚNICA da FRENTE C (UTAC110i.2).
+ *
+ * Diferente de `billingDisponivel()`: aqui não se pergunta se a LOJA funciona, só ONDE estamos.
+ * É esta a pergunta que decide se o PIX pode existir: no APK o Passe é um produto digital e a
+ * política de Pagamentos da Play exige o Billing — nem sequer como fallback.
+ *
+ * ⚠️ Deliberadamente NÃO é `plataforma === "android"` do `useRecursosApp`: esse valor é
+ * sobreponível por `?plataforma=android` (caminho de validação/MCP) e um utilizador do PWA que
+ * abrisse esse URL perderia a compra por PIX. Aqui a resposta vem da ponte nativa, que a web não
+ * consegue forjar. iOS fica de FORA (o Billing iOS não está implementado — bloquear o PIX lá
+ * partiria um fluxo que hoje funciona; declarado como pendência).
+ *
+ * Fail-closed: excepção → `false` (nunca bloqueia o PIX por engano).
+ */
+export function androidNativo() {
+  try {
+    return Capacitor?.isNativePlatform?.() === true && Capacitor?.getPlatform?.() === "android";
+  } catch {
+    return false;
+  }
+}
+
 /** @returns {null|string} o SKU do tipo, ou null se o tipo não for conhecido. */
 export function skuDoTipo(tipo) {
   return typeof tipo === "string" && Object.hasOwn(SKU_PASSE, tipo) ? SKU_PASSE[tipo] : null;

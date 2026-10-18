@@ -1,0 +1,12 @@
+{
+  "isLeilaoAtivo": {
+    "ios": false,
+    "pwa": true,
+    "android": false
+  },
+  "isPagamentoNativoAtivo": {
+    "ios": false,
+    "pwa": false,
+    "android": true
+  }
+}

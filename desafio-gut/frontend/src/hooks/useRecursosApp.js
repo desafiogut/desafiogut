@@ -9,13 +9,15 @@
 // Deteção de plataforma — honesta e SEM regressão para o utilizador real:
 //   1. override explícito ?plataforma= (validação/MCP) ou window.__GUT_PLATAFORMA__
 //   2. marcador de wrapper nativo window.GUT_NATIVE.platform (build da loja)
-//   3. caso contrário → "pwa" (browser puro NUNCA é classificado como nativo,
+//   3. o próprio Capacitor (UTAC110i.2) — `isNativePlatform()` + `getPlatform()`
+//   4. caso contrário → "pwa" (browser puro NUNCA é classificado como nativo,
 //      logo o utilizador iOS/Android em Safari/Chrome continua a ver o leilão).
 //
 // Fail-soft: se a função 404/erro (ex.: vite puro sem Netlify Functions), cai no
 // DEFAULT local resolvido para a plataforma detetada — pwa mantém o leilão ativo.
 
 import { useState, useEffect } from "react";
+import { Capacitor } from "@capacitor/core";
 import { supabaseConfigurado, getSupabaseBrowser } from "../lib/supabaseClient";
 import { useRealtimeConfig } from "./useRealtimeConfig";
 import { apiGet } from "../lib/api.js";
@@ -79,6 +81,23 @@ export function detectarPlataforma() {
     if (window.__GUT_PLATAFORMA__) return window.__GUT_PLATAFORMA__;
     const nativa = window.GUT_NATIVE && window.GUT_NATIVE.platform;
     if (nativa === "ios" || nativa === "android") return nativa;
+    // UTAC110i.2 — passo 3: o CAPACITOR é a fonte de verdade do wrapper nativo.
+    // Antes deste passo, o ÚNICO marcador nativo era `window.GUT_NATIVE`, que NADA no repositório
+    // escreve (medido: 1 ocorrência, esta leitura) ⇒ o APK classificava-se «pwa» e ia buscar a
+    // chave de config do PWA (leilão ligado, pagamento nativo desligado).
+    // ⚠️ `isNativePlatform()` NÃO é uma prova forte — é DERIVADO de `getPlatform()`
+    // (`@capacitor/core/dist/index.js:48`), que por sua vez lê `win.androidBridge`
+    // (`index.js:28-39`). Um script que escreva `window.androidBridge = {}` ANTES do import faz o
+    // pacote real responder `android`/`true` numa página web (medido pelo validador adversarial do
+    // UTAC110i.2, com o pacote 8.4.2). Ou seja: o par `isNativePlatform() + getPlatform()` protege
+    // contra um `getPlatform()` injectado DEPOIS do import, não contra a forja do bridge antes.
+    // Risco aceite e declarado: quem o fizer só se prejudica (o PWA passa a ver a vista de
+    // conformidade e perde o PIX) — não ganha privilégio nenhum, e o servidor não confia nisto
+    // para autorizar nada (as escritas exigem sessão; a validação da compra é no servidor).
+    if (Capacitor?.isNativePlatform?.() === true) {
+      const nativaCapacitor = Capacitor.getPlatform?.();
+      if (nativaCapacitor === "android" || nativaCapacitor === "ios") return nativaCapacitor;
+    }
   } catch {
     /* fail-soft */
   }

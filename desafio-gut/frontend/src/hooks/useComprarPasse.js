@@ -39,7 +39,7 @@ import { apiPost } from "../lib/api.js";
 import { gerarIdempotencyKey } from "../utils/idempotency.js";
 import { passeDoTipo, inteiroNaoNegativo } from "../lib/passes.js";
 import { useRecursosApp } from "./useRecursosApp.js";
-import { billingDisponivel, iniciarCompra, confirmarCompra } from "../lib/google-play-billing.js";
+import { billingDisponivel, iniciarCompra, confirmarCompra, androidNativo } from "../lib/google-play-billing.js";
 
 // Mensagens por código HTTP dos endpoints (`_lib/comprar-passe-tipado.mjs`): nunca em silêncio.
 const MSG_POR_STATUS = {
@@ -62,6 +62,15 @@ const MSG_BILLING = {
   billing_indisponivel: "Pagamento pela loja indisponível neste dispositivo.",
   em_curso: "Compra em curso",
 };
+
+// UTAC110i.2 — FRENTE C (opção c do enunciado): no APK o Passe NÃO tem PIX. O Passe é um produto
+// digital e a política de Pagamentos da Play exige o Billing; oferecer PIX como alternativa ou
+// fallback é a violação que o bloqueante do AAB descreve. A mensagem remete para o mesmo sítio que
+// a vista de conformidade do Mercado já usa (`MercadoLances.jsx`, `PWA_URL`).
+const PWA_PASSE = "https://desafiogut.com";
+const MSG_PIX_NO_APK =
+  "O Passe Desafio nesta app é comprado pela Google Play, não com saldo. " +
+  `Se a loja não abrir, compre em ${PWA_PASSE.replace("https://", "")}, no seu navegador.`;
 
 export function useComprarPasse() {
   const { address, authToken, refetchSaldoRs } = useAppContext();
@@ -136,6 +145,18 @@ export function useComprarPasse() {
       // a loja sozinha ligaria o Billing com a flag desligada (regressão no APK actual) — foi
       // exactamente esse o estado em que o mutante D3 deixou este ficheiro (medido).
       if (isPagamentoNativoAtivo === true && billingDisponivel()) return await comprarNativo(tipo);
+
+      // ── UTAC110i.2 · FRENTE C: no APK o PIX NÃO é alternativa nem fallback ────────────────────
+      // Chegámos aqui porque a loja não está disponível (plugin ausente) ou porque a flag está
+      // desligada — e estamos num APK Android. Cair no PIX seria vender um produto digital fora da
+      // Play, que é exactamente o bloqueante do AAB. Erro CLARO, com o caminho alternativo (o site);
+      // nada em silêncio e nenhuma chamada ao endpoint.
+      // ⚠️ A condição é `androidNativo()` (ponte nativa), NÃO `plataforma === "android"`: o valor de
+      // `plataforma` é sobreponível por `?plataforma=android` e um utilizador do PWA perderia o PIX.
+      if (androidNativo()) {
+        setErro(MSG_PIX_NO_APK);
+        return { ok: false, code: "pix_indisponivel_no_apk", message: MSG_PIX_NO_APK };
+      }
 
       // ── PIX / saldo R$ (fluxo ORIGINAL — inalterado) ───────────────────────────────────────────
       // Chave NOVA por CHAMADA (nunca reutilizada): a idempotência do servidor cobre o RETRY do

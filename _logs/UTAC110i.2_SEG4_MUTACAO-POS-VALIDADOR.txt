@@ -1,0 +1,48 @@
+backup FORA do repo: C:\Users\Moltbot\AppData\Local\Temp\utac110i2-detetor-useRecursosApp.js.bak
+backup FORA do repo: C:\Users\Moltbot\AppData\Local\Temp\utac110i2-hook-useComprarPasse.js.bak
+backup FORA do repo: C:\Users\Moltbot\AppData\Local\Temp\utac110i2-billing-google-play-billing.js.bak
+
+md5 inicial: detetor=5e6ee3deb4b2ee4e939b1f9bbb932294 hook=693c8d0160c0231cb77e579e2cafe1e7 billing=7f6abf78003a871518e6f6865285ca85
+
+controlo (sem mutação): VERDE 59/59
+
+RED            | entrou: sim | restaurado: sim | fail=7 | A1  o detetor volta a não reconhecer o Capacitor (o APK é «pwa» outra vez)
+                 ↳ ✖ (a) APK Android nativo ⇒ 'android'; controlo: browser ⇒ 'pwa' (1.9628ms)
+                 ↳ ✖ (b) APK iOS nativo ⇒ 'ios' (0.4411ms)
+                 ↳ ✖ (e) precedência: ?plataforma= > __GUT_PLATAFORMA__ > GUT_NATIVE > Capacitor (0.5849ms)
+                 ↳ ✖ (f) CADEIA função: APK Android pede ?plataforma=android e recebe a flag LIGADA (4.4626ms)
+RED            | entrou: sim | restaurado: sim | fail=1 | A2  o detetor aceita a STRING da plataforma sem a ponte nativa (falsificável na web)
+                 ↳ ✖ (c) string forjada: getPlatform()='android' com isNativePlatform()=false ⇒ 'pwa' (0.9485ms)
+                 ↳ ✖ failing tests:
+                 ↳ ✖ (c) string forjada: getPlatform()='android' com isNativePlatform()=false ⇒ 'pwa' (0.9485ms)
+RED            | entrou: sim | restaurado: sim | fail=1 | A3  o detetor deixa de honrar o marcador antigo GUT_NATIVE (regressão de builds)
+                 ↳ ✖ (e) precedência: ?plataforma= > __GUT_PLATAFORMA__ > GUT_NATIVE > Capacitor (1.1225ms)
+                 ↳ ✖ failing tests:
+                 ↳ ✖ (e) precedência: ?plataforma= > __GUT_PLATAFORMA__ > GUT_NATIVE > Capacitor (1.1225ms)
+RED            | entrou: sim | restaurado: sim | fail=1 | A4  o detetor só reconhece Android (o wrapper iOS passa a «pwa»)
+                 ↳ ✖ (b) APK iOS nativo ⇒ 'ios' (1.0004ms)
+                 ↳ ✖ failing tests:
+                 ↳ ✖ (b) APK iOS nativo ⇒ 'ios' (1.0004ms)
+RED            | entrou: sim | restaurado: sim | fail=4 | C1  o bloco da frente C desaparece (o APK volta a poder comprar por PIX)
+                 ↳ ✖ (b) Android nativo mas SEM o plugin nativo ⇒ SEM compra (o APK não vende por PIX) — UTAC110i.2/C (3.4955ms)
+                 ↳ ✖ (c) Android nativo com a flag DESLIGADA ⇒ SEM compra (nem Billing nem PIX) — UTAC110i.2/C (4.6672ms)
+                 ↳ ✖ corrida no MESMO tick no ramo BLOQUEADO (APK sem loja) ⇒ um erro, zero rede, zero loja (2.7651ms)
+                 ↳ ✖ (C/estado) o bloqueio da frente C põe a mensagem no ESTADO `erro` do hook (2.8903ms)
+RED            | entrou: sim | restaurado: sim | fail=1 | C2  `androidNativo()` passa a «qualquer nativo» (o iOS perderia o PIX que hoje funciona)
+                 ↳ ✖ (b) iOS com a flag ligada ⇒ PIX (a loja do Google não existe em iOS) (3.6758ms)
+                 ↳ ✖ failing tests:
+                 ↳ ✖ (b) iOS com a flag ligada ⇒ PIX (a loja do Google não existe em iOS) (3.6758ms)
+RED            | entrou: sim | restaurado: sim | fail=14 | C3  `androidNativo()` passa a ser sempre true (o PWA perderia o PIX)
+                 ↳ ✖ (b) PWA com a flag ligada no Blob ⇒ PIX (o browser nunca tem loja) e ZERO peças do Billing (4.1476ms)
+                 ↳ ✖ (b) iOS com a flag ligada ⇒ PIX (a loja do Google não existe em iOS) (5.44ms)
+                 ↳ ✖ corrida no MESMO tick ⇒ só uma compra, nos dois ramos que restam (PIX/web + Billing) (2.1178ms)
+                 ↳ ✖ o erro fica no ESTADO `erro` do hook (loja e servidor) e um sucesso posterior limpa-o (442.1344ms)
+RED            | entrou: sim | restaurado: sim | fail=1 | C4  o bloqueio deixa de pôr o erro no ESTADO (o balão fica mudo)
+                 ↳ ✖ (C/estado) o bloqueio da frente C põe a mensagem no ESTADO `erro` do hook (2.4153ms)
+                 ↳ ✖ failing tests:
+                 ↳ ✖ (C/estado) o bloqueio da frente C põe a mensagem no ESTADO `erro` do hook (2.4153ms)
+
+mutantes RED: 8/8
+md5 final useRecursosApp.js: 5e6ee3deb4b2ee4e939b1f9bbb932294 (== inicial)
+md5 final useComprarPasse.js: 693c8d0160c0231cb77e579e2cafe1e7 (== inicial)
+md5 final google-play-billing.js: 7f6abf78003a871518e6f6865285ca85 (== inicial)

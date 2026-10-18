@@ -13,6 +13,10 @@ import { opcoesServidorTeste, ALIASES } from "../../__tests__/_servidor-teste.mj
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const DUPLO = join(AQUI, "_supabase-duplo.mjs");
+// UTAC110i.2 — o `@capacitor/core` passa a duplo controlável neste arnês, para se poder exercitar
+// o braço NATIVO do detetor (inexistente até este UTAC). O duplo é FIEL ao pacote real em Node
+// (`web`/`false`/`false`, medido) ⇒ os testes que já usavam este arnês vêem exactamente o mesmo.
+const DUPLO_CAPACITOR = join(AQUI, "..", "..", "lib", "__tests__", "_duplo-capacitor.mjs");
 
 let servidor = null;
 async function obterServidor() {
@@ -25,7 +29,10 @@ async function obterServidor() {
       logLevel: "error",
       optimizeDeps: { noDiscovery: true },
       envDir: mkdtempSync(join(tmpdir(), "mc1041-env-")), // sem VITE_* reais
-      resolve: { alias: [...ALIASES, { find: /^\.\.\/lib\/supabaseClient(\.js)?$/, replacement: DUPLO }] },
+      resolve: { alias: [...ALIASES,
+        { find: /^\.\.\/lib\/supabaseClient(\.js)?$/, replacement: DUPLO },
+        { find: /^@capacitor\/core$/, replacement: DUPLO_CAPACITOR },
+      ] },
     });
   }
   return servidor;
@@ -38,14 +45,22 @@ export async function carregarModulo(caminho) {
 }
 
 /**
+ * URL do último pedido de `correr` (UTAC110i.2). Serve para afirmar QUAL plataforma o cliente
+ * envia ao endpoint — o APK usa o caminho da FUNÇÃO (o build não leva `VITE_SUPABASE_*`), e era
+ * exactamente o `?plataforma=pwa` que fazia o servidor devolver a chave do PWA.
+ */
+export const ULTIMO_PEDIDO = { url: null };
+
+/**
  * Corre `carregarRecursos()` num cenário:
  *   { via: "supabase", valor }            → Supabase configurado, config_remota.valor = valor
  *   { via: "supabase-erro" }              → Supabase configurado mas a query falha → cai para a função
  *   { via: "funcao", corpo, status=200 }  → sem Supabase; /recursos-app responde `corpo`
  *   { via: "local" }                      → sem Supabase e a função falha → fallback local
- * `plataforma` via window.__GUT_PLATAFORMA__.
+ * `plataforma` via window.__GUT_PLATAFORMA__ (undefined ⇒ deixa decidir o detector).
  */
 export async function correr(mod, cenario, plataforma = "pwa") {
+  ULTIMO_PEDIDO.url = null;
   const sb = globalThis.__duploSupabase;
   sb.configurado = cenario.via === "supabase" || cenario.via === "supabase-erro";
   sb.erro = cenario.via === "supabase-erro";
@@ -54,6 +69,7 @@ export async function correr(mod, cenario, plataforma = "pwa") {
   const winOrig = globalThis.window;
   globalThis.window = { location: { search: "" }, __GUT_PLATAFORMA__: plataforma };
   globalThis.fetch = async (url) => {
+    ULTIMO_PEDIDO.url = String(url);
     if (cenario.via === "local" || cenario.via === "supabase-erro" && !cenario.corpo) throw new Error("rede em baixo");
     if (!String(url).includes("recursos-app")) throw new Error(`fetch inesperado: ${url}`);
     return new Response(JSON.stringify(cenario.corpo ?? {}), {
