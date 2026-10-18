@@ -36,25 +36,26 @@ export const PONTOS_INDICACAO = 50;
 export const LIMITE_INDICACOES_MES = 10;
 
 /**
- * UTAC110n (R18-110j.4b-5) — CICLO DE MISSÕES = 200 PONTOS DE LANCE, alcançável DE GRAÇA.
+ * UTAC110n (R18-110j.4b-5) — CICLO DE MISSÕES, alcançável DE GRAÇA.
  *
- * As fontes diárias dão 15 pontos BRUTOS/dia (login +5 + missão do 1.º lance +10). A **proposta
- * aprovada pelo operador** é 14 dias × 15 = **210 ≥ 200**, medida do lado BRUTO.
+ * UTAC110n.1 (DECISÃO DO OPERADOR, 2026-10-18): **15 dias × 15 = 225 brutos / 210 líquidos**.
+ * As fontes diárias dão 15 pontos BRUTOS/dia (login +5 + missão do 1.º lance +10).
  *
  * ⚠️ **BRUTO ≠ LÍQUIDO** (achado ⚠️2 do validador SEG8, medido): a missão de +10 exige DAR UM LANCE, e
- * um lance custa no mínimo 1 ponto (`LANCE_MIN_CENTAVOS = 1`). A 1 ponto/dia, o líquido é
- * 5 + 10 − 1 = **14/dia ⇒ 196 em 14 dias, abaixo dos 200**. Ou seja: ao 14.º dia o medidor diz
- * `completo` (conta ganhos, por desenho) e a carteira tem 196 — não chega para um lance de 200.
- * Para o ciclo fechar também do lado LÍQUIDO com 1 lance/dia seriam precisos **15 dias** (225 bruto /
- * 210 líquido). **Decisão do operador (R18)**: mantém-se 14 dias por agora; o número está aqui à vista
- * para a próxima revisão. Quem dá lances maiores gasta mais por dia, mas também recebe o +10 do dia.
+ * um lance custa no mínimo 1 ponto (`LANCE_MIN_CENTAVOS = 1`). A 1 ponto/dia o líquido é
+ * 5 + 10 − 1 = **14/dia**.
+ *   · 14 dias ⇒ 196 LÍQUIDOS — o medidor dizia `completo` e a carteira não chegava aos 200. Foi o
+ *     defeito que o operador mandou corrigir.
+ *   · 15 dias ⇒ **210 LÍQUIDOS ≥ 200** ✅ — é o valor em vigor.
+ * O alvo (225) continua a ser medido do lado BRUTO (`progressoCicloMissoes` conta GANHOS, por desenho);
+ * é o número de DIAS que garante o líquido. Não voltar a ler 225 como se fosse o saldo disponível.
  *
  * ⚠️ Nada aqui CREDITA: o crédito é das fontes (`creditarLoginDiario`, `creditarMissaoLance`, …); este
  * bloco define o ALVO e mede o progresso. O Passe é atalho (+200), nunca condição.
  */
-export const PONTOS_CICLO_MISSOES = 200;
+export const PONTOS_CICLO_MISSOES = 225;
 export const PONTOS_DIA_MISSOES = PONTOS_LOGIN_DIARIO + PONTOS_MISSAO_LANCE; // 15
-export const DIAS_CICLO_MISSOES = Math.ceil(PONTOS_CICLO_MISSOES / PONTOS_DIA_MISSOES); // 14
+export const DIAS_CICLO_MISSOES = Math.ceil(PONTOS_CICLO_MISSOES / PONTOS_DIA_MISSOES); // 15
 
 /** Motivos que contam como ganho GRATUITO (todos menos o bónus do Passe). */
 export const MOTIVOS_GRATUITOS = Object.freeze(["login", "missao", "indicacao", "sequencia", "boas-vindas"]);

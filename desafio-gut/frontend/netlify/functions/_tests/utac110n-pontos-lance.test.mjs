@@ -252,17 +252,17 @@ test("C5 · se o crédito falhar, a reclamação é LIBERTADA e o retry paga (n�
   assert.equal(pontosLance(), 51, "o retry credita os 50 que faltavam, uma só vez");
 });
 
-// ═══ FRENTE D — o ciclo de missões vale 200 pontos, alcançável DE GRAÇA ═══════════════════════════
+// ═══ FRENTE D — o ciclo de missões vale 225 pontos (210 líquidos), alcançável DE GRAÇA ═══════════
 
-test("D1 · o ciclo: alvo 200 · 15 pontos/dia · 14 dias (14×15 = 210 ≥ 200)", () => {
-  assert.equal(F.PONTOS_CICLO_MISSOES, 200);
+test("D1 · o ciclo: alvo 225 · 15 pontos/dia · 15 dias (15×15 = 225 ≥ 225)", () => {
+  assert.equal(F.PONTOS_CICLO_MISSOES, 225);
   assert.equal(F.PONTOS_DIA_MISSOES, F.PONTOS_LOGIN_DIARIO + F.PONTOS_MISSAO_LANCE);
   assert.equal(F.PONTOS_DIA_MISSOES, 15);
-  assert.equal(F.DIAS_CICLO_MISSOES, 14);
+  assert.equal(F.DIAS_CICLO_MISSOES, 15);
   assert.ok(F.DIAS_CICLO_MISSOES * F.PONTOS_DIA_MISSOES >= F.PONTOS_CICLO_MISSOES);
 });
 
-test("D2 · um utilizador que SÓ faz missões chega a 200 pontos em 14 dias (sem Passe)", async () => {
+test("D2 · um utilizador que SÓ faz missões chega ao alvo em 15 dias (sem Passe)", async () => {
   const base = Date.parse("2026-11-01T12:00:00Z");
   for (let d = 0; d < F.DIAS_CICLO_MISSOES; d++) {
     const agora = new Date(base + d * 24 * 3600 * 1000);
@@ -270,11 +270,11 @@ test("D2 · um utilizador que SÓ faz missões chega a 200 pontos em 14 dias (se
     await F.creditarMissaoLance(A, agora);
   }
   assert.equal(pontosLance(), F.DIAS_CICLO_MISSOES * F.PONTOS_DIA_MISSOES);
-  assert.ok(pontosLance() >= 200, "210 ≥ 200: alcançável de graça");
+  assert.ok(pontosLance() >= 200, "225 brutos ≥ 200: alcançável de graça");
 
   const prog = F.progressoCicloMissoes(linha());
   assert.equal(prog.completo, true);
-  assert.equal(prog.pontos, 200);
+  assert.equal(prog.pontos, 225);
   assert.equal(prog.faltam, 0);
 });
 
@@ -286,13 +286,15 @@ test("D3 · o progresso do ciclo não conta o bónus do Passe nem o gasto do lan
   assert.equal(prog.ganhos, 190, "só boas-vindas: o Passe não é ganho de ciclo");
   assert.equal(pontosLance(), 353, "190 + 200 − 37 (saldo real, que É o que o lance gasta)");
   assert.equal(prog.completo, false);
-  assert.equal(prog.faltam, 10);
+  assert.equal(prog.faltam, 35, "225 − 190");
 });
 
 // UTAC110n — achado ⚠️2 do validador SEG8: o número do ciclo é BRUTO. A missão de +10 exige dar um
 // lance, e um lance custa no mínimo 1 ponto. Este teste mede os DOIS lados para o número não voltar a
 // ser lido como se fosse líquido.
-test("D2b · o ciclo é BRUTO: com 1 lance de 1 ponto/dia, 14 dias dão 196 líquidos", async () => {
+// UTAC110n.1 (decisão do operador): 14 dias davam 196 LÍQUIDOS — abaixo dos 200. Passou a 15 dias ⇒
+// 210 líquidos, que é o que o teste agora exige: o ciclo tem de fechar TAMBÉM no líquido.
+test("D2b · o ciclo é BRUTO: com 1 lance de 1 ponto/dia, 15 dias dão 210 líquidos (≥ 200)", async () => {
   const base = Date.parse("2026-12-01T12:00:00Z");
   for (let d = 0; d < F.DIAS_CICLO_MISSOES; d++) {
     const agora = new Date(base + d * 24 * 3600 * 1000);
@@ -300,12 +302,13 @@ test("D2b · o ciclo é BRUTO: com 1 lance de 1 ponto/dia, 14 dias dão 196 líq
     await L.consumirPontosLance(A, 1, `lance:dia-${d}`); // −1 (o lance mínimo, para a missão contar)
     await F.creditarMissaoLance(A, agora);            // +10
   }
-  assert.equal(pontosLance(), 196, "14 dias × (5 + 10 − 1)");
+  assert.equal(pontosLance(), 210, "15 dias × (5 + 10 − 1)");
   const prog = F.progressoCicloMissoes(linha());
-  assert.equal(prog.ganhos, 210, "o medidor conta GANHOS (bruto), por desenho");
+  assert.equal(prog.ganhos, 225, "o medidor conta GANHOS (bruto), por desenho");
   assert.equal(prog.completo, true);
-  assert.ok(pontosLance() < F.PONTOS_CICLO_MISSOES,
-    "…e a carteira ainda não tem 200 — é o desvio declarado (15 dias fechariam também no líquido)");
+  assert.ok(pontosLance() >= 200,
+    "…e a carteira TEM os 200 para licitar: é este o requisito que 14 dias não cumpriam (196)");
+  assert.equal(F.DIAS_CICLO_MISSOES, 15, "14 dias voltariam a dar 196 líquidos");
 });
 
 // ═══ FRENTE E — conversão de créditos em pontos (DEBT-071) ══════════════════════════════════════
@@ -476,4 +479,50 @@ test("G4 · a âncora do Art. 17º no GUTO é um excerto VERBATIM do artigo", as
   const art = /Art\. 17º — ([^\n]+)/.exec(doc)?.[1] ?? "";
   const { ARTIGOS_V4 } = await import("../_lib/guto-perfis.mjs");
   assert.ok(art.includes(ARTIGOS_V4["17"]), "a âncora do Art. 17º deixou de ser verbatim");
+});
+
+// ═══ FRENTE H — DEBT-076 (UTAC110n.1): as SENHAS antigas convertem-se em pontos ══════════════════
+
+const MIG_SENHAS = new URL("../../../supabase/migrations/20261018_utac110n1_conversao_senhas_legadas.sql", import.meta.url);
+const SQLS = (await import("node:fs")).readFileSync(MIG_SENHAS, "utf8");
+const SQLS_CORPO = SQLS.replace(/--[^\n]*/g, "");
+
+test("H1 · 1 senha = 200 pontos, e a dívida é zerada na MESMA instrução", () => {
+  // ⚠️ Todas as ocorrências, não só a primeira: o valor aparece duas vezes (o UPSERT e o `delta` do
+  // histórico). Um `assert.match` simples deixava passar um mutante que trocava UMA delas para 20 —
+  // medido: o M15 sobreviveu à 1.ª versão deste teste (achado meu, corrigido aqui).
+  const fatores = [...SQLS_CORPO.matchAll(/senhas\s*\*\s*(\d+)/g)].map((m) => Number(m[1]));
+  assert.ok(fatores.length >= 2, `esperava o factor em 2 sítios, achei ${fatores.length}`);
+  assert.deepEqual([...new Set(fatores)], [200], `todas as ocorrências têm de ser 200: ${fatores}`);
+  assert.match(SQLS_CORPO, /SET\s+senhas_a_creditar\s*=\s*0/, "a dívida tem de ser zerada");
+  // A aritmética, aplicada: 3 senhas ⇒ 600 pontos.
+  assert.equal(3 * 200, 600);
+});
+
+test("H2 · idempotente por construção: a zeragem tem o guard na mesma instrução", () => {
+  const update = SQLS_CORPO.split(";").map((s) => s.trim())
+    .find((s) => /UPDATE\s+public\.rankings_ciclo/i.test(s));
+  assert.ok(update, "não encontrei o UPDATE de rankings_ciclo");
+  assert.match(update, /senhas_a_creditar\s*>\s*0/, "o guard da coluna");
+  assert.match(update, /liquidado_em\s+IS\s+NULL/, "só dívidas por liquidar");
+  assert.match(update, /senhas_a_creditar\s*=\s*0/, "zera na mesma instrução");
+});
+
+test("H3 · cobre quem NÃO tem linha em public.pontos (UPSERT, não UPDATE simples)", () => {
+  assert.match(SQLS_CORPO, /INSERT\s+INTO\s+public\.pontos/i, "tem de inserir quando falta a linha");
+  assert.match(SQLS_CORPO, /ON\s+CONFLICT\s*\(\s*endereco\s*\)\s*DO\s+UPDATE/i, "e somar quando existe");
+  assert.match(SQLS_CORPO, /p\.pontos_lance\s*\+\s*EXCLUDED\.pontos_lance/);
+});
+
+test("H4 · a ref leva o instante da execução (não repete numa re-conversão) e o motivo é próprio", () => {
+  assert.match(SQLS_CORPO, /'motivo',\s*'conversao-senhas'/);
+  assert.match(SQLS_CORPO, /'ref',\s*'conversao-senhas:'/);
+  assert.match(SQLS_CORPO, /HH24MISSMS/, "o sufixo tem de distinguir duas execuções");
+});
+
+test("H5 · não apaga nem reescreve a fila: só deixa de haver dívida (worker e sweeper ficam)", () => {
+  assert.equal(/DELETE\s+FROM/i.test(SQLS_CORPO), false, "a migração não apaga linhas");
+  assert.equal(/UPDATE\s+public\.fila_tarefas/i.test(SQLS_CORPO), false,
+    "a fila não é tocada: o worker recusa sozinho quando senhas_a_creditar deixa de bater");
+  assert.equal(/DROP\s+(TABLE|COLUMN)/i.test(SQLS_CORPO), false, "nada de DDL destrutivo");
 });
