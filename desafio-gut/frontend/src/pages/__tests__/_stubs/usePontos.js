@@ -11,6 +11,8 @@
 const BASE = Object.freeze({
   pontos: 0, pontosCartao: 0, bonusPalpite: 0,
   historico: [], palpites: [], pontosParaCartao: 50, podeResgatarCartao: false, creditosLance: 0,
+  lance: null, // UTAC110j.4b — progresso pessoal dos pontos de lance (Meus Ativos)
+  missoesHoje: null,
   loading: false, erro: "",
 });
 

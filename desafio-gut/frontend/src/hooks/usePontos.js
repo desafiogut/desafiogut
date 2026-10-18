@@ -13,6 +13,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
 import { apiGet } from "../lib/api.js";
 import { creditosDaResposta } from "../lib/passes.js";
+import { pontosLanceDaResposta } from "../lib/pontosLance.js"; // UTAC110j.4b — progresso pessoal em Meus Ativos
 
 // UTAC110d-front — `creditosLance`: os créditos de lance do ledger novo (`lance.creditos` do
 // `ler-pontos`, UTAC110d). Lido SEM coerção (`creditosDaResposta`): ilegível ou ausente → 0.
@@ -21,6 +22,7 @@ const VAZIO = Object.freeze({
   historico: [], palpites: [], pontosParaCartao: 50, podeResgatarCartao: false,
   creditosLance: 0,
   missoesHoje: null,
+  lance: null, // UTAC110j.4b — `{pontos, movimentos}` do ledger de lance, ou `null` (ilegível/sem sessão)
 });
 
 // UTAC110f-front — «Missões de hoje» (campo `missoesHoje` do `ler-pontos`). Leitura ESTRITA, sem coerção: só se aceita
@@ -67,6 +69,7 @@ export function usePontos() {
         podeResgatarCartao: data?.podeResgatarCartao === true,
         creditosLance: creditosDaResposta(data),
         missoesHoje: missoesDaResposta(data),
+        lance: pontosLanceDaResposta(data),
       };
       setDados(novo);
       return novo;

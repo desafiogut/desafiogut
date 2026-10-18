@@ -108,6 +108,7 @@ const EXIGIDO_V5 = {
   "8":  ["pontos de fidelidade", "10"],
   "9":  ["cartão colecionável", "50"],
   "14": ["competição de habilidade", "menor lance único"],
+  "16": ["pontos de lance", "engajamento"], // UTAC110j.4b — painel «Seus pontos de lance» de Meus Ativos
   "27": ["palpite"],
   "47": ["ECOQUILDO", "R$ 1,00"],
   "49": ["ECOQUILDO", "convertível"],

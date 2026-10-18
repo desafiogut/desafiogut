@@ -1,0 +1,43 @@
+UTAC110j.4 / 110j.4b — MEUS ATIVOS: PONTOS DE LANCE + «PRODUTO PATROCINADO»
+Executor: Claude Code (Opus 5.5) · Baseline e995f1c · SEM commit/push (não autorizado)
+
+1. DIAGNÓSTICO
+- «Bônus de senhas» (5 acertos): crédito AUTOMÁTICO do backend que acaba na blockchain
+  (pontuacao-store → fila creditar-senhas-bonus → worker-bonus → adicionarSenhas; hoje em dry-run).
+  Mudar para pontos de lance = BACKEND → escalado ao Hermes.
+- «Competição de habilidade»: ranking e pontuação 1/3 do motor MC93 (tabela rankings_ciclo).
+  O progresso PESSOAL de pontos de lance dá para fazer só na UI (ler-pontos); um ranking de todos precisa de endpoint novo.
+
+2. DECISÕES DO OPERADOR (R18-110j.4b-1..8)
+- O lance passa a gastar pontos de lance GRATUITOS, no valor do lance (afastar «pagar pela possibilidade de ganhar»).
+- Passe Relâmpago (R$ 2,00) = produto: 10 pontos de fidelidade + ECOQUILDO + acesso + BÓNUS de 200 pontos de lance
+  (acelerador, não condição para licitar).
+- Bónus de 5 acertos = +50 pontos de lance. Ciclo de missões = 200 pontos (dias a definir).
+- Créditos já comprados: 1 crédito = 200 pontos (DEBT-071). Ranking ordenado pelo saldo, endereços mascarados.
+- Art. 17º do Regulamento: rever «1 crédito de lance» → «200 pontos de lance».
+→ Tudo isto é backend: rascunho _logs/UTAC110n.spec-HERMES.md («110m.3» já é o GUTO ⇒ nome provisório 110n).
+
+3. FEITO (só UI)
+- «Prêmio a anunciar» → «Produto patrocinado» (CartaoEdicao, EdicaoCard). O nome do patrocinador não existe nos dados.
+- Meus Ativos: o painel «Competição de habilidade» deu lugar a «⭐ Seus pontos de lance»: saldo, ganhos por fonte
+  (login, missão, indicação…), últimos 5 movimentos. Sem sessão não mostra números; erro nunca vira zeros.
+- PainelTorneio, EstadoBonus e ProgressoBonus continuam no código (o bónus continua visível até o backend mudar).
+- usePontos ganhou o campo «lance» (extensão de escopo, declarada).
+
+4. VERIFICAÇÃO
+- Suíte: frontend 1227/1227 · backend 1351/1357 — VERDE (baseline 1208/1208 · 1351/1357).
+- Mutação: 7/7 + 2/2 (Frente C) + V15 do validador, restauro md5 idêntico.
+- Validador adversarial (worktree próprio): APROVADO COM RESSALVAS, 0 bloqueantes; 14 de 15 mutantes dele mortos;
+  o V15 foi fechado depois (não re-validado).
+- Não aberto em browser (gate LGPD).
+
+5. PENDENTE / RESSALVAS
+- ⚠️ A página ainda tem dois sistemas de «pontos»: «Seus lances» diz «vale 3 pontos», o ranking usa a pontuação MC93
+  e o bónus fala de «senhas» — mudam com o UTAC110n.
+- ⚠️ Os pontos de lance ainda não servem para licitar (backend).
+- A RAM ficou abaixo dos 1 500 MB no arranque de uma corrida (1 477 MB); o fecho dos MCP foi recusado pelo
+  classificador e não foi contornado.
+- Custo: validador 732 711 tokens; sessão principal não medida; delta de saldo não lido.
+
+Registos: _logs/UTAC110j.4_SEG-1_MEDICAO.md · _logs/UTAC110j.4b_SEG-1_DIAGNOSTICO.md · _logs/UTAC110j.4b-meus-ativos.md ·
+_logs/UTAC110j.4b_SEG4_VALIDADOR.md · _logs/UTAC110n.spec-HERMES.md · CLAUDE.md (R14) · _logs/DEBT.md (DEBT-071)

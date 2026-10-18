@@ -80,7 +80,7 @@ export default function CartaoEdicao({
   vazio = false, titulo, mensagemVazio: mensagemDada, ajudaVazio: ajudaDada,
   isMobile = false, children, style, ...rest
 }) {
-  const nome = produto || "Prêmio a anunciar";
+  const nome = produto || "Produto patrocinado"; // UTAC110j.4 — v5.1: o produto é patrocinado (Cotas, Arts. 12º/24º); era «Prêmio a anunciar»
   const formato = isMobile ? "1 / 1" : "16 / 9";
   const temAcao = acaoValida(acao);
   const textoVazio = temAcao ? VAZIO_POR_ACAO[acao] : VAZIO_PADRAO;

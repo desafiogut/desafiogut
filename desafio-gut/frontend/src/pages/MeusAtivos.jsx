@@ -9,7 +9,10 @@ import { useRanking } from "../hooks/useRanking.js";
 // É a única fonte honesta do menor único: o browser não o consegue apurar (ver o hook).
 import { useResultadoOficial } from "../hooks/useResultadoOficial.js";
 import { useFeedback } from "../hooks/useFeedback.js";
-import PainelTorneio from "../components/meus-ativos/PainelTorneio.jsx";
+// UTAC110j.4b (Frente B, só-UI) — o painel do motor MC93 (`PainelTorneio`, que fica no código) deu lugar ao
+// progresso PESSOAL dos pontos de lance (Art. 16º), lido do `ler-pontos` pelo `usePontos`.
+import { usePontos } from "../hooks/usePontos.js";
+import PainelPontosLance from "../components/meus-ativos/PainelPontosLance.jsx";
 import ProgressoBonus from "../components/meus-ativos/ProgressoBonus.jsx";
 import EstadoBonus from "../components/meus-ativos/EstadoBonus.jsx";
 import FeedbackLance from "../components/meus-ativos/FeedbackLance.jsx";
@@ -74,6 +77,7 @@ export default function MeusAtivos() {
   // (decisão do operador no MC93-B — um UUID impediria o join com `lances`).
   const ranking = useRanking(EDICAO_ATIVA);
   const feedback = useFeedback(EDICAO_ATIVA, address, authToken);
+  const pontos = usePontos(); // UTAC110j.4b
 
   // ⛔ "SEM SESSÃO" E "SESSÃO SEM TOKEN AINDA" SÃO COISAS DIFERENTES.
   // `useFeedback` devolve `semSessao: true` enquanto não tiver `token`, porque sem
@@ -92,6 +96,8 @@ export default function MeusAtivos() {
   const senhas = estadoSenhasAntigas({ temSessao, saldoSenhas, saldoSenhasStatus });
   const aEsperarToken = temSessao && feedback.semSessao;
   const feedbackCarregando = feedback.carregando || aEsperarToken;
+  // UTAC110j.4b — o `usePontos` também espera o `authToken` (sem ele não chama o `ler-pontos`).
+  const pontosCarregando = pontos.loading || (temSessao && !authToken);
 
   const meusLances = lances.filter(
     (l) => !address || l.endereco?.toLowerCase() === address?.toLowerCase()
@@ -185,13 +191,12 @@ export default function MeusAtivos() {
         gap: isMobile ? "0.75rem" : "1rem",
         marginBottom: sectionGap,
       }}>
-        <PainelTorneio
+        <PainelPontosLance
           temSessao={temSessao}
-          feedback={feedback.feedback}
-          carregando={feedbackCarregando}
-          erro={feedback.erro}
+          carregando={pontosCarregando}
+          erro={pontos.erro || null}
+          lance={pontos.lance}
           isMobile={isMobile}
-          t={t}
         />
         {/* ⚠️ As QUATRO secções pessoais recebem o MESMO estado de sessão. A
             primeira versão só passava os dados a duas, e em produção um utilizador

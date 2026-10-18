@@ -93,7 +93,7 @@ export default function EdicaoCard({ edicao, isMobile, cardCls = "p-4", cardTitu
             Edição {edicao.id}
           </div>
           <div style={{ fontSize: isMobile ? "0.78rem" : "0.82rem", color: COR.gold, fontWeight: "800", lineHeight: 1.25, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {edicao.produto ? edicao.produto : "Prêmio a anunciar"}
+            {edicao.produto ? edicao.produto : "Produto patrocinado"}
           </div>
           <div style={{ fontSize: "0.68rem", color: encerrada ? "#fca5a5" : COR.muted, lineHeight: 1.2 }}>
             {est.rotulo}

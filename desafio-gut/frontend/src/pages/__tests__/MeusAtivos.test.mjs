@@ -29,6 +29,8 @@ let Pagina = null;
 let definirContexto = null;
 let definirHooks = null;
 let argumentos = null;
+let definirPontos = null;
+let chamadasPontos = null;
 
 before(async () => {
   vite = await createServer({
@@ -48,6 +50,8 @@ before(async () => {
         { find: /^\.\.\/context\/IdiomaContext\.jsx$/, replacement: `${STUBS}/IdiomaContext.jsx` },
         { find: /^\.\.\/hooks\/useRanking\.js$/,       replacement: `${STUBS}/hooks.js` },
         { find: /^\.\.\/hooks\/useFeedback\.js$/,      replacement: `${STUBS}/hooks.js` },
+        // UTAC110j.4b — o painel «Seus pontos de lance» lê o `usePontos`; em SSR o efeito não corre, logo o duplo.
+        { find: /^\.\.\/hooks\/usePontos\.js$/,        replacement: `${STUBS}/usePontos.js` },
         // `BotaoLoginPrincipal` arrasta o SDK do Privy (2,68 MB), que em SSR
         // estoura a heap. A tela só precisa que ele RENDERIZE algo com a palavra
         // "Entrar" para o teste de não-regressão do convite a entrar.
@@ -57,13 +61,14 @@ before(async () => {
   });
   ({ definirContexto } = await vite.ssrLoadModule(`${STUBS}/AppContext.jsx`));
   ({ definirHooks, argumentos } = await vite.ssrLoadModule(`${STUBS}/hooks.js`));
+  ({ definirPontos, chamadasPontos } = await vite.ssrLoadModule(`${STUBS}/usePontos.js`));
   Pagina = (await vite.ssrLoadModule("/src/pages/MeusAtivos.jsx")).default;
 });
 
 after(async () => { if (vite) await vite.close(); });
 
 /** Renderiza a página com contexto e hooks controlados. */
-function renderizar({ contexto = {}, hooks = {} } = {}) {
+function renderizar({ contexto = {}, hooks = {}, pontos = {} } = {}) {
   definirContexto({
     lances: [],
     address: null,
@@ -78,6 +83,7 @@ function renderizar({ contexto = {}, hooks = {} } = {}) {
     feedback: { feedback: null, carregando: false, erro: null, semSessao: true },
     ...hooks,
   });
+  definirPontos(pontos);
   return renderToStaticMarkup(React.createElement(Pagina));
 }
 
@@ -131,20 +137,23 @@ describe("MC94 · MeusAtivos — HARD GATE 5: nada regride", () => {
 
 // ───────────────────────────────────────────────────────────────────────────
 describe("MC94 · MeusAtivos — as secções novas estão na página", () => {
-  test("as cinco secções do torneio renderizam", () => {
+  // UTAC110j.4b (declarado): o «painel-torneio» (motor MC93) deu lugar ao «pontos-lance» (progresso pessoal).
+  test("as cinco secções renderizam (pontos de lance no lugar do painel do motor MC93)", () => {
     const html = renderizar();
     for (const secao of [
-      "painel-torneio", "progresso-bonus", "estado-bonus",
+      "pontos-lance", "progresso-bonus", "estado-bonus",
       "feedback-lance", "ranking-ciclo",
     ]) {
       assert.match(html, new RegExp(`data-secao="${secao}"`),
         `a secção "${secao}" não está na página`);
     }
+    assert.doesNotMatch(html, /data-secao="painel-torneio"/, "o painel do motor MC93 voltou à página");
+    assert.doesNotMatch(texto(html), /Competição de habilidade/);
   });
 
   test("a ordem é a planeada: torneio ANTES do histórico", () => {
     const html = renderizar();
-    const iTorneio = html.indexOf('data-secao="painel-torneio"');
+    const iTorneio = html.indexOf('data-secao="pontos-lance"'); // UTAC110j.4b
     const iFiltro  = html.indexOf("Filtrar");
     assert.ok(iTorneio !== -1 && iFiltro !== -1, "faltam âncoras para comparar");
     assert.ok(iTorneio < iFiltro,
@@ -223,6 +232,7 @@ describe("MC94 · MeusAtivos — resiliência", () => {
         ranking:  { ranking: [], total: 0, carregando: true, erro: null },
         feedback: { feedback: null, carregando: true, erro: null, semSessao: false },
       },
+      pontos: { loading: true }, // UTAC110j.4b — o painel dos pontos de lance também está a carregar
     }));
     assert.doesNotMatch(t, /não foi possível|erro/i, "mostra erro durante a espera");
     assert.match(t, /carregando/i, "não avisa que está a carregar");
@@ -328,7 +338,7 @@ describe("MC94 · MeusAtivos — cablagem: os dados chegam às secções", () =>
         ranking:  { ranking: [], total: 0, carregando: false, erro: null },
       },
     });
-    for (const secao of ["painel-torneio", "progresso-bonus", "estado-bonus"]) {
+    for (const secao of ["progresso-bonus", "estado-bonus"]) { // UTAC110j.4b: o painel-torneio saiu
       const i = html.indexOf(`data-secao="${secao}"`);
       assert.notEqual(i, -1, `a secção ${secao} desapareceu`);
       const corpo = html.slice(i, i + html.slice(i).indexOf("</section>"));
@@ -347,7 +357,7 @@ describe("MC94 · MeusAtivos — cablagem: os dados chegam às secções", () =>
       contexto: { address: EU, authToken: "tok", isConnected: true },
       hooks: { feedback: { feedback: null, carregando: true, erro: null, semSessao: false } },
     });
-    for (const secao of ["painel-torneio", "progresso-bonus", "estado-bonus"]) {
+    for (const secao of ["progresso-bonus", "estado-bonus"]) { // UTAC110j.4b: o painel-torneio saiu
       const i = html.indexOf(`data-secao="${secao}"`);
       const corpo = html.slice(i, i + html.slice(i).indexOf("</section>"));
       assert.match(corpo, /data-estado="carregando"/, `"${secao}" não recebe o \`carregando\``);
@@ -359,7 +369,7 @@ describe("MC94 · MeusAtivos — cablagem: os dados chegam às secções", () =>
       contexto: { address: null, authToken: null, isConnected: false },
       hooks: { feedback: { feedback: null, carregando: false, erro: null, semSessao: true } },
     });
-    for (const secao of ["painel-torneio", "progresso-bonus", "estado-bonus"]) {
+    for (const secao of ["progresso-bonus", "estado-bonus"]) { // UTAC110j.4b: o painel-torneio saiu
       const i = html.indexOf(`data-secao="${secao}"`);
       const corpo = html.slice(i, i + html.slice(i).indexOf("</section>"));
       assert.match(corpo, /data-estado="sem-sessao"/, `"${secao}" não recebe o \`semSessao\``);
@@ -388,8 +398,7 @@ describe("MC94 · MeusAtivos — cablagem: os dados chegam às secções", () =>
       const i = html.indexOf(`data-secao="${secao}"`);
       return texto(html.slice(i, i + html.slice(i).indexOf("</section>")));
     };
-    assert.match(dentro("painel-torneio"), /4º/, "a posição não chega ao painel");
-    assert.match(dentro("painel-torneio"), /\b13\b/, "os pontos não chegam ao painel");
+    // UTAC110j.4b: as asserções de posição/pontos do `painel-torneio` saíram com o painel (motor MC93).
     assert.match(dentro("progresso-bonus"), /\b3\b[\s\S]*\/\s*5/, "a sequência não chega ao progresso");
     assert.match(dentro("progresso-bonus"), /Faltam 2 acertos/, "o `faltamParaBonus` não chega ao progresso");
     assert.match(dentro("estado-bonus"), /\b40\s+senhas\b/,
@@ -470,7 +479,7 @@ describe("MC94 · MeusAtivos — a página não fala de quem não conhece", () =
       contexto: { address: null, authToken: null, isConnected: false, lances: LANCES_DE_TODOS },
       hooks: { feedback: { feedback: null, carregando: false, erro: null, semSessao: true } },
     });
-    for (const secao of ["painel-torneio", "progresso-bonus", "estado-bonus", "feedback-lance"]) {
+    for (const secao of ["pontos-lance", "progresso-bonus", "estado-bonus", "feedback-lance"]) { // UTAC110j.4b
       const t = dentro(html, secao);
       assert.match(t, /Entre na sua conta/i, `"${secao}" não convida a entrar`);
     }
@@ -494,7 +503,7 @@ describe("MC94 · MeusAtivos — a página não fala de quem não conhece", () =
       contexto: { address: EU, authToken: null, isConnected: true, lances: LANCES_DE_TODOS },
       hooks: { feedback: { feedback: null, carregando: false, erro: null, semSessao: true } },
     });
-    for (const secao of ["painel-torneio", "progresso-bonus", "estado-bonus"]) {
+    for (const secao of ["progresso-bonus", "estado-bonus"]) { // UTAC110j.4b: o painel-torneio saiu
       const t = dentro(html, secao);
       assert.doesNotMatch(t, /Entre na sua conta/i,
         `"${secao}" manda entrar na conta quem já entrou`);
@@ -520,8 +529,7 @@ describe("MC94 · MeusAtivos — a página não fala de quem não conhece", () =
     });
     const t = texto(html);
     assert.doesNotMatch(t, /Entre na sua conta/i);
-    assert.match(t, /2º/);
-    assert.match(t, /Faltam 2 acertos/i);
+    assert.match(t, /Faltam 2 acertos/i); // UTAC110j.4b: a posição «2º» era do painel-torneio, que saiu
   });
 
   test("o ranking é público: aparece com ou sem sessão, e não entra na conversa da sessão", () => {
@@ -541,5 +549,69 @@ describe("MC94 · MeusAtivos — a página não fala de quem não conhece", () =
       assert.doesNotMatch(t, /Entre na sua conta|carregando/i,
         "o ranking, que é público, ficou preso ao estado da sessão");
     }
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// UTAC110j.4b (Frente B, só-UI) — «Seus pontos de lance»: a cablagem do `usePontos` até ao painel.
+// ───────────────────────────────────────────────────────────────────────────
+describe("UTAC110j.4b · MeusAtivos — o painel dos pontos de lance recebe os dados", () => {
+  const EU = "0xAAAAaaaaAAAAaaaaAAAAaaaaAAAAaaaaAAAAaaaa";
+  const painel = (html) => {
+    const i = html.indexOf('data-secao="pontos-lance"');
+    assert.notEqual(i, -1, "o painel dos pontos de lance desapareceu");
+    return html.slice(i, i + html.slice(i).indexOf("</section>"));
+  };
+  const LANCE = { pontos: 73, movimentos: [
+    { data: "2026-10-10T15:00:00Z", t: Date.parse("2026-10-10T15:00:00Z"), motivo: "login", delta: 5 },
+    { data: "2026-10-11T15:00:00Z", t: Date.parse("2026-10-11T15:00:00Z"), motivo: "indicacao", delta: 50 },
+  ] };
+
+  test("a página chama o `usePontos`", () => {
+    renderizar({ contexto: { address: EU, authToken: "tok", isConnected: true } });
+    assert.ok(chamadasPontos() >= 1, "a página não chamou o `usePontos`");
+  });
+
+  test("com dados: o saldo e os ganhos por fonte chegam ao painel", () => {
+    const p = painel(renderizar({ contexto: { address: EU, authToken: "tok", isConnected: true }, pontos: { lance: LANCE } }));
+    assert.match(p, /data-testid="pontos-lance-saldo"[^>]*>73</, "o saldo não chega ao painel");
+    assert.match(texto(p), /Indicação \+50/);
+    assert.match(texto(p), /Login diário \+5/);
+  });
+
+  test("«Últimos movimentos» mostra no máximo 5 (V15 do validador SEG4)", () => {
+    const movimentos = Array.from({ length: 7 }, (_, i) => {
+      const data = `2026-10-${String(10 + i).padStart(2, "0")}T15:00:00Z`;
+      return { data, t: Date.parse(data), motivo: "login", delta: 5 };
+    });
+    const p = painel(renderizar({ contexto: { address: EU, authToken: "tok", isConnected: true }, pontos: { lance: { pontos: 35, movimentos } } }));
+    const ult = p.slice(p.indexOf('data-testid="pontos-ultimos"'));
+    assert.equal(ult.slice(0, ult.indexOf("</ul>")).split("<li").length - 1, 5);
+  });
+
+  test("o `erro` do `usePontos` chega ao painel (e não contamina o ranking)", () => {
+    const html = renderizar({ contexto: { address: EU, authToken: "tok", isConnected: true },
+      pontos: { erro: "Não foi possível carregar os pontos", lance: LANCE } });
+    assert.match(painel(html), /data-estado="erro"/);
+    const i = html.indexOf('data-secao="ranking-ciclo"');
+    assert.doesNotMatch(html.slice(i, i + html.slice(i).indexOf("</section>")), /data-estado="erro"/);
+  });
+
+  test("o `loading` chega ao painel, sem números inventados", () => {
+    const p = painel(renderizar({ contexto: { address: EU, authToken: "tok", isConnected: true }, pontos: { loading: true, lance: LANCE } }));
+    assert.match(p, /data-estado="carregando"/);
+    assert.doesNotMatch(p, />73</);
+  });
+
+  test("⛔ ANÓNIMO: mesmo que o hook traga dados, o painel não mostra números", () => {
+    const p = painel(renderizar({ contexto: { address: null, authToken: null, isConnected: false }, pontos: { lance: LANCE } }));
+    assert.match(p, /data-estado="sem-sessao"/);
+    assert.doesNotMatch(texto(p), /73|\+50/);
+  });
+
+  test("⛔ JANELA DO TOKEN: com sessão e sem token, o painel diz «carregando», não «entre na conta»", () => {
+    const p = texto(painel(renderizar({ contexto: { address: EU, authToken: null, isConnected: true } })));
+    assert.match(p, /carregando/i);
+    assert.doesNotMatch(p, /Entre na sua conta/i);
   });
 });
