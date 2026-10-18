@@ -40,7 +40,7 @@ Art. 7º — A aquisição do Passe Desafio é uma transação separada e genuí
 
 Art. 8º — Cada Passe Desafio adquirido concede ao utilizador 10 (dez) pontos de fidelidade. Esta proporção é fixa e igual para todos os utilizadores.
 
-Art. 9º — A cada 50 (cinquenta) pontos de fidelidade acumulados, o utilizador poderá adquirir 1 (um) cartão colecionável físico da Família Quildo. Esta proporção é fixa e igual para todos os utilizadores.
+Art. 9º — A cada 50 (cinquenta) pontos de fidelidade acumulados, o utilizador poderá resgatar gratuitamente 1 (um) cartão colecionável físico da Família Quildo, sem qualquer pagamento adicional. Esta proporção é fixa e igual para todos os utilizadores.
 
 Art. 10º — Os pontos de fidelidade não têm prazo de validade enquanto o programa estiver ativo e a conta se mantiver em situação regular. Os pontos não são convertíveis em dinheiro e não são transferíveis entre contas.
 
@@ -98,7 +98,7 @@ Art. 20º — O produto é entregue no endereço indicado pelo adquirente, por d
 
 termos do Capítulo VI deste Regulamento.
 
-Art. 21º — O participante que não vencer perde o acesso às métricas do Desafio e ao benefício de lance opcional da edição seguinte, porém mantém os pontos de fidelidade e o ECOQUILDO adquiridos com o Passe, bem como o acesso ao assistente virtual GUTO.
+Art. 21º — O participante que não vencer mantém integralmente os pontos de fidelidade e o ECOQUILDO adquiridos com o Passe, bem como o acesso ao assistente virtual GUTO e às métricas e dados estratégicos a que o Passe adquirido dá acesso.
 
 Secção V — Das Mensagens de Acompanhamento
 
@@ -154,7 +154,7 @@ Art. 30º — O vencedor do palpite adquire o produto patrocinado pelo patrocina
 
 Art. 31º — O produto é entregue no endereço indicado pelo adquirente, por dropshipping, nos termos do Capítulo VI deste Regulamento.
 
-Art. 32º — O participante que não acertar perde o acesso às métricas do Desafio e ao benefício de palpite opcional da edição seguinte, porém mantém os pontos de fidelidade e o ECOQUILDO adquiridos com o Passe, bem como o acesso ao assistente virtual GUTO.
+Art. 32º — O participante que não acertar mantém integralmente os pontos de fidelidade e o ECOQUILDO adquiridos com o Passe, bem como o acesso ao assistente virtual GUTO e às métricas e dados estratégicos a que o Passe adquirido dá acesso.
 
 Secção V — Do Bónus de Fidelidade
 
@@ -212,11 +212,9 @@ CAPÍTULO VII — DA MOEDA SOCIAL ECOQUILDO
 
 Art. 47º — O ECOQUILDO é uma moeda social interna do Grupo União e Trabalho, com lastro em reais à razão de 1 ECOQUILDO = R$ 1,00 (um real).
 
-Art. 48º — O ECOQUILDO é concedido ao utilizador como benefício da aquisição do Passe Desafio, e pode ser utilizado para:
+Art. 48º — O ECOQUILDO é concedido ao utilizador como benefício da aquisição do Passe Desafio e é utilizado exclusivamente no site oficial do Grupo União e Trabalho (ecossistema GUT), não sendo aceite como forma de pagamento dentro do aplicativo DesafioGUT. Pode ser utilizado para:
 
-- I — Aquisição de produtos e serviços no site oficial www.grupouniaoetrabalho.com.br;
-
-- II — Aquisição de novos Passes Desafio no aplicativo.
+- I — Aquisição de produtos e serviços no site oficial www.grupouniaoetrabalho.com.br.
 
 Art. 49º — O ECOQUILDO não é convertível em dinheiro e não é transferível a terceiros. A sua circulação é restrita ao ecossistema do Grupo União e Trabalho.
 
@@ -228,9 +226,7 @@ CAPÍTULO VIII — DAS FORMAS DE PAGAMENTO
 
 Art. 52º — A aquisição do Passe Desafio (produto digital), em qualquer das suas modalidades, será realizada exclusivamente por meio do sistema de faturamento do Google Play (Google Play Billing), em conformidade com a política de pagamentos da Google Play.
 
-Art. 53º — A aquisição de produtos físicos (cartão colecionável, produto patrocinado do
-
-Relâmpago) poderá ser realizada via PIX para a conta institucional do Grupo União e Trabalho (CNPJ 23.040.066/0001-00), caracterizando uma compra de bem físico fora do âmbito do Google Play Billing.
+Art. 53º — A aquisição de produtos físicos (produto patrocinado do Relâmpago) poderá ser realizada via PIX para a conta institucional do Grupo União e Trabalho (CNPJ 23.040.066/0001-00), caracterizando uma compra de bem físico fora do âmbito do Google Play Billing. O cartão colecionável da Família Quildo não é adquirido por PIX: é resgatado gratuitamente com 50 (cinquenta) pontos de fidelidade, nos termos do Art. 9º.
 
 Art. 54º — É vedada a utilização de contas bancárias de pessoas físicas para recebimento de valores relativos ao DesafioGUT. Todos os pagamentos serão direcionados exclusivamente à conta institucional da Associação.
 
@@ -240,7 +236,7 @@ Art. 55º — Os dados pessoais dos participantes serão coletados, tratados e a
 
 Art. 56º — Os dados são utilizados exclusivamente para a execução do programa — contabilizar pontos, apurar o resultado, processar o pedido, emitir a nota técnica, gerir o rastreamento do produto e realizar a entrega. Os dados de entrega não são usados para marketing nem vendidos a terceiros.
 
-Art. 57º — O titular poderá exercer os seus direitos (acesso, correção, portabilidade, eliminação e revogação do consentimento) através do e-mail desafiogut01@gmail.com ou pela função de eliminação de conta do próprio aplicativo.
+Art. 57º — O titular poderá exercer os seus direitos (acesso, correção, portabilidade, eliminação e revogação do consentimento) através do e-mail do Encarregado de Proteção de Dados (DPO) dpo@grupouniaoetrabalho.com.br, do e-mail desafiogut01@gmail.com ou pela função de eliminação de conta do próprio aplicativo.
 
 Art. 58º — Os registos fiscais (nota fiscal e respetivo pagamento) serão mantidos pelo prazo exigido pela legislação fiscal brasileira.
 
@@ -270,7 +266,7 @@ Art. 67º — A participação no DesafioGUT pressupõe o conhecimento e a aceit
 
 Art. 68º — Este Regulamento poderá ser alterado a qualquer tempo, desde que não afete direitos adquiridos dos participantes nem edições em curso.
 
-Art. 69º — Dúvidas, informações e sugestões deverão ser encaminhadas exclusivamente através do e-mail desafiogut01@gmail.com.
+Art. 69º — Dúvidas, informações e sugestões deverão ser encaminhadas através do e-mail desafiogut01@gmail.com. As questões relativas à proteção de dados pessoais (LGPD) podem ser encaminhadas diretamente ao Encarregado de Proteção de Dados (DPO): Francisco Canindé Marinho — dpo@grupouniaoetrabalho.com.br.
 
 Art. 70º — Este Regulamento está registado no RTD — Cartório de Títulos e Documentos da Comarca de Manaus/AM, em 02 de novembro de 2026.
 

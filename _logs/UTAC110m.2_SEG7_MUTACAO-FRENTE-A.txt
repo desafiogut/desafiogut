@@ -1,0 +1,49 @@
+backup FORA do repo: C:\Users\Moltbot\AppData\Local\Temp\utac110m2-v5-REGULAMENTO-v5.md.bak
+backup FORA do repo: C:\Users\Moltbot\AppData\Local\Temp\utac110m2-guto-GUTO-REGULAMENTO.md.bak
+backup FORA do repo: C:\Users\Moltbot\AppData\Local\Temp\utac110m2-mjs-guto-regulamento.mjs.bak
+backup FORA do repo: C:\Users\Moltbot\AppData\Local\Temp\utac110m2-perfis-guto-perfis.mjs.bak
+backup FORA do repo: C:\Users\Moltbot\AppData\Local\Temp\utac110m2-termos-TermosConsentimento.jsx.bak
+backup FORA do repo: C:\Users\Moltbot\AppData\Local\Temp\utac110m2-consent-consentimento.mjs.bak
+
+md5 inicial: REGULAMENTO-v5.md=8dc93f61 GUTO-REGULAMENTO.md=61075834 guto-regulamento.mjs=52b18b5c guto-perfis.mjs=b4c1dd62 TermosConsentimento.jsx=ed1eaf82 consentimento.mjs=3c85086c
+
+controlo (sem mutação): VERDE 50/50
+
+RED            | entrou: sim | restaurado: sim | fail=5 | A1  o Art. 9º volta a «adquirir» (só na transcrição v5)
+                 ↳ ✖ cada bloco do gate é TEXTO LITERAL do artigo do v5 que cita (nada de redacção nova) (5.2313ms)
+                 ↳ ✖ A/v5.1: a versão subiu nos dois ficheiros e o gate de aceite acompanhou (2.3216ms)
+RED            | entrou: sim | restaurado: sim | fail=2 | A2  o gate legal volta a «adquirir» (deixa de ser trecho literal)
+                 ↳ ✖ cada bloco do gate é TEXTO LITERAL do artigo do v5 que cita (nada de redacção nova) (4.0394ms)
+                 ↳ ✖ A: Art. 9º resgata gratuitamente (50 pontos) e o Art. 53º tira o cartão do PIX (2.4146ms)
+RED            | entrou: sim | restaurado: sim | fail=1 | A3  a âncora do GUTO volta a «adquirir» (deixa de ser verbatim)
+                 ↳ ✖ A: Art. 9º resgata gratuitamente (50 pontos) e o Art. 53º tira o cartão do PIX (2.6186ms)
+                 ↳ ✖ failing tests:
+RED            | entrou: sim | restaurado: sim | fail=4 | A4  o cartão volta à lista do PIX no Art. 53º
+                 ↳ ✖ A/v5.1: a versão subiu nos dois ficheiros e o gate de aceite acompanhou (2.5016ms)
+                 ↳ ✖ INVARIANTE: corpo(v5) e corpo(GUTO) continuam byte a byte iguais (e o .mjs diz o mesmo) (2.4048ms)
+RED            | entrou: sim | restaurado: sim | fail=4 | B1  a «perda de métricas» volta ao Art. 21º (só no v5)
+                 ↳ ✖ A/v5.1: a versão subiu nos dois ficheiros e o gate de aceite acompanhou (2.3463ms)
+                 ↳ ✖ B: Arts. 21º e 32º deixam de prometer a perda de métricas (o código não tem esse mecanismo) (1.1947ms)
+RED            | entrou: sim | restaurado: sim | fail=4 | B2  o Art. 21º do GUTO volta ao texto antigo (divergência)
+                 ↳ ✖ A/v5.1: a versão subiu nos dois ficheiros e o gate de aceite acompanhou (2.3239ms)
+                 ↳ ✖ B: Arts. 21º e 32º deixam de prometer a perda de métricas (o código não tem esse mecanismo) (1.254ms)
+RED            | entrou: sim | restaurado: sim | fail=2 | C1  a restrição do ECOQUILDO sai do caput (no runtime do GUTO)
+                 ↳ ✖ C: Art. 48º restringe o ECOQUILDO ao site no CAPUT (não num parágrafo dentro da alínea) (0.7175ms)
+                 ↳ ✖ INVARIANTE: corpo(v5) e corpo(GUTO) continuam byte a byte iguais (e o .mjs diz o mesmo) (1.3007ms)
+RED            | entrou: sim | restaurado: sim | fail=4 | D1  o DPO sai do Art. 57º (o Gmail volta a ser o único canal)
+                 ↳ ✖ A/v5.1: a versão subiu nos dois ficheiros e o gate de aceite acompanhou (2.428ms)
+                 ↳ ✖ D: Arts. 57º e 69º dão o DPO como canal de LGPD, e o Gmail fica como suporte geral (0.6832ms)
+RED            | entrou: sim | restaurado: sim | fail=3 | I1  um espaço a mais no corpo do v5 (parte a invariante byte-a-byte)
+                 ↳ ✖ A/v5.1: a versão subiu nos dois ficheiros e o gate de aceite acompanhou (2.4043ms)
+                 ↳ ✖ INVARIANTE: corpo(v5) e corpo(GUTO) continuam byte a byte iguais (e o .mjs diz o mesmo) (3.1693ms)
+RED            | entrou: sim | restaurado: sim | fail=1 | G1  o backend fica em 3.2 e o frontend em 3.3 (paridade do gate partida)
+                 ↳ ✖ A/v5.1: a versão subiu nos dois ficheiros e o gate de aceite acompanhou (3.4388ms)
+                 ↳ ✖ failing tests:
+
+mutantes RED: 10/10
+md5 final REGULAMENTO-v5.md          8dc93f61 (== inicial)
+md5 final GUTO-REGULAMENTO.md        61075834 (== inicial)
+md5 final guto-regulamento.mjs       52b18b5c (== inicial)
+md5 final guto-perfis.mjs            b4c1dd62 (== inicial)
+md5 final TermosConsentimento.jsx    ed1eaf82 (== inicial)
+md5 final consentimento.mjs          3c85086c (== inicial)

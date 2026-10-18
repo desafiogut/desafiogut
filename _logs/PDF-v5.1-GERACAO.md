@@ -1,9 +1,10 @@
 # PDF do Regulamento v5.1 — registo de geração
 
-**Data:** 2026-10-17 16:14 (America/Manaus) — **revisão 2** (linha vazia corrigida, PDF regerado)
-**Fonte:** `docs/REGULAMENTO-v5.md` — **alterada numa única linha VAZIA** (formatação; texto idêntico, ver §6.3)
-**Saída:** `docs/REGULAMENTO-v5.1.pdf` + cópia `C:/Users/Moltbot/Desktop/REGULAMENTO-v5.1.pdf`
-**Estado:** PDF **gerado e verificado como renderização fiel e integral**.
+**Data:** 2026-10-18 11:22 (America/Manaus) — **revisão 4** (UTAC110m.2: o TEXTO mudou — Arts. 9º, 21º, 32º, 48º, 53º, 57º e 69º; PDF regerado)
+**Fonte:** `docs/REGULAMENTO-v5.md` — **alterada no conteúdo** (correcções A, B, C e D do UTAC110m.2, com a frente A autorizada pelo operador em 18/10)
+**Saída:** `docs/REGULAMENTO-v5.1.pdf` + cópia `C:/Users/Moltbot/Desktop/REGULAMENTO-v5.1.pdf` (sha256 idêntico)
+**Estado:** PDF **regerado a partir da fonte corrigida e verificado** (frases antigas ausentes, novas presentes, 72 artigos, 8 páginas).
+> **Histórico:** revisão 2 (2026-10-17 16:14) foi uma correcção de *formatação* (linha vazia) com o texto idêntico, sha256 `43cd0938…`, 160 158 bytes. Esta revisão 3 muda o **texto**.
 ⚠️ **O checklist do pedido NÃO fecha 5/5: fecha 2/5 positivos + 2/2 negativos.** As 3 falhas são
 conteúdo **ausente da fonte**, não defeito de renderização. **Paro aqui — ver §5.**
 
@@ -29,15 +30,16 @@ cp docs/REGULAMENTO-v5.1.pdf "C:/Users/Moltbot/Desktop/REGULAMENTO-v5.1.pdf"
 | item | valor |
 |---|---|
 | caminho | `docs/REGULAMENTO-v5.1.pdf` (+ cópia no Desktop) |
-| tamanho | **160 158 bytes** |
+| tamanho | **160 504 bytes** |
 | páginas | **8** |
 | formato | **A4** (595,276 × 841,89 pts), margens laterais 2,5 cm |
 | metadados | título «Regulamento Oficial do DesafioGUT — v5.1» · autor «Associação Recreativa dos Nordestinos no Amazonas» · producer «ReportLab» |
-| sha256 | `43cd0938db8a01b39f5f0333544b3d9d907c769d5534deb8183ada2a19757b2f` |
+| sha256 | `ca6b295fec0108b41c…` — revisão 4 · UTAC110m.2 (com a frente A) |
 | rodapé | «Regulamento Oficial do DesafioGUT — versão 5.1» + «página N» em todas as páginas |
 
 Estrutura preservada: título, subtítulo, linha de versão, **12 CAPÍTULOS** a negrito, **10 Secções**,
-**72 artigos** com o rótulo `Art. Nº` a negrito, 34 linhas de lista com marcador, assinatura final
+**72 artigos** com o rótulo `Art. Nº` a negrito, 33 linhas de lista com marcador (eram 34: a alínea II do
+Art. 48º saiu no UTAC110m.2), assinatura final
 centrada. Sem markdown cru: **0** `**`, **0** crases, **0** `>` de blockquote no texto impresso.
 
 ## 3. Checklist do pedido
@@ -175,3 +177,10 @@ pdfinfo docs/REGULAMENTO-v5.1.pdf | grep -E "Pages|Page size"
 sha256sum docs/REGULAMENTO-v5.1.pdf
 # sha256 esperado: 43cd0938db8a01b39f5f0333544b3d9d907c769d5534deb8183ada2a19757b2f
 ```
+
+## Nota de verificação (UTAC110m.2, 2026-10-18)
+
+⚠️ Ao verificar este PDF, **normalizar espaços antes de procurar frases**: o extractor devolve as
+linhas partidas e uma pesquisa literal por «poderá resgatar gratuitamente» falha mesmo com o texto
+certo no ficheiro. Aconteceu **2×** neste UTAC e produziu falsos «AUSENTE» — o erro era do
+verificador, não do artefacto. Usar `re.sub(r'\s+',' ', texto)` antes de comparar.

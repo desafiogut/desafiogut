@@ -75,6 +75,8 @@ test("versão do aceite: gate e servidor em \"3.1\" (R18-110k.1 — o Regulament
   const front = ler("src/components/TermosConsentimento.jsx").match(/export const VERSAO_CONSENTIMENTO = "([^"]+)"/);
   const back = ler("netlify/functions/_lib/consentimento.mjs").match(/export const VERSAO_GATE = "([^"]+)"/);
   assert.ok(front && back, "não encontrei as constantes de versão");
-  assert.equal(front[1], "3.2", "o gate tem de subir com a Política de Privacidade revista (E-3: 3.2)");
-  assert.equal(back[1], "3.2", "o servidor recusaria o aceite do gate novo (versao_invalida)");
+  // ⚠️ UTAC110m.2 (2026-10-18): subiu de **3.2** para **3.3** (texto do Regulamento + redução da
+  // promessa do ECOQUILDO; Art. 39º exige aviso prévio). O valor antigo fica declarado aqui.
+  assert.equal(front[1], "3.3", "o gate tem de subir com o Regulamento corrigido (UTAC110m.2: 3.3)");
+  assert.equal(back[1], "3.3", "o servidor recusaria o aceite do gate novo (versao_invalida)");
 });

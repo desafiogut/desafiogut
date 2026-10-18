@@ -142,7 +142,10 @@ test("PARSER · as frases partidas pelo PDF são unidas e os itens ficam no arti
   assert.ok(arts["Art. 20º"].texto.endsWith("nos termos do Capítulo VI deste Regulamento."));
   assert.ok(arts["Art. 42º"].texto.includes("confirmação do resultado da edição, antes do despacho"));
   assert.ok(arts["Art. 53º"].texto.includes("produto patrocinado do Relâmpago) poderá ser realizada via PIX"));
-  assert.deepEqual([13, 22, 25, 43, 48].map((n) => arts[`Art. ${n}º`].itens.length), [5, 6, 5, 6, 2]);
+  // ⚠️ UTAC110m.2 (2026-10-18): o Art. 48º tinha 2 alíneas; a alínea II («Aquisição de novos Passes
+  // Desafio no aplicativo») saiu e o seu conteúdo passou a «Parágrafo único» — o ECOQUILDO é só do
+  // site (R18-110e-2, frente C do 110m.2). O valor anterior desta posição era **2**.
+  assert.deepEqual([13, 22, 25, 43, 48].map((n) => arts[`Art. ${n}º`].itens.length), [5, 6, 5, 6, 1]);
   assert.match(mod.REGULAMENTO.rodape, /\(CNPJ 23\.040\.066\/0001-00\)\. Versão 5\.1 — vigente a partir de 02 de novembro de 2026\.$/);
   assert.equal(mod.REGULAMENTO.capitulos.flatMap((c) => c.blocos).filter((b) => b.tipo === "paragrafo").length, 0);
 });

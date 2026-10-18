@@ -24,7 +24,7 @@ export const TAMANHO_GUTO_GATE = 96;
 // UTAC110h.1 (R18-110h.1-B) — "2.0" (v4) -> "3.0" (v5): quem aceitou o v4 volta a ver o gate.
 // Tem de ser igual a VERSAO_GATE de netlify/functions/_lib/consentimento.mjs (há teste).
 export const CHAVE_CONSENTIMENTO  = "gut_consentimento";
-export const VERSAO_CONSENTIMENTO = "3.2";
+export const VERSAO_CONSENTIMENTO = "3.3"; // 2026-10-18 (UTAC110m.2): acompanha o VERSAO_GATE do backend — o Regulamento mudou de texto e a frente C reduziu uma promessa (ECOQUILDO fora do app); Art. 39º exige aviso prévio (DEBT-066).
 
 export default function TermosConsentimento({ onAceitar }) {
   const [lido,       setLido]       = useState(false);
@@ -122,7 +122,8 @@ export default function TermosConsentimento({ onAceitar }) {
 
           <p style={estilos.artigo}>
             <strong style={estilos.artLabel}>Art. 9º</strong> — A cada 50 (cinquenta) pontos de fidelidade
-            acumulados, o utilizador poderá adquirir 1 (um) cartão colecionável físico da Família Quildo.
+            acumulados, o utilizador poderá resgatar gratuitamente 1 (um) cartão colecionável físico
+            da Família Quildo, sem qualquer pagamento adicional.
           </p>
 
           <p style={estilos.artigo}>

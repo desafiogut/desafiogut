@@ -1,0 +1,37 @@
+backup FORA do repo: C:\Users\Moltbot\AppData\Local\Temp\utac110m2-v5-REGULAMENTO-v5.md.bak
+backup FORA do repo: C:\Users\Moltbot\AppData\Local\Temp\utac110m2-guto-GUTO-REGULAMENTO.md.bak
+backup FORA do repo: C:\Users\Moltbot\AppData\Local\Temp\utac110m2-mjs-guto-regulamento.mjs.bak
+
+md5 inicial: REGULAMENTO-v5.md=a2759afc GUTO-REGULAMENTO.md=caa84320 guto-regulamento.mjs=a678e347
+
+controlo (sem mutação): VERDE 29/29
+
+RED            | entrou: sim | restaurado: sim | fail=3 | B1  a «perda de métricas» volta ao Art. 21º (só na transcrição v5)
+                 ↳ ✖ A/v5.1: a versão subiu nos dois ficheiros e o gate de aceite acompanhou (2.4378ms)
+                 ↳ ✖ B: Arts. 21º e 32º deixam de prometer a perda de métricas (o código não tem esse mecanismo) (1.1869ms)
+                 ↳ ✖ INVARIANTE: corpo(v5) e corpo(GUTO) continuam byte a byte iguais (e o .mjs diz o mesmo) (2.9765ms)
+RED            | entrou: sim | restaurado: sim | fail=3 | B2  o Art. 21º do GUTO volta ao texto antigo (divergência com o v5)
+                 ↳ ✖ A/v5.1: a versão subiu nos dois ficheiros e o gate de aceite acompanhou (2.4164ms)
+                 ↳ ✖ B: Arts. 21º e 32º deixam de prometer a perda de métricas (o código não tem esse mecanismo) (1.4091ms)
+                 ↳ ✖ INVARIANTE: corpo(v5) e corpo(GUTO) continuam byte a byte iguais (e o .mjs diz o mesmo) (3.2101ms)
+RED            | entrou: sim | restaurado: sim | fail=2 | C1  o ECOQUILDO volta a poder ser usado no app (alínea II, no runtime do GUTO)
+                 ↳ ✖ C: Art. 48º admite o ECOQUILDO só no site oficial (R18-110e-2) e tem parágrafo único (0.7116ms)
+                 ↳ ✖ INVARIANTE: corpo(v5) e corpo(GUTO) continuam byte a byte iguais (e o .mjs diz o mesmo) (0.2865ms)
+                 ↳ ✖ failing tests:
+RED            | entrou: sim | restaurado: sim | fail=3 | D1  o DPO sai do Art. 57º (o Gmail volta a ser o único canal)
+                 ↳ ✖ A/v5.1: a versão subiu nos dois ficheiros e o gate de aceite acompanhou (2.4208ms)
+                 ↳ ✖ D: Arts. 57º e 69º dão o DPO como canal de LGPD, e o Gmail fica como suporte geral (0.6522ms)
+                 ↳ ✖ INVARIANTE: corpo(v5) e corpo(GUTO) continuam byte a byte iguais (e o .mjs diz o mesmo) (3.1106ms)
+RED            | entrou: sim | restaurado: sim | fail=2 | I1  um espaço a mais no corpo do v5 (parte a invariante byte-a-byte)
+                 ↳ ✖ A/v5.1: a versão subiu nos dois ficheiros e o gate de aceite acompanhou (2.5389ms)
+                 ↳ ✖ INVARIANTE: corpo(v5) e corpo(GUTO) continuam byte a byte iguais (e o .mjs diz o mesmo) (2.2889ms)
+                 ↳ ✖ failing tests:
+RED            | entrou: sim | restaurado: sim | fail=4 | A1  Art. 9º corrigido SEM o gate legal (frente A pela metade)
+                 ↳ ✖ cada bloco do gate é TEXTO LITERAL do artigo do v5 que cita (nada de redacção nova) (3.6906ms)
+                 ↳ ✖ A/v5.1: a versão subiu nos dois ficheiros e o gate de aceite acompanhou (2.4013ms)
+                 ↳ ✖ INVARIANTE: corpo(v5) e corpo(GUTO) continuam byte a byte iguais (e o .mjs diz o mesmo) (2.3944ms)
+
+mutantes RED: 6/6
+md5 final REGULAMENTO-v5.md: a2759afc (== inicial)
+md5 final GUTO-REGULAMENTO.md: caa84320 (== inicial)
+md5 final guto-regulamento.mjs: a678e347 (== inicial)

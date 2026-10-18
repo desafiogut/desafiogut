@@ -83,7 +83,10 @@ test("as 4 caixas marcadas ligam o botão; aceitar grava a versão do termo com 
   // UTAC110k.1: a versão subiu para 3.1 (Regulamento v5.1). O teste passou a comparar com a
   // CONSTANTE — uma literal aqui obrigaria a editar o teste a cada versão nova, sem medir nada.
   assert.equal(salvo.versao, mod.VERSAO_CONSENTIMENTO, "o aceite não foi gravado com a versão vigente do termo");
-  assert.equal(salvo.versao, "3.2", "controlo: a versão vigente hoje é a da Política revista (E-3)");
+  // ⚠️ UTAC110m.2 (2026-10-18): a versão subiu para **3.3** (o Regulamento mudou de texto em 5
+  // artigos e a frente C reduziu uma promessa — o ECOQUILDO deixou de valer no aplicativo).
+  // Valor anterior desta asserção: "3.2" (E-3, Política revista).
+  assert.equal(salvo.versao, "3.3", "controlo: a versão vigente hoje é a do Regulamento corrigido (UTAC110m.2)");
   assert.deepEqual(salvo.aceitos, { lido: true, maiores: true, termos: true, privacidade: true });
 });
 

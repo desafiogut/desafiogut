@@ -161,7 +161,7 @@ export const ARTIGOS_V4 = {
   "1":  "O DesafioGUT é um programa de fidelidade gamificado operado pela Associação Recreativa dos Nordestinos no Amazonas",
   "6":  "O Passe Desafio é o produto digital adquirido pelo utilizador, com preço fixo de R$ 2,00 (dois reais), nas modalidades Passe Relâmpago e Passe Programado.",
   "8":  "Cada Passe Desafio adquirido concede ao utilizador 10 (dez) pontos de fidelidade.",
-  "9":  "A cada 50 (cinquenta) pontos de fidelidade acumulados, o utilizador poderá adquirir 1 (um) cartão colecionável físico da Família Quildo.",
+  "9":  "A cada 50 (cinquenta) pontos de fidelidade acumulados, o utilizador poderá resgatar gratuitamente 1 (um) cartão colecionável físico da Família Quildo, sem qualquer pagamento adicional.",
   "12": "A Oferta Relâmpago é patrocinada pelos patrocinadores que adquirem as Cotas Bronze e Cotas Prata",
   "14": "A Oferta Relâmpago é uma competição de habilidade: vence o participante que apresentar o menor valor em pontos de lance que ninguém mais escolheu (menor lance único).",
   "17": "O Passe Desafio (R$ 2,00) é a transação principal que dá acesso a métricas, GUTO, ECOQUILDO e 1 crédito de lance.",

@@ -75,10 +75,18 @@ test("D3 Termos: a caixa de contacto mostra SÓ o e-mail (Art. 69º do v5.0)", (
   const codigoT = codigo(T);
   assert.doesNotMatch(codigoT, /\(\d{2}\)\s*\d{4,5}[-.\s]?\d{4}/, "apareceu um TELEFONE no gate");
   assert.doesNotMatch(codigoT, /www\.|https?:\/\//, "apareceu um SITE no gate");
-  // A fonte legal, lida do ficheiro: o Art. 69º manda «exclusivamente» e-mail.
+  // A fonte legal, lida do ficheiro: o Art. 69º mandava «exclusivamente» e-mail e passou a dar o DPO
+  // como canal de LGPD (UTAC110m.2) — a caixa continua a ser o canal de DÚVIDAS (ver abaixo).
   const REG = readFileSync(resolve(SRC, "..", "..", "..", "docs", "REGULAMENTO-v5.md"), "utf8");
   const art69 = (REG.match(/Art\. 69º[^\n]*/) ?? [])[0] ?? "";
-  assert.match(art69, /exclusivamente através do e-mail desafiogut01@gmail\.com/, `Art. 69º: «${art69}»`);
+  // ⚠️ UTAC110m.2 (2026-10-18) — a justificação legal desta caixa mudou: o Art. 69º deixou de
+  // dizer «exclusivamente» e passou a dar o DPO como canal de LGPD. A asserção anterior era
+  //   assert.match(art69, /exclusivamente através do e-mail desafiogut01@gmail\.com/, …)
+  // e fica preservada aqui, REFUTADA. O que se exige agora: a caixa continua a ser o canal de
+  // DÚVIDAS (Gmail) — e o Regulamento, esse, já nomeia o DPO para a LGPD (que a caixa ainda NÃO
+  // mostra: é a DEBT-063, a fechar no UTAC da UI).
+  assert.match(art69, /Dúvidas, informações e sugestões deverão ser encaminhadas através do e-mail desafiogut01@gmail\.com/, `Art. 69º: «${art69}»`);
+  assert.match(art69, /dpo@grupouniaoetrabalho\.com\.br/, `Art. 69º: o DPO tem de estar lá — «${art69}»`);
 });
 
 test("controlo positivo: o verificador da caixa de contacto apanha a caixa ANTIGA (verbatim)", () => {

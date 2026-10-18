@@ -44,7 +44,13 @@ test("nenhum e-mail de pessoa física aparece como meio de pagamento (v5, Art. 5
 });
 
 test("o contacto do gate é o canal oficial de dúvidas do v5 (Art. 69º)", () => {
-  assert.match(V5, /Art\. 69º — Dúvidas, informações e sugestões deverão ser encaminhadas exclusivamente através do e-mail desafiogut01@gmail\.com/);
+  // ⚠️ UTAC110m.2 (2026-10-18) — a asserção anterior exigia «exclusivamente», que o Art. 69º já
+  // não diz: o canal de LGPD passou a ser o DPO (Art. 57º/69º). Texto antigo, preservado à vista:
+  //   assert.match(V5, /Art\. 69º — Dúvidas, informações e sugestões deverão ser encaminhadas
+  //                      exclusivamente através do e-mail desafiogut01@gmail\.com/);
+  // O que se exige agora: o Gmail continua a ser o canal de DÚVIDAS, e o DPO é o de LGPD.
+  assert.match(V5, /Art\. 69º — Dúvidas, informações e sugestões deverão ser encaminhadas através do e-mail desafiogut01@gmail\.com/);
+  assert.match(V5, /As questões relativas à proteção de dados pessoais \(LGPD\) podem ser encaminhadas diretamente ao Encarregado de Proteção de Dados \(DPO\)[^\n]*dpo@grupouniaoetrabalho\.com\.br/);
   assert.match(GATE_SEM_COMENTARIOS, /Dúvidas: desafiogut01@gmail\.com/, "o gate perdeu o contacto oficial de dúvidas");
 });
 

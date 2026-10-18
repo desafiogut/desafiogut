@@ -1,0 +1,22 @@
+OK   Art. 9º: resgate gratuito
+OK   Art. 9º: sem «adquirir»
+OK   Art. 53º: remete ao 9º
+OK   Art. 53º: cartão fora do PIX
+OK   Art. 53º: produto patrocinado por PIX (pin do parser)
+OK   Art. 21º: sem perda de métricas
+OK   nenhum artigo promete «perda de métricas»
+OK   Art. 48º: restrição no CAPUT (não dentro da alínea)
+OK   Arts. 57º/69º: DPO
+OK   Art. 69º: sem «exclusivamente»
+OK   gate: bloco é TRECHO LITERAL do Art. 9º -> 183 chars
+OK   gate: diz o mesmo que o artigo
+OK   GUTO: âncora é EXCERTO VERBATIM
+OK   GUTO: responde o mesmo que o artigo
+OK   invariante corpo(v5) == corpo(GUTO) -> 17702 bytes
+OK   runtime do GUTO tem os artigos novos
+OK   gate: paridade frontend/backend -> 3.3 / 3.3
+OK   gate: 3.3 (o re-aceite que o Art. 39º exige) -> 3.3
+OK   9 ficheiros que dependem do Regulamento/gate -> pass=68 fail=0
+OK   mc963: âncoras verbatim do GUTO -> pass=10 fail=0
+
+TUDO OK — verificador do UTAC110m.2 (não substitui a suíte: scripts/utac110i2-suite.sh)
