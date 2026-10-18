@@ -128,7 +128,9 @@ export default {
   // anterior ("Rodada programada · ... cada lance usa 1 senha (R$ 2,00)") descrevia o
   // comportamento ANTIGO e era a causa visível do desvio reportado pelo operador.
   // UTAC110j (R18-110j-3, achado B1 do validador) — o lance já não debita R$ (UTAC110d): consome 1 crédito de lance.
-  "edicao.especial.regra": "Lance relâmpago · vence o menor lance único · cada lance consome 1 crédito de lance",
+  // UTAC110j.5 / DEBT-075 (2026-10-18) — resíduo: o crédito JÁ NÃO EXISTE; o lance gasta o seu valor em PONTOS
+  // de lance e o Passe é que dá +200. O texto antigo fica à vista na linha acima, como manda o protocolo.
+  "edicao.especial.regra": "Lance relâmpago · vence o menor lance único · cada lance gasta o seu valor em pontos de lance · o Passe dá +200 pontos de lance",
   "edicao.especial.badgeEmBreve": "🕒 Em breve",
   "edicao.especial.badgeAbrindo": "⏳ Abrindo",
   "edicao.especial.badgeAberta": "🟢 Aberta",

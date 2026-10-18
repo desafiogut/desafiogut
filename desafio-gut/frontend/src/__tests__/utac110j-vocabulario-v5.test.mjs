@@ -196,9 +196,20 @@ test("5a · a edição especial fala de «Produto», e o dicionário bate com o 
 
 test("3 (B1 do validador) · a regra da edição especial diz «crédito de lance», não débito em R$", () => {
   const card = codigo(ler("src/components/edicao-especial/CardEdicaoEspecial.jsx"));
-  const frase = "Lance relâmpago · vence o menor lance único · cada lance consome 1 crédito de lance";
+  // ⚠️ UTAC110j.5 / DEBT-075 (2026-10-18): o texto do UTAC110j («cada lance consome 1 crédito de lance»,
+  // conservado aqui à vista) descrevia um crédito que já não existe. Passou a dizer o modelo em vigor: o
+  // lance gasta o SEU VALOR em pontos de lance e o Passe é que dá +200. O título do teste fica histórico.
+  const frase = "Lance relâmpago · vence o menor lance único · cada lance gasta o seu valor em pontos de lance · o Passe dá +200 pontos de lance";
   assert.ok(card.includes(`t("edicao.especial.regra", "${frase}")`), "o fallback da regra da especial mudou");
-  assert.match(ler("src/i18n/pt.js"), new RegExp(`"edicao\\.especial\\.regra": "${frase}",`));
+  // ⚠️ comparação por TEXTO, não por RegExp: a frase tem «+200» e o `+` é quantificador em regex
+  // (a 1.ª versão deste teste deu falso vermelho por isso).
+  assert.ok(ler("src/i18n/pt.js").includes(`"edicao.especial.regra": "${frase}",`),
+    "o i18n não tem a frase nova");
+  // O crédito não pode reaparecer no texto visível da especial nem no i18n.
+  for (const f of ["src/components/edicao-especial/CardEdicaoEspecial.jsx", "src/i18n/pt.js"]) {
+    assert.doesNotMatch(codigo(ler(f)).replace(/^\s*\/\/.*$/gm, ""), /1 crédito de lance/,
+      `${f}: o crédito de lance já não existe no modelo`);
+  }
 });
 
 test("5b · a Privacidade explica que LeilaoGUT é o nome do contrato on-chain (imutável)", () => {

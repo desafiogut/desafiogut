@@ -190,7 +190,7 @@ export default function CardEdicaoEspecial({
             </div>
           )}
           <div style={{ fontSize: "0.66rem", color: COR.muted, lineHeight: 1.3 }}>
-            {t("edicao.especial.regra", "Lance relâmpago · vence o menor lance único · cada lance consome 1 crédito de lance")}
+            {t("edicao.especial.regra", "Lance relâmpago · vence o menor lance único · cada lance gasta o seu valor em pontos de lance · o Passe dá +200 pontos de lance")}
           </div>
         </div>
       </div>

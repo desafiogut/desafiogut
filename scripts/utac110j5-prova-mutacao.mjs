@@ -58,6 +58,9 @@ const MUTANTES = [
     "à razão de 1 ponto = R$ 0,01 (Art. 18º).", "à razão de 1 ponto = R$ 0,01 (Art. 9º).", [T.art]],
   // SEG5 — sobreviventes do validador. VM2..VM6, V1 fechados; VM1 e VM3 fechados em 2026-10-18
   // por decisão do operador (R16: mutante sobrevivente é lacuna de teste).
+  // DEBT-075 (resíduo, 2026-10-18): o texto da edição especial ainda prometia «1 crédito de lance».
+  ["M23 i18n da edição especial volta a «1 crédito de lance»", "src/i18n/pt.js",
+    "\"Lance relâmpago · vence o menor lance único · cada lance gasta o seu valor em pontos de lance · o Passe dá +200 pontos de lance\"", "\"Lance relâmpago · vence o menor lance único · cada lance consome 1 crédito de lance\"", [T.voc]],
   ["VM1 nota da conversão SEM a guarda de leitura", "src/pages/MinhaCarteira.jsx",
     "{!saldosIlegiveis && (conversao.creditos || conversao.senhas) && (", "{!saldosIlegiveis && (", [T.novo]],
   ["VM3 linha do custo SEM a guarda de sessão", "src/components/CardLance.jsx",
