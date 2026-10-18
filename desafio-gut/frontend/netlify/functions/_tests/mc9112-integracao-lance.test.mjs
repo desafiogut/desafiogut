@@ -22,8 +22,10 @@ let mockDebitoRs = { ok: true, resultado: { saldoAntesCentavos: 200, saldoDepois
 let chamadasDebitoRs = 0;
 let chamadasCompromete = 0;
 let chamadasAddLance = 0;
-let mockCreditos = 3;            // UTAC110d — creditos de lance do titular
-let chamadasConsumoCredito = 0;
+let mockCreditos = 0;            // UTAC110n — os créditos deixaram de ser gastos (ficam a 0 e intocados)
+let mockPontosLance = 300;       // UTAC110n — saldo de PONTOS DE LANCE do titular
+let ultimoValorConsumido = 0;
+let chamadasConsumoCredito = 0;  // (nome herdado do 110d: conta consumos no ledger de lance)
 let chamadasReversao = 0;
 let refsConsumidas = [];
 let falharCompromete = false;
@@ -61,23 +63,25 @@ mock.module("../_lib/edicoes-core.mjs", { namedExports: { buscarEdicao: async ()
 mock.module("../_lib/saldoRs.mjs", {
   namedExports: { debitarSaldoRs: async () => { chamadasDebitoRs += 1; return mockDebitoRs; } },
 });
-// UTAC110d (R18-110d-3): o relâmpago consome 1 CRÉDITO de lance (o débito R$ ficou atrás da flag
-// DESLIGADA). Duplo do ledger: conta créditos e consumos; recusa a 0 como o real (CREDITOS_INSUFICIENTES).
+// UTAC110n (R18-110j.4b-1) — o relâmpago gasta PONTOS DE LANCE pelo valor do lance (antes: 1 CRÉDITO
+// de lance, UTAC110d). Duplo do ledger: debita o valor pedido e recusa a 0 como o real
+// (PONTOS_LANCE_INSUFICIENTES). `mockCreditos` fica a 0 e o teste seguinte garante que não é tocado.
 mock.module("../_lib/ledger-lance.mjs", {
   namedExports: {
-    consumirCreditoLance: async (e, ref) => {
+    consumirPontosLance: async (e, valor, ref) => {
       chamadasConsumoCredito += 1;
-      if (refsConsumidas.includes(ref)) return { ok: true, criado: false, creditos: mockCreditos }; // idempotente por ref, como o real
-      if (mockCreditos < 1) return { ok: false, code: "CREDITOS_INSUFICIENTES", creditos: mockCreditos };
-      mockCreditos -= 1; refsConsumidas.push(ref);
-      return { ok: true, criado: true, creditos: mockCreditos };
+      ultimoValorConsumido = valor;
+      if (refsConsumidas.includes(ref)) return { ok: true, criado: false, pontos: mockPontosLance }; // idempotente por ref
+      if (mockPontosLance < valor) return { ok: false, code: "PONTOS_LANCE_INSUFICIENTES", pontos: mockPontosLance };
+      mockPontosLance -= valor; refsConsumidas.push(ref);
+      return { ok: true, criado: true, pontos: mockPontosLance };
     },
     // UTAC110f — a missão do lance importa `creditarPontosLance` (via `_lib/fontes-lance.mjs`).
     creditarPontosLance: async () => ({ ok: true, criado: true, pontos: 10 }),
     lerLedgerLance: async () => ({ creditos: 0, pontos: 0, historico: [] }),
     reverterMovimentoLance: async (e, ref) => {
       chamadasReversao += 1;
-      if (refsConsumidas.includes(ref)) { mockCreditos += 1; refsConsumidas.splice(refsConsumidas.indexOf(ref), 1); }
+      if (refsConsumidas.includes(ref)) { mockPontosLance += ultimoValorConsumido; refsConsumidas.splice(refsConsumidas.indexOf(ref), 1); }
       return { ok: true, revertido: true };
     },
   },
@@ -113,7 +117,8 @@ function zerar() {
   mockEdicao = null;
   mockSaldoOnChain = 5;
   mockDebitoRs = { ok: true, resultado: { saldoAntesCentavos: 200, saldoDepoisCentavos: 150 } };
-  mockCreditos = 3; chamadasConsumoCredito = 0; chamadasReversao = 0; refsConsumidas = []; falharCompromete = false;
+  mockCreditos = 0; mockPontosLance = 300; ultimoValorConsumido = 0;
+  chamadasConsumoCredito = 0; chamadasReversao = 0; refsConsumidas = []; falharCompromete = false;
 }
 
 const bodyLance = (edicaoId = "PROG-1", valorCentavos = 50) => ({
@@ -155,12 +160,13 @@ test("PROGRAMADO sem senhas on-chain: 400 senhas_insuficientes, sem debito, sem 
   assert.equal(consumo, null, "nenhum consumo registrado");
 });
 
-// UTAC110d — contrato mudado por decisao do operador (R18-110d-3): era «debita R$». A invariante
-// mantem-se: o relampago tem um custo cobrado ANTES do registo, e nunca consome senha.
-test("RELAMPAGO: consome 1 credito de lance, NAO debita R$ e NAO consome senha (blindagem mantida)", async () => {
+// UTAC110n (R18-110j.4b-1) — o relampago gasta PONTOS DE LANCE pelo VALOR do lance. Antes (UTAC110d,
+// R18-110d-3) consumia 1 CRÉDITO de lance e debitava 0 R$. A invariante mantem-se: ha um custo cobrado
+// ANTES do registo, e nunca se consome senha.
+test("RELAMPAGO: gasta 37 pontos de lance (o valor do lance), NAO debita R$ e NAO consome senha", async () => {
   zerar();
   mockEdicao = { id: "R-1", tipo: "relampago" };
-  const resp = await handler(fakeReq(bodyLance("R-1", 50)));
+  const resp = await handler(fakeReq(bodyLance("R-1", 37)));
   assert.equal(resp.status, 201);
   const data = await resp.json();
   assert.equal(data.modo, "relampago");
@@ -168,62 +174,68 @@ test("RELAMPAGO: consome 1 credito de lance, NAO debita R$ e NAO consome senha (
   assert.equal(data.saldoRsAntesCentavos, null);
   assert.equal(data.saldoRsDepoisCentavos, null);
   assert.equal(chamadasDebitoRs, 0, "relampago NAO debita saldo R$ (flag desligada)");
-  assert.equal(chamadasConsumoCredito, 1, "relampago consome 1 credito");
-  assert.equal(mockCreditos, 2);
-  assert.equal(data.creditoLanceConsumido, true);
-  assert.equal(data.creditosLanceRestantes, 2);
+  assert.equal(chamadasConsumoCredito, 1, "relampago passa pelo ledger de lance uma vez");
+  assert.equal(ultimoValorConsumido, 37, "o valor debitado É o valor do lance (centavos = pontos)");
+  assert.equal(mockPontosLance, 263, "300 - 37");
+  assert.equal(data.pontosLanceConsumidos, 37);
+  assert.equal(data.pontosLanceRestantes, 263);
+  assert.equal(data.creditoLanceConsumido, false, "LEGADO: nenhum credito e consumido");
+  assert.equal(mockCreditos, 0, "os creditos nunca sao tocados");
   assert.equal(chamadasCompromete, 1);
   const consumo = await fakeStore.get(`senhas-programado-consumo:${TEST_ADDR}`, { type: "json" });
   assert.equal(consumo, null, "relampago NAO consome senha");
 });
 
-test("RELAMPAGO sem creditos de lance: 400 sem_creditos_lance, sem blindagem nem gravacao", async () => {
+test("RELAMPAGO sem pontos de lance: 400 saldo_pontos_insuficiente, sem blindagem nem gravacao", async () => {
   zerar();
   mockEdicao = { id: "R-1", tipo: "relampago" };
-  mockCreditos = 0;
+  mockPontosLance = 10; // tem 10, o lance pede 50
   const resp = await handler(fakeReq(bodyLance("R-1", 50)));
   assert.equal(resp.status, 400);
   const data = await resp.json();
-  assert.equal(data.error.code, "sem_creditos_lance");
-  assert.match(data.error.message, /créditos de lance/);
-  assert.equal(chamadasCompromete, 0, "sem credito nao ha blindagem");
+  // Antes do 110n o codigo era `sem_creditos_lance` (credito); agora o saldo e de PONTOS.
+  assert.equal(data.error.code, "saldo_pontos_insuficiente");
+  assert.match(data.error.message, /pontos de lance/i);
+  assert.equal(data.error.detalhes?.pontosLance ?? data.error.pontosLance ?? 10, 10);
+  assert.equal(chamadasCompromete, 0, "sem saldo nao ha blindagem");
   assert.equal(chamadasAddLance, 0);
-  assert.equal(chamadasDebitoRs, 0, "a falta de credito NAO cai para o debito R$");
+  assert.equal(chamadasDebitoRs, 0, "a falta de pontos NAO cai para o debito R$");
+  assert.equal(mockPontosLance, 10, "o saldo fica intacto");
 });
 
-test("UTAC110d: a blindagem falha -> 502 e o credito consumido VOLTA", async () => {
+test("UTAC110n: a blindagem falha -> 502 e os pontos gastos VOLTAM", async () => {
   zerar();
   mockEdicao = { id: "R-1", tipo: "relampago" };
   falharCompromete = true;
   const resp = await handler(fakeReq(bodyLance("R-1", 50)));
   assert.equal(resp.status, 502);
   assert.equal(chamadasConsumoCredito, 1);
-  assert.equal(chamadasReversao, 1, "o credito tem de ser devolvido");
-  assert.equal(mockCreditos, 3, "creditos de volta ao valor inicial");
+  assert.equal(chamadasReversao, 1, "os pontos têm de ser devolvidos");
+  assert.equal(mockPontosLance, 300, "saldo de volta ao valor inicial");
 });
 
-test("UTAC110d (SEG4 V1): 2 lances sem chave consomem 2 creditos distintos", async () => {
+test("UTAC110n (SEG4 V1): 2 lances sem chave gastam 2 valores distintos", async () => {
   zerar();
   mockEdicao = { id: "R-1", tipo: "relampago" };
   assert.equal((await handler(fakeReq(bodyLance("R-1", 50)))).status, 201);
   assert.equal((await handler(fakeReq(bodyLance("R-1", 51)))).status, 201);
-  assert.equal(mockCreditos, 1, "3 - 2");
+  assert.equal(mockPontosLance, 199, "300 - 50 - 51");
   assert.equal(new Set(refsConsumidas).size, 2);
 });
 
-test("UTAC110d (SEG4 W5): mesma idempotencyKey ja consumida -> 409, sem 2.o credito nem 2.o lance", async () => {
+test("UTAC110n (SEG4 W5): mesma idempotencyKey ja consumida -> 409, sem 2.o debito nem 2.o lance", async () => {
   zerar();
   mockEdicao = { id: "R-1", tipo: "relampago" };
   refsConsumidas.push("lance:chave-x"); // o outro pedido concorrente ja consumiu
   const resp = await handler(fakeReq({ ...bodyLance("R-1", 50), idempotencyKey: "chave-x" }));
   assert.equal(resp.status, 409);
   assert.equal((await resp.json()).error.code, "lance_em_processamento");
-  assert.equal(mockCreditos, 3);
+  assert.equal(mockPontosLance, 300);
   assert.equal(chamadasAddLance, 0);
-  assert.equal(chamadasReversao, 0, "nunca devolve o credito do outro pedido");
+  assert.equal(chamadasReversao, 0, "nunca devolve o consumo do outro pedido");
 });
 
-test("edicao sem metadata (R-1 sintetica): tratada como relampago (credito de lance)", async () => {
+test("edicao sem metadata (R-1 sintetica): tratada como relampago (gasta pontos)", async () => {
   zerar();
   mockEdicao = null; // sem metadata persistida
   const resp = await handler(fakeReq(bodyLance("R-1", 10)));
@@ -231,5 +243,6 @@ test("edicao sem metadata (R-1 sintetica): tratada como relampago (credito de la
   const data = await resp.json();
   assert.equal(data.modo, "relampago");
   assert.equal(chamadasConsumoCredito, 1);
+  assert.equal(ultimoValorConsumido, 10);
   assert.equal(chamadasDebitoRs, 0);
 });

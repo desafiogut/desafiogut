@@ -25,13 +25,22 @@
 
 import { getSupabase } from "./supabase-client.mjs";
 import { EDICAO_ESPECIAL_RE } from "./edicao-janela.mjs"; // MC94.3 — guarda central
-import { enfileirar } from "./fila.mjs";
 import { calcularPontosRodada, detectarConsecutivos, REGRAS } from "./pontuacao-utils.mjs";
+import { creditarPontosLance } from "./ledger-lance.mjs"; // UTAC110n — o bónus passou a pontos de lance
 
 const T_PONTUACOES = "pontuacoes";
 const T_RANKINGS   = "rankings_ciclo";
-/** Tipo de tarefa na fila. O handler on-chain é criado quando o operador autorizar. */
+
+/**
+ * UTAC110n (R18-110j.4b-4) — o bónus de 5 acertos seguidos passou a creditar +50 PONTOS DE LANCE
+ * (Art. 16º), e não 20 senhas on-chain. `_lib/worker-bonus.mjs` fica no código (contrato on-chain
+ * intacto) mas DEIXA DE TER PRODUTOR: nada mais enfileira `creditar-senhas-bonus`.
+ */
+export const PONTOS_LANCE_BONUS_SEQUENCIA = 50;
+/** Tipo de tarefa da fila on-chain — LEGADO (110n). Mantido só porque o worker e os testes o importam. */
 export const TIPO_TAREFA_BONUS = "creditar-senhas-bonus";
+/** Ref do crédito de pontos do bónus: UMA por ciclo (a idempotência do ledger faz o resto). */
+export const refBonusSequencia = (ciclo) => `sequencia:${ciclo}`;
 
 const normalizar = (e) => (typeof e === "string" && e ? e.toLowerCase() : null);
 
@@ -190,10 +199,18 @@ export async function registrarPontuacaoRodada(cicloId, lances) {
       const ganhou = await reclamarBonus(ciclo, endereco, v.pontos, supabase);
       if (ganhou) {
         bonusRegistados += 1;
-        // Regista a DÍVIDA para liquidação posterior. Não credita nada agora.
-        await enfileirar(TIPO_TAREFA_BONUS, {
-          cicloId: ciclo, endereco, quantidade: REGRAS.SENHAS_BONUS,
-        });
+        // UTAC110n — credita +50 PONTOS DE LANCE (Art. 16º). Antes: enfileirava 20 senhas on-chain
+        // (`creditar-senhas-bonus`). O worker on-chain fica no código, sem produtor.
+        // A `ref` é por CICLO e a escrita é idempotente: um retry/consolidação concorrente não paga 2×.
+        let credito;
+        try { credito = await creditarPontosLance(endereco, PONTOS_LANCE_BONUS_SEQUENCIA, "sequencia", refBonusSequencia(ciclo)); }
+        catch { credito = { ok: false, code: "ERRO_DB" }; }
+        if (!credito.ok) {
+          // Não creditou ⇒ devolve a reclamação, senão o bónus ficava perdido para sempre (a regra é
+          // «1 por ciclo»: `bonus_emitido` já a true bloquearia qualquer retry).
+          await libertarBonus(ciclo, endereco, v.pontos, supabase);
+          console.error("[pontuacao-store] crédito dos pontos de lance do bónus falhou:", credito.code);
+        }
       }
     }
   }
@@ -246,7 +263,8 @@ async function reclamarBonus(ciclo, endereco, pontosRodada, supabase = getSupaba
   const r = await supabase.from(T_RANKINGS)
     .update({
       bonus_emitido: true,
-      senhas_a_creditar: REGRAS.SENHAS_BONUS,
+      // ⚠️ UTAC110n: `senhas_a_creditar` JÁ NÃO é escrita — o bónus é pago em pontos de lance pelo
+      // ledger (`creditarPontosLance`). A coluna fica na BD (histórico de dívidas antigas do 110d).
       pontos_totais: pontosRodada + REGRAS.PONTOS_BONUS,
       atualizado_em: new Date().toISOString(),
     })
@@ -255,6 +273,21 @@ async function reclamarBonus(ciclo, endereco, pontosRodada, supabase = getSupaba
     .eq("bonus_emitido", false)   // ← a condição que só um vencedor satisfaz
     .select();
   return (exigir(r, "reclamar bónus") || []).length > 0;
+}
+
+/**
+ * UTAC110n — desfaz a reclamação quando o crédito dos pontos falhou, para o bónus não se perder.
+ * Seguro: o crédito é idempotente pela `ref` do ciclo, logo um retry que já tenha creditado não paga 2×.
+ */
+async function libertarBonus(ciclo, endereco, pontosRodada, supabase = getSupabase()) {
+  try {
+    exigir(await supabase.from(T_RANKINGS)
+      .update({ bonus_emitido: false, pontos_totais: pontosRodada, atualizado_em: new Date().toISOString() })
+      .eq("ciclo_id", ciclo).eq("endereco", endereco).eq("bonus_emitido", true)
+      .select(), "libertar bónus");
+  } catch (err) {
+    console.error("[pontuacao-store] não foi possível libertar a reclamação do bónus:", err?.message);
+  }
 }
 
 /** Relê o ciclo, reordena e grava as posições. */

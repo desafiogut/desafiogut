@@ -157,13 +157,19 @@ test("A3 sem linha nenhuma: consumir RECUSA (nunca cria saldo negativo nem linha
   assert.equal(S.tabelas.pontos.length, 0);
 });
 
-test("A4 pontos de lance NUNCA por compra: motivos de compra são recusados; engajamento aceite", async () => {
-  for (const m of ["compra", "passe-relampago", "passe-programado", "lance"]) {
+test("A4 pontos de lance: «compra» continua recusada; «passe-relampago» passou a ser válido (110n)", async () => {
+  // ⚠️ UTAC110n (R18-110j.4b-3, Art. 16º VI): `passe-relampago` DEIXOU de ser recusado — o Passe dá
+  // +200 pontos de lance como bónus. O que continua FORA é vender pontos: `compra`, `passe-programado`
+  // e `lance` (esse é o motivo do DÉBITO, não de um crédito).
+  for (const m of ["compra", "passe-programado", "lance", "saldo"]) {
     assert.equal((await L.creditarPontosLance(A, 5, m, `r-${m}`)).code, "MOTIVO_INVALIDO", m);
   }
   assert.equal(S.tabelas.pontos.length, 0);
   const ok = await L.creditarPontosLance(A, 5, "login", "login:2026-10-13");
   assert.equal(ok.ok, true); assert.equal(ok.pontos, 5); assert.equal(ok.creditos, 0);
+  const bonus = await L.creditarPontosLance(A, 200, "passe-relampago", "passe:art16-vi");
+  assert.equal(bonus.ok, true, "o Passe Relâmpago credita pontos de lance");
+  assert.equal(bonus.pontos, 205);
 });
 
 test("A5 o lance consome CRÉDITO — não toca nos pontos de fidelidade nem nos pontos de lance", async () => {
@@ -228,18 +234,24 @@ test("A8 reverter: devolve o crédito e remove a entrada (o retry volta a consum
 });
 
 // ── Frente B — os dois endpoints de compra ───────────────────────────────────────────────────────
-test("B1 Passe Relâmpago: 201, −R$ 2,00, +10 pontos (compra), +1 CRÉDITO, 0 pontos de lance", async () => {
+// ⚠️ UTAC110n (R18-110j.4b-3): este teste fixava «+1 CRÉDITO, 0 pontos de lance» (modelo do 110d).
+// O Passe passou a dar +200 PONTOS DE LANCE e a NÃO dar crédito — o crédito deixou de ser moeda.
+test("B1 Passe Relâmpago: 201, −R$ 2,00, +10 pontos (compra), +200 PONTOS de lance, 0 créditos", async () => {
   const r = await comprar(hRelampago);
   assert.equal(r.status, 201, JSON.stringify(r.corpo));
   assert.equal(r.corpo.tipo, "relampago");
   assert.equal(r.corpo.pontosFidelidade, 10);
-  assert.equal(r.corpo.creditosLance, 1);
+  assert.equal(r.corpo.pontosLance, 200);
+  assert.equal(r.corpo.creditosLance, 0, "o crédito legado já não é creditado");
   assert.equal(saldo(), 300);
   assert.equal(linha().pontos, 10);
   assert.equal(linha().historico[0].tipo, "compra");
   assert.equal(linha().historico[0].ref, `passe-relampago:${K(1)}`);
-  assert.equal(linha().creditos_lance, 1);
-  assert.equal(linha().pontos_lance, 0, "a compra NUNCA credita pontos de lance (Art. 17º)");
+  assert.equal(linha().creditos_lance, 0);
+  assert.equal(linha().pontos_lance, 200, "o Passe dá 200 pontos de lance (Art. 16º VI)");
+  const mov = linha().historico_lance.find((h) => h.motivo === "passe-relampago");
+  assert.equal(mov.delta, 200);
+  assert.equal(mov.ref, `passe-relampago:${K(1)}`, "a ref da compra é a do crédito (permite rollback)");
 });
 
 test("B2 Passe Programado: 201, −R$ 2,00, +10 pontos; NÃO mexe no ledger de lance", async () => {
@@ -260,16 +272,17 @@ test("B3 os dois Passes são SEPARADOS: a mesma chave nos dois endpoints são 2 
   assert.equal((await comprar(hProgramado)).status, 201);
   assert.equal(saldo(), 100);
   assert.equal(linha().pontos, 20);
-  assert.equal(linha().creditos_lance, 1, "só o Relâmpago deu crédito");
+  assert.equal(linha().creditos_lance, 0, "nenhum dos dois dá crédito (o crédito deixou de existir)");
+  assert.equal(linha().pontos_lance, 200, "só o Relâmpago deu pontos de lance");
 });
 
-test("B4 idempotência: repetir a MESMA chave → 200, cobra UMA vez, crédito UMA vez", async () => {
+test("B4 idempotência: repetir a MESMA chave → 200, cobra UMA vez, credita UMA vez", async () => {
   await comprar(hRelampago);
   const r2 = await comprar(hRelampago);
   assert.equal(r2.status, 200); assert.equal(r2.corpo.idempotent, true);
   assert.equal(saldo(), 300);
   assert.equal(linha().pontos, 10);
-  assert.equal(linha().creditos_lance, 1);
+  assert.equal(linha().pontos_lance, 200, "200 pontos de lance, uma só vez");
 });
 
 test("B5 concorrência: 5 cliques simultâneos com a mesma chave → cobra 1×, credita 1×", async () => {
@@ -278,7 +291,7 @@ test("B5 concorrência: 5 cliques simultâneos com a mesma chave → cobra 1×, 
   assert.ok(rs.every((r) => r.status === 201 || r.status === 200));
   assert.equal(saldo(), 300);
   assert.equal(linha().pontos, 10);
-  assert.equal(linha().creditos_lance, 1);
+  assert.equal(linha().pontos_lance, 200, "uma compra, um crédito de 200 pontos");
 });
 
 test("B6 sem saldo: 402 e NADA creditado", async () => {
@@ -295,28 +308,30 @@ test("B7 auth bidireccional: sem token 401; token lance-auth (propósito errado)
   assert.equal((await comprar(hProgramado)).status, 201);
 });
 
-test("B8 o crédito de lance falha depois do débito → 502, os 10 pontos são DESFEITOS e o R$ volta", async () => {
+test("B8 o crédito dos pontos de lance falha depois do débito → 502, os 10 pontos são DESFEITOS e o R$ volta", async () => {
   S.g.falhar.pontos = { op: "update", code: "XX000", se: (st) => "historico_lance" in (st.dados ?? {}) };
   const r = await comprar(hRelampago);
   assert.equal(r.status, 502);
-  assert.equal(r.corpo.error.code, "creditar_credito_lance_falhou");
+  // Antes do 110n: `creditar_credito_lance_falhou` (crédito). Agora o que falha são os PONTOS.
+  assert.equal(r.corpo.error.code, "creditar_pontos_lance_falhou");
   assert.equal(saldo(), 500, "reembolsado");
   assert.equal(linha().pontos, 0, "pontos desfeitos");
   assert.deepEqual(linha().historico, []);
+  assert.equal(linha().pontos_lance, 0, "nenhum ponto de lance ficou");
   // e o retry (já sem falha) compra normalmente
   S.g.falhar.pontos = null;
   const r2 = await comprar(hRelampago);
   assert.equal(r2.status, 201);
-  assert.equal(saldo(), 300); assert.equal(linha().creditos_lance, 1);
+  assert.equal(saldo(), 300); assert.equal(linha().pontos_lance, 200);
 });
 
-test("B9 compra Relâmpago a MEIO (pontos sim, crédito não) → o retry completa o crédito SEM cobrar", async () => {
+test("B9 compra Relâmpago a MEIO (pontos sim, pontos de lance não) → o retry completa SEM cobrar", async () => {
   await P.creditarPontos(A, 10, "compra", `passe-relampago:${K(1)}`);
   const r = await comprar(hRelampago);
   assert.equal(r.status, 200);
-  assert.equal(r.corpo.creditosLance, 1);
+  assert.equal(r.corpo.pontosLance, 200);
   assert.equal(saldo(), 500, "não cobrou de novo");
-  assert.equal(linha().creditos_lance, 1);
+  assert.equal(linha().pontos_lance, 200);
 });
 
 test("B10 os 10 pontos de um Passe novo CONTAM para o cartão (tipo compra); 5 Passes = 50", async () => {
@@ -334,7 +349,7 @@ test("B11 ler-pontos devolve os DOIS ledgers (e mantém os campos antigos)", asy
   assert.equal(c.pontos, 10); assert.equal(c.pontosCartao, 10);
   assert.equal(c.fidelidade.total, 10);
   assert.equal(c.fidelidade.historico.length, 1);
-  assert.equal(c.lance.creditos, 1);
-  assert.equal(c.lance.pontos, 3);
+  assert.equal(c.lance.creditos, 0, "o lance já não dá nem gasta créditos");
+  assert.equal(c.lance.pontos, 203, "200 do Passe + 3 do login");
   assert.equal(c.lance.historico.length, 2);
 });

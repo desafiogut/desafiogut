@@ -164,7 +164,7 @@ export const ARTIGOS_V4 = {
   "9":  "A cada 50 (cinquenta) pontos de fidelidade acumulados, o utilizador poderá resgatar gratuitamente 1 (um) cartão colecionável físico da Família Quildo, sem qualquer pagamento adicional.",
   "12": "A Oferta Relâmpago é patrocinada pelos patrocinadores que adquirem as Cotas Bronze e Cotas Prata",
   "14": "A Oferta Relâmpago é uma competição de habilidade: vence o participante que apresentar o menor valor em pontos de lance que ninguém mais escolheu (menor lance único).",
-  "17": "O Passe Desafio (R$ 2,00) é a transação principal que dá acesso a métricas, GUTO, ECOQUILDO e 1 crédito de lance.",
+  "17": "O Passe Desafio (R$ 2,00) é a transação principal que dá acesso a métricas, GUTO, ECOQUILDO e 200 pontos de lance.",
   "18": "à razão de 1 ponto = R$ 0,01 (um centavo)",
   "24": "A Oferta Programada é patrocinada pelos patrocinadores que adquirem as Cotas Ouro e Cotas Diamante",
   "27": "Vence o palpite que ficar mais próximo do número real de lances apurado pela Associação.",

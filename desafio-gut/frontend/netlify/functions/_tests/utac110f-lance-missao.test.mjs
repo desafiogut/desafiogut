@@ -11,7 +11,7 @@ import assert from "node:assert/strict";
 
 const ADDR = "0x5baf46609dd9188e081cc78f70e61a6ea07f32b8";
 let mockEdicao = null;
-let mockCreditos = 3;
+let mockPontos = 100;  // UTAC110n — saldo de PONTOS DE LANCE (o lance de 37 gasta 37)
 let falharCompromete = false;
 let missao = [];              // chamadas a creditarPontosLance: [endereco, quantidade, motivo, ref]
 let refsMissao = new Set();
@@ -40,11 +40,12 @@ mock.module("../_lib/contract.mjs", { namedExports: {
 mock.module("../_lib/edicoes-core.mjs", { namedExports: { buscarEdicao: async () => mockEdicao } });
 mock.module("../_lib/saldoRs.mjs", { namedExports: { debitarSaldoRs: async () => ({ ok: true, resultado: {} }) } });
 mock.module("../_lib/ledger-lance.mjs", { namedExports: {
-  consumirCreditoLance: async () => {
-    if (mockCreditos < 1) return { ok: false, code: "CREDITOS_INSUFICIENTES", creditos: mockCreditos };
-    mockCreditos -= 1; return { ok: true, criado: true, creditos: mockCreditos };
+  // UTAC110n — o lance gasta pontos pelo valor do lance (antes: 1 crédito, UTAC110d).
+  consumirPontosLance: async (e, valor) => {
+    if (mockPontos < valor) return { ok: false, code: "PONTOS_LANCE_INSUFICIENTES", pontos: mockPontos };
+    mockPontos -= valor; return { ok: true, criado: true, pontos: mockPontos };
   },
-  reverterMovimentoLance: async () => { mockCreditos += 1; return { ok: true, revertido: true }; },
+  reverterMovimentoLance: async () => { mockPontos += 1; return { ok: true, revertido: true }; },
   creditarPontosLance: async (e, q, motivo, ref) => {
     missao.push([e, q, motivo, ref]);
     if (modoMissao === "falha") return { ok: false, code: "ERRO_DB" };
@@ -65,7 +66,7 @@ before(async () => {
   ({ diaManaus } = await import("../_lib/fontes-lance.mjs"));
 });
 beforeEach(() => {
-  mem.clear(); mockEdicao = null; mockCreditos = 3; falharCompromete = false;
+  mem.clear(); mockEdicao = null; mockPontos = 100; falharCompromete = false;
   missao = []; refsMissao = new Set(); modoMissao = "ok";
 });
 
@@ -108,7 +109,7 @@ test("L3 lance PROGRAMADO não conta para a missão (missaoLance:null, 0 chamada
 
 test("L4 lance RECUSADO (sem créditos) → nenhuma missão", async () => {
   mockEdicao = { id: "RELAMP-1", tipo: "relampago" };
-  mockCreditos = 0;
+  mockPontos = 0;
   const r = await lance();
   assert.equal(r.status, 400);
   assert.equal(missao.length, 0);

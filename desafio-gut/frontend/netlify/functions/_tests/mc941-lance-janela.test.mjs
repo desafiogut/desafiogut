@@ -52,10 +52,10 @@ mock.module("../_lib/saldoRs.mjs", {
     },
   },
 });
-// UTAC110d (R18-110d-3): o relâmpago consome 1 crédito de lance (débito R$ atrás da flag desligada).
+// UTAC110n (R18-110j.4b-1): o relâmpago gasta PONTOS DE LANCE pelo valor do lance (antes: 1 crédito).
 mock.module("../_lib/ledger-lance.mjs", {
   namedExports: {
-    consumirCreditoLance: async () => { chamadasConsumoCredito += 1; return { ok: true, criado: true, creditos: 0 }; },
+    consumirPontosLance: async () => { chamadasConsumoCredito += 1; return { ok: true, criado: true, pontos: 0 }; },
     reverterMovimentoLance: async () => ({ ok: true, revertido: true }),
     // UTAC110f — a missão do lance importa `creditarPontosLance` (via `_lib/fontes-lance.mjs`).
     creditarPontosLance: async () => ({ ok: true, criado: true, pontos: 10 }),

@@ -3,11 +3,15 @@
 // Store: as colunas `creditos_lance`, `pontos_lance` e `historico_lance` da MESMA linha de
 // `public.pontos` (decisão do operador R18-110d-1, opção b — sem tocar na PK nem na FK).
 //
-//   • Crédito de lance  — DIRECTO: o Passe Relâmpago dá +1 (R18-110d-2); 1 lance no MLC consome 1.
-//   • Pontos de lance   — ganhos por ENGAJAMENTO (Art. 16º I-V / Art. 17º). NUNCA por compra:
-//                         `creditarPontosLance` só aceita motivos de engajamento (ver MOTIVOS_*).
-//                         O lance NÃO os consome (R18-110d-2). As fontes (login, missões, …) ainda
-//                         não estão ligadas — ficam para UTAC próprio.
+//   • Crédito de lance  — LEGADO (UTAC110d). O Passe Relâmpago JÁ NÃO o credita: o UTAC110n
+//                         substituiu-o por +200 pontos de lance (R18-110j.4b-3). Fica a coluna e as
+//                         funções porque os saldos antigos ainda existem até à conversão (DEBT-071:
+//                         1 crédito = 200 pontos) e porque o valor tem de ser convertido, não apagado.
+//   • Pontos de lance   — a MOEDA do Menor Lance Único desde o UTAC110n (R18-110j.4b-1): o lance
+//                         DEBITA o valor do próprio lance (`consumirPontosLance`). Ganham-se por
+//                         ENGAJAMENTO (Art. 16º I-V/VI) e pelo Passe (+200, Art. 16º VI) — nunca por
+//                         compra de créditos. R18-110d-2 («o lance não os consome») ficou REVOGADA;
+//                         a decisão nova está em `_logs/UTAC110n_SEG-1_MEDICAO.md`.
 //
 // Módulo SEPARADO de `passe-pontos.mjs` de propósito: o `lance-relampago.mjs` importa-o, e o
 // `passe-pontos.mjs` puxa `edicoes-core`/`resgates` — dependências que o lance não precisa.
@@ -24,16 +28,29 @@
 
 import { getSupabase } from "./supabase-client.mjs";
 
-export const CREDITOS_LANCE_POR_PASSE_RELAMPAGO = 1;
-export const CREDITOS_POR_LANCE = 1;
+export const CREDITOS_LANCE_POR_PASSE_RELAMPAGO = 1; // LEGADO (110d) — o Passe já não credita isto
+export const CREDITOS_POR_LANCE = 1;                 // LEGADO (110d) — o lance gasta pontos (110n)
+
+/** UTAC110n (R18-110j.4b-3) — o Passe Relâmpago credita +200 pontos de lance (Art. 16º VI). */
+export const PONTOS_LANCE_POR_PASSE_RELAMPAGO = 200;
+/** UTAC110n (DEBT-071) — 1 crédito de lance antigo vale 200 pontos (Art. 17º, v5.1). */
+export const PONTOS_POR_CREDITO_DE_LANCE = 200;
 
 export const CAMPO_CREDITOS = "creditos_lance";
 export const CAMPO_PONTOS = "pontos_lance";
 
-/** Motivos que movem CRÉDITOS de lance. */
+/** Motivos que movem CRÉDITOS de lance (LEGADO — só a conversão do DEBT-071 os lê). */
 export const MOTIVOS_CREDITO = Object.freeze(["passe-relampago", "lance"]);
-/** Motivos que creditam PONTOS de lance — só engajamento (Art. 16º I-V). Sem «compra»/«passe». */
-export const MOTIVOS_PONTOS_LANCE = Object.freeze(["boas-vindas", "login", "missao", "indicacao", "sequencia"]);
+/**
+ * Motivos que movem PONTOS de lance. «sequencia» = bónus de 5 acertos (110n, Frente C);
+ * «passe-relampago» = bónus de +200 do Passe (110n, R18-110j.4b-3 — Art. 16º VI). Os restantes são
+ * engajamento puro (Art. 16º I-V).
+ */
+export const MOTIVOS_PONTOS_LANCE = Object.freeze([
+  "boas-vindas", "login", "missao", "indicacao", "sequencia", "passe-relampago",
+]);
+/** Motivo do DÉBITO de pontos que o próprio lance faz (110n, Frente A). */
+export const MOTIVO_PONTOS_GASTOS_NO_LANCE = "lance";
 
 const TABELA = "pontos";
 const ENDERECO_RE = /^0x[0-9a-f]{40}$/;
@@ -126,14 +143,34 @@ export function consumirCreditoLance(endereco, ref) {
 }
 
 /**
- * Credita PONTOS de lance por ENGAJAMENTO. Recusa qualquer motivo fora de `MOTIVOS_PONTOS_LANCE`
- * (em particular, NUNCA por compra de Passe — Art. 17º).
+ * Credita PONTOS de lance. Recusa qualquer motivo fora de `MOTIVOS_PONTOS_LANCE`.
+ *
+ * ⚠️ UTAC110n: o motivo `passe-relampago` PASSOU a ser aceite (R18-110j.4b-3, Art. 16º VI): o Passe
+ * dá +200 pontos de lance como BÓNUS de engajamento, não como compra de créditos. O que continua
+ * proibido é vender pontos avulso — não existe, e não passa a existir, motivo «compra»/«saldo».
  */
 export function creditarPontosLance(endereco, quantidade, motivo, ref) {
   if (!MOTIVOS_PONTOS_LANCE.includes(motivo)) return Promise.resolve({ ok: false, code: "MOTIVO_INVALIDO" });
   if (!Number.isInteger(quantidade) || quantidade <= 0) return Promise.resolve({ ok: false, code: "QUANTIDADE_INVALIDA" });
   return aplicar(endereco, CAMPO_PONTOS, quantidade, motivo, ref);
 }
+
+/** +200 pontos de lance pela compra do Passe Relâmpago (UTAC110n, Art. 16º VI). Idempotente por `ref`. */
+export function creditarPontosLanceDoPasseRelampago(endereco, ref) {
+  return creditarPontosLance(endereco, PONTOS_LANCE_POR_PASSE_RELAMPAGO, "passe-relampago", ref);
+}
+
+/**
+ * DEBITA pontos de lance — é o pagamento do lance no Menor Lance Único (UTAC110n, R18-110j.4b-1).
+ * O valor do lance É o preço em pontos (Art. 18º: 1 ponto = R$ 0,01), logo `quantidade` = centavos.
+ * Idempotente por `ref` (retry do mesmo lance não cobra duas vezes); saldo a menos → recusa sem
+ * escrever nada (`PONTOS_LANCE_INSUFICIENTES`), nunca saldo negativo (CHECK `>= 0` na BD também).
+ */
+export function consumirPontosLance(endereco, quantidade, ref) {
+  if (!Number.isInteger(quantidade) || quantidade <= 0) return Promise.resolve({ ok: false, code: "QUANTIDADE_INVALIDA" });
+  return aplicar(endereco, CAMPO_PONTOS, -quantidade, MOTIVO_PONTOS_GASTOS_NO_LANCE, ref);
+}
+
 
 /**
  * REVERTE integralmente um movimento de lance (remove a entrada e devolve o delta), com CAS.

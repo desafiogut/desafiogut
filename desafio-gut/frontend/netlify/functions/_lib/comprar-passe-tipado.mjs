@@ -13,18 +13,20 @@
 //   comportamento, guardada pelos testes do 110d/110e (e pela prova de mutação deles).
 //
 // Cadeia de benefícios de UM Passe (quaisquer que seja o pagamento):
-//   +10 pontos de fidelidade (`tipo:"compra"` ⇒ contam para o cartão; Art. 17º: pontos de lance NUNCA)
-//   +1 CRÉDITO de lance — SÓ no Relâmpago (`ledger-lance.mjs`)
+//   +10 pontos de fidelidade (`tipo:"compra"` ⇒ contam para o cartão; Art. 8º)
+//   +200 PONTOS DE LANCE — SÓ no Relâmpago (UTAC110n, R18-110j.4b-3; Art. 16º VI). Substituiu o
+//        «+1 crédito de lance» do UTAC110d: o crédito deixou de existir como moeda (o lance gasta
+//        pontos) e os saldos antigos convertem-se a 200 pontos cada (DEBT-071).
 //   +1 ECOQUILDO + lastro em R$ (`eco-quildo.mjs`; Art. 47º-51º) — ÚLTIMO passo de propósito
 //
 // Idempotência: por `ref` em CADA ledger. No PIX a `ref` vem da `idempotencyKey` do cliente; no
 // Google Play vem do `purchaseToken` (hash) — ver `refGoogle` em `validar-compra-google.mjs`.
 // Um retry de uma compra A MEIO completa o que falta sem voltar a cobrar/creditar.
 //
-// 201 { ok, idempotent:false, tipo, pontosFidelidade, creditosLance?, ecoQuildo, saldoRsAntesCentavos, saldoRsDepoisCentavos }
-// 200 { ok, idempotent:true, tipo, pontosFidelidade, creditosLance?, ecoQuildo }
+// 201 { ok, idempotent:false, tipo, pontosFidelidade, pontosLance?, creditosLance?, ecoQuildo, saldoRsAntesCentavos, saldoRsDepoisCentavos }
+// 200 { ok, idempotent:true, tipo, pontosFidelidade, pontosLance?, creditosLance?, ecoQuildo }
 // 400 idempotencyKey_invalida · 401 token_ausente|token_invalido · 402 saldo_insuficiente
-// 405 metodo_invalido · 502 debito_falhou|creditar_pontos_falhou|creditar_credito_lance_falhou|creditar_eco_quildo_falhou
+// 405 metodo_invalido · 502 debito_falhou|creditar_pontos_falhou|creditar_pontos_lance_falhou|creditar_eco_quildo_falhou
 // 503 sistema_pausado|store_indisponivel
 
 import { jsonResponse, jsonError, parseJsonBody, ValidationError } from "./validate.mjs";
@@ -37,7 +39,9 @@ import {
   creditarPontos, lerPontos, reverterMovimento,
   PONTOS_FIDELIDADE_POR_PASSE, VALOR_PASSE_CENTAVOS, TIPO_COMPRA, TIPOS_PASSE, refPasse,
 } from "./passe-pontos.mjs";
-import { creditarCreditoLance, lerLedgerLance, reverterMovimentoLance } from "./ledger-lance.mjs";
+import {
+  creditarPontosLanceDoPasseRelampago, lerLedgerLance, reverterMovimentoLance,
+} from "./ledger-lance.mjs";
 import {
   creditarEcoQuildo, lerEcoQuildo, reverterEcoQuildo, registarEmissaoNoLastro,
   ECOQUILDO_POR_PASSE,
@@ -107,31 +111,31 @@ async function garantirEcoDoPasse(ctx, endereco, ref) {
 }
 
 /**
- * Completa o que FALTA numa compra cuja `ref` já entrou nos pontos (sem cobrar nada): o crédito de
+ * Completa o que FALTA numa compra cuja `ref` já entrou nos pontos (sem cobrar nada): os pontos de
  * lance (só Relâmpago) e o ECOQUILDO. É o que permite a um retry fechar uma compra a meio.
- * @returns {Promise<{ok:true, pontos:number, creditosLance:number|undefined, ecoQuildo:number}|{ok:false, etapa:string, code:string}>}
+ * @returns {Promise<{ok:true, pontos:number, pontosLance:number|undefined, ecoQuildo:number}|{ok:false, etapa:string, code:string}>}
  */
 async function completarPendentes(ctx, endereco, ref, st) {
-  let creditosLance;
+  let pontosLance;
   if (ctx.ehRelampago) {
-    if (st.completa || temRef(st.led?.historico, ref)) creditosLance = st.led.creditos;
+    if (st.completa || temRef(st.led?.historico, ref)) pontosLance = st.led.pontos;
     else {
-      const c = await creditarCreditoLance(endereco, ref);
+      const c = await creditarPontosLanceDoPasseRelampago(endereco, ref);
       if (!c.ok) return { ok: false, etapa: "lance", code: c.code ?? "ERRO_DB" };
-      creditosLance = c.creditos;
+      pontosLance = c.pontos;
     }
   }
   const g = await garantirEcoDoPasse(ctx, endereco, ref);
-  if (!g.ok) return { ok: false, etapa: "eco", code: g.code, creditosLance };
-  return { ok: true, pontos: Number(st.reg?.pontos ?? 0), creditosLance, ecoQuildo: g.saldo };
+  if (!g.ok) return { ok: false, etapa: "eco", code: g.code, pontosLance };
+  return { ok: true, pontos: Number(st.reg?.pontos ?? 0), pontosLance, ecoQuildo: g.saldo };
 }
 
 /**
  * CADEIA DE CRÉDITO dos benefícios de um Passe. **Não cobra e não reembolsa nada** — o pagamento é
  * do chamador (R$ no PIX, Google no Billing). Idempotente por `ref`.
- * @returns {Promise<{ok:true, pontos:number, creditosLance:number|undefined, ecoQuildo:number}|
+ * @returns {Promise<{ok:true, pontos:number, pontosLance:number|undefined, ecoQuildo:number}|
  *                   {ok:false, etapa:"pontos"|"lance"|"eco", code:string|null,
- *                    jaExistia?:boolean, pontos?:number, pontosDesfeitos?:boolean, creditosLance?:number}>}
+ *                    jaExistia?:boolean, pontos?:number, pontosDesfeitos?:boolean, pontosLance?:number}>}
  */
 async function creditarBeneficios(ctx, endereco, ref) {
   let p;
@@ -143,25 +147,25 @@ async function creditarBeneficios(ctx, endereco, ref) {
     return { ok: false, etapa: "pontos", code: p.code ?? null, jaExistia: p.ok === true && p.criado === false, pontos: p.pontos };
   }
 
-  let creditosLance;
+  let pontosLance;
   if (ctx.ehRelampago) {
     let c;
-    try { c = await creditarCreditoLance(endereco, ref); }
+    try { c = await creditarPontosLanceDoPasseRelampago(endereco, ref); }
     catch { c = { ok: false, code: "ERRO_DB" }; }
     if (!c.ok) {
-      // Sem o lance, o Passe Relâmpago não foi entregue: desfaz os 10 pontos (o pagamento é do chamador).
+      // Sem os pontos de lance, o Passe Relâmpago não foi entregue: desfaz os 10 pontos (o pagamento é do chamador).
       const rev = await reverterMovimento(endereco, ref).catch(() => ({ ok: false, code: "ERRO_DB" }));
       if (!(rev.ok && rev.revertido)) {
         captureSecurityAlert(`${ctx.nome}_reversao_pontos_falhou`, { code: rev.code ?? null }, "error").catch(() => {});
       }
       return { ok: false, etapa: "lance", code: c.code ?? "ERRO_DB", pontos: p.pontos, pontosDesfeitos: rev.ok === true && rev.revertido === true };
     }
-    creditosLance = c.creditos;
+    pontosLance = c.pontos;
   }
 
   const eco = await garantirEcoDoPasse(ctx, endereco, ref);
-  if (!eco.ok) return { ok: false, etapa: "eco", code: eco.code, pontos: p.pontos, creditosLance };
-  return { ok: true, pontos: p.pontos, creditosLance, ecoQuildo: eco.saldo };
+  if (!eco.ok) return { ok: false, etapa: "eco", code: eco.code, pontos: p.pontos, pontosLance };
+  return { ok: true, pontos: p.pontos, pontosLance, ecoQuildo: eco.saldo };
 }
 
 /**
@@ -193,12 +197,16 @@ async function respostaIdempotente(ctx, endereco, ref, st) {
   const c = await completarPendentes(ctx, endereco, ref, st);
   if (!c.ok) {
     return c.etapa === "lance"
-      ? jsonError(502, "creditar_credito_lance_falhou", "não foi possível creditar o lance", { motivo: c.code })
+      ? jsonError(502, "creditar_pontos_lance_falhou", "não foi possível creditar os pontos de lance", { motivo: c.code })
       : jsonError(502, "creditar_eco_quildo_falhou", "não foi possível creditar o ECOQUILDO", { motivo: c.code });
   }
   return jsonResponse({
     ok: true, idempotent: true, tipo: ctx.tipoPasse, pontosFidelidade: c.pontos,
-    ...(ctx.ehRelampago ? { creditosLance: c.creditosLance } : {}),
+    ...(ctx.ehRelampago ? {
+      pontosLance: c.pontosLance,
+      // LEGADO (110d): o crédito já não é creditado; o campo fica a 0 para não partir clientes antigos.
+      creditosLance: 0,
+    } : {}),
     ecoQuildo: c.ecoQuildo,
   }, 200);
 }
@@ -262,10 +270,10 @@ export async function comprarPasseTipado(req, tipoPasse) {
       }
       return jsonError(502, "creditar_pontos_falhou", "não foi possível creditar os pontos", { reembolsado });
     }
-    // ── crédito de lance (só Relâmpago) ─────────────────────────────────────────────────────────
+    // ── pontos de lance (só Relâmpago) ──────────────────────────────────────────────────────────
     if (cred.etapa === "lance") {
       const reembolsado = await reembolsar();
-      return jsonError(502, "creditar_credito_lance_falhou", "não foi possível creditar o lance",
+      return jsonError(502, "creditar_pontos_lance_falhou", "não foi possível creditar os pontos de lance",
         { reembolsado, pontosDesfeitos: cred.pontosDesfeitos === true });
     }
     // ── ECOQUILDO ───────────────────────────────────────────────────────────────────────────────
@@ -276,7 +284,7 @@ export async function comprarPasseTipado(req, tipoPasse) {
 
   return jsonResponse({
     ok: true, idempotent: false, tipo: tipoPasse, pontosFidelidade: cred.pontos,
-    ...(ctx.ehRelampago ? { creditosLance: cred.creditosLance } : {}),
+    ...(ctx.ehRelampago ? { pontosLance: cred.pontosLance, creditosLance: 0 } : {}),
     ecoQuildo: cred.ecoQuildo,
     saldoRsAntesCentavos: debito.resultado.saldoAntesCentavos,
     saldoRsDepoisCentavos: debito.resultado.saldoDepoisCentavos,
@@ -304,7 +312,8 @@ export async function creditarPasseGoogle({ endereco, tipoPasse, ref }) {
   if (st.fid) {
     const c = await completarPendentes(ctx, endereco, ref, st);
     if (!c.ok) return c;
-    return { ok: true, idempotent: true, pontos: c.pontos, creditosLance: c.creditosLance, ecoQuildo: c.ecoQuildo };
+    return { ok: true, idempotent: true, pontos: c.pontos, ecoQuildo: c.ecoQuildo,
+      ...(ctx.ehRelampago ? { pontosLance: c.pontosLance, creditosLance: 0 } : {}) };
   }
 
   const cred = await creditarBeneficios(ctx, endereco, ref);
@@ -315,10 +324,12 @@ export async function creditarPasseGoogle({ endereco, tipoPasse, ref }) {
       if (st2?.fid) {
         const c = await completarPendentes(ctx, endereco, ref, st2);
         if (!c.ok) return c;
-        return { ok: true, idempotent: true, pontos: c.pontos, creditosLance: c.creditosLance, ecoQuildo: c.ecoQuildo };
+        return { ok: true, idempotent: true, pontos: c.pontos, ecoQuildo: c.ecoQuildo,
+          ...(ctx.ehRelampago ? { pontosLance: c.pontosLance, creditosLance: 0 } : {}) };
       }
     }
     return cred;
   }
-  return { ok: true, idempotent: false, pontos: cred.pontos, creditosLance: cred.creditosLance, ecoQuildo: cred.ecoQuildo };
+  return { ok: true, idempotent: false, pontos: cred.pontos, ecoQuildo: cred.ecoQuildo,
+    ...(ctx.ehRelampago ? { pontosLance: cred.pontosLance, creditosLance: 0 } : {}) };
 }

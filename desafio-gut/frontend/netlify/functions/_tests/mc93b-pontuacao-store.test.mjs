@@ -118,6 +118,24 @@ mock.module("../_lib/fila.mjs", {
     enfileirar: async (tipo, payload) => { filaEnfileirada.push({ tipo, payload }); return { id: "t1" }; },
   },
 });
+// UTAC110n (R18-110j.4b-4): o bónus de 5 acertos passou a CREDITAR +50 PONTOS DE LANCE pelo ledger,
+// em vez de enfileirar 20 senhas on-chain. O duplo do ledger é um ESPIÃO (conta os créditos, é
+// idempotente por ref como o real) — o CAS e a escrita atómica do ledger têm teste próprio
+// (`utac110n-pontos-lance.test.mjs`). `filaEnfileirada` continua a existir para provar que NADA é
+// enfileirado; `erroLedger` permite simular a falha do crédito.
+const creditosLance = [];
+let erroLedger = null;
+mock.module("../_lib/ledger-lance.mjs", {
+  namedExports: {
+    creditarPontosLance: async (endereco, quantidade, motivo, ref) => {
+      if (erroLedger) return { ok: false, code: erroLedger };
+      const chave = `${endereco}|${ref}`;
+      if (creditosLance.some((c) => `${c.endereco}|${c.ref}` === chave)) return { ok: true, criado: false, pontos: quantidade };
+      creditosLance.push({ endereco, quantidade, motivo, ref });
+      return { ok: true, criado: true, pontos: quantidade };
+    },
+  },
+});
 
 const {
   registrarPontuacaoRodada, lerRankingCiclo, lerFeedback, ordenarRanking,
@@ -138,6 +156,7 @@ const rodada = (vencedor, perdedor) => [
 beforeEach(() => {
   db.pontuacoes.length = 0; db.rankings.length = 0; db.upserts.length = 0;
   filaEnfileirada.length = 0; erroForcado = null; relogio = 0;
+  creditosLance.length = 0; erroLedger = null;
 });
 
 // ── persistência ─────────────────────────────────────────────────────────────
@@ -183,7 +202,7 @@ test("refechar NÃO apaga os pontos do bónus já ganho", async () => {
   await registrarPontuacaoRodada("R-5", rodada(A, B));
   const depois = db.rankings.find((r) => r.ciclo_id === "R-5" && r.endereco === A);
   assert.equal(depois.pontos_totais, 4 + REGRAS.PONTOS_BONUS, "refechar não pode apagar o bónus");
-  assert.equal(filaEnfileirada.length, 1, "e não pode enfileirar outra vez");
+  assert.equal(creditosLance.length, 1, "e não pode creditar outra vez");
 });
 
 test("rodada sem lances válidos não grava nada", async () => {
@@ -264,13 +283,17 @@ test("cinco ciclos seguidos com acerto dão UM bónus, pelo fluxo real", async (
   // era inalcançável em produção.
   for (const c of ["R-1", "R-2", "R-3", "R-4"]) {
     await registrarPontuacaoRodada(c, rodada(A, B));
-    assert.equal(filaEnfileirada.length, 0, `${c}: ainda não são 5`);
+    assert.equal(creditosLance.length, 0, `${c}: ainda não são 5`);
   }
   const r = await registrarPontuacaoRodada("R-5", rodada(A, B));
   assert.equal(r.bonusRegistados, 1);
-  assert.equal(filaEnfileirada.length, 1);
-  assert.equal(filaEnfileirada[0].tipo, "creditar-senhas-bonus");
-  assert.equal(filaEnfileirada[0].payload.quantidade, REGRAS.SENHAS_BONUS);
+  // ⚠️ UTAC110n: era `filaEnfileirada[0].tipo === "creditar-senhas-bonus"` com
+  // `REGRAS.SENHAS_BONUS` (20 senhas on-chain). Agora é um crédito de 50 PONTOS DE LANCE.
+  assert.equal(creditosLance.length, 1);
+  assert.equal(creditosLance[0].quantidade, 50);
+  assert.equal(creditosLance[0].motivo, "sequencia");
+  assert.equal(creditosLance[0].ref, "sequencia:R-5", "a ref é por ciclo (1 bónus por ciclo)");
+  assert.equal(filaEnfileirada.length, 0, "NADA é enfileirado: o worker on-chain ficou sem produtor");
 });
 
 test("uma rodada FALHADA parte a sequência e adia o bónus", async () => {
@@ -280,15 +303,19 @@ test("uma rodada FALHADA parte a sequência e adia o bónus", async () => {
   await registrarPontuacaoRodada("R-3", [lance(A, 50), lance(B, 50)]); // A falha
   await registrarPontuacaoRodada("R-4", rodada(A, B));
   await registrarPontuacaoRodada("R-5", rodada(A, B));
-  assert.equal(filaEnfileirada.length, 0,
+  assert.equal(creditosLance.length, 0,
     "5 participações mas só 2 acertos seguidos depois da falha");
 });
 
-test("o bónus é um DIREITO por liquidar — nunca um saldo já creditado", async () => {
+// ⚠️ UTAC110n (R18-110j.4b-4): este teste fixava «o bónus é um DIREITO por liquidar» — 20 senhas em
+// `senhas_a_creditar`, à espera do worker on-chain. O bónus passou a ser PAGO na hora em +50 pontos de
+// lance (Art. 16º). A garantia que fica é a oposta e mais simples: não há dívida nenhuma.
+test("o bónus é pago em 50 PONTOS DE LANCE — não fica dívida de senhas", async () => {
   for (const c of ["R-1", "R-2", "R-3", "R-4", "R-5"]) await registrarPontuacaoRodada(c, rodada(A, B));
   const linha = db.rankings.find((r) => r.ciclo_id === "R-5" && r.endereco === A);
-  assert.equal(linha.senhas_a_creditar, REGRAS.SENHAS_BONUS);
-  assert.equal(linha.liquidado_em, null, "só a liquidação on-chain preenche liquidado_em");
+  assert.equal(linha.senhas_a_creditar, 0, "a dívida de senhas deixou de ser escrita");
+  assert.equal(linha.liquidado_em, null, "nada a liquidar: o crédito é imediato");
+  assert.deepEqual(creditosLance.map((c) => [c.quantidade, c.motivo]), [[50, "sequencia"]]);
 });
 
 test("o store NUNCA credita senhas on-chain", async () => {
@@ -328,8 +355,10 @@ test("feedback reflecte o bónus JÁ emitido e o direito por liquidar", async ()
   for (const c of ["R-1", "R-2", "R-3", "R-4", "R-5"]) await registrarPontuacaoRodada(c, rodada(A, B));
   const f = await lerFeedback("R-5", A);
   assert.equal(f.bonusEmitido, true, "quem já ganhou tem de o ver");
-  assert.equal(f.senhasACreditar, REGRAS.SENHAS_BONUS);
-  assert.equal(f.liquidado, false, "liquidado_em NULL → dívida em aberto");
+  // ⚠️ UTAC110n: era `REGRAS.SENHAS_BONUS` (20 senhas por liquidar). Agora o bónus já está pago em
+  // pontos de lance — não há direito pendente para mostrar.
+  assert.equal(f.senhasACreditar, 0);
+  assert.equal(f.liquidado, false);
 });
 
 test("feedback de quem não jogou devolve zeros, não erro", async () => {
@@ -401,10 +430,8 @@ test("duas consolidações EM PARALELO do mesmo ciclo dão UM só bónus", async
 
   assert.equal(r1.bonusRegistados + r2.bonusRegistados, 1,
     "só uma das chamadas pode reclamar o bónus");
-  assert.equal(filaEnfileirada.length, 1, "uma só ordem de crédito на fila");
-  const linha = db.rankings.find((r) => r.ciclo_id === "R-5" && r.endereco === A);
-  assert.equal(linha.senhas_a_creditar, REGRAS.SENHAS_BONUS,
-    "20 senhas no livro-razão, não 40");
+  assert.equal(creditosLance.length, 1, "um só crédito de pontos, não 100");
+  assert.equal(creditosLance[0].quantidade, 50);
 });
 
 test("endereços são normalizados para minúsculas (o CHECK do SQL exige)", async () => {
@@ -429,13 +456,13 @@ test("depois de UM bónus, os ciclos seguintes NÃO concedem outro", async () =>
   // 5 vitórias + 10 derrotas davam 11 bónus = 220 senhas = R$ 440, em vez de
   // um só. Nenhum teste passava de 5 ciclos, por isso ninguém o via.
   for (const c of ["R-1", "R-2", "R-3", "R-4", "R-5"]) await registrarPontuacaoRodada(c, rodada(A, B));
-  assert.equal(filaEnfileirada.length, 1, "o primeiro bónus, aos 5 acertos");
+  assert.equal(creditosLance.length, 1, "o primeiro bónus, aos 5 acertos");
 
   // Dez ciclos em que A PERDE — a corrente está partida, não há bónus novo.
   for (let i = 6; i <= 15; i++) {
     await registrarPontuacaoRodada(`R-${i}`, [lance(A, 50), lance(B, 50)]);
   }
-  assert.equal(filaEnfileirada.length, 1,
+  assert.equal(creditosLance.length, 1,
     "derrotas não podem conceder bónus — eram 11 antes da correcção");
   const comBonus = db.rankings.filter((r) => r.bonus_emitido === true);
   assert.equal(comBonus.length, 1, "um só ciclo com bónus em todo o histórico");
@@ -447,18 +474,17 @@ test("uma SEGUNDA sequência de 5 concede um segundo bónus (e só um)", async (
   for (const c of ["R-1", "R-2", "R-3", "R-4", "R-5"]) await registrarPontuacaoRodada(c, rodada(A, B));
   await registrarPontuacaoRodada("R-6", [lance(A, 50), lance(B, 50)]);   // parte a corrente
   for (const c of ["R-7", "R-8", "R-9", "R-10", "R-11"]) await registrarPontuacaoRodada(c, rodada(A, B));
-  assert.equal(filaEnfileirada.length, 2, "duas sequências completas = dois bónus");
+  assert.equal(creditosLance.length, 2, "duas sequências completas = dois bónus");
   await registrarPontuacaoRodada("R-12", rodada(A, B));
-  assert.equal(filaEnfileirada.length, 2, "o 6.º acerto da 2.ª corrida não paga outra vez");
+  assert.equal(creditosLance.length, 2, "o 6.º acerto da 2.ª corrida não paga outra vez");
 });
 
 test("refechar um ciclo com bónus não concede um bónus extra", async () => {
   for (const c of ["R-1", "R-2", "R-3", "R-4", "R-5"]) await registrarPontuacaoRodada(c, rodada(A, B));
   await registrarPontuacaoRodada("R-5", rodada(A, B));
   await registrarPontuacaoRodada("R-5", rodada(A, B));
-  assert.equal(filaEnfileirada.length, 1);
-  assert.equal(db.rankings.find((r) => r.ciclo_id === "R-5" && r.endereco === A).senhas_a_creditar,
-    REGRAS.SENHAS_BONUS, "20 senhas, não 40 nem 60");
+  assert.equal(creditosLance.length, 1);
+  assert.equal(creditosLance[0].quantidade, 50, "50 pontos, não 100 nem 150");
 });
 
 test("o upsert NUNCA escreve as colunas do cadeado do bónus", async () => {

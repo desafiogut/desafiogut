@@ -18,9 +18,13 @@
 //   t = f.read_text(encoding="utf-8")
 //   t = t.replace("\\", "\\\\").replace("`", "\\`").replace("${", "\\${")
 //   cab = m.read_text(encoding="utf-8").rpartition("export const REGULAMENTO_TEXTO")[0] + "export const REGULAMENTO_TEXTO"  # ULTIMA ocorrencia: a 1.a esta no proprio comentario
-//   m.write_text(cab + f'export const REGULAMENTO_TEXTO = `{t}`;' + "\\n",
-//                encoding="utf-8", newline="\\n")
+//   m.write_text(cab + f" = `{t}`;" + "\n",
+//                encoding="utf-8", newline="\n")
 //   PY
+// ⚠️ UTAC110n: a receita acima estava INCOMPLETA — escrevia `cab + f'export const REGULAMENTO_TEXTO = ...'`
+// quando `cab` JÁ termina no nome, o que produzia `export const REGULAMENTO_TEXTOexport const ...` e um
+// `SyntaxError: Missing initializer in const declaration`. Medido (o ficheiro partiu e foi restaurado do
+// .bak). A forma correcta é `cab + f" = \`{t}\`;"`, que é a que está escrita aqui.
 // O teste acima falha enquanto a regeneracao nao for feita — a receita nao depende de
 // memoria de quem edita.
 
@@ -146,7 +150,7 @@ Art. 16º — O lance é registado em pontos de lance, obtidos por engajamento n
 
 - VI — Bónus incluído na aquisição do Passe Relâmpago.
 
-Art. 17º — O Passe Desafio (R$ 2,00) é a transação principal que dá acesso a métricas, GUTO, ECOQUILDO e 1 crédito de lance. O crédito de lance é um benefício suplementar e subordinado à compra do Passe, não uma taxa separada.
+Art. 17º — O Passe Desafio (R$ 2,00) é a transação principal que dá acesso a métricas, GUTO, ECOQUILDO e 200 pontos de lance. Os pontos de lance são um benefício suplementar e não são condição para participar: o aplicativo concede-os também gratuitamente por engajamento, e a aquisição do Passe apenas antecipa esse saldo, não sendo uma taxa separada.
 
 Secção IV — Da Aquisição do Produto
 

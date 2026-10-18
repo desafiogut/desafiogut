@@ -31,7 +31,12 @@ const semComentarios = (s) =>
 
 // ─────────────────────────── FRENTE A — Art. 17º ───────────────────────────
 
-test("A/Art. 17º (v5.1): descreve o Passe pago e o crédito como benefício — nos DOIS ficheiros", () => {
+// ⚠️ UTAC110n (R18-110j.4b-8): a última asserção fixava o texto do 110k.1 —
+// «benefício suplementar e subordinado à compra do Passe, não uma taxa separada» — que descrevia o
+// crédito como SUBORDINADO à compra. O Art. 17º passou a dizer «200 pontos de lance» e a negar
+// expressamente a subordinação («não são condição para participar»). O texto antigo fica à vista
+// aqui, como manda o protocolo (nunca apagado); o corpo continua a ter de ser igual nos DOIS ficheiros.
+test("A/Art. 17º (v5.1): descreve o Passe pago e os pontos de lance como benefício — nos DOIS ficheiros", () => {
   const NOVO = /Art\. 17º — O Passe Desafio \(R\$ 2,00\) é a transação principal/;
   assert.match(V5, NOVO, "a transcrição tem de ter o texto novo");
   assert.match(GUTO, NOVO, "a FONTE (GUTO) tem de ter o MESMO texto — senão volta a divergir");
@@ -39,7 +44,11 @@ test("A/Art. 17º (v5.1): descreve o Passe pago e o crédito como benefício —
     assert.doesNotMatch(src.replace(/>.*$/gm, ""), /pontos de lance não são comprados com dinheiro real/,
       `${nome}: a negação do pagamento não pode sobreviver no corpo`);
   }
-  assert.match(V5, /benefício suplementar e subordinado à compra do Passe, não uma taxa separada/);
+  assert.match(V5, /200 pontos de lance/, "Art. 17º tem de nomear os 200 pontos de lance");
+  assert.match(V5, /benefício suplementar e não são condição para participar/,
+    "Art. 17º: os pontos de lance não são condição para licitar (UTAC110n)");
+  assert.match(V5, /não sendo uma taxa separada/);
+  assert.doesNotMatch(V5, /1 crédito de lance/, "o crédito deixou de existir no Art. 17º");
 });
 
 test("A/v5.1: a versão subiu nos dois ficheiros e o gate de aceite acompanhou", () => {

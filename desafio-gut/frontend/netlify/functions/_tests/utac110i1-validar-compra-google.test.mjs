@@ -254,29 +254,31 @@ const pedirGoogle = (extra = {}) => pedir(hValidar, {
 
 const pontos = (e = A) => S.tabelas.pontos.find((l) => l.endereco === e);
 const eco = (e = A) => S.tabelas.eco_quildo.find((l) => l.endereco === e);
-const lance = (e = A) => S.tabelas.pontos.find((l) => l.endereco === e)?.creditos_lance;
+// UTAC110n — o Passe credita PONTOS DE LANCE (o crédito deixou de existir).
+const lance = (e = A) => S.tabelas.pontos.find((l) => l.endereco === e)?.pontos_lance;
 const saldoRs = (e = A) => S.tabelas.saldo_rs.find((l) => l.cliente_id === e)?.payload?.centavos;
 const registo = (t = TOKEN) => S.tabelas.google_play_compras.find((l) => l.purchase_token === t);
 const historicoPasse = (e = A) => (pontos(e)?.historico ?? []).filter((h) => h?.tipo === "compra");
 
 // ═══ (a) POSITIVO ════════════════════════════════════════════════════════════════════════════════
-test("(a) Relâmpago: 201 · +10 pontos · +1 crédito de lance · +1 ECOQUILDO · saldo R$ INTACTO", async () => {
+test("(a) Relâmpago: 201 · +10 pontos · +200 PONTOS de lance · +1 ECOQUILDO · saldo R$ INTACTO", async () => {
   const r = await pedirGoogle();
   assert.equal(r.status, 201, JSON.stringify(r.json));
   assert.equal(r.json.ok, true);
   assert.equal(r.json.idempotent, false);
   assert.equal(r.json.tipo, "relampago");
   assert.equal(r.json.pontosFidelidade, 10);
-  assert.equal(r.json.creditosLance, 1);
+  // ⚠️ UTAC110n: era `creditosLance: 1`. O Passe passou a dar +200 pontos de lance (Art. 16º VI).
+  assert.equal(r.json.creditosLance, 0);
   assert.equal(r.json.ecoQuildo, 1);
   assert.equal(pontos().pontos, 10);
-  assert.equal(lance(), 1);
+  assert.equal(lance(), 200);
   assert.equal(eco().saldo, 1);
   // ⚠️ O PONTO CENTRAL DESTE UTAC (R18-110i.1-1): o pagamento foi da GOOGLE — não se debita saldo R$.
   assert.equal(saldoRs(), 500, "o Billing debitou saldo R$ (só o PIX pode debitar)");
   assert.equal(registo().estado, "creditada");
   assert.equal(registo().pontos, 10);
-  assert.equal(registo().creditos_lance, 1);
+  assert.equal(registo().creditos_lance, 0, "o registo do recibo já não guarda crédito");
   assert.equal(registo().eco_quildo, 1);
   assert.equal(registo().produto_id, PROD.relampago);
   assert.equal(soGoogle().length, 1, "a Google devia ser consultada exactamente uma vez");
@@ -290,6 +292,7 @@ test("(a) Programado: 201 · +10 pontos · +1 ECOQUILDO · SEM créditos de lanc
   assert.equal(r.json.tipo, "programado");
   assert.equal(r.json.pontosFidelidade, 10);
   assert.equal(r.json.creditosLance, undefined, "o Programado não credita lance");
+  assert.equal(r.json.pontosLance, undefined, "o Programado não dá pontos de lance");
   assert.equal(r.json.ecoQuildo, 1);
   assert.equal(pontos().pontos, 10);
   assert.equal(lance() ?? 0, 0);
@@ -304,7 +307,7 @@ test("o MESMO recibo 2× ⇒ 200 idempotente, mesmos números, SEM repetir créd
   assert.equal(r2.status, 200, JSON.stringify(r2.json));
   assert.equal(r2.json.idempotent, true);
   assert.equal(r2.json.pontosFidelidade, 10);
-  assert.equal(r2.json.creditosLance, 1);
+  assert.equal(lance(), 200, "os pontos de lance foram creditados 2×");
   assert.deepEqual(JSON.parse(JSON.stringify(r2.json)), JSON.parse(JSON.stringify({ ...r1.json, idempotent: true })));
   assert.equal(pontos().pontos, 10, "os pontos foram creditados 2×");
   assert.equal(eco().saldo, 1, "o ECOQUILDO foi creditado 2×");
@@ -327,9 +330,9 @@ test("compra a MEIO (pontos + lance escritos, ECOQUILDO não) ⇒ o retry COMPLE
   // (é o que a cadeia faz: o ECOQUILDO é o ÚLTIMO passo de propósito).
   const ref = refGoogle("relampago", TOKEN);
   S.tabelas.pontos.push({
-    endereco: A, pontos: 10, atualizado_em: "x", creditos_lance: 1, pontos_lance: 0,
+    endereco: A, pontos: 10, atualizado_em: "x", creditos_lance: 0, pontos_lance: 200,
     historico: [{ data: "x", tipo: "compra", pontos: 10, ref }],
-    historico_lance: [{ data: "x", tipo: "passe-relampago", delta: 1, ref }],
+    historico_lance: [{ data: "x", campo: "pontos_lance", motivo: "passe-relampago", delta: 200, ref }],
   });
   S.tabelas.google_play_compras.push({
     purchase_token: TOKEN, order_id: null, produto_id: PROD.relampago, tipo_passe: "relampago",
@@ -341,11 +344,10 @@ test("compra a MEIO (pontos + lance escritos, ECOQUILDO não) ⇒ o retry COMPLE
   assert.equal(r.status, 200, JSON.stringify(r.json));
   assert.equal(r.json.idempotent, true);
   assert.equal(r.json.pontosFidelidade, 10);
-  assert.equal(r.json.creditosLance, 1);
   assert.equal(r.json.ecoQuildo, 1);
   assert.equal(pontos().pontos, 10, "o retry creditou os pontos outra vez");
   assert.equal(historicoPasse().length, 1, "o histórico tem 2 entradas da mesma compra");
-  assert.equal(lance(), 1, "o retry creditou o lance outra vez");
+  assert.equal(lance(), 200, "o retry voltou a creditar os pontos de lance");
   assert.equal(eco().saldo, 1, "o retry não completou o ECOQUILDO");
   assert.equal(registo().estado, "creditada");
 });
@@ -472,7 +474,7 @@ test("A/B: o PIX DEBITA R$ 2,00; o Google Play NÃO debita — mesmos benefício
   assert.equal(rGoogle.status, 201, JSON.stringify(rGoogle.json));
   assert.equal(saldoRs(), 500, "o Google Play debitou saldo R$");
   assert.equal(pontos().pontos, 10, "os benefícios deviam ser os MESMOS do PIX");
-  assert.equal(lance(), 1);
+  assert.equal(lance(), 200);
   assert.equal(eco().saldo, 1);
 });
 
@@ -519,7 +521,7 @@ test("falha do registo no fecho NÃO esconde a entrega: responde ok, alerta e o 
   cliente = novoCliente();
   S.tabelas.saldo_rs.push({ cliente_id: A, payload: { centavos: 500 }, atualizado_em: "x" });
   S.tabelas.eco_quildo_lastro.push({ id: 1, total_emitido: 0, total_usado: 0, reserva_rs_centavos: 0, atualizado_em: "x" });
-  S.tabelas.pontos.push({ endereco: A, pontos: 10, historico: [{ data: "x", tipo: "compra", pontos: 10, ref: refGoogle("relampago", TOKEN) }], atualizado_em: "x", creditos_lance: 1, pontos_lance: 0, historico_lance: [{ data: "x", ref: refGoogle("relampago", TOKEN), delta: 1 }] });
+  S.tabelas.pontos.push({ endereco: A, pontos: 10, historico: [{ data: "x", tipo: "compra", pontos: 10, ref: refGoogle("relampago", TOKEN) }], atualizado_em: "x", creditos_lance: 0, pontos_lance: 200, historico_lance: [{ data: "x", campo: "pontos_lance", motivo: "passe-relampago", ref: refGoogle("relampago", TOKEN), delta: 200 }] });
   S.tabelas.eco_quildo.push({ endereco: A, saldo: 1, historico: [{ data: "x", ref: refGoogle("relampago", TOKEN), delta: 1 }], atualizado_em: "x" });
   S.tabelas.eco_quildo_lastro[0].total_emitido = 1;
   const r2 = await pedirGoogle();
@@ -547,7 +549,7 @@ test("CORRIDA: o mesmo recibo chega 2× ao mesmo tempo (o INSERT colide na PK) �
           return (dados) => {
             // O concorrente B ganha a corrida: a linha entra já creditada e com os seus números.
             S.tabelas.google_play_compras.push({
-              ...dados, estado: "creditada", pontos: 10, creditos_lance: 1, eco_quildo: 1,
+              ...dados, estado: "creditada", pontos: 10, creditos_lance: 0, eco_quildo: 1,
               criado_em: "x", atualizado_em: "x",
             });
             return alvo.insert(dados); // …e o INSERT de A colide (23505)
@@ -567,14 +569,14 @@ test("CORRIDA: o mesmo recibo chega 2× ao mesmo tempo (o INSERT colide na PK) �
   assert.ok(ref.length <= 200);
 });
 
-test("o ECOQUILDO é o ÚLTIMO passo: se o crédito de LANCE falhar, o ECOQUILDO NÃO é emitido", async () => {
+test("o ECOQUILDO é o ÚLTIMO passo: se o crédito dos PONTOS DE LANCE falhar, o ECOQUILDO NÃO é emitido", async () => {
   // Invariante da ordem da cadeia (110e): uma falha no crédito de lance não pode deixar um ECOQUILDO
   // emitido sem lastro de contrapartida — e o PIX seria reembolsado. B14 (mutante) creditava o
   // ECOQUILDO primeiro e deixava-o preso depois da falha.
-  S.g.falhar.pontos = { se: (st) => Boolean(st.dados && "creditos_lance" in st.dados) };
+  S.g.falhar.pontos = { se: (st) => Boolean(st.dados && "pontos_lance" in st.dados) };
   const r = await pedirGoogle();
   assert.equal(r.status, 502, JSON.stringify(r.json));
-  assert.equal(r.json.error.code, "creditar_credito_lance_falhou");
+  assert.equal(r.json.error.code, "creditar_pontos_lance_falhou");
   assert.equal(eco(), undefined, "o ECOQUILDO foi emitido apesar da falha no lance");
   assert.equal(S.tabelas.eco_quildo_lastro[0].total_emitido, 0, "o lastro registou uma emissão que não devia existir");
   assert.equal(pontos()?.pontos ?? 0, 0, "os pontos ficaram creditados depois da falha");

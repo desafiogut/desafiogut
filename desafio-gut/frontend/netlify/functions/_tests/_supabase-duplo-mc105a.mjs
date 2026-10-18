@@ -56,7 +56,7 @@ const ESQUEMA = {
   eco_quildo_lastro: {
     colunas: ["id", "total_emitido", "total_usado", "reserva_rs_centavos", "atualizado_em"],
     notNull: ["id"],
-    unicos: [["id"]],
+    unicos: [[ "id" ]],
     uuid: [],
     defaults: () => ({ total_emitido: 0, total_usado: 0, reserva_rs_centavos: 0, atualizado_em: new Date().toISOString() }),
     checks: [
@@ -65,6 +65,38 @@ const ESQUEMA = {
       (l) => Number.isInteger(l.total_usado) && l.total_usado >= 0,
       (l) => Number.isInteger(l.reserva_rs_centavos) && l.reserva_rs_centavos >= 0,
     ],
+  },
+  // UTAC110n — as três tabelas do ledger de lance e da competição, com as colunas/CHECKs reais
+  // (migrações 20261013_utac110d e 20260923_*). Aditivo: nenhum teste anterior as usava.
+  pontos: {
+    colunas: ["endereco", "pontos", "historico", "atualizado_em", "creditos_lance", "pontos_lance", "historico_lance"],
+    notNull: ["endereco"],
+    unicos: [["endereco"]],
+    uuid: [],
+    defaults: () => ({ pontos: 0, historico: [], atualizado_em: new Date().toISOString(),
+      creditos_lance: 0, pontos_lance: 0, historico_lance: [] }),
+    checks: [
+      (l) => ["pontos", "creditos_lance", "pontos_lance"].every((c) => Number.isInteger(l[c]) && l[c] >= 0),
+      (l) => Array.isArray(l.historico) && Array.isArray(l.historico_lance),
+    ],
+  },
+  pontuacoes: {
+    colunas: ["ciclo_id", "endereco", "pontos", "acertos", "menor_unico", "criado_em"],
+    notNull: ["ciclo_id", "endereco"],
+    unicos: [["ciclo_id", "endereco"]],
+    uuid: [],
+    defaults: () => ({ pontos: 0, acertos: 0, menor_unico: false, criado_em: new Date().toISOString() }),
+    checks: [],
+  },
+  rankings_ciclo: {
+    colunas: ["ciclo_id", "endereco", "pontos_totais", "acertos_totais", "posicao",
+      "bonus_emitido", "senhas_a_creditar", "liquidado_em", "atualizado_em"],
+    notNull: ["ciclo_id", "endereco"],
+    unicos: [["ciclo_id", "endereco"]],
+    uuid: [],
+    defaults: () => ({ pontos_totais: 0, acertos_totais: 0, posicao: null, bonus_emitido: false,
+      senhas_a_creditar: 0, liquidado_em: null, atualizado_em: new Date().toISOString() }),
+    checks: [],
   },
 };
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -109,12 +141,16 @@ export function criarSupabase() {
         if (v === null || v === undefined) throw new Error(`duplo: .eq("${col}", null) — o PostgREST rejeita; usar .is()`);
         st.filtros.push([col, v]); return api;
       },
-      order(col, { ascending = true } = {}) { st.ordem = [col, ascending]; return api; },
+      order(col, { ascending = true } = {}) { st.ordens = [...(st.ordens ?? []), [col, ascending]]; return api; },
+      // UTAC110n — comparador numérico `>` (PostgREST `gt.<v>`) e `limit`, ambos usados pelo
+      // `ranking-pontos-lance.mjs`. Semântica real: numérica e aplicado DEPOIS da ordenação.
+      gt(col, v) { st.maiores = [...(st.maiores ?? []), [col, v]]; return api; },
+      limit(n) { st.limite = n; return api; },
       single() { st.terminal = "single"; return api; },
       maybeSingle() { st.terminal = "maybe"; return api; },
       then(res, rej) { return Promise.resolve().then(executar).then(res, rej); },
     };
-    for (const m of ["neq", "gt", "lt", "in", "is", "or", "filter", "limit", "range", "delete"]) {
+    for (const m of ["neq", "lt", "in", "is", "or", "filter", "range", "delete"]) {
       api[m] = () => { throw new Error(`duplo: .${m}() não modelado — acrescentar com a semântica real`); };
     }
 
@@ -128,7 +164,8 @@ export function criarSupabase() {
         if (!esq.colunas.includes(base)) return erro("42703", `column "${c}" does not exist`);
         if (esq.uuid.includes(c) && !UUID_RE.test(String(v))) return erro("22P02", "invalid input syntax for type uuid");
       }
-      const casa = (l) => st.filtros.every(([c, v]) => valor(l, c) === (typeof v === "boolean" ? v : String(v)) || valor(l, c) === v);
+      const casa = (l) => st.filtros.every(([c, v]) => valor(l, c) === (typeof v === "boolean" ? v : String(v)) || valor(l, c) === v)
+        && (st.maiores ?? []).every(([c, v]) => Number(valor(l, c)) > Number(v));
       let linhas;
       if (st.op === "insert") {
         if (g.antesDeInserir) { const h = g.antesDeInserir; g.antesDeInserir = null; h(tab, st.dados, tabelas); }
@@ -160,7 +197,10 @@ export function criarSupabase() {
         linhas.forEach((l) => Object.assign(l, st.dados));
       } else {
         linhas = tabelas[tab].filter(casa);
-        if (st.ordem) { const [c, asc] = st.ordem; linhas = [...linhas].sort((a, b) => (a[c] < b[c] ? -1 : a[c] > b[c] ? 1 : 0) * (asc ? 1 : -1)); }
+        for (const [c, asc] of (st.ordens ?? [])) {
+          linhas = [...linhas].sort((a, b) => (a[c] < b[c] ? -1 : a[c] > b[c] ? 1 : 0) * (asc ? 1 : -1));
+        }
+        if (Number.isInteger(st.limite)) linhas = linhas.slice(0, st.limite);
       }
       const copia = linhas.map((l) => structuredClone(l));
       if (st.op !== "select" && !st.retorno) return { data: null, error: null };

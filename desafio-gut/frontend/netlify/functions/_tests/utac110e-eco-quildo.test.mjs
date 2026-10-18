@@ -384,7 +384,9 @@ test("B5 lastro-eco-quildo (admin): 401 sem ser admin; 200 com os três números
 });
 
 // ═══════════════════════════ FRENTE C — integração com a compra ═══════════════════════════════════
-test("C1 Passe Relâmpago: 201 com +10 pontos +1 crédito +1 ECOQUILDO, e o lastro leva +R$ 1,00", async () => {
+// ⚠️ UTAC110n (R18-110j.4b-3): o título e a última asserção fixavam «+1 crédito» (modelo do 110d).
+// O Passe passou a dar +200 PONTOS de lance; o objecto deste teste (ECOQUILDO + lastro) não mudou.
+test("C1 Passe Relâmpago: 201 com +10 pontos +200 pontos de lance +1 ECOQUILDO, e o lastro leva +R$ 1,00", async () => {
   const r = await comprar(hRelampago);
   assert.equal(r.status, 201, JSON.stringify(r.corpo));
   assert.equal(r.corpo.ecoQuildo, 1);
@@ -393,7 +395,8 @@ test("C1 Passe Relâmpago: 201 com +10 pontos +1 crédito +1 ECOQUILDO, e o last
   assert.equal(ecoLinha().historico[0].ref, `passe-relampago:${K(1)}`, "a ref do ECOQUILDO é a da compra (idempotência herdada)");
   assert.deepEqual([lastro().total_emitido, lastro().total_usado, lastro().reserva_rs_centavos], [1, 0, 100]);
   assert.equal(pLinha().pontos, 10);
-  assert.equal(pLinha().creditos_lance, 1);
+  assert.equal(pLinha().creditos_lance, 0, "o crédito legado já não é creditado");
+  assert.equal(pLinha().pontos_lance, 200, "o Passe dá 200 pontos de lance (Art. 16º VI)");
 });
 
 test("C2 Passe Programado: 201 com +10 pontos +1 ECOQUILDO (motivo próprio) e SEM crédito de lance", async () => {

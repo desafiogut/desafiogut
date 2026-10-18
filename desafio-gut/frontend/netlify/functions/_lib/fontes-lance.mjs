@@ -35,6 +35,23 @@ export const PONTOS_MISSAO_LANCE = 10;
 export const PONTOS_INDICACAO = 50;
 export const LIMITE_INDICACOES_MES = 10;
 
+/**
+ * UTAC110n (R18-110j.4b-5) — CICLO DE MISSÕES = 200 PONTOS DE LANCE, alcançável DE GRAÇA.
+ *
+ * As fontes diárias já ligadas dão 15 pontos/dia (login +5 + missão do 1.º lance +10). A **proposta**
+ * implementada é 14 dias × 15 = **210 ≥ 200**: ao 14.º dia o ciclo fecha no alvo de 200 (os 10 de
+ * sobra ficam no saldo, não se perdem). Alternativa do operador (20 × 10 = 200) exigiria baixar a
+ * missão diária para 5, o que reduziria o ganho por dia — fica registada e é ele quem decide (R18).
+ * ⚠️ Nada aqui CREDITA: o crédito é das fontes (`creditarLoginDiario`, `creditarMissaoLance`, …); este
+ * bloco define o ALVO e mede o progresso. O Passe é atalho (+200), nunca condição.
+ */
+export const PONTOS_CICLO_MISSOES = 200;
+export const PONTOS_DIA_MISSOES = PONTOS_LOGIN_DIARIO + PONTOS_MISSAO_LANCE; // 15
+export const DIAS_CICLO_MISSOES = Math.ceil(PONTOS_CICLO_MISSOES / PONTOS_DIA_MISSOES); // 14
+
+/** Motivos que contam como ganho GRATUITO (todos menos o bónus do Passe). */
+export const MOTIVOS_GRATUITOS = Object.freeze(["login", "missao", "indicacao", "sequencia", "boas-vindas"]);
+
 /** UTAC110h.2 — ECOQUILDO da indicação confirmada (Art. 51º do Regulamento 5.0). */
 export const ECOQUILDO_INDICACAO_INDICANTE = 2;
 export const ECOQUILDO_INDICACAO_INDICADO = 1;
@@ -90,6 +107,32 @@ export function missoesDoRegisto(registo, agora = new Date()) {
   const historico = Array.isArray(registo?.historico_lance) ? registo.historico_lance : [];
   const tem = (ref) => historico.some((h) => h?.ref === ref);
   return { dia, loginFeito: tem(refLoginDiario(dia)), lanceFeito: tem(refMissaoLance(dia)) };
+}
+
+/**
+ * UTAC110n — PROGRESSO do ciclo de missões (200 pontos), a partir do registo **JÁ LIDO**. PURA.
+ *
+ * Conta só ganhos GRATUITOS (`MOTIVOS_GRATUITOS`) e só deltas positivos: um lance que gasta pontos
+ * não faz o ciclo andar para trás (o ciclo mede o que o utilizador CONQUISTOU, não o saldo). Uma
+ * reversão apaga a entrada do histórico, logo também não conta.
+ * `completo` fecha ao atingir o alvo; `ganhos` pode exceder 200 (o excedente fica no saldo).
+ */
+export function progressoCicloMissoes(registo) {
+  const historico = Array.isArray(registo?.historico_lance) ? registo.historico_lance : [];
+  const ganhos = historico.reduce((s, h) => {
+    const delta = Number(h?.delta);
+    if (h?.campo !== "pontos_lance" || !Number.isFinite(delta) || delta <= 0) return s;
+    return MOTIVOS_GRATUITOS.includes(h?.motivo) ? s + delta : s;
+  }, 0);
+  return {
+    alvo: PONTOS_CICLO_MISSOES,
+    dias: DIAS_CICLO_MISSOES,
+    pontosPorDia: PONTOS_DIA_MISSOES,
+    ganhos,
+    pontos: Math.min(PONTOS_CICLO_MISSOES, ganhos),
+    faltam: Math.max(0, PONTOS_CICLO_MISSOES - ganhos),
+    completo: ganhos >= PONTOS_CICLO_MISSOES,
+  };
 }
 
 /**

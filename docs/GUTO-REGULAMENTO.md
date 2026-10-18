@@ -113,7 +113,7 @@ Art. 16º — O lance é registado em pontos de lance, obtidos por engajamento n
 
 - VI — Bónus incluído na aquisição do Passe Relâmpago.
 
-Art. 17º — O Passe Desafio (R$ 2,00) é a transação principal que dá acesso a métricas, GUTO, ECOQUILDO e 1 crédito de lance. O crédito de lance é um benefício suplementar e subordinado à compra do Passe, não uma taxa separada.
+Art. 17º — O Passe Desafio (R$ 2,00) é a transação principal que dá acesso a métricas, GUTO, ECOQUILDO e 200 pontos de lance. Os pontos de lance são um benefício suplementar e não são condição para participar: o aplicativo concede-os também gratuitamente por engajamento, e a aquisição do Passe apenas antecipa esse saldo, não sendo uma taxa separada.
 
 Secção IV — Da Aquisição do Produto
 

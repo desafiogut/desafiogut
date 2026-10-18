@@ -23,7 +23,7 @@
 // 400 tipo_invalido|sku_divergente|token_invalido|body_invalido
 // 401 token_ausente|token_invalido
 // 409 compra_nao_encontrada|compra_cancelada|compra_pendente|compra_ja_consumida
-// 502 registo_falhou|creditar_pontos_falhou|creditar_credito_lance_falhou|creditar_eco_quildo_falhou
+// 502 registo_falhou|creditar_pontos_falhou|creditar_pontos_lance_falhou|creditar_eco_quildo_falhou
 // 503 sistema_pausado|google_play_nao_configurado|google_play_indisponivel
 
 import { createHash } from "node:crypto";
@@ -171,7 +171,7 @@ export default async function handler(req) {
     await fecharCompra(purchaseToken, "falhada", { motivo: `${creditado.etapa}:${creditado.code}` }).catch(() => {});
     const mapa = {
       pontos: "creditar_pontos_falhou",
-      lance: "creditar_credito_lance_falhou",
+      lance: "creditar_pontos_lance_falhou", // UTAC110n: a etapa «lance» passou a creditar pontos
       eco: "creditar_eco_quildo_falhou",
     };
     return jsonError(502, mapa[creditado.etapa] ?? "creditar_falhou",
