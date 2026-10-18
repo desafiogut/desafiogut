@@ -289,6 +289,25 @@ test("D3 · o progresso do ciclo não conta o bónus do Passe nem o gasto do lan
   assert.equal(prog.faltam, 10);
 });
 
+// UTAC110n — achado ⚠️2 do validador SEG8: o número do ciclo é BRUTO. A missão de +10 exige dar um
+// lance, e um lance custa no mínimo 1 ponto. Este teste mede os DOIS lados para o número não voltar a
+// ser lido como se fosse líquido.
+test("D2b · o ciclo é BRUTO: com 1 lance de 1 ponto/dia, 14 dias dão 196 líquidos", async () => {
+  const base = Date.parse("2026-12-01T12:00:00Z");
+  for (let d = 0; d < F.DIAS_CICLO_MISSOES; d++) {
+    const agora = new Date(base + d * 24 * 3600 * 1000);
+    await F.creditarLoginDiario(A, agora);            // +5
+    await L.consumirPontosLance(A, 1, `lance:dia-${d}`); // −1 (o lance mínimo, para a missão contar)
+    await F.creditarMissaoLance(A, agora);            // +10
+  }
+  assert.equal(pontosLance(), 196, "14 dias × (5 + 10 − 1)");
+  const prog = F.progressoCicloMissoes(linha());
+  assert.equal(prog.ganhos, 210, "o medidor conta GANHOS (bruto), por desenho");
+  assert.equal(prog.completo, true);
+  assert.ok(pontosLance() < F.PONTOS_CICLO_MISSOES,
+    "…e a carteira ainda não tem 200 — é o desvio declarado (15 dias fechariam também no líquido)");
+});
+
 // ═══ FRENTE E — conversão de créditos em pontos (DEBT-071) ══════════════════════════════════════
 
 const MIGRACAO = new URL("../../../supabase/migrations/20261018_utac110n_conversao_creditos_lance.sql", import.meta.url);
@@ -324,8 +343,26 @@ test("E4 · deriva: 3 créditos ⇒ 600 pontos (a aritmética do SQL, aplicada)"
   assert.equal(factor * 3, 600);
 });
 
-// ═══ FRENTE F — ranking de pontos de lance ═══════════════════════════════════════════════════════
+// UTAC110n — achado ⚠️4 do validador SEG8 (medido em PostgreSQL 16): sem o instante na ref, converter
+// de novo créditos REINTRODUZIDOS na mesma linha criava uma 2.ª entrada com a MESMA ref — e o ledger
+// assume que a ref é única.
+test("E5 · a ref da conversão leva o instante, para não colidir numa re-conversão", () => {
+  assert.match(SQL_CORPO, /'ref',\s*'conversao-creditos:'\s*\|\|\s*endereco\s*\|\|\s*':'\s*\|\|\s*creditos_lance/);
+  assert.match(SQL_CORPO, /to_char\(now\(\)[^)]*YYYYMMDDHH24MISSMS/, "falta o sufixo de instante na ref");
+});
 
+// UTAC110n — achado ⚠️3 do validador SEG8: o índice do placar tem de poder ser aplicado SEM a conversão
+// (o endpoint público já está no ar).
+test("E6 · o índice do placar vive em migração PRÓPRIA, não na conversão", async () => {
+  assert.equal(/CREATE\s+INDEX/i.test(SQL_CORPO), false, "a conversão não pode ser quem cria o índice");
+  const fs = await import("node:fs");
+  const idx = fs.readFileSync(new URL("../../../supabase/migrations/20261018_utac110n_indice_ranking.sql", import.meta.url), "utf8");
+  assert.match(idx, /CREATE INDEX IF NOT EXISTS pontos_pontos_lance_idx/);
+  assert.match(idx, /ON public\.pontos \(pontos_lance DESC\)/);
+  assert.match(idx, /NÃO está aplicada|NAO esta aplicada|não foi aplicada/i, "o cabeçalho tem de dizer por que é separado");
+});
+
+// ═══ FRENTE F — ranking de pontos de lance ═══════════════════════════════════════════════════════
 test("F1 · ordena pelo SALDO ACTUAL, com posições 1-2-2-4 e endereços mascarados", async () => {
   const cliente = await import("../ranking-pontos-lance.mjs");
   const out = cliente.ordenarPorPontosLance([
@@ -385,6 +422,22 @@ test("F4 · método e limite inválidos", async () => {
     method: "GET", headers: { "x-nf-client-connection-ip": "10.7.0.5" } }));
   assert.equal(mau.status, 400);
   assert.equal((await mau.json()).error.code, "limite_invalido");
+});
+
+// UTAC110n — achado ⚠️6 do validador SEG8: o duplo aplicava as ordens por ordem de chamada, de modo que
+// a ÚLTIMA mandava (o PostgREST usa a PRIMEIRA como primária). Com `limit`, isso devolvia o conjunto
+// ERRADO — e um teste que combine multi-order+limit ficaria vacuamente verde.
+test("F5 · duplo: a 1.ª ordem é a primária e o limit corta o conjunto certo", async () => {
+  S.tabelas.pontos.push(
+    { endereco: A,  pontos: 0, historico: [], atualizado_em: "x", creditos_lance: 0, pontos_lance: 100, historico_lance: [] },
+    { endereco: B2, pontos: 0, historico: [], atualizado_em: "x", creditos_lance: 0, pontos_lance: 400, historico_lance: [] },
+    { endereco: C2, pontos: 0, historico: [], atualizado_em: "x", creditos_lance: 0, pontos_lance: 150, historico_lance: [] },
+  );
+  const r = await hRanking(new Request("https://x/.netlify/functions/ranking-pontos-lance?limite=1", {
+    method: "GET", headers: { "x-nf-client-connection-ip": "10.7.0.9" } }));
+  const corpo = await r.json();
+  assert.equal(corpo.ranking.length, 1);
+  assert.equal(corpo.ranking[0].pontos, 400, "o limit tem de cortar DEPOIS de ordenar pelo saldo (400, não 100)");
 });
 
 // ═══ FRENTE G — Art. 17º e a invariante dos 3 sítios ════════════════════════════════════════════

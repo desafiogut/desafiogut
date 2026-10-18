@@ -32,8 +32,9 @@ let falharCompromete = false;
 
 // Store in-memory (mesmo padrao dos outros testes).
 const mem = new Map();
+let falharSetJSON = false; // UTAC110n (achado ⚠️1) — simula o Blob em baixo no ramo legado
 const fakeStore = {
-  async setJSON(k, o) { mem.set(k, JSON.stringify(o)); },
+  async setJSON(k, o) { if (falharSetJSON) throw new Error("blob indisponivel"); mem.set(k, JSON.stringify(o)); },
   async get(k, { type } = {}) {
     const v = mem.get(k);
     if (v === undefined) return null;
@@ -119,6 +120,7 @@ function zerar() {
   mockDebitoRs = { ok: true, resultado: { saldoAntesCentavos: 200, saldoDepoisCentavos: 150 } };
   mockCreditos = 0; mockPontosLance = 300; ultimoValorConsumido = 0;
   chamadasConsumoCredito = 0; chamadasReversao = 0; refsConsumidas = []; falharCompromete = false;
+  falharSetJSON = false;
 }
 
 const bodyLance = (edicaoId = "PROG-1", valorCentavos = 50) => ({
@@ -178,7 +180,9 @@ test("RELAMPAGO: gasta 37 pontos de lance (o valor do lance), NAO debita R$ e NA
   assert.equal(ultimoValorConsumido, 37, "o valor debitado É o valor do lance (centavos = pontos)");
   assert.equal(mockPontosLance, 263, "300 - 37");
   assert.equal(data.pontosLanceConsumidos, 37);
-  assert.equal(data.pontosLanceRestantes, 263);
+  // ⚠️ 273, não 263: o +10 da missão do dia é creditado DEPOIS do débito, e o campo responde pelo
+  // estado no FIM do pedido (achado ⚠️2 do validador SEG8).
+  assert.equal(data.pontosLanceRestantes, 273);
   assert.equal(data.creditoLanceConsumido, false, "LEGADO: nenhum credito e consumido");
   assert.equal(mockCreditos, 0, "os creditos nunca sao tocados");
   assert.equal(chamadasCompromete, 1);
@@ -245,4 +249,41 @@ test("edicao sem metadata (R-1 sintetica): tratada como relampago (gasta pontos)
   assert.equal(chamadasConsumoCredito, 1);
   assert.equal(ultimoValorConsumido, 10);
   assert.equal(chamadasDebitoRs, 0);
+});
+
+// UTAC110n — achado ⚠️1 do validador SEG8. ANTES: fora de mainnet, a falha de persistência era
+// «não-fatal» e o endpoint respondia 201 `ok:true` — com o custo a ser o VALOR DO LANCE, isso queimava
+// pontos em silêncio (medido: saldo 73, 37 gastos, `lances guardados: null`).
+test("LEGADO (fora de mainnet): persistencia falha -> 502 e os pontos gastos VOLTAM", async () => {
+  zerar();
+  const anterior = process.env.NETWORK_STAGE;
+  process.env.NETWORK_STAGE = "sepolia";
+  try {
+    mockEdicao = { id: "R-1", tipo: "relampago" };
+    falharSetJSON = true;
+    const resp = await handler(fakeReq(bodyLance("R-1", 40)));
+    assert.equal(resp.status, 502, "o lance nao foi registado: nao pode dizer ok");
+    assert.equal((await resp.json()).error.code, "persistencia_falhou");
+    assert.equal(chamadasConsumoCredito, 1, "chegou a consumir");
+    assert.equal(chamadasReversao, 1, "e devolveu");
+    assert.equal(mockPontosLance, 300, "saldo de volta ao valor inicial (nada cobrado)");
+    assert.equal(mem.has("R-1"), false, "nada gravado");
+  } finally {
+    process.env.NETWORK_STAGE = anterior;
+  }
+});
+
+test("LEGADO (fora de mainnet): com o Blob a funcionar, grava e responde 201", async () => {
+  zerar();
+  const anterior = process.env.NETWORK_STAGE;
+  process.env.NETWORK_STAGE = "sepolia";
+  try {
+    mockEdicao = { id: "R-1", tipo: "relampago" };
+    const resp = await handler(fakeReq(bodyLance("R-1", 40)));
+    assert.equal(resp.status, 201);
+    assert.equal(chamadasReversao, 0, "nao reverte o que foi gravado");
+    assert.equal(mockPontosLance, 260, "300 - 40");
+  } finally {
+    process.env.NETWORK_STAGE = anterior;
+  }
 });

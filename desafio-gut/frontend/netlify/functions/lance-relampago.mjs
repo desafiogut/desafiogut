@@ -32,7 +32,7 @@ import { verificarJanelaLance, EDICAO_ESPECIAL_RE } from "./_lib/edicao-janela.m
 import { registrarConsumoSenha, BLOB_SENHAS_CONSUMO } from "./_lib/senhas-programado.mjs"; // MC91.11 — ledger
 import { keccak256, AbiCoder } from "ethers";
 import { consumirPontosLance, reverterMovimentoLance } from "./_lib/ledger-lance.mjs"; // UTAC110n (era UTAC110d)
-import { creditarMissaoLance } from "./_lib/fontes-lance.mjs"; // UTAC110f — missão «1 lance do dia»
+import { creditarMissaoLance, PONTOS_MISSAO_LANCE } from "./_lib/fontes-lance.mjs"; // UTAC110f — missão «1 lance do dia»
 import { respostaPreflight } from "./_lib/cors.mjs";
 import { mascararEndereco } from "./_lib/validate.mjs"; // UTAC110h.4 (DEBT-031)
 
@@ -312,14 +312,21 @@ export default async (req) => {
       return jsonError(502, "blindagem_falhou", "não foi possível registar o lance blindado");
     }
   } else {
-    // ── LEGADO (Sepolia/localhost): blob único em texto limpo — INTOCADO ──────
+    // ── LEGADO (Sepolia/localhost): blob único em texto limpo ────────────────
+    // ⚠️ UTAC110n (achado ⚠️1 do validador SEG8) — ANTES: a falha de `setJSON` era
+    // «não-fatal» e o endpoint respondia 201 com `ok:true`. Com o crédito custava 1
+    // crédito; agora custa o VALOR DO LANCE (até 999 999 pontos) — queimar pontos em
+    // silêncio e dizer «ok» é inaceitável. Passa a ser FATAL como na mainnet: reverter é
+    // obrigatório, porque o lance não existe em lado nenhum.
     const store = abrirStore(BLOB_LANCES);
+    let gravou = false;
     if (store) {
       try {
         const existente = (await store.get(edicaoId, { type: "json" })) || { lances: [] };
         existente.lances.push(registro);
         existente.atualizadoEm = new Date().toISOString();
         await store.setJSON(edicaoId, existente);
+        gravou = true;
         // ── MC15.7 ITEM 1 — notificações de unicidade (fail-soft; nunca quebra o lance)
         try {
           await registrarEventosDeLance({
@@ -335,8 +342,16 @@ export default async (req) => {
         // foi removido para o gatilho ser único; a idempotência (referral-convertido)
         // continua a impedir duplo-crédito.
       } catch (err) {
-        console.warn("[lance-relampago] persistir lance falhou (não-fatal):", err?.message);
+        console.error("[lance-relampago] persistir lance falhou:", err?.message);
       }
+    }
+    if (!gravou) {
+      // Sem persistência não há lance: devolve-se o que foi gasto (pontos, ou o crédito legado).
+      if (refConsumoPontos) {
+        const rev = await reverterMovimentoLance(endereco, refConsumoPontos).catch(() => ({ ok: false }));
+        if (!rev.ok) console.error("[lance-relampago] devolver os pontos de lance falhou");
+      }
+      return jsonError(502, "persistencia_falhou", "não foi possível registar o lance — nada foi cobrado");
     }
   }
 
@@ -392,7 +407,12 @@ export default async (req) => {
     creditoLanceConsumido: false,        // LEGADO (110d) — mantido para não partir clientes antigos
     creditosLanceRestantes: null,        // LEGADO (110d) — o lance já não gasta créditos
     pontosLanceConsumidos: debito.resultado.pontosLanceGastos ?? null, // UTAC110n
-    pontosLanceRestantes: debito.resultado.pontosLanceRestantes ?? null,
+    // ⚠️ O +10 da missão do dia é creditado DEPOIS do débito (:7b). Devolver o saldo do momento do
+    // débito dava 63 quando o utilizador passa a ter 73 — achado ⚠️2 do validador SEG8. O campo
+    // responde pelo estado no FIM do pedido, que é o que o ecrã mostra.
+    pontosLanceRestantes: debito.resultado.pontosLanceRestantes == null
+      ? null
+      : debito.resultado.pontosLanceRestantes + (missaoLance?.creditado ? PONTOS_MISSAO_LANCE : 0),
     missaoLance, // UTAC110f — null no programado; {creditado} no relâmpago
     processadoEm: registro.processadoEm,
     commitmentHash: registro.commitmentHash ?? null,

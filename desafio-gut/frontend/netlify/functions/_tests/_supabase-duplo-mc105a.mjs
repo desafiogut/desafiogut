@@ -197,7 +197,12 @@ export function criarSupabase() {
         linhas.forEach((l) => Object.assign(l, st.dados));
       } else {
         linhas = tabelas[tab].filter(casa);
-        for (const [c, asc] of (st.ordens ?? [])) {
+        // ⚠️ UTAC110n (achado ⚠️6 do validador SEG8): o PostgREST compõe `.order(a).order(b)` como
+        // `order=a,b` — a PRIMEIRA chamada é a chave PRIMÁRIA. Num sort estável, para que a primeira
+        // mande tem de ser aplicada POR ÚLTIMO. A versão anterior aplicava-as por ordem e a última
+        // mandava; com `.limit()` isso devolvia o CONJUNTO ERRADO (ex.: lim=1 trazia o menor saldo), e
+        // qualquer teste futuro com multi-order+limit ficaria vacuamente verde.
+        for (const [c, asc] of [...(st.ordens ?? [])].reverse()) {
           linhas = [...linhas].sort((a, b) => (a[c] < b[c] ? -1 : a[c] > b[c] ? 1 : 0) * (asc ? 1 : -1));
         }
         if (Number.isInteger(st.limite)) linhas = linhas.slice(0, st.limite);

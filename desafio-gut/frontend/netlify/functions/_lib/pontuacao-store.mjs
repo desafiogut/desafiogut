@@ -34,7 +34,13 @@ const T_RANKINGS   = "rankings_ciclo";
 /**
  * UTAC110n (R18-110j.4b-4) — o bónus de 5 acertos seguidos passou a creditar +50 PONTOS DE LANCE
  * (Art. 16º), e não 20 senhas on-chain. `_lib/worker-bonus.mjs` fica no código (contrato on-chain
- * intacto) mas DEIXA DE TER PRODUTOR: nada mais enfileira `creditar-senhas-bonus`.
+ * intacto) mas **deixa de ter produtor PARA O BÓNUS NOVO**: nada aqui enfileira `creditar-senhas-bonus`.
+ *
+ * ⚠️ Achado ⚠️5 do validador SEG8: a frase «nada mais enfileira» era FALSA como afirmação absoluta —
+ * `_lib/sweeper-divida-orfa.mjs:99` continua a enfileirar `TIPO_TAREFA_BONUS` a partir de linhas
+ * LEGADAS com `senhas_a_creditar > 0` e `liquidado_em IS NULL` (ver DEBT-076). O que este módulo
+ * garante é que as linhas NOVAS nascem com `senhas_a_creditar = 0` (já não é escrita em
+ * `reclamarBonus`), logo o sweeper não tem nada de novo para apanhar.
  */
 export const PONTOS_LANCE_BONUS_SEQUENCIA = 50;
 /** Tipo de tarefa da fila on-chain — LEGADO (110n). Mantido só porque o worker e os testes o importam. */

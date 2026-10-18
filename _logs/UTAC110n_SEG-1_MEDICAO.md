@@ -64,7 +64,8 @@ Texto novo nos **3 sítios** da invariante (+ âncora `ARTIGOS_V4["17"]` em `gut
 «…dá acesso a métricas, GUTO, ECOQUILDO e **200 pontos de lance**. Os pontos de lance são um benefício
 suplementar e **não são condição para participar**: o aplicativo concede-os também gratuitamente por
 engajamento, e a aquisição do Passe apenas antecipa esse saldo, não sendo uma taxa separada.»
-`corpo(v5) == corpo(GUTO)` = **17700 = 17700** bytes. Módulo do runtime regenerado e idêntico.
+`corpo(v5) == corpo(GUTO)` = **17700 caracteres** (18599 bytes — ver §5, erro meu n.º 1).
+Módulo do runtime regenerado e idêntico à fonte (md5 `70c435a9…`).
 
 ## 2. Testes
 
@@ -116,3 +117,51 @@ confirmado** em todos.
 
 Ver a lista do commit (`git show --stat`), um a um — **nunca `git add -A`**.
 Não tocados: UI (`src/` de produção), GUTO (vocabulário), Data Safety, contratos on-chain, `worker-bonus.mjs`.
+
+---
+
+## 7. 2.ª RONDA — validador adversarial (SEG8) · **APROVADO COM RESSALVAS**
+
+Worktree próprio `C:/Users/Moltbot/tmp-utac110n-val/wt` @ `c784b9f`. Veredicto integral em
+`_logs/UTAC110n_SEG8_VALIDADOR.md`. Ele mediu o que eu **não** medi: executou a migração em
+**PostgreSQL 16.14 real** (base local, schema fiel) e provou a idempotência por execução, em vez de a
+ler no SQL. Suíte confirmada por ele no worktree: 1227/1227 · 1381/1387.
+
+### O que ele REFUTOU (conclusões minhas, mantidas à vista e corrigidas)
+
+| # | O que eu afirmei | O que a medição mostrou | Tratamento |
+|---|---|---|---|
+| ⚠️1 | «o lance não é gravado ⇒ os pontos voltam» (só no ramo mainnet) | Fora de mainnet a falha de `setJSON` era **não-fatal** e o endpoint respondia **201 `ok:true`** com os pontos gastos (medido: saldo 73, 37 gastos, `lances: null`) | **CORRIGIDO**: o ramo legado passou a ser fatal como a mainnet — reverter + 502 `persistencia_falhou`. Testes novos em `mc9112` (com e sem falha de Blob) |
+| ⚠️2 | «14 dias × 15 = 210 ≥ 200» | **210 é BRUTO**: a missão de +10 exige um lance que custa ≥1 ponto ⇒ **196 líquidos** em 14 dias. E `pontosLanceRestantes` devolvia **63** quando o saldo final era **73** | **CORRIGIDO no que é corrigível**: o comentário passa a dizer bruto≠líquido (e que 15 dias fechariam no líquido — decisão do operador); o campo da resposta passou a incluir o +10 da missão. Testes D2b e a asserção 273 |
+| ⚠️3 | o índice do placar nascia na migração da conversão | Essa migração **não** está aplicada ⇒ o endpoint público corria **sem índice** (seq scan + sort, 30×/min) | **CORRIGIDO**: migração própria `20261018_utac110n_indice_ranking.sql` (pode ser aplicada já). Teste E6 |
+| ⚠️4 | a ref da conversão é única | Re-converter créditos **reintroduzidos** na mesma linha repetia a ref (medido: 2 entradas, refs iguais) | **CORRIGIDO**: a ref leva o instante da execução (`…:YYYYMMDDHH24MISSMS`). Teste E5 |
+| ⚠️5 | «o worker fica sem produtor; nada mais enfileira `creditar-senhas-bonus`» | **FALSO como absoluto**: `_lib/sweeper-divida-orfa.mjs:99` continua a enfileirar para dívidas **legadas** | **CORRIGIDO no texto**: «sem produtor **para o bónus novo**» (código e DEBT-076). O comportamento estava certo; a frase não |
+| ⚠️6 | o duplo do Supabase ganhou `order`/`limit` fiéis | Aplicava as ordens «por ordem» ⇒ a **última** mandava (PostgREST usa a **primeira**), e com `limit` devolvia o **conjunto errado** (lim=1 → o menor saldo) | **CORRIGIDO**: aplica-as em ordem inversa (a primeira é a primária). Teste F5 — sem ele, qualquer teste multi-order+limit ficaria vacuamente verde |
+
+### Erros meus declarados (do veredicto)
+
+1. «17700 **bytes**» → são 17700 **caracteres** (18599 bytes). Corrigido no §G.
+2. «sem produtor / nada mais enfileira» → qualificado (⚠️5).
+3. «14 × 15 = 210 ≥ 200» → bruto, não líquido (⚠️2).
+4. `pontosLanceRestantes` nascia desactualizado → corrigido.
+5. Reversão só em mainnet → corrigido.
+6. Duplo infiel (⚠️6) → corrigido.
+
+### Informativos do validador que NÃO corrigi (declarados)
+
+- E2/E4 da migração são prova por leitura/regex; a idempotência **real** foi provada por ele em PG16.
+  Sugestão aceite para UTAC próprio (não há Postgres no CI).
+- `creditarCreditoLance`/`consumirCreditoLance` são exports mortos (0 chamadores fora de testes) — ficam
+  de propósito, documentados, até a conversão ser aplicada.
+- O `ref` do Google é único **por endereço** (defesa no endpoint, não no ledger).
+- `total` do ranking é o número de linhas devolvidas, não de participantes (documentado no ficheiro).
+- `progressoCicloMissoes` é monotónico de vida (não reinicia por ciclo) — o nome «ciclo» promete mais do
+  que faz; fica registado para o UTAC do front, onde a UI terá de o apresentar.
+- O duplo não modela CHECKs para `pontuacoes`/`rankings_ciclo`.
+
+### Registo do instrumento
+
+O subagente validador atingiu o limite de iterações **antes** de gravar o ficheiro do veredicto (2.ª vez
+na série). O texto integral foi recuperado do resumo da delegação e gravado em
+`_logs/UTAC110n_SEG8_VALIDADOR.md`. Artefactos dele a limpar: `wt/_logs/_probe-utac110n.mjs` e a base
+local `utac110n_s8`.

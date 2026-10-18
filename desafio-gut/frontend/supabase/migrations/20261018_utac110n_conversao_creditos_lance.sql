@@ -9,6 +9,15 @@
 -- instrução, zera essa coluna. Uma 2.ª execução encontra 0 linhas e não escreve nada (nem duplica
 -- entradas no histórico). Não usa DDL destrutivo: nenhuma coluna é removida.
 --
+-- ⚠️ A `ref` leva o INSTANTE da execução (achado ⚠️4 do validador SEG8, medido em Postgres 16):
+-- sem ele, converter de novo créditos REINTRODUZIDOS na mesma linha (restauro de backup, caminho
+-- legado) produzia uma segunda entrada com a MESMA `ref` — e `aplicar()`/`reverterMovimentoLance`
+-- assumem que a `ref` é única. O instante é calculado UMA vez (`now()` é fixo dentro da transacção),
+-- logo todas as linhas desta execução partilham o mesmo sufixo e cada uma continua única.
+--
+-- ⚠️ O índice do placar NÃO vive aqui (achado ⚠️3): foi para `20261018_utac110n_indice_ranking.sql`,
+-- porque o ranking público precisa dele ANTES de a conversão ser aplicada.
+--
 -- Projecto de produção: vjslwowwrpcawijdiksm. Requer autorização do operador para ser APLICADA.
 -- Verificação DEPOIS de correr — as DUAS têm de devolver 0:
 --   (1) nenhum crédito sobra:
@@ -32,15 +41,13 @@ UPDATE public.pontos
          'campo',  'pontos_lance',
          'motivo', 'conversao-creditos',
          'delta',  creditos_lance * 200,
+         -- `to_char` com precisão de milissegundos: distingue duas execuções da mesma linha.
          'ref',    'conversao-creditos:' || endereco || ':' || creditos_lance
+                   || ':' || to_char(now() AT TIME ZONE 'UTC', 'YYYYMMDDHH24MISSMS')
        )),
        creditos_lance = 0,
        atualizado_em  = now()
  WHERE creditos_lance > 0;
-
--- Índice para o placar novo (`GET /ranking-pontos-lance`, UTAC110n Frente F): ordena por saldo.
-CREATE INDEX IF NOT EXISTS pontos_pontos_lance_idx
-  ON public.pontos (pontos_lance DESC);
 
 COMMIT;
 

@@ -38,10 +38,17 @@ export const LIMITE_INDICACOES_MES = 10;
 /**
  * UTAC110n (R18-110j.4b-5) — CICLO DE MISSÕES = 200 PONTOS DE LANCE, alcançável DE GRAÇA.
  *
- * As fontes diárias já ligadas dão 15 pontos/dia (login +5 + missão do 1.º lance +10). A **proposta**
- * implementada é 14 dias × 15 = **210 ≥ 200**: ao 14.º dia o ciclo fecha no alvo de 200 (os 10 de
- * sobra ficam no saldo, não se perdem). Alternativa do operador (20 × 10 = 200) exigiria baixar a
- * missão diária para 5, o que reduziria o ganho por dia — fica registada e é ele quem decide (R18).
+ * As fontes diárias dão 15 pontos BRUTOS/dia (login +5 + missão do 1.º lance +10). A **proposta
+ * aprovada pelo operador** é 14 dias × 15 = **210 ≥ 200**, medida do lado BRUTO.
+ *
+ * ⚠️ **BRUTO ≠ LÍQUIDO** (achado ⚠️2 do validador SEG8, medido): a missão de +10 exige DAR UM LANCE, e
+ * um lance custa no mínimo 1 ponto (`LANCE_MIN_CENTAVOS = 1`). A 1 ponto/dia, o líquido é
+ * 5 + 10 − 1 = **14/dia ⇒ 196 em 14 dias, abaixo dos 200**. Ou seja: ao 14.º dia o medidor diz
+ * `completo` (conta ganhos, por desenho) e a carteira tem 196 — não chega para um lance de 200.
+ * Para o ciclo fechar também do lado LÍQUIDO com 1 lance/dia seriam precisos **15 dias** (225 bruto /
+ * 210 líquido). **Decisão do operador (R18)**: mantém-se 14 dias por agora; o número está aqui à vista
+ * para a próxima revisão. Quem dá lances maiores gasta mais por dia, mas também recebe o +10 do dia.
+ *
  * ⚠️ Nada aqui CREDITA: o crédito é das fontes (`creditarLoginDiario`, `creditarMissaoLance`, …); este
  * bloco define o ALVO e mede o progresso. O Passe é atalho (+200), nunca condição.
  */
