@@ -1,0 +1,32 @@
+[
+  {
+    "resultado": {
+      "anonimizado": {
+        "cotas_pagas": 0,
+        "eco_quildo": 0,
+        "fila_tarefas": 0,
+        "fila_tarefas_legado": 0,
+        "google_play_compras": 0,
+        "passes": 0,
+        "resgates": 0,
+        "saldo_rs_creditos": 0,
+        "saldo_rs_debitos": 0,
+        "wallet_idem": 0
+      },
+      "deletado": {
+        "atividade_utilizadores": 0,
+        "cotas": 0,
+        "lances": 0,
+        "lojistas": 0,
+        "palpites": 0,
+        "pontos": 0,
+        "pontuacoes": 0,
+        "rankings_ciclo": 0,
+        "saldo_rs": 0,
+        "troco_senhas": 0,
+        "wallet": 0
+      },
+      "dryRun": true
+    }
+  }
+]
