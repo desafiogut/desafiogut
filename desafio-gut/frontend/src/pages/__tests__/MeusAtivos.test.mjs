@@ -183,7 +183,12 @@ describe("MC94 · MeusAtivos — as secções novas estão na página", () => {
     }));
     assert.match(t, /2º/, "não mostra a posição");
     assert.match(t, /\b9\b/, "não mostra os pontos");
-    assert.match(t, /20/, "não mostra as senhas a creditar");
+    // ⚠️ UTAC110j.5 — ALTERADO (declarado): o bónus de 5 acertos é pago em +50 PONTOS de lance (UTAC110n);
+    // o «🎟️ Bônus de senhas» (`EstadoBonus`, senhas a creditar/liquidar) saiu da página.
+    // Antes: assert.match(t, /20/, "não mostra as senhas a creditar");
+    assert.match(t, /\+50 pontos de lance creditados/, "não mostra o bónus em pontos de lance");
+    // SEG5/V4: a 1.ª versão só exigia «+50 pontos de lance» — que TAMBÉM aparece no estado sem bónus (vácua).
+    assert.doesNotMatch(t, /senhas a creditar|Bônus de senhas/i, "a página voltou a falar do bónus em senhas");
     assert.match(t, /você|voce/i, "não destaca o próprio no ranking");
   });
 
@@ -401,9 +406,12 @@ describe("MC94 · MeusAtivos — cablagem: os dados chegam às secções", () =>
     // UTAC110j.4b: as asserções de posição/pontos do `painel-torneio` saíram com o painel (motor MC93).
     assert.match(dentro("progresso-bonus"), /\b3\b[\s\S]*\/\s*5/, "a sequência não chega ao progresso");
     assert.match(dentro("progresso-bonus"), /Faltam 2 acertos/, "o `faltamParaBonus` não chega ao progresso");
-    assert.match(dentro("estado-bonus"), /\b40\s+senhas\b/,
-      "o `senhasACreditar` não chega ao estado do bónus — ou está em literal");
-    assert.match(dentro("estado-bonus"), /A creditar/i, "o `liquidado: false` não chega");
+    // ⚠️ UTAC110j.5 — ALTERADO (declarado): o bónus de 5 acertos é pago em +50 PONTOS de lance (UTAC110n);
+    // o «🎟️ Bônus de senhas» (`EstadoBonus`, senhas a creditar/liquidar) saiu da página.
+    // Antes: /\b40\s+senhas\b/ (`senhasACreditar`) e /A creditar/ (`liquidado: false`) no estado do bónus.
+    // Invariante mantida: o campo do feedback que decide (`bonusEmitido`) chega ao sítio certo.
+    assert.match(dentro("estado-bonus"), /\+50 pontos de lance/, "o `bonusEmitido: true` não chega ao estado do bónus");
+    assert.match(html.slice(html.indexOf('data-secao="estado-bonus"')), /^[^]*?data-estado="com-bonus"/);
   });
 
   test("⚠️ as secções NÃO se contradizem quando a sequência está completa", () => {
@@ -431,6 +439,10 @@ describe("MC94 · MeusAtivos — cablagem: os dados chegam às secções", () =>
       "declara o bónus a partir de uma conta local e contradiz a secção ao lado");
   });
 
+  // ⚠️ UTAC110j.5 — ALTERADO (declarado): o bónus de 5 acertos é pago em +50 PONTOS de lance (UTAC110n);
+  // o «🎟️ Bônus de senhas» (`EstadoBonus`, senhas a creditar/liquidar) saiu da página.
+  // Antes: /Já creditadas/ (senhas liquidadas pela coordenação). Os pontos são creditados no fecho do ciclo —
+  // não há fase «a creditar»; a invariante (não prometer de novo) mantém-se.
   test("com bónus já LIQUIDADO, a página não promete creditar outra vez", () => {
     const t = texto(renderizar({
       contexto: { address: EU, authToken: "tok", isConnected: true },
@@ -445,8 +457,8 @@ describe("MC94 · MeusAtivos — cablagem: os dados chegam às secções", () =>
         },
       },
     }));
-    assert.match(t, /Já creditadas/i);
-    assert.doesNotMatch(t, /A creditar/i, "promete creditar senhas que já foram creditadas");
+    assert.match(t, /\+50 pontos de lance creditados/i);
+    assert.doesNotMatch(t, /A creditar/i, "promete creditar o que já foi creditado");
   });
 });
 

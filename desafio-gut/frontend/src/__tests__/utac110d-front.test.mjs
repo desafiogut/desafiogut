@@ -79,7 +79,10 @@ test("A · os dois Passes: endpoint, nome e benefício certos; tipo só por chav
   assert.equal(PONTOS_FIDELIDADE_POR_PASSE, 10);
   assert.equal(passeDoTipo("relampago").endpoint, "comprar-passe-relampago");
   assert.equal(passeDoTipo("programado").endpoint, "comprar-passe-programado");
-  assert.match(passeDoTipo("relampago").beneficio, /10 pontos \+ 1 lance/);
+  // ⚠️ UTAC110j.5 — ALTERADO (declarado): o lance gasta PONTOS de lance pelo seu valor (backend UTAC110n).
+  // Antes: assert.match(passeDoTipo("relampago").beneficio, /10 pontos \+ 1 lance/);
+  assert.match(passeDoTipo("relampago").beneficio, /10 pontos de fidelidade \+ 200 pontos de lance/);
+  assert.doesNotMatch(passeDoTipo("relampago").beneficio, /1 lance/);
   assert.match(passeDoTipo("programado").beneficio, /10 pontos \+ 1 palpite/);
   for (const t of ["", "pontos", "constructor", "__proto__", "toString", 1, null, undefined, "Relampago"]) {
     assert.equal(passeDoTipo(t), null, `tipo ${String(t)} escolheu um Passe`);
@@ -153,27 +156,33 @@ const bloco = (h, nome) => {
 
 test("C · a Carteira mostra os DOIS saldos: pontos de CARTÃO «X / 50» (não o total) e créditos de lance", async () => {
   // `pontos` (total, com bónus) ≠ `pontosCartao` (só compras): um ecrã ligado ao campo errado mostra 37.
-  const h = await carteiraCom({ ok: true, pontos: 37, pontosCartao: 30, pontosParaCartao: 50, lance: { creditos: 3 } });
+  const h = await carteiraCom({ ok: true, pontos: 37, pontosCartao: 30, pontosParaCartao: 50, lance: { creditos: 3, pontos: 120, historico: [] } });
   const fid = semTags(bloco(h, "fidelidade"));
   assert.match(fid, /Pontos de fidelidade 30 \/ 50/, `pontos de cartão errados: «${fid}»`);
   assert.doesNotMatch(fid, /37/, "a Carteira mostrou o TOTAL (com bónus) — o cartão conta só as compras");
   assert.match(bloco(h, "fidelidade"), /data-barra-cartao="" style="width:60%/, "a barra não está a 60 % (30/50)");
   assert.match(bloco(h, "fidelidade"), /role="progressbar"[^>]*aria-valuenow="30"/, "a barra não anuncia o valor");
-  const cr = semTags(bloco(h, "creditos"));
-  assert.match(cr, /Créditos de lance 3 disponíveis/, `créditos errados: «${cr}»`);
+  // ⚠️ UTAC110j.5 — ALTERADO (declarado): o lance gasta PONTOS de lance pelo seu valor (backend UTAC110n).
+  // Antes: bloco "creditos" → /Créditos de lance 3 disponíveis/ (com `lance: { creditos: 3 }`).
+  const cr = semTags(bloco(h, "pontos-lance"));
+  assert.match(cr, /Pontos de lance 120 /, `pontos de lance errados: «${cr}»`);
+  assert.doesNotMatch(h, /Créditos de lance/, "a Carteira voltou a falar em créditos de lance");
   // Regra 1: os dois saldos vivem DENTRO do vidro do saldo (o 1.º GlassCard).
   const vidro = h.indexOf("gut-glass-standard");
   assert.ok(vidro >= 0 && vidro < h.indexOf("data-saldos-passe"), "os saldos estão fora do vidro");
 });
 
-test("C · BIDIRECCIONAL da barra: 0 pontos → 0 %; ≥ 50 → 100 % (nunca passa do fim); 1 crédito → singular", async () => {
-  const h0 = await carteiraCom({ ok: true, pontos: 0, pontosCartao: 0, lance: { creditos: 1 } });
+test("C · BIDIRECCIONAL da barra: 0 pontos → 0 %; ≥ 50 → 100 % (nunca passa do fim); pontos de lance 0 e ilegível", async () => {
+  // ⚠️ UTAC110j.5 — ALTERADO (declarado): o lance gasta PONTOS de lance pelo seu valor (backend UTAC110n).
+  // Antes: «1 crédito → singular» (Créditos de lance 1 disponível / 0 disponíveis).
+  const h0 = await carteiraCom({ ok: true, pontos: 0, pontosCartao: 0, lance: { creditos: 1, pontos: 0, historico: [] } });
   assert.match(bloco(h0, "fidelidade"), /width:0%/);
-  assert.match(semTags(bloco(h0, "creditos")), /Créditos de lance 1 disponível(?!eis)/);
+  assert.match(semTags(bloco(h0, "pontos-lance")), /Pontos de lance 0 /);
   const h60 = await carteiraCom({ ok: true, pontos: 60, pontosCartao: 60, lance: { creditos: 0 } });
   assert.match(semTags(bloco(h60, "fidelidade")), /60 \/ 50/);
   assert.match(bloco(h60, "fidelidade"), /width:100%/, "a barra passou de 100 %");
-  assert.match(semTags(bloco(h60, "creditos")), /Créditos de lance 0 disponíveis/);
+  // Bloco `lance` ilegível (sem `pontos`/`historico`) → «—», nunca um 0 inventado.
+  assert.match(semTags(bloco(h60, "pontos-lance")), /Pontos de lance — /);
 });
 
 test("C · erro de leitura → «—» e aviso vermelho (não se inventa 0)", async () => {
@@ -185,8 +194,10 @@ test("C · erro de leitura → «—» e aviso vermelho (não se inventa 0)", as
     h = renderToStaticMarkup(React.createElement(React.Fragment, null, c.resultado()));
   } finally { dup.restaurar(); }
   assert.match(semTags(bloco(h, "fidelidade")), /— \/ 50/);
-  assert.match(semTags(bloco(h, "creditos")), /Créditos de lance —/);
-  assert.match(h, /color:#ef4444[^>]*>⚠️ Não foi possível ler seus pontos e créditos agora\./);
+  // ⚠️ UTAC110j.5 — ALTERADO (declarado): o lance gasta PONTOS de lance pelo seu valor (backend UTAC110n).
+  // Antes: /Créditos de lance —/ e «⚠️ Não foi possível ler seus pontos e créditos agora.»
+  assert.match(semTags(bloco(h, "pontos-lance")), /Pontos de lance —/);
+  assert.match(h, /color:#ef4444[^>]*>⚠️ Não foi possível ler seus pontos agora\./);
 });
 
 // ═══ D — CardLance REAL (Relâmpago) ════════════════════════════════════════════════
@@ -205,21 +216,31 @@ const textoDe = (n) => n == null || typeof n === "boolean" ? ""
   : (typeof n === "string" || typeof n === "number") ? String(n)
   : Array.isArray(n) ? n.map(textoDe).join("") : n.props ? textoDe(n.props.children) : "";
 
-/** Monta o CardLance real com um servidor duplo. `estado.creditos` é o ledger do servidor. */
-async function cardLance({ creditos, modalidade = "flash", lerFalha = false, ctx = {} }) {
+/** Monta o CardLance real com um servidor duplo. `estado.pontos` é o ledger de PONTOS de lance do servidor.
+ *  ⚠️ UTAC110j.5 — ALTERADO (declarado): o lance gasta PONTOS de lance pelo seu valor (backend UTAC110n).
+ *  Antes: `estado.creditos`, 1 crédito por lance, 400 `sem_creditos_lance`. Agora espelha `lance-relampago.mjs`:
+ *  debita o VALOR, 400 `saldo_pontos_insuficiente` com `pontosLance`/`pontosNecessarios`, 201 com
+ *  `pontosLanceConsumidos`/`pontosLanceRestantes`. */
+async function cardLance({ pontos, modalidade = "flash", lerFalha = false, ctx = {} }) {
   const address = novoEndereco();
   definirContexto({ ...contexto(address), ...ctx });
-  const estado = { creditos, lances: 0 };
+  const estado = { pontos, lances: 0 };
   const dup = duploDeFetch((url, opts) => {
     if (LER_PONTOS.test(url)) {
-      return lerFalha ? { status: 500, json: {} } : { status: 200, json: { ok: true, pontos: 0, pontosCartao: 0, lance: { creditos: estado.creditos } } };
+      return lerFalha ? { status: 500, json: {} }
+        : { status: 200, json: { ok: true, pontos: 0, pontosCartao: 0, lance: { creditos: 0, pontos: estado.pontos, historico: [] } } };
     }
     if (/auth-lance$/.test(url)) return { status: 200, json: { token: "LANCE-AUTH", ttl: 600 } };
     if (/lance-relampago$/.test(url)) {
-      if (estado.creditos < 1) return { status: 400, json: { error: { code: "sem_creditos_lance" } } };
-      estado.creditos -= 1; estado.lances += 1;
       const corpo = JSON.parse(opts.body);
-      return { status: 200, json: { ok: true, lanceId: `L-${estado.lances}`, edicaoId: corpo.edicaoId, creditosLanceRestantes: estado.creditos } };
+      const v = corpo.valorCentavos;
+      if (estado.pontos < v) {
+        return { status: 400, json: { error: { code: "saldo_pontos_insuficiente", message: "x", pontosLance: estado.pontos, pontosNecessarios: v } } };
+      }
+      estado.pontos -= v; estado.lances += 1;
+      return { status: 201, json: { ok: true, lanceId: `L-${estado.lances}`, edicaoId: corpo.edicaoId,
+        creditoLanceConsumido: false, creditosLanceRestantes: null,
+        pontosLanceConsumidos: v, pontosLanceRestantes: estado.pontos } };
     }
     return { status: 404, json: {} };
   });
@@ -246,78 +267,103 @@ async function cardLance({ creditos, modalidade = "flash", lerFalha = false, ctx
   return { c, dup, estado, botaoLance, html, escrever, fim: restaurar };
 }
 
-test("D · BIDIRECCIONAL — com créditos o «Dar lance» fica ACTIVO; com 0 fica DESLIGADO + «Adquira um Passe Relâmpago»", async () => {
-  const com = await cardLance({ creditos: 3 });
+// ⚠️ UTAC110j.5 — ALTERADO (declarado): o lance gasta PONTOS de lance pelo seu valor (backend UTAC110n).
+// Os 5 testes D antigos (créditos: «⚡ N créditos», `data-creditos-lance`, «Adquira um Passe Relâmpago»,
+// 400 `sem_creditos_lance`, X → X−1) foram reescritos para PONTOS, com a mesma estrutura e as mesmas invariantes:
+// bidireccional activo/desligado, fail-closed na leitura, releitura depois do lance, 400 com mensagem clara e
+// o ramo Programado independente.
+test("D · BIDIRECCIONAL — com pontos ≥ valor o «Dar lance» fica ACTIVO; com 0, ou valor acima do saldo, DESLIGADO + atalho", async () => {
+  const com = await cardLance({ pontos: 40 });
   try {
-    await com.escrever("5");
-    assert.equal(com.botaoLance().props.disabled, false, "com 3 créditos o botão devia estar activo");
-    assert.match(semTags(com.html()), /⚡ 3 créditos/, "o saldo de créditos não aparece no cartão");
-    assert.doesNotMatch(com.html(), /data-creditos-lance=/, "com créditos não há aviso");
+    await com.escrever("37");
+    assert.equal(com.botaoLance().props.disabled, false, "com 40 pontos um lance de 37 devia estar activo");
+    const t = semTags(com.html());
+    assert.match(t, /⭐ 40 pontos de lance/, "o saldo de pontos não aparece no cartão");
+    assert.match(t, /Este lance custa 37 pontos de lance · seu saldo: 40 pontos de lance/, "o custo do lance não aparece");
+    assert.doesNotMatch(com.html(), /data-pontos-lance=/, "com saldo que chega não há aviso");
+    assert.doesNotMatch(t, /crédito/, "o formulário ainda fala em créditos");
   } finally { com.fim(); }
 
-  const sem = await cardLance({ creditos: 0 });
+  const acima = await cardLance({ pontos: 40 });
+  try {
+    await acima.escrever("41");
+    const b = acima.botaoLance();
+    assert.equal(b.props.disabled, true, "um lance acima do saldo devia ficar desligado");
+    assert.match(b.props.title, /este lance custa 41 pontos de lance e você tem 40/);
+    const h = acima.html();
+    assert.match(h, /data-pontos-lance="insuficiente"[^>]*>Saldo insuficiente: este lance custa 41 pontos de lance e você tem 40/);
+    assert.match(h, /data-atalho-pontos="" [^>]*>Ver missões de hoje →/, "falta o atalho para ganhar pontos");
+    assert.match(h, /href="\/carteira"[^>]*data-atalho-pontos/);
+  } finally { acima.fim(); }
+
+  const sem = await cardLance({ pontos: 0 });
   try {
     await sem.escrever("5");
-    const b = sem.botaoLance();
-    assert.equal(b.props.disabled, true, "com 0 créditos o botão devia estar desligado");
-    assert.match(b.props.title, /Adquira um Passe Relâmpago/, "o motivo não está no title do botão");
+    assert.equal(sem.botaoLance().props.disabled, true, "com 0 pontos o botão devia estar desligado");
     const h = sem.html();
-    assert.match(h, /data-creditos-lance="sem_creditos"[^>]*>Sem créditos de lance\. Adquira um Passe Relâmpago na Carteira/,
-      "sem créditos, a mensagem não aparece À VISTA");
-    assert.match(semTags(h), /⚡ 0 créditos/);
+    assert.match(h, /data-pontos-lance="sem_pontos"[^>]*>Você não tem pontos de lance\. Ganhe pontos grátis: login diário \(\+5\) e missão do dia \(\+10\)/);
+    assert.match(h, /data-atalho-pontos=""/);
+    assert.match(semTags(h), /⭐ 0 pontos de lance/);
   } finally { sem.fim(); }
 });
 
-test("D · leitura dos créditos a falhar → botão DESLIGADO + erro visível (fail-closed)", async () => {
-  const x = await cardLance({ creditos: 9, lerFalha: true });
+test("D · leitura dos pontos a falhar → botão DESLIGADO + erro visível (fail-closed)", async () => {
+  const x = await cardLance({ pontos: 900, lerFalha: true });
   try {
     await x.escrever("5");
     assert.equal(x.botaoLance().props.disabled, true);
-    assert.match(x.html(), /data-creditos-lance="erro"[^>]*>⚠️ Não foi possível ler seus créditos de lance/);
+    assert.match(x.html(), /data-pontos-lance="erro"[^>]*>⚠️ Não foi possível ler seus pontos de lance/);
+    assert.doesNotMatch(x.html(), /data-atalho-pontos/, "num erro de leitura não se manda ganhar pontos");
   } finally { x.fim(); }
 });
 
-test("D · depois de dar um lance os créditos RELÊEM-SE: X → X−1 no ecrã (e o último deixa o botão desligado)", async () => {
-  const x = await cardLance({ creditos: 2 });
+test("D · depois de dar um lance os pontos RELÊEM-SE: X → X − valor, e o ecrã mostra o que o SERVIDOR gastou", async () => {
+  const x = await cardLance({ pontos: 50 });
   try {
-    await x.escrever("7");
-    assert.match(semTags(x.html()), /⚡ 2 créditos/);
+    await x.escrever("37");
+    assert.match(semTags(x.html()), /⭐ 50 pontos de lance/);
     await x.botaoLance().props.onClick();
     await x.c.assentar();
     assert.equal(x.estado.lances, 1, "o lance não chegou ao servidor");
-    assert.match(semTags(x.html()), /✅ Lance registrado!/, "o lance não deu sucesso");
-    assert.match(semTags(x.html()), /⚡ 1 crédito\b/, `os créditos não desceram para 1: «${semTags(x.html())}»`);
+    const t = semTags(x.html());
+    assert.match(t, /✅ Lance registrado!/, "o lance não deu sucesso");
+    assert.match(t, /−37 pontos de lance · restam 13 pontos de lance/, `o gasto do servidor não aparece: «${t}»`);
+    assert.match(t, /⭐ 13 pontos de lance/, `os pontos não desceram para 13: «${t}»`);
 
-    await x.escrever("8");
+    await x.escrever("14");
+    assert.equal(x.botaoLance().props.disabled, true, "14 > 13: o botão devia desligar");
+    await x.escrever("13");
     await new Promise((r) => setTimeout(r, 3100)); // cooldown do rate limiter (3 s)
     await x.botaoLance().props.onClick();
     await x.c.assentar();
     assert.equal(x.estado.lances, 2);
-    assert.match(semTags(x.html()), /⚡ 0 créditos/);
-    await x.escrever("9");
-    assert.equal(x.botaoLance().props.disabled, true, "sem créditos depois do último lance, o botão devia desligar");
+    assert.match(semTags(x.html()), /⭐ 0 pontos de lance/);
+    await x.escrever("1");
+    assert.equal(x.botaoLance().props.disabled, true, "sem pontos depois do último lance, o botão devia desligar");
   } finally { x.fim(); }
 });
 
-test("D · o servidor recusa por falta de créditos (400 `sem_creditos_lance`) → mensagem CLARA, não genérica", async () => {
-  // Corrida: o ecrã ainda mostra 1 crédito mas o servidor já não tem (gasto noutro aparelho).
-  const x = await cardLance({ creditos: 1 });
+test("D · o servidor recusa por saldo (400 `saldo_pontos_insuficiente`) → mensagem CLARA com os números, e relê", async () => {
+  // Corrida: o ecrã ainda mostra 40 pontos mas o servidor já só tem 3 (gastos noutro aparelho).
+  const x = await cardLance({ pontos: 40 });
   try {
-    await x.escrever("4");
-    x.estado.creditos = 0;
+    await x.escrever("20");
+    x.estado.pontos = 3;
     await x.botaoLance().props.onClick();
     await x.c.assentar();
-    assert.match(x.html(), /⚠️ Sem créditos de lance\. Adquira um Passe Relâmpago na Carteira/);
-    assert.match(semTags(x.html()), /⚡ 0 créditos/, "depois do 400 os créditos não foram relidos");
+    assert.match(x.html(), /⚠️ Saldo de pontos de lance insuficiente: este lance custa 20 pontos e você tem 3\./);
+    assert.doesNotMatch(x.html(), /Sem créditos de lance/);
+    assert.match(semTags(x.html()), /⭐ 3 pontos de lance/, "depois do 400 os pontos não foram relidos");
   } finally { x.fim(); }
 });
 
-test("D · o modo Programado NÃO depende dos créditos de lance (senhas): 0 créditos não o bloqueia", async () => {
-  const x = await cardLance({ creditos: 0, modalidade: "programado", ctx: { saldoSenhas: 2, saldoSenhasStatus: "ok" } });
+test("D · o modo Programado NÃO depende dos pontos de lance (senhas): 0 pontos não o bloqueia", async () => {
+  const x = await cardLance({ pontos: 0, modalidade: "programado", ctx: { saldoSenhas: 2, saldoSenhasStatus: "ok" } });
   try {
     await x.escrever("5");
-    assert.equal(x.botaoLance().props.disabled, false, "o Programado ficou bloqueado pelos créditos de lance");
-    assert.doesNotMatch(x.html(), /data-creditos-lance=/);
+    assert.equal(x.botaoLance().props.disabled, false, "o Programado ficou bloqueado pelos pontos de lance");
+    assert.doesNotMatch(x.html(), /data-pontos-lance=/);
+    assert.doesNotMatch(x.html(), /data-custo-lance/, "o custo em pontos não é do ramo Programado");
   } finally { x.fim(); }
 });
 
@@ -353,12 +399,14 @@ test("SEG5/V2 · a Carteira passa ao balão os pontos de CARTÃO (não o total) 
   } finally { dup.restaurar(); }
 });
 
-test("SEG5/ℹ️ · sem `authToken` ainda (sessão por cunhar) o CardLance diz «Carregando», não «Sem créditos»", async () => {
-  const x = await cardLance({ creditos: 5, ctx: { authToken: null } });
+test("SEG5/ℹ️ · sem `authToken` ainda (sessão por cunhar) o CardLance diz «Carregando», não «sem pontos»", async () => {
+  // ⚠️ UTAC110j.5 — ALTERADO (declarado): o lance gasta PONTOS de lance pelo seu valor (backend UTAC110n).
+  // Antes: data-creditos-lance="carregando" / "sem_creditos".
+  const x = await cardLance({ pontos: 5, ctx: { authToken: null } });
   try {
     await x.escrever("5");
     assert.equal(x.botaoLance().props.disabled, true, "sem token o lance não pode abrir");
-    assert.match(x.html(), /data-creditos-lance="carregando"/);
-    assert.doesNotMatch(x.html(), /data-creditos-lance="sem_creditos"/, "mostrou «Sem créditos» enquanto a sessão nasce");
+    assert.match(x.html(), /data-pontos-lance="carregando"/);
+    assert.doesNotMatch(x.html(), /data-pontos-lance="sem_pontos"/, "mostrou «sem pontos» enquanto a sessão nasce");
   } finally { x.fim(); }
 });

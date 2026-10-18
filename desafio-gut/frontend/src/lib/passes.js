@@ -2,10 +2,14 @@
 // créditos de lance. Puro: sem React, sem rede — testável com `node --test`.
 //
 // Backend (UTAC110d, não tocado aqui):
-//   POST /comprar-passe-relampago → R$ 2,00 → 10 pontos de fidelidade + 1 CRÉDITO de lance;
+//   POST /comprar-passe-relampago → R$ 2,00 → 10 pontos de fidelidade + 200 PONTOS de lance (UTAC110n;
+//     até ao UTAC110n dava 1 CRÉDITO de lance) + 1 ECOQUILDO;
 //   POST /comprar-passe-programado → R$ 2,00 → 10 pontos de fidelidade (+ o direito ao palpite);
 //   GET  /ler-pontos → { …, fidelidade:{total,historico}, lance:{creditos,pontos,historico} };
-//   POST /lance-relampago (Relâmpago) consome 1 crédito → 400 `sem_creditos_lance` sem créditos.
+//   POST /lance-relampago (Relâmpago) GASTA o valor do lance em pontos → 400 `saldo_pontos_insuficiente`
+//     (UTAC110n; o `sem_creditos_lance` do 110d deixou de existir). ⚠️ UTAC110j.5: `estadoCreditosLance`,
+//     `rotuloCreditos` e `creditosDaResposta` abaixo ficam como LEGADO — o CardLance usa
+//     `estadoPontosLance` (`lib/pontosLance.js`).
 // O tipo do Passe vem do ENDPOINT, nunca do corpo (`_lib/comprar-passe-tipado.mjs`).
 
 export const PRECO_PASSE = "R$ 2,00";
@@ -19,8 +23,11 @@ export const TIPOS_PASSE = Object.freeze({
     endpoint: "comprar-passe-relampago",
     nome: "Passe Relâmpago",
     icone: "⚡",
-    beneficio: "10 pontos + 1 lance no Menor Lance Único",
-    sucesso: "Passe Relâmpago comprado: +10 pontos e 1 lance",
+    // UTAC110j.5 — o backend (UTAC110n) deixou de dar 1 CRÉDITO e passou a dar +200 PONTOS de lance
+    // (`ledger-lance.mjs` PONTOS_LANCE_POR_PASSE_RELAMPAGO) + 1 ECOQUILDO. Texto antigo, por histórico:
+    //   beneficio: "10 pontos + 1 lance no Menor Lance Único" · sucesso: "Passe Relâmpago comprado: +10 pontos e 1 lance"
+    beneficio: "10 pontos de fidelidade + 200 pontos de lance + 1 ECOQUILDO",
+    sucesso: "Passe Relâmpago comprado: +10 pontos de fidelidade e +200 pontos de lance",
   }),
   programado: Object.freeze({
     tipo: "programado",

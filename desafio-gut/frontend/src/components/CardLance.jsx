@@ -26,8 +26,11 @@ import useTrocarPorSenhas from "../hooks/useTrocarPorSenhas.js";
 // UTAC110d-front (Frente C) — o lance Relâmpago consome 1 CRÉDITO de lance no servidor
 // (`lance-relampago.mjs`, UTAC110d; o débito em R$ está desligado por `DEBITO_SALDO_LANCE_ATIVO`).
 // O botão passa a depender dos créditos (`ler-pontos` → `lance.creditos`), não do saldo R$.
+// ⚠️ UTAC110j.5: SUPERADO pelo UTAC110n — o lance gasta PONTOS (`lance.pontos`) pelo seu valor; ver abaixo.
 import { usePontos } from "../hooks/usePontos.js";
-import { estadoCreditosLance, rotuloCreditos } from "../lib/passes.js";
+// UTAC110j.5 — o lance GASTA o seu valor em pontos de lance (backend UTAC110n). O estado por créditos
+// (`estadoCreditosLance`/`rotuloCreditos` de `lib/passes.js`) deixou de ser usado aqui; fica como legado.
+import { estadoPontosLance, rotuloPontosLance } from "../lib/pontosLance.js";
 
 const SEPOLIA_CHAIN_ID = CHAIN_ID_DEC;
 
@@ -49,6 +52,15 @@ const FASES = {
   SUCESSO:      "sucesso",
   ERRO:         "erro",
 };
+
+/** UTAC110j.5 — texto do 400 `saldo_pontos_insuficiente` com os números do servidor (sem coerção). */
+export function mensagemSaldoInsuficiente(erroServidor, valorCentavos) {
+  const tem = Number.isSafeInteger(erroServidor?.pontosLance) ? erroServidor.pontosLance : null;
+  const precisa = Number.isSafeInteger(erroServidor?.pontosNecessarios) ? erroServidor.pontosNecessarios : valorCentavos;
+  return `Saldo de pontos de lance insuficiente: este lance custa ${precisa} pontos`
+    + (tem !== null ? ` e você tem ${tem}` : "")
+    + ". Ganhe pontos grátis com o login diário e a missão do dia (veja na Carteira).";
+}
 
 export default function CardLance({
   idEdicao,
@@ -84,9 +96,10 @@ export default function CardLance({
   // MC91.11 — conversão automática R$ → senha (programado sem senha on-chain).
   const { trocarPorSenhas } = useTrocarPorSenhas();
 
-  // UTAC110d-front — créditos de lance do titular (Relâmpago).
+  // UTAC110d-front — créditos de lance do titular (Relâmpago). UTAC110j.5 — passou a ser o SALDO DE PONTOS
+  // de lance (`lance.pontos` do `ler-pontos`): é ele que o servidor debita pelo valor do lance.
   const {
-    creditosLance, loading: creditosCarregando, erro: creditosErro, refetch: refetchCreditos,
+    lance: pontosLanceLidos, loading: pontosCarregando, erro: pontosErro, refetch: refetchPontosLance,
   } = usePontos();
 
   const [valor,             setValor]             = useState("");
@@ -120,12 +133,16 @@ export default function CardLance({
   const semFichas       = isProgramado && saldoSenhas != null && saldoSenhas <= 0 &&
                           saldoRsCentavos !== null && saldoRsCentavos < 200;
   // UTAC110d-front — saiu o bloqueio «saldo R$ < valor do lance»: o lance Relâmpago já não debita
-  // R$ no servidor; o que o bloqueia agora é não ter créditos de lance (fail-closed: a carregar,
-  // em erro ou com 0 → botão desligado + mensagem).
-  const creditos = estadoCreditosLance({
-    isConnected, creditos: creditosLance, loading: creditosCarregando || (isConnected && !authToken), erro: creditosErro,
+  // R$ no servidor. UTAC110j.5 — o que o bloqueia agora é o SALDO DE PONTOS de lance: o lance custa o
+  // seu valor (1 ponto = R$ 0,01, Art. 18º) e só se pode licitar até ao saldo (fail-closed: a carregar,
+  // em erro, com 0 ou com o valor acima do saldo → botão desligado + mensagem À VISTA).
+  const pontosL = estadoPontosLance({
+    isConnected, pontos: pontosLanceLidos?.pontos, valor,
+    loading: pontosCarregando || (isConnected && !authToken), erro: pontosErro,
   });
-  const semCreditosFlash = !isProgramado && isConnected && !creditos.podeLancar;
+  const semPontosFlash = !isProgramado && isConnected && !pontosL.podeLancar;
+  // UTAC110j.5 — o que o servidor devolveu no último lance (`pontosLanceConsumidos/Restantes`).
+  const [ultimoGasto, setUltimoGasto] = useState(null);
 
   // Obtém token JWT de auth para flash (cached 10min). Abre popup Privy só se expirado.
   async function getFlashAuthToken() {
@@ -253,13 +270,14 @@ export default function CardLance({
             token_invalido:           "Falha na autenticação. Tente novamente.",
             endereco_nao_corresponde: "Endereço divergente. Saia e entre novamente.",
             senhas_insuficientes:     MSG_PROGRAMADO_LEGADO, // UTAC110j — código do ramo legado
-            // UTAC110d-front — os códigos novos do consumo de crédito (`lance-relampago.mjs`).
-            sem_creditos_lance:       "Sem créditos de lance. Adquira um Passe Relâmpago na Carteira para dar um lance.",
-            consumo_credito_falhou:   "Não foi possível usar seu crédito de lance. Tente novamente.",
+            // UTAC110j.5 — os códigos do consumo de PONTOS (`lance-relampago.mjs`, UTAC110n). Os do 110d
+            // (`sem_creditos_lance`, `consumo_credito_falhou`) deixaram de ser emitidos pelo servidor.
+            saldo_pontos_insuficiente: mensagemSaldoInsuficiente(data?.error, valorCentavos),
+            consumo_pontos_falhou:    "Não foi possível usar seus pontos de lance. Tente novamente.",
             lance_em_processamento:   "Este lance já está sendo processado. Aguarde um instante.",
           };
-          // O servidor diz que não há créditos: relê-se para o ecrã não mentir.
-          if (data?.error?.code === "sem_creditos_lance") { try { refetchCreditos?.(); } catch {} }
+          // O servidor diz que não há pontos que cheguem: relê-se para o ecrã não mentir.
+          if (data?.error?.code === "saldo_pontos_insuficiente") { try { refetchPontosLance?.(); } catch {} }
           throw new Error(msgMap[data?.error?.code] ?? data?.error?.message ?? "Erro no lance relâmpago.");
         }
         registrarLance(address);
@@ -270,8 +288,13 @@ export default function CardLance({
         setFase(FASES.SUCESSO);
         setValor("");
         refetchSaldoRs();
-        // UTAC110d-front — o lance consumiu 1 crédito: relê os créditos (X → X−1 no ecrã).
-        try { refetchCreditos?.(); } catch {}
+        // UTAC110j.5 — o lance gastou o seu valor em pontos: mostra-se o que o SERVIDOR diz
+        // (`pontosLanceConsumidos/Restantes`) e relê-se o saldo (X → X − valor no ecrã).
+        setUltimoGasto(Number.isSafeInteger(data?.pontosLanceConsumidos)
+          ? { consumidos: data.pontosLanceConsumidos,
+              restantes: Number.isSafeInteger(data?.pontosLanceRestantes) ? data.pontosLanceRestantes : null }
+          : null);
+        try { refetchPontosLance?.(); } catch {}
         onLanceSucesso?.({ address, valorCentavos, txHash: data.lanceId, nomeExibicao: userLabel || null });
         return;
       }
@@ -342,10 +365,11 @@ export default function CardLance({
   let saldoPendente;
   if (!isProgramado) {
     // UTAC110d-front — no Relâmpago o que conta são os CRÉDITOS de lance (não o saldo R$).
+    // UTAC110j.5 — passou a ser o saldo de PONTOS de lance.
     saldoPendente = false;
-    saldoLabel = creditos.estado === "carregando" ? "⚡ … créditos"
-               : creditos.estado === "erro"       ? "⚡ — créditos ✗"
-               : `⚡ ${rotuloCreditos(creditosLance)}`;
+    saldoLabel = pontosL.estado === "carregando" ? "⭐ … pontos de lance"
+               : pontosL.estado === "erro"       ? "⭐ — pontos de lance ✗"
+               : `⭐ ${rotuloPontosLance(pontosL.saldo ?? 0)}`;
   } else {
     const n  = saldoSenhas;
     const sx = saldoSenhasStatus === "loading" ? " ⏳"
@@ -354,16 +378,16 @@ export default function CardLance({
     saldoLabel = `🔗 ${n ?? "—"} senha${n === 1 ? "" : "s"}${sx}`;
   }
   const saldoTitle = !isProgramado
-    ? `créditos de lance — estado: ${creditos.estado}`
+    ? `pontos de lance — estado: ${pontosL.estado}`
     : `saldo on-chain — status: ${saldoSenhasStatus}`;
 
   const desabilitado = !isConnected || ocupado || !valor || semFichas ||
-                       saldoCarregando || saldoErro || semCreditosFlash;
+                       saldoCarregando || saldoErro || semPontosFlash;
   const tooltipBotao =
     saldoErro       ? "Erro ao ler saldo. Verifique sua conexão." :
     saldoCarregando ? "Aguardando leitura do saldo on-chain." :
     semFichas       ? MSG_PROGRAMADO_LEGADO :
-    semCreditosFlash ? creditos.mensagem :
+    semPontosFlash ? pontosL.mensagem :
     "";
 
   const pipelineItens = !isProgramado
@@ -445,7 +469,7 @@ export default function CardLance({
         <p style={estilos.hintConexao}>
           {isProgramado
             ? MSG_PROGRAMADO_LEGADO
-            : "Cada lance consome 1 crédito de lance (Passe Relâmpago) · menor lance único vence."}
+            : "Cada lance gasta o seu valor em pontos de lance (um lance de 37 gasta 37) · menor lance único vence."}
         </p>
       </div>
 
@@ -471,6 +495,13 @@ export default function CardLance({
           {valorReais && <span style={estilos.valorPreview}>{valorReais}</span>}
         </div>
         <p style={estilos.hintInput}>Mín R$ 0,01 · Máx 5 lances/min · Cooldown 3s</p>
+        {/* UTAC110j.5 — o CUSTO do lance, em pontos, ao lado do saldo: o utilizador vê o que vai gastar. */}
+        {!isProgramado && isConnected && pontosL.custo !== null && (
+          <p data-custo-lance="" style={estilos.custoLance}>
+            Este lance custa <strong>{rotuloPontosLance(pontosL.custo)}</strong>
+            {pontosL.saldo !== null && <> · seu saldo: <strong>{rotuloPontosLance(pontosL.saldo)}</strong></>}
+          </p>
+        )}
       </div>
 
       {ocupado && (
@@ -509,6 +540,12 @@ export default function CardLance({
           ) : ultimaTx ? (
             <p style={estilos.txText}>🔗 Recibo: {ultimaTx.slice(0, 18)}…</p>
           ) : null}
+          {!isProgramado && ultimoGasto && (
+            <p data-gasto-lance="" style={estilos.txText}>
+              −{rotuloPontosLance(ultimoGasto.consumidos)}
+              {ultimoGasto.restantes !== null && <> · restam {rotuloPontosLance(ultimoGasto.restantes)}</>}
+            </p>
+          )}
         </div>
       )}
 
@@ -553,14 +590,22 @@ export default function CardLance({
       )}
 
       {/* UTAC110d-front (Frente C) — sem créditos de lance, o motivo fica À VISTA (não só no
-          `title` do botão desligado): a carregar, erro de leitura, ou «adquira um Passe Relâmpago». */}
-      {!isProgramado && !encerrado && semCreditosFlash && creditos.mensagem && (
+          `title` do botão desligado). UTAC110j.5 — em PONTOS: a carregar, erro de leitura, sem pontos ou
+          lance acima do saldo; nos dois últimos, um atalho para ganhar pontos (missões e login na Carteira). */}
+      {!isProgramado && !encerrado && semPontosFlash && pontosL.mensagem && (
         <div
           role="status"
-          data-creditos-lance={creditos.estado}
-          style={creditos.estado === "erro" ? estilos.boxErro : estilos.boxAvisoNeutro}
+          data-pontos-lance={pontosL.estado}
+          style={pontosL.estado === "erro" ? estilos.boxErro : estilos.boxAvisoNeutro}
         >
-          {creditos.mensagem}
+          {pontosL.mensagem}
+          {(pontosL.estado === "sem_pontos" || pontosL.estado === "insuficiente") && (
+            <>
+              {" "}
+              {/* <a> e não <Link>: o CardLance não depende do router (é montado em vários sítios). */}
+              <a href="/carteira" data-atalho-pontos="" style={estilos.atalhoPontos}>Ver missões de hoje →</a>
+            </>
+          )}
         </div>
       )}
 
@@ -613,6 +658,8 @@ const estilos = {
   input:            { width: "100%", padding: "0.75rem 1rem", background: "rgba(3,15,36,0.7)", border: "1px solid rgba(245,166,35,0.25)", borderRadius: "12px", color: "#e8f0fe", fontSize: "1rem", boxSizing: "border-box", outline: "none" },
   valorPreview:     { position: "absolute", right: "1rem", top: "50%", transform: "translateY(-50%)", color: "#fbbf24", fontWeight: "700", fontSize: "0.9rem", pointerEvents: "none" },
   hintInput:        { margin: 0, fontSize: "0.7rem", color: "#6b7db8" },
+  custoLance:       { margin: 0, fontSize: "0.8rem", color: "#e8f0fe" },
+  atalhoPontos:     { display: "inline-flex", alignItems: "center", minHeight: "44px", color: "#f5a623", fontWeight: "800", textDecoration: "underline" },
   pipeline:         { background: "rgba(3,15,36,0.6)", padding: "1rem", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "0.5rem", border: "1px solid rgba(245,166,35,0.15)" },
   pipelineItem:     { fontSize: "0.83rem", transition: "opacity 0.2s", color: "#e8f0fe" },
   boxSucesso:       { background: "rgba(16,185,129,0.12)", padding: "1rem", borderRadius: "12px", color: "#10b981", border: "1px solid rgba(16,185,129,0.3)" },

@@ -21,6 +21,13 @@ import { Link } from "react-router-dom";
 import { GlassCard } from "@/components/ui";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import REGULAMENTO_MD from "../../../../docs/REGULAMENTO-v5.md?raw";
+// UTAC110j.5 (Frente C) — as PROPORÇÕES FIXAS de pontos de lance (Google Play, Política de Programas de
+// Fidelidade Gamificados: «visíveis no app e nos termos oficiais»). O Regulamento v5.1 fixa 200 (Art. 17º)
+// e 1 ponto = R$ 0,01 (Art. 18º), mas NÃO os valores de cada fonte (Art. 16º só as enumera). O resumo vem
+// de `lib/pontosLance.js` (amarrado às constantes do backend por teste) e NÃO é escrito à mão aqui —
+// regra do UTAC110h. Fica ANTES do 1.º capítulo: o texto integral do Regulamento continua igual, palavra
+// a palavra (guarda `utac106h-regras`), e é ele que vincula.
+import { PROPORCOES_TEXTO } from "../lib/pontosLance.js";
 
 const COR = { text: "#e8f0fe", corpo: "#c9d3ee", muted: "#8f9cc8", gold: "#f5a623" };
 
@@ -122,6 +129,24 @@ export default function RegrasOficiais() {
             </a>
           ))}
         </nav>
+      </GlassCard>
+
+      {/* UTAC110j.5 — sem <section> de propósito: a guarda de cobertura do 110h começa no 1.º <section>. */}
+      <GlassCard className={cardCls}>
+        <div data-proporcoes="">
+          <h2 style={h2}>Proporções fixas dos pontos de lance</h2>
+          <p style={{ ...pArt, color: COR.muted, fontSize: "0.82rem" }}>
+            Resumo informativo dos valores do programa. O texto que vale é o Regulamento abaixo.
+          </p>
+          {PROPORCOES_TEXTO.map((bloco) => (
+            <div key={bloco.id} data-proporcao={bloco.id}>
+              <h3 style={h3}>{bloco.titulo}</h3>
+              <ul style={{ ...ul, margin: "0 0 0.9rem" }}>
+                {bloco.linhas.map((l) => <li key={l} style={li}>{l}</li>)}
+              </ul>
+            </div>
+          ))}
+        </div>
       </GlassCard>
 
       {REGULAMENTO.capitulos.map((c) => (

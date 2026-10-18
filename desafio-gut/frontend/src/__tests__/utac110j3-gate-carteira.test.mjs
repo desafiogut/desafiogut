@@ -155,7 +155,7 @@ async function carteira() {
   definirContexto(CONTEXTO);
   const dup = duploDeFetch((url) => (
     LER_PONTOS.test(url)
-      ? { status: 200, json: { ok: true, pontos: 37, pontosCartao: 30, pontosParaCartao: 50, lance: { creditos: 3 },
+      ? { status: 200, json: { ok: true, pontos: 37, pontosCartao: 30, pontosParaCartao: 50, lance: { creditos: 3, pontos: 3, historico: [] },
           missoesHoje: { dia: "2026-10-17", loginFeito: true, lanceFeito: false, pontosHoje: 5 } } }
       : LER_ECO.test(url) ? { status: 200, json: { ok: true, saldo: 5, historico: [], centavosPorEcoQuildo: 100 } }
       : { status: 404, json: {} }));
@@ -166,7 +166,9 @@ async function carteira() {
   } finally { dup.restaurar(); }
 }
 
-test("O1 · Saldo R$ → os 4 botões (na ordem de sempre) → Pontos → Créditos → ECOQUILDO → Missões", async () => {
+// ⚠️ UTAC110j.5 — ALTERADO (declarado): o card «⚡ Créditos de lance» passou a «⭐ Pontos de lance» (backend UTAC110n).
+// A ordem é a mesma: «Créditos» → «Pontos de lance» ocupa o mesmo lugar (antes: 'data-saldo="creditos"').
+test("O1 · Saldo R$ → os 4 botões (na ordem de sempre) → Pontos → Pontos de lance → ECOQUILDO → Missões", async () => {
   const h = await carteira();
   const ancoras = [
     ["saldo R$", "Saldo Disponível"],
@@ -175,7 +177,7 @@ test("O1 · Saldo R$ → os 4 botões (na ordem de sempre) → Pontos → Crédi
     ["MLU", "Menor Lance Único"],
     ["OP", "🎫 Ofertas Programadas"],
     ["pontos", 'data-saldo="fidelidade"'],
-    ["créditos", 'data-saldo="creditos"'],
+    ["pontos de lance", 'data-saldo="pontos-lance"'],
     ["ECOQUILDO", 'data-saldo="eco-quildo"'],
     ["missões", "data-missoes-hoje"],
   ].map(([nome, s]) => [nome, h.indexOf(s)]);
@@ -196,7 +198,8 @@ test("O2 · tudo continua DENTRO do 1.º vidro (Regra 1) e os cards mantêm o co
   }
   const t = semTags(h);
   assert.match(t, /Pontos de fidelidade 30 \/ 50/);
-  assert.match(t, /Créditos de lance 3 disponíveis/);
+  // Antes: assert.match(t, /Créditos de lance 3 disponíveis/);
+  assert.match(t, /Pontos de lance 3 Cada lance gasta o seu valor/);
   assert.match(t, /ECOQUILDO 5 Usável no site oficial/);
   assert.match(t, /Missões de hoje/);
 });

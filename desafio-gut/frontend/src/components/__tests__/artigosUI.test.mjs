@@ -109,6 +109,10 @@ const EXIGIDO_V5 = {
   "9":  ["cartão colecionável", "50"],
   "14": ["competição de habilidade", "menor lance único"],
   "16": ["pontos de lance", "engajamento"], // UTAC110j.4b — painel «Seus pontos de lance» de Meus Ativos
+  // UTAC110j.5 — as proporções fixas (Regras Oficiais, `lib/pontosLance.js`) citam o 17º e o 18º. Acrescento
+  // ao mapa (declarado); a regra é a mesma: o assunto tem de estar na linha E no artigo do v5.
+  "17": ["benefício suplementar", "taxa"],
+  "18": ["1 ponto", "R$ 0,01"],
   "27": ["palpite"],
   "47": ["ECOQUILDO", "R$ 1,00"],
   "49": ["ECOQUILDO", "convertível"],

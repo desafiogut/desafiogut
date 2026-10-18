@@ -8,6 +8,7 @@ import { useComprarPasse } from "../hooks/useComprarPasse.js";
 import { usePontos } from "../hooks/usePontos.js";
 import { useEcoQuildo } from "../hooks/useEcoQuildo.js";
 import { passeDoTipo } from "../lib/passes.js";
+import { conversoesFeitas } from "../lib/pontosLance.js"; // UTAC110j.5 — pontos de lance
 import ComprarPasseModal from "../components/ComprarPasseModal.jsx";
 import Toast from "../widgets/toast/Toast.jsx";
 import ComprarFichasModal from "../components/ComprarFichasModal.jsx";
@@ -103,7 +104,8 @@ export default function MinhaCarteira() {
   // UTAC110d-front (Frente A) — dois saldos SEPARADOS: pontos de CARTÃO (`pontosCartao`, só
   // compras — R1 do UTAC106f; é o mesmo número da barra das Ofertas Programadas) e créditos de lance.
   const {
-    pontosCartao, pontosParaCartao, creditosLance, missoesHoje, podeResgatarCartao,
+    // UTAC110j.5 — `creditosLance` deu lugar a `lance` (`{pontos, movimentos}`): o lance gasta PONTOS (UTAC110n).
+    pontosCartao, pontosParaCartao, lance: pontosLance, missoesHoje, podeResgatarCartao,
     loading: pontosCarregando, erro: pontosErro, refetch: refetchPontos,
   } = usePontos();
   // UTAC110g.1 (R18-110g.1-2) — resgate do cartão. O `podeResgatarCartao` acima é a verdade do
@@ -165,6 +167,9 @@ export default function MinhaCarteira() {
   // UTAC110e — a mesma leitura honesta serve o ECOQUILDO: passa-se o estado do hook dele.
   const textoSaldo = (n, carregando = pontosCarregando, erro = pontosErro) =>
     (carregando ? "…" : erro || n == null ? "—" : String(n));
+  // UTAC110j.5 — saldo de pontos de lance: `null` quando o bloco `lance` é ilegível (⇒ «—», nunca 0 inventado).
+  const saldoPontosLance = pontosLance ? pontosLance.pontos : null;
+  const conversao = conversoesFeitas(pontosLance);
 
   // UTAC110f-front — «Missões de hoje». Estado NEUTRO quando não se sabe (a carregar, erro, ou campo ilegível —
   // `missoesHoje === null`): não se afirma «feito» nem «pendente». ✓ feito = amarelo único `#f5a623`
@@ -412,7 +417,8 @@ export default function MinhaCarteira() {
 
               {/* UTAC110d-front (Frente A) — os DOIS saldos do programa, separados, DENTRO do vidro
                   do saldo (Regra 1): pontos de fidelidade (rumo ao cartão, X / 50 + barra) e
-                  créditos de lance (cada lance no Menor Lance Único consome 1). */}
+                  créditos de lance (cada lance no Menor Lance Único consome 1). UTAC110j.5 — o 2.º passou a ser
+                  os PONTOS de lance (cada lance gasta o seu valor em pontos). */}
               <div data-saldos-passe="" style={{
                 // UTAC110e — 3 saldos: lado a lado no desktop; empilhados no telemóvel (3 colunas
                 // a 375 px apertariam o texto dos rótulos).
@@ -441,17 +447,26 @@ export default function MinhaCarteira() {
                     <div data-barra-cartao="" style={{ width: `${progressoCartao}%`, height: "100%", background: COR.primary }} />
                   </div>
                 </div>
-                <div data-saldo="creditos" style={{
+                {/* UTAC110j.5 (Frente B) — «⚡ Créditos de lance» (110d) passou a «⭐ Pontos de lance»: o lance
+                    gasta o SEU VALOR em pontos (UTAC110n). Texto antigo: «⚡ Créditos de lance · N disponíveis». */}
+                <div data-saldo="pontos-lance" style={{
                   padding: "0.65rem 0.75rem", borderRadius: "12px",
                   background: "rgba(245,166,35,0.06)", border: "1px solid rgba(245,166,35,0.25)",
                 }}>
-                  <div style={{ fontSize: "0.7rem", color: COR.text, fontWeight: 700 }}>⚡ Créditos de lance</div>
+                  <div style={{ fontSize: "0.7rem", color: COR.text, fontWeight: 700 }}>⭐ Pontos de lance</div>
                   <div style={{ fontSize: "1.25rem", fontWeight: 900, color: COR.gold, lineHeight: 1.2 }}>
-                    {textoSaldo(creditosLance)}
+                    {textoSaldo(saldoPontosLance)}
                   </div>
                   <div style={{ fontSize: "0.68rem", color: COR.text, opacity: 0.85, marginTop: "0.25rem" }}>
-                    {!saldosIlegiveis && creditosLance === 1 ? "disponível" : "disponíveis"}
+                    Cada lance gasta o seu valor
                   </div>
+                  {!saldosIlegiveis && (conversao.creditos || conversao.senhas) && (
+                    <p data-nota-conversao="" style={{ margin: "0.35rem 0 0", fontSize: "0.68rem", color: COR.text, lineHeight: 1.4 }}>
+                      {conversao.creditos && "Seus créditos de lance antigos foram convertidos em pontos de lance."}
+                      {conversao.creditos && conversao.senhas && " "}
+                      {conversao.senhas && "Suas senhas antigas foram convertidas em pontos de lance."}
+                    </p>
+                  )}
                 </div>
                 {/* UTAC110e (Frente D2) — ECOQUILDO: SÓ leitura. Sem botão de compra (Art. 49º: não
                     se compra, não se converte em dinheiro, não se transfere); usa-se no site oficial. */}
@@ -470,7 +485,7 @@ export default function MinhaCarteira() {
               </div>
               {pontosErro && (
                 <p style={{ margin: "-0.5rem 0 0.8rem", fontSize: "0.72rem", color: COR.danger, lineHeight: 1.4 }}>
-                  ⚠️ Não foi possível ler seus pontos e créditos agora.
+                  ⚠️ Não foi possível ler seus pontos agora.
                 </p>
               )}
               {ecoErro && (

@@ -86,8 +86,12 @@ test("1-B · o ramo Programado do CardLance usa só a mensagem de legado e conti
   assert.match(cru, /LEGADO \/ INALCANÇÁVEL desde o UTAC108e\.1/, "falta o comentário que marca o ramo como legado");
   // A mensagem é usada nos sítios do ramo (erros + aviso + hint), não declarada à toa.
   assert.ok((c.match(/MSG_PROGRAMADO_LEGADO/g) || []).length >= 8, "a mensagem de legado não está a ser usada no ramo");
-  // O Relâmpago (vivo) continua a dizer o que faz: 1 crédito de lance (R18-110j-3 = backend).
-  assert.match(c, /Cada lance consome 1 crédito de lance \(Passe Relâmpago\)/);
+  // O Relâmpago (vivo) continua a dizer o que faz (R18-110j-3 = backend).
+  // ⚠️ UTAC110j.5 — ALTERADO (declarado): o backend UTAC110n passou a gastar o VALOR do lance em pontos.
+  // Asserção antiga: assert.match(c, /Cada lance consome 1 crédito de lance \(Passe Relâmpago\)/);
+  // Invariante mantida: o hint diz o que o servidor faz — e o modelo antigo não pode voltar.
+  assert.match(c, /Cada lance gasta o seu valor em pontos de lance \(um lance de 37 gasta 37\)/);
+  assert.doesNotMatch(c, /Cada lance consome 1 crédito/);
 });
 
 test("1-B · o ramo Programado continua inalcançável: ninguém chama setModalidade", () => {

@@ -8,6 +8,8 @@ import { FONTES, ganhosPorFonte, recentes, rotuloMotivo, diaMes } from "../../li
  *
  * Não promete o que o código ainda não faz: hoje os pontos de lance só se GANHAM (o gasto no lance é o UTAC do
  * Hermes, R18-110j.4b-2). Não há ranking de todos (exige endpoint novo). `PainelTorneio.jsx` fica no código.
+ * ⚠️ UTAC110j.5: SUPERADO — desde o UTAC110n o lance GASTA o seu valor em pontos (motivo `lance`, que aparece
+ * nos últimos movimentos como «Lance»), o Passe Relâmpago dá +200 e as conversões do modelo antigo têm linha própria.
  *
  * Apresentacional (sem I/O). Quatro estados que não se confundem: sem sessão, a carregar, erro, dados.
  *
@@ -46,6 +48,7 @@ export default function PainelPontosLance({ temSessao = false, carregando = fals
 
   const ganhos = ganhosPorFonte(lance);
   const linhas = [...FONTES.map((f) => ({ id: f.motivo, rotulo: f.rotulo, n: ganhos[f.motivo] })),
+    { id: "conversao", rotulo: "Conversão do modelo antigo", n: ganhos.conversao }, // UTAC110j.5
     { id: "outro", rotulo: "Outros", n: ganhos.outro }].filter((l) => l.n > 0);
   const ultimos = recentes(lance, 5);
 
@@ -61,7 +64,9 @@ export default function PainelPontosLance({ temSessao = false, carregando = fals
         </span>
       </div>
       <p style={{ ...legenda(isMobile), marginTop: "0.35rem" }}>
-        Ganhos de graça pelo seu engajamento no app (Art. 16º).
+        {/* UTAC110j.5 — antes: «Ganhos de graça pelo seu engajamento no app (Art. 16º).» O Passe Relâmpago
+            também dá pontos (Art. 16º VI) e o lance passou a gastá-los. */}
+        Ganhos pelo engajamento no app e pelo Passe Relâmpago (Art. 16º). Cada lance gasta o seu valor em pontos.
       </p>
 
       {linhas.length === 0 ? (

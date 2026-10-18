@@ -67,7 +67,7 @@ const LER_ECO = /\/\.netlify\/functions\/ler-eco-quildo$/;
 const LER_PONTOS = /\/\.netlify\/functions\/ler-pontos$/;
 const semTags = (h) => h.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 const eco = (saldo, historico = []) => ({ status: 200, json: { ok: true, saldo, historico, centavosPorEcoQuildo: 100 } });
-const pontos = { status: 200, json: { ok: true, pontos: 37, pontosCartao: 30, pontosParaCartao: 50, lance: { creditos: 3 } } };
+const pontos = { status: 200, json: { ok: true, pontos: 37, pontosCartao: 30, pontosParaCartao: 50, lance: { creditos: 3, pontos: 3, historico: [] } } };
 
 async function hookCom(responder, ctx = CONTEXTO) {
   definirContexto(ctx);
@@ -157,7 +157,9 @@ test("C · BIDIRECCIONAL — a Carteira mostra 0 ECOQUILDO e mostra 5 ECOQUILDO 
   assert.equal(textoBloco(h5, "eco-quildo"), "🪙 ECOQUILDO 5 Usável no site oficial");
   // Valores distintos nos três saldos: 30 (cartão), 3 (créditos), 5 (ECOQUILDO).
   assert.match(semTags(bloco(h5, "fidelidade")), /30 \/ 50/);
-  assert.match(semTags(bloco(h5, "creditos")), /Créditos de lance 3 disponíveis/);
+  // ⚠️ UTAC110j.5 — ALTERADO (declarado): o card «créditos» passou a «pontos-lance» (o lance gasta PONTOS, UTAC110n).
+  // Antes: assert.match(semTags(bloco(h5, "creditos")), /Créditos de lance 3 disponíveis/);
+  assert.match(semTags(bloco(h5, "pontos-lance")), /Pontos de lance 3 Cada lance gasta o seu valor/);
   assert.doesNotMatch(textoBloco(h5, "eco-quildo"), /\b(30|37|3)\b/, "o ECOQUILDO mostrou pontos ou créditos");
   // Regra 1: o 3.º saldo vive DENTRO do vidro do saldo, na mesma grelha.
   const grelha = h5.indexOf("data-saldos-passe");

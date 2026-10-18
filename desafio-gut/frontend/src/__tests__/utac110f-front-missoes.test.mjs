@@ -65,7 +65,7 @@ const missoes = (loginFeito, lanceFeito) =>
   ({ dia: "2026-10-13", loginFeito, lanceFeito, pontosHoje: (loginFeito ? 5 : 0) + (lanceFeito ? 10 : 0) });
 const pontosCom = (missoesHoje) => ({
   status: 200,
-  json: { ok: true, pontos: 37, pontosCartao: 30, pontosParaCartao: 50, lance: { creditos: 3 }, ...(missoesHoje === undefined ? {} : { missoesHoje }) },
+  json: { ok: true, pontos: 37, pontosCartao: 30, pontosParaCartao: 50, lance: { creditos: 3, pontos: 3, historico: [] }, ...(missoesHoje === undefined ? {} : { missoesHoje }) },
 });
 const eco = { status: 200, json: { ok: true, saldo: 5, historico: [], centavosPorEcoQuildo: 100 } };
 
@@ -212,7 +212,9 @@ test("S · os 3 saldos existentes continuam com o mesmo texto (não foram tocado
     return semTags(h.slice(h.indexOf(">", i) + 1, h.indexOf("</div></div>", i) + 12));
   };
   assert.match(txt("fidelidade"), /^🎟️ Pontos de fidelidade 30 \/ 50/);
-  assert.equal(txt("creditos"), "⚡ Créditos de lance 3 disponíveis");
+  // ⚠️ UTAC110j.5 — ALTERADO (declarado): o card «⚡ Créditos de lance» passou a «⭐ Pontos de lance» (backend UTAC110n).
+  // Antes: assert.equal(txt("creditos"), "⚡ Créditos de lance 3 disponíveis");
+  assert.equal(txt("pontos-lance"), "⭐ Pontos de lance 3 Cada lance gasta o seu valor");
   assert.equal(txt("eco-quildo"), "🪙 ECOQUILDO 5 Usável no site oficial");
 });
 

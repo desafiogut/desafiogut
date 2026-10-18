@@ -193,7 +193,9 @@ test("S · DENTRO do 1.º vidro, depois dos botões de compra, dos 3 saldos e da
     const segundoVidro = h.indexOf("gut-glass-standard", vidro + 1);
     assert.ok(segundoVidro < 0 || resgate < segundoVidro, "o botão saiu do 1.º vidro");
     // os 3 saldos continuam a existir (o botão é ACRESCENTADO, não substitui nada)
-    for (const s of ["fidelidade", "creditos", "eco-quildo"]) assert.ok(h.includes(`data-saldo="${s}"`), `faltou o saldo ${s}`);
+    // ⚠️ UTAC110j.5 — ALTERADO (declarado): o card «créditos» passou a «pontos-lance» (o lance gasta PONTOS, UTAC110n).
+    // Antes: ["fidelidade", "creditos", "eco-quildo"].
+    for (const s of ["fidelidade", "pontos-lance", "eco-quildo"]) assert.ok(h.includes(`data-saldo="${s}"`), `faltou o saldo ${s}`);
   } finally { c.dup.restaurar(); }
 });
 

@@ -14,7 +14,9 @@ import { useFeedback } from "../hooks/useFeedback.js";
 import { usePontos } from "../hooks/usePontos.js";
 import PainelPontosLance from "../components/meus-ativos/PainelPontosLance.jsx";
 import ProgressoBonus from "../components/meus-ativos/ProgressoBonus.jsx";
-import EstadoBonus from "../components/meus-ativos/EstadoBonus.jsx";
+// UTAC110j.5 (Frente D) — o «🎟️ Bônus de senhas» (`EstadoBonus`, MC93 — fica no código) deu lugar a
+// `BonusSequenciaPontos` (abaixo): desde o UTAC110n o bónus de 5 acertos é pago em +50 PONTOS de lance.
+import { PROPORCOES } from "../lib/pontosLance.js";
 import FeedbackLance from "../components/meus-ativos/FeedbackLance.jsx";
 import RankingCiclo from "../components/meus-ativos/RankingCiclo.jsx";
 import MeusPedidos from "../components/meus-ativos/MeusPedidos.jsx"; // MC-ECOMMERCE-01a
@@ -62,6 +64,42 @@ export function estadoSenhasAntigas({ temSessao, saldoSenhas, saldoSenhasStatus 
       : { estado: "erro", n: null };
   }
   return saldoSenhas === 0 ? { estado: "vazio", n: 0 } : { estado: "dados", n: saldoSenhas };
+}
+
+/**
+ * UTAC110j.5 (Frente D) — estado do bónus da sequência, EM PONTOS de lance. O backend (UTAC110n,
+ * `pontuacao-store.mjs`) credita +50 pontos (motivo `sequencia`) no fecho do ciclo e marca `bonusEmitido`;
+ * já não grava senhas a creditar. Os mesmos estados do `EstadoBonus` (sem sessão · erro · a carregar ·
+ * sem bónus · com bónus): nunca se afirma nada sobre quem a app não identificou.
+ */
+export function BonusSequenciaPontos({ temSessao = false, carregando = false, erro = null, bonusEmitido = false, isMobile = false }) {
+  const n = PROPORCOES.sequencia;
+  const k = PROPORCOES.acertosSequencia;
+  let estado;
+  let corpo;
+  if (!temSessao) { estado = "sem-sessao"; corpo = "Entre na sua conta para ver seu bônus de sequência."; }
+  else if (erro) { estado = "erro"; corpo = "Não foi possível carregar seu bônus agora. Tente novamente mais tarde."; }
+  else if (carregando) { estado = "carregando"; corpo = "Carregando seu bônus…"; }
+  else if (bonusEmitido === true) { estado = "com-bonus"; corpo = null; }
+  else { estado = "sem-bonus"; corpo = `Nenhum bônus neste ciclo. Complete ${k} acertos seguidos para ganhar +${n} pontos de lance.`; }
+  return (
+    <section style={caixa(isMobile)} data-secao="estado-bonus">
+      <h2 style={tituloSecao(isMobile)}>🎁 Bônus de sequência</h2>
+      {corpo !== null ? (
+        <p style={{ ...legenda(isMobile), ...(estado === "erro" ? { color: COR.danger } : {}) }} data-estado={estado}>{corpo}</p>
+      ) : (
+        <div data-estado={estado}>
+          <strong style={{ fontSize: isMobile ? "1.3rem" : "1.55rem", fontWeight: 900, color: COR.gold, lineHeight: 1 }}>
+            +{n}
+          </strong>{" "}
+          <span style={{ fontSize: "0.82rem", color: COR.gold, fontWeight: 700 }}>pontos de lance</span>
+          <p style={{ ...legenda(isMobile), marginTop: "0.35rem" }}>
+            Você completou {k} acertos seguidos neste ciclo: +{n} pontos de lance creditados.
+          </p>
+        </div>
+      )}
+    </section>
+  );
 }
 
 export default function MeusAtivos() {
@@ -215,15 +253,13 @@ export default function MeusAtivos() {
           isMobile={isMobile}
           t={t}
         />
-        <EstadoBonus
+        {/* UTAC110j.5 — era <EstadoBonus … senhasACreditar … /> («🎟️ Bônus de senhas»). */}
+        <BonusSequenciaPontos
           temSessao={temSessao}
           carregando={feedbackCarregando}
           erro={feedback.erro}
-          senhasACreditar={feedback.feedback?.senhasACreditar}
           bonusEmitido={feedback.feedback?.bonusEmitido ?? false}
-          liquidado={feedback.feedback?.liquidado}
           isMobile={isMobile}
-          t={t}
         />
         <FeedbackLance
           temSessao={temSessao}
