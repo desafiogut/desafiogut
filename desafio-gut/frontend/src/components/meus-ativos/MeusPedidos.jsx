@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { apiGet, apiPut } from "../../lib/api.js";
 import {
   ENDERECO_VAZIO, UFS, erroDoEndereco, estadoDoPedido, formatarCep, interpretarRespostaRecebi, podeMarcarRecebido,
-  resumoEndereco, ROTULO_ESTADO, textoPrazo,
+  precisaPagarProduto, resumoEndereco, rotuloDoPedido, textoPrazo,
 } from "../../lib/pedidos.js";
+import { usePagarProduto } from "../../hooks/usePagarProduto.js";
 import { timelineDoRastreio } from "../../lib/rastreio.js";
 import { COR, caixa, tituloSecao, legenda, reais } from "./_estilo.js";
 import TimelineRastreio from "./TimelineRastreio.jsx";
@@ -87,17 +88,21 @@ export function CartaoPedido({ pedido, authToken, endereco, isMobile, aoGravar }
     aoGravar();
   }
 
+  // UTAC111 — o vencedor ainda não pagou o produto: o valor do lance é o que falta pagar.
+  const porPagar = precisaPagarProduto(pedido, endereco);
+
   return (
     <article style={{ border: `1px solid ${COR.borda}`, borderRadius: "12px", padding: isMobile ? "0.75rem" : "0.9rem" }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: "0.5rem", flexWrap: "wrap" }}>
         <strong style={{ color: COR.text }}>{pedido.produtoNome || "Produto"}</strong>
-        <span style={{ fontSize: "0.72rem", fontWeight: 700, color: passo === "sem_endereco" ? COR.primary : COR.success }}>
-          {ROTULO_ESTADO[passo]}
+        <span style={{ fontSize: "0.72rem", fontWeight: 700, color: porPagar || passo === "sem_endereco" ? COR.primary : COR.success }}>
+          {rotuloDoPedido(pedido, endereco)}
         </span>
       </div>
       <p style={{ ...legenda(isMobile), margin: "0.3rem 0 0" }}>
-        Edição {pedido.edicaoId} · valor pago {reais(pedido.valorPagoCentavos)}{prazo ? ` · ${prazo}` : ""}
+        Edição {pedido.edicaoId} · {porPagar ? "valor do lance" : "valor pago"} {reais(pedido.valorPagoCentavos)}{prazo ? ` · ${prazo}` : ""}
       </p>
+      {porPagar && <PagarProduto pedido={pedido} authToken={authToken} isMobile={isMobile} aoPagar={aoGravar} />}
 
       {pedido.rastreio && (
         <p style={{ margin: "0.5rem 0 0", fontSize: "0.82rem", color: COR.text }}>
@@ -147,6 +152,60 @@ export function CartaoPedido({ pedido, authToken, endereco, isMobile, aoGravar }
         />
       )}
     </article>
+  );
+}
+
+/**
+ * UTAC111 — cartão do VENCEDOR: paga o produto por PIX no valor do seu lance. O PIX cai na conta da
+ * Associação (Mercado Pago). O valor e o comprador são verificados no servidor; aqui só se mostra.
+ */
+export function PagarProduto({ pedido, authToken, isMobile, aoPagar }) {
+  const { estado, pix, erro, pagar } = usePagarProduto({ produtoId: pedido.produtoId, authToken, aoPagar });
+  const [copiado, setCopiado] = useState(false);
+  async function copiar() {
+    try { await navigator.clipboard.writeText(pix.qrCodeText); setCopiado(true); setTimeout(() => setCopiado(false), 2000); } catch { /* o texto fica visível para copiar à mão */ }
+  }
+  const botao = {
+    minHeight: "48px", padding: "0.55rem 1.1rem", borderRadius: "10px", fontWeight: 800, cursor: "pointer",
+    background: COR.primaryDim, border: `1px solid rgba(245,166,35,0.4)`, color: COR.primary,
+  };
+
+  return (
+    <div data-pagar-produto style={{ marginTop: "0.6rem", padding: isMobile ? "0.7rem" : "0.8rem", borderRadius: "10px",
+      border: `1px solid rgba(245,166,35,0.35)`, background: "rgba(245,166,35,0.06)" }}>
+      <p style={{ margin: 0, fontSize: "0.88rem", color: COR.text, fontWeight: 700 }}>
+        Parabéns! Você venceu o Menor Lance Único. Adquira o seu produto pagando o valor do seu lance.
+      </p>
+      <p style={{ margin: "0.35rem 0 0", fontSize: "0.82rem", color: COR.text }}>
+        Valor a pagar: <strong style={{ color: COR.primary }}>{reais(pedido.valorPagoCentavos)}</strong>
+      </p>
+
+      {estado === "pago" ? (
+        <p role="status" style={{ margin: "0.5rem 0 0", fontSize: "0.85rem", color: COR.primary, fontWeight: 700 }}>
+          ✓ Produto adquirido com sucesso.
+        </p>
+      ) : estado === "aguardando" && pix ? (
+        <div style={{ marginTop: "0.55rem" }}>
+          {pix.qrCodeImage && <img src={pix.qrCodeImage} alt="QR code do PIX" width={180} height={180} style={{ display: "block", background: "#fff", borderRadius: "8px" }} />}
+          <p style={{ margin: "0.45rem 0 0.25rem", fontSize: "0.72rem", color: COR.muted }}>PIX copia e cola:</p>
+          <code data-pix-copia-cola style={{ display: "block", wordBreak: "break-all", fontSize: "0.72rem", color: COR.text }}>{pix.qrCodeText}</code>
+          <p style={{ margin: "0.45rem 0 0", display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
+            <button type="button" onClick={copiar} style={botao}>{copiado ? "✓ Copiado" : "Copiar código PIX"}</button>
+            <span role="status" style={{ fontSize: "0.75rem", color: COR.muted }}>Aguardando a confirmação do pagamento…</span>
+          </p>
+        </div>
+      ) : (
+        <p style={{ margin: "0.55rem 0 0" }}>
+          <button type="button" onClick={pagar} disabled={estado === "gerando"} data-acao="pagar-produto"
+            style={{ ...botao, opacity: estado === "gerando" ? 0.6 : 1 }}>
+            {estado === "gerando" ? "Gerando PIX…" : "Pagar Produto via PIX"}
+          </button>
+        </p>
+      )}
+      {estado === "erro" && erro && (
+        <p role="alert" style={{ margin: "0.4rem 0 0", fontSize: "0.8rem", color: COR.danger }}>{erro}</p>
+      )}
+    </div>
   );
 }
 

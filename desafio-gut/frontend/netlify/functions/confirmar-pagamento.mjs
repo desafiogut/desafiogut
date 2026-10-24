@@ -24,6 +24,9 @@ import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 // MC17.1 — fallback de ativação de cota (caso o webhook atrase/falhe).
 import { ativarCotaPaga } from "./_lib/cota-ativacao.mjs";
 import { respostaPreflight } from "./_lib/cors.mjs";
+// UTAC111 — PIX do produto físico marca o pedido de entrega como pago.
+import { marcarPedidoPago } from "./_lib/pedidos.mjs";
+import { captureSecurityAlert } from "./_lib/sentry-server.mjs";
 
 const BLOB_STORE_MP  = "mp-aprovados";
 
@@ -127,8 +130,13 @@ export default async (req) => {
     const code = err?.code === "ERR_JWT_EXPIRED" ? "token_expirado" : "token_invalido";
     return jsonError(401, code, "token rejeitado");
   }
-  const { pedidoId, endereco, qtd, paymentId, valorBRL, tipo, categoria, produtoValor, produtoNome } = payload;
-  if (!pedidoId || !endereco || (tipo !== "cota" && !qtd)) {
+  const { pedidoId, endereco, qtd, paymentId, valorBRL, tipo, categoria, produtoValor, produtoNome, produtoId } = payload;
+  // UTAC111 — PIX do produto físico exige o pagamento REAL do MP (sem paymentId não há o que verificar:
+  // o caminho legado do mock, que confia no JWT, nunca marca um produto como pago).
+  if (tipo === "produto" && (!produtoId || !paymentId)) {
+    return jsonError(400, "payload_incompleto", "token de produto sem produtoId/paymentId");
+  }
+  if (!pedidoId || !endereco || (tipo !== "cota" && tipo !== "produto" && !qtd)) {
     return jsonError(400, "payload_incompleto", "token sem campos obrigatórios");
   }
   // Modelo dual: PIX credita R$ (não senhas). qtd é mantido no JWT para
@@ -173,6 +181,22 @@ export default async (req) => {
     return jsonResponse({
       ok: true, idempotent: !!ativacao.idempotent, tipo: "cota",
       pedidoId, endereco, categoria, cota: ativacao.resultado,
+    });
+  }
+
+  // ── UTAC111 — PIX do PRODUTO: marca o pedido como pago (nunca credita saldo R$) ──
+  // Fallback do webhook (que nunca disparou em produção — MC101). Idempotente por pedido.
+  if (tipo === "produto") {
+    const pago = await marcarPedidoPago(produtoId, {
+      endereco, valorCentavos, paymentId, fonte: "confirmar-pagamento",
+    });
+    if (!pago.ok) return jsonError(pago.code === "pedido_nao_encontrado" ? 404 : 409, pago.code, "não foi possível marcar o produto como pago");
+    if (pago.pagamentoDuplicado) {
+      captureSecurityAlert("pix_produto_pago_em_duplicado", { produtoId, paymentId: pago.pagamentoDuplicado }).catch(() => {});
+    }
+    return jsonResponse({
+      ok: true, idempotent: !!pago.idempotent, tipo: "produto", pedidoId, produtoId,
+      valorCentavos, pagoEm: pago.pedido?.pago_em ?? null,
     });
   }
 

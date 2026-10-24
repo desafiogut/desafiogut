@@ -57,19 +57,31 @@ function montarPayer({ email, cpf, tipoDoc, nome } = {}) {
   return payer;
 }
 
-export async function gerarPedidoPix({ pedidoId, valorBRL, pagador } = {}) {
+/**
+ * UTAC111 — `date_of_expiration` no formato do MP («yyyy-MM-ddTHH:mm:ss.SSS±hh:mm»), no fuso de Manaus
+ * (UTC-4, sem horário de verão). PURA.
+ */
+export function formatarExpiracaoMp(ms) {
+  return new Date(ms - 4 * 3600 * 1000).toISOString().replace("Z", "-04:00");
+}
+
+// UTAC111 — `expiraEmMs` é OPCIONAL: só o PIX do produto o passa (24 h). O depósito de saldo não o passa e o
+// corpo enviado ao MP fica byte-igual ao de antes (expiração por omissão do MP).
+export async function gerarPedidoPix({ pedidoId, valorBRL, pagador, expiraEmMs } = {}) {
+  const body = {
+    transaction_amount: Number(valorBRL),
+    description: `DesafioGUT — pedido ${pedidoId}`,
+    payment_method_id: "pix",
+    external_reference: pedidoId,
+    payer: montarPayer(pagador),
+  };
+  if (Number.isFinite(expiraEmMs)) body.date_of_expiration = formatarExpiracaoMp(expiraEmMs);
   const data = await fetchMP("/v1/payments", {
     method: "POST",
     // pedidoId é um UUID v4 (randomUUID) — já serve como X-Idempotency-Key
     // dinâmico (mp-client.fetchMP o envia no header). Não duplicar.
     idempotencyKey: pedidoId,
-    body: {
-      transaction_amount: Number(valorBRL),
-      description: `DesafioGUT — pedido ${pedidoId}`,
-      payment_method_id: "pix",
-      external_reference: pedidoId,
-      payer: montarPayer(pagador),
-    },
+    body,
   });
 
   const tx = data?.point_of_interaction?.transaction_data;

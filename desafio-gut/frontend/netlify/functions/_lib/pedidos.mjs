@@ -371,6 +371,49 @@ export async function marcarRecebido(produtoId, endereco) {
 }
 
 /**
+ * UTAC111 — o PIX do produto foi APROVADO no Mercado Pago: o vencedor pagou o valor do seu lance.
+ * Chamado pelo webhook e pela confirmação por consulta (`confirmar-pagamento`), que podem correr os
+ * dois: IDEMPOTENTE (a 2.ª chamada não reescreve `pago_em`). Só o comprador do pedido; o valor aprovado
+ * tem de ser EXACTAMENTE o valor do lance gravado na consolidação (`valorPagoCentavos`) — senão recusa.
+ */
+export async function marcarPedidoPago(produtoId, { endereco, valorCentavos, paymentId = null, fonte = null } = {}) {
+  return atualizarPedido(produtoId, (pedido) => {
+    if (!pedido || pedido.comprador !== String(endereco).toLowerCase()) return { ok: false, code: "pedido_nao_encontrado" };
+    if (pedido.pago_em) {
+      // Outro PIX aprovado para um pedido já pago (o comprador pagou dois QR codes): não se marca de novo,
+      // mas assinala-se para o chamador alertar — o dinheiro entrou e tem de ser devolvido à mão.
+      const duplicado = !!paymentId && String(paymentId) !== String(pedido.pagamento?.paymentId ?? "");
+      return { ok: true, idempotent: true, pedido, ...(duplicado ? { pagamentoDuplicado: String(paymentId) } : {}) };
+    }
+    if (!Number.isInteger(valorCentavos) || valorCentavos !== pedido.valorPagoCentavos) return { ok: false, code: "valor_divergente" };
+    pedido.pago_em = new Date().toISOString();
+    pedido.pagamento = { paymentId: paymentId ? String(paymentId) : null, valorCentavos, fonte };
+    delete pedido.pixPendente;
+    return { evento: "pagamento_aprovado" };
+  });
+}
+
+/**
+ * UTAC111 (decisão do operador) — o PIX do produto ainda por pagar fica guardado no pedido, para o botão
+ * devolver o MESMO código em vez de criar outro (evita o pagamento em dobro). Grava por CAS: se outro pedido
+ * concorrente já guardou OUTRO PIX ainda válido, NÃO o substitui e devolve esse (`vencedor`).
+ * @param {{pedidoId:string, paymentId:string, qrCodeText:string, qrCodeImage:string|null, expiraEm:string, valorCentavos:number}} pix
+ */
+export async function guardarPixPendente(produtoId, endereco, pix, agoraMs = Date.now(), descartado = null) {
+  return atualizarPedido(produtoId, (pedido) => {
+    if (!pedido || pedido.comprador !== String(endereco).toLowerCase()) return { ok: false, code: "pedido_nao_encontrado" };
+    if (pedido.pago_em) return { ok: false, code: "pedido_ja_pago" };
+    const atual = pedido.pixPendente;
+    // `descartado` = o PIX que o chamador JÁ viu e rejeitou (cancelado/expirado/perto do fim): esse substitui-se.
+    if (atual && Date.parse(atual.expiraEm) > agoraMs && atual.paymentId !== pix.paymentId && atual.paymentId !== descartado) {
+      return { ok: true, vencedor: atual };
+    }
+    pedido.pixPendente = pix;
+    return { evento: "pix_gerado" };
+  });
+}
+
+/**
  * MC102 (Frente C) — prazo de arrependimento do CDC art. 49 (7 dias). PURA.
  * Início = `recebido_em` do pedido (o comprador confirmou); SEM ele, fallback para o
  * `entregue_em` do PRODUTO (marcado pelo lojista/admin — o comportamento de antes), até o

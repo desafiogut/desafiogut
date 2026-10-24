@@ -188,10 +188,14 @@ test("4 · Art. 20 → 6º, Art. 7/8 → 14º, Arts. 25/26 (sem correspondente n
 // ── 5a/5b/2 ──────────────────────────────────────────────────────────────────────────────────────
 test("5a · a edição especial fala de «Produto», e o dicionário bate com o fallback", () => {
   const card = codigo(ler("src/components/edicao-especial/CardEdicaoEspecial.jsx"));
-  assert.match(card, /t\("edicao\.especial\.premioEmDisputa", "Produto em disputa"\)/);
-  assert.match(card, /t\("edicao\.especial\.premio", "Produto especial"\)/);
+  // UTAC111 (Frente C, «prêmio» → «produto»): as CHAVES passaram de `…premio…` a `…produto…`; a invariante
+  // (o texto visível diz «Produto» e o dicionário bate com o fallback) fica igual. Antes:
+  //   t("edicao.especial.premioEmDisputa", …) · t("edicao.especial.premio", …)
+  assert.match(card, /t\("edicao\.especial\.produtoEmDisputa", "Produto em disputa"\)/);
+  assert.match(card, /t\("edicao\.especial\.produto", "Produto especial"\)/);
   const pt = ler("src/i18n/pt.js");
-  assert.match(pt, /"edicao\.especial\.premioEmDisputa": "Produto em disputa",/);
+  assert.match(pt, /"edicao\.especial\.produtoEmDisputa": "Produto em disputa",/);
+  assert.doesNotMatch(card + pt, /premio/i);
 });
 
 test("3 (B1 do validador) · a regra da edição especial diz «crédito de lance», não débito em R$", () => {

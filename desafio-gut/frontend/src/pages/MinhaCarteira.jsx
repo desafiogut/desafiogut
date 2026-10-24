@@ -12,6 +12,7 @@ import { conversoesFeitas } from "../lib/pontosLance.js"; // UTAC110j.5 — pont
 import ComprarPasseModal from "../components/ComprarPasseModal.jsx";
 import Toast from "../widgets/toast/Toast.jsx";
 import ComprarFichasModal from "../components/ComprarFichasModal.jsx";
+import { androidNativo } from "../lib/google-play-billing.js";
 import PainelIndicacao from "../components/PainelIndicacao.jsx";
 import BotaoLoginPrincipal from "../components/BotaoLoginPrincipal.jsx";
 // UTAC110g.1 (R18-110g.1-2 / decisão D-110g-4) — o RESGATE do cartão colecionável mudou de casa: o
@@ -94,6 +95,11 @@ export default function MinhaCarteira() {
     user?.email?.address || user?.google?.email || user?.apple?.email || null;
 
   const [comprarAberto, setComprarAberto] = useState(false);
+  // UTAC111 (R18-111-A) — no APK não há depósito PIX de saldo: o Passe (bem digital) é pago pelo
+  // Google Play Billing (política de Pagamentos da Play). O PWA mantém o depósito, porque no browser
+  // o Passe só se compra com saldo R$. A condição é a PONTE nativa (como no `useComprarPasse`, 110i.2),
+  // nunca `?plataforma=` (sobreponível). O saldo R$ antigo continua visível nos dois.
+  const depositoPix = !androidNativo();
   // UTAC106c — balão de confirmação do Passe Desafio. UTAC106e — o balão passou a COMPRAR
   // (chama o endpoint `comprar-passe-pontos`); o estado do balão mantém o nome do 106c.
   const [passeAberto, setPasseAberto] = useState(false);
@@ -199,7 +205,8 @@ export default function MinhaCarteira() {
         try { await refetchEco?.(); } catch { /* releitura é best-effort */ }
       } else if (r?.status === 402 || r?.code === "saldo_insuficiente") {
         setPasseSemSaldo(true);
-        setErroPasse("Saldo insuficiente. Deposite via PIX e tente de novo.");
+        // UTAC111 (achado 3 do validador) — no APK não se convida a depositar por PIX.
+        setErroPasse(depositoPix ? "Saldo insuficiente. Deposite via PIX e tente de novo." : "Saldo insuficiente.");
         setToastPasse({ variant: "error", message: "Saldo insuficiente. Carregar agora?" });
       } else {
         const msg = r?.message || "Erro. Tente de novo.";
@@ -319,7 +326,7 @@ export default function MinhaCarteira() {
                 gap: "0.6rem",
                 marginBottom: "0.95rem",
               }}>
-                <button
+                {depositoPix && <button
                   onClick={() => setComprarAberto(true)}
                   style={{
                     // UTAC109h.2 — amarelo único `#f5a623` (era ciano): o destaque do depósito usa o mesmo tom do app.
@@ -332,7 +339,7 @@ export default function MinhaCarteira() {
                   title="Depósito PIX → +R$ (crédito automático após aprovação MP)"
                 >
                   💰 Depositar PIX
-                </button>
+                </button>}
                 <button
                   type="button"
                   onClick={() => { setErroPasse(""); setPasseAberto(true); }}
@@ -401,7 +408,7 @@ export default function MinhaCarteira() {
                 }}>
                   <p style={{ margin: 0, fontSize: "0.82rem", color: COR.danger, lineHeight: 1.4, fontWeight: 700 }}>
                     ⚠️ Saldo insuficiente.{" "}
-                    <button
+                    {depositoPix && <button
                       type="button"
                       onClick={() => { setPasseSemSaldo(false); setToastPasse(null); setPasseAberto(false); setComprarAberto(true); }}
                       style={{
@@ -410,7 +417,7 @@ export default function MinhaCarteira() {
                       }}
                     >
                       Carregar agora (PIX)
-                    </button>
+                    </button>}
                   </p>
                 </div>
               )}
@@ -580,12 +587,12 @@ export default function MinhaCarteira() {
                   o utilizador está quando vai pagar.
                   ⚠️ UTAC107b: CONFIRMADO que o modal de depósito NÃO mostra o destinatário
                   (só o código PIX) — por isso esta nota MANTÉM-SE (RESSALVA 5). */}
-              <p style={{
+              {depositoPix && <p style={{
                 margin: "0.75rem 0 0", fontSize: "0.68rem", color: COR.muted, lineHeight: 1.45,
               }}>
                 Depósito por PIX via Mercado Pago — <strong style={{ color: COR.blue300 }}>desafiogut@gmail.com</strong>{" "}
                 (crédito automático após a aprovação). Passe Desafio: R$ {VALOR_POR_SENHA_BRL.toFixed(2)} (Art. 6º).
-              </p>
+              </p>}
 
               {saldoRsStatus === "error" && (
                 <p style={{ margin: "0.6rem 0 0", fontSize: "0.72rem", color: COR.danger, lineHeight: 1.4 }}>
@@ -647,7 +654,7 @@ export default function MinhaCarteira() {
       )}
 
       <ComprarFichasModal
-        aberto={comprarAberto}
+        aberto={depositoPix && comprarAberto}
         onFechar={() => setComprarAberto(false)}
         address={address}
         email={emailPagador}

@@ -32,6 +32,8 @@ import { validarAssinaturaMp } from "./_lib/mp-signature.mjs";
 // MC59.2 (D-1) — torna o fail-open OBSERVÁVEL (alerta em vez de log silencioso).
 import { captureSecurityAlert } from "./_lib/sentry-server.mjs";
 import { respostaPreflight } from "./_lib/cors.mjs";
+// UTAC111 — PIX do produto físico marca o pedido de entrega como pago.
+import { marcarPedidoPago } from "./_lib/pedidos.mjs";
 
 const BLOB_STORE_MP = "mp-aprovados";
 
@@ -204,6 +206,27 @@ export default async (req) => {
     return jsonResponse({
       ok: true, recorded: true, cota_ativada: ativacao.ok, idempotent: !!ativacao.idempotent,
       pedidoId, paymentId, categoria: meta.categoria, troco: ativacao.resultado?.troco || null,
+    });
+  }
+
+  // UTAC111 — PIX do PRODUTO físico: marca o pedido de entrega como pago («Pago — aguardando envio»).
+  // NUNCA credita saldo R$. Idempotente (marcarPedidoPago) — webhook e confirmar-pagamento não duplicam.
+  // O valor que conta é o APROVADO no MP (`transaction_amount`), conferido contra o lance do pedido.
+  if (meta?.tipo === "produto") {
+    const valorAprovado = Math.round(Number(pagamento?.transaction_amount) * 100);
+    const pago = await marcarPedidoPago(meta.produtoId, {
+      endereco: meta.endereco, valorCentavos: valorAprovado, paymentId, fonte: "webhook",
+    });
+    if (!pago.ok) {
+      console.error("[webhook-mp] produto: marcar pago falhou", { pedidoId, produtoId: meta.produtoId, code: pago.code });
+      captureSecurityAlert("webhook_mp_produto_falhou", { pedidoId, code: pago.code }).catch(() => {});
+    }
+    if (pago.pagamentoDuplicado) {
+      captureSecurityAlert("pix_produto_pago_em_duplicado", { produtoId: meta.produtoId, paymentId: pago.pagamentoDuplicado }).catch(() => {});
+    }
+    return jsonResponse({
+      ok: true, recorded: true, tipo: "produto", pago: !!pago.ok, idempotent: !!pago.idempotent,
+      reason: pago.ok ? undefined : pago.code, pedidoId, paymentId,
     });
   }
 

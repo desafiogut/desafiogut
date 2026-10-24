@@ -25,8 +25,121 @@ import { getPixProvider, PIX_PROVIDER_NAME } from "./_lib/pix-provider/index.mjs
 import { gravarMetaPedido } from "./_lib/meta.mjs";
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 import { respostaPreflight } from "./_lib/cors.mjs";
+import { verificarUserSession } from "./_lib/jwt.mjs";
+import { lerPedido, marcarPedidoPago, guardarPixPendente } from "./_lib/pedidos.mjs";
+import { consultarPagamento } from "./_lib/mp-client.mjs";
 
 const TTL_SEC = 15 * 60; // 15 minutos para o usuário pagar
+// UTAC111 — PIX do produto: válido 24 h no MP; reaproveita-se se faltarem mais de 2 min.
+const VALIDADE_PIX_PRODUTO_MS = 24 * 3600 * 1000;
+const MARGEM_REUSO_MS = 2 * 60 * 1000;
+const STATUS_PENDENTES = new Set(["pending", "in_process", "authorized"]);
+
+// ── UTAC111 — PIX do PRODUTO físico (o vencedor paga o valor do seu lance) ──────────────────────
+// Body: { tipo: "produto", produtoId }  ·  Header: Authorization: Bearer <user-session>
+// O comprador sai do TOKEN e o valor sai do PEDIDO gravado na consolidação (`valorPagoCentavos`,
+// 14 pontos = R$ 0,14) — NUNCA do corpo. O meta leva `tipo:"produto"` + `produtoId`, para o webhook e
+// o `confirmar-pagamento` marcarem o pedido como pago em vez de creditarem saldo R$.
+// 401 token_ausente|token_invalido · 404 pedido_nao_encontrado · 409 pedido_ja_pago
+async function iniciarPagamentoProduto(req, body) {
+  const h = req.headers.get("authorization") || "";
+  const bearer = h.startsWith("Bearer ") ? h.slice(7) : null;
+  if (!bearer) return jsonError(401, "token_ausente", "Authorization: Bearer *** obrigatório");
+  let endereco;
+  try {
+    endereco = String((await verificarUserSession(bearer))?.endereco || "").toLowerCase();
+  } catch {
+    return jsonError(401, "token_invalido", "token rejeitado");
+  }
+  if (!/^0x[0-9a-f]{40}$/.test(endereco)) return jsonError(401, "token_invalido", "token rejeitado");
+
+  const produtoId = typeof body.produtoId === "string" ? body.produtoId.trim() : "";
+  const pedido = produtoId ? await lerPedido(produtoId) : null;
+  // Outro comprador = 404, como em definirMorada: não confirma que o pedido existe.
+  if (!pedido || pedido.comprador !== endereco) return jsonError(404, "pedido_nao_encontrado", "pedido não encontrado");
+  if (pedido.pago_em) return jsonError(409, "pedido_ja_pago", "este produto já foi pago");
+  // Um pedido já enviado (pedidos anteriores a este fluxo) nunca pede pagamento — a mesma regra do cliente.
+  if (pedido.rastreio) return jsonError(409, "pedido_ja_enviado", "este pedido já foi enviado");
+  if (!Number.isInteger(pedido.valorPagoCentavos) || pedido.valorPagoCentavos <= 0) {
+    return jsonError(409, "valor_invalido", "pedido sem valor de lance válido");
+  }
+  const valorCentavos = pedido.valorPagoCentavos;
+  const valorBRL = Number((valorCentavos / 100).toFixed(2));
+  const agora = Date.now();
+
+  // 1) Reaproveita o PIX pendente (decisão do operador): o mesmo código enquanto não for pago nem expirar.
+  const pend = pedido.pixPendente;
+  if (pend?.paymentId && pend.valorCentavos === valorCentavos && Date.parse(pend.expiraEm) - agora > MARGEM_REUSO_MS) {
+    const status = await consultarPagamento(pend.paymentId).then((p) => p?.status ?? null).catch(() => null);
+    if (status === "approved") {
+      await marcarPedidoPago(produtoId, { endereco, valorCentavos, paymentId: pend.paymentId, fonte: "iniciar-pagamento" });
+      return jsonError(409, "pedido_ja_pago", "este produto já foi pago");
+    }
+    // Pendente — ou o MP não respondeu: devolver o MESMO código é seguro (pagar duas vezes é que não).
+    if (status === null || STATUS_PENDENTES.has(status)) {
+      return responderPixProduto({ pix: pend, endereco, produtoId, valorBRL, valorCentavos, reutilizado: true });
+    }
+    // cancelled / rejected / expired → gera um novo abaixo.
+  }
+
+  // 2) PIX novo, válido 24 h no MP; a sondagem do cliente segue ESSE prazo (o JWT dura até lá).
+  const expiraEmMs = agora + VALIDADE_PIX_PRODUTO_MS;
+  const pedidoId = randomUUID();
+  let gerado;
+  try {
+    gerado = await getPixProvider().gerarPedidoPix({ pedidoId, valorBRL, expiraEmMs });
+  } catch (err) {
+    console.error("[iniciar-pagamento] produto: provider falhou", {
+      name: err?.name, code: err?.code, message: err?.message, status: err?.status,
+    });
+    if (err?.code === "mp_config_invalida") {
+      return jsonError(500, "pix_provider_mal_configurado", "PIX provider sem credenciais válidas");
+    }
+    return jsonError(502, "pix_provider_indisponivel", "não foi possível gerar o PIX agora");
+  }
+  const pix = {
+    pedidoId, paymentId: gerado.paymentId ?? null, qrCodeText: gerado.qrCodeText, qrCodeImage: gerado.qrCodeImage ?? null,
+    expiraEm: new Date(expiraEmMs).toISOString(), valorCentavos, simulated: !!gerado.simulated,
+  };
+  await gravarMetaPedido({ pedidoId, endereco, qtd: null, valorBRL, paymentId: pix.paymentId, tipo: "produto", produtoId });
+
+  // Só um PIX com paymentId (MP real) se pode reaproveitar — o do mock não é verificável.
+  if (pix.paymentId) {
+    const g = await guardarPixPendente(produtoId, endereco, pix, agora, pend?.paymentId ?? null);
+    if (g?.vencedor) return responderPixProduto({ pix: g.vencedor, endereco, produtoId, valorBRL, valorCentavos, reutilizado: true });
+    if (g?.code === "pedido_ja_pago") return jsonError(409, "pedido_ja_pago", "este produto já foi pago");
+    if (!g?.ok) console.warn("[iniciar-pagamento] produto: PIX pendente não guardado (não-fatal)", { produtoId, code: g?.code });
+  }
+  return responderPixProduto({ pix, endereco, produtoId, valorBRL, valorCentavos, reutilizado: false });
+}
+
+// O JWT de confirmação dura até à expiração REAL do PIX (não 15 min): um pagamento tardio continua confirmável.
+async function responderPixProduto({ pix, endereco, produtoId, valorBRL, valorCentavos, reutilizado }) {
+  const ttlSec = Math.max(60, Math.floor((Date.parse(pix.expiraEm) - Date.now()) / 1000));
+  let token;
+  try {
+    const payload = { pedidoId: pix.pedidoId, endereco, valorBRL, tipo: "produto", produtoId };
+    if (pix.paymentId) payload.paymentId = pix.paymentId;
+    token = await assinarPedido(payload, ttlSec);
+  } catch (err) {
+    console.error("[iniciar-pagamento] jwt falhou", { name: err?.name, message: err?.message });
+    return jsonError(500, "jwt_indisponivel", "configuração de servidor incompleta");
+  }
+  return jsonResponse({
+    pedidoId: pix.pedidoId,
+    tipo: "produto",
+    produtoId,
+    valorBRL,
+    valorCentavos,
+    qrCodeText: pix.qrCodeText,
+    qrCodeImage: pix.qrCodeImage,
+    simulated: !!pix.simulated,
+    provider: PIX_PROVIDER_NAME,
+    validUntil: pix.expiraEm,
+    reutilizado,
+    token,
+  });
+}
 
 export default async (req) => {
   // MC88.12 — preflight CORS do APK. Tem de ser a primeira coisa: o OPTIONS não
@@ -50,6 +163,9 @@ export default async (req) => {
     if (err instanceof ValidationError) return jsonError(400, err.code, err.message);
     throw err;
   }
+
+  // UTAC111 — ramo isolado do produto físico; o depósito de saldo abaixo fica igual.
+  if (body.tipo === "produto") return iniciarPagamentoProduto(req, body);
 
   let endereco, qtd, valorBRL;
   try {

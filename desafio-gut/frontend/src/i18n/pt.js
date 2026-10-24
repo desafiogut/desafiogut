@@ -116,13 +116,13 @@ export default {
   "ativos.palpites.placeholder": "Esta área ainda não está disponível. Seus palpites vão aparecer aqui quando o recurso for lançado.",
   // MC94.2 — edição especial (Dashboard). pt = fallbacks dos componentes.
   // UTAC110j (R18-110j-5a) — «Prêmio especial/em disputa» → «Produto» (produto físico patrocinado, v5).
-  "edicao.especial.premio": "Produto especial",
+  "edicao.especial.produto": "Produto especial",
   "edicao.especial.abreEm": "Abre em",
   "edicao.especial.abrindo": "Abrindo em instantes…",
   "edicao.especial.fechaEm": "Fecha em",
   "edicao.especial.titulo": "🎁 Edição especial",
   "edicao.especial.altArte": "Arte da edição especial",
-  "edicao.especial.premioEmDisputa": "Produto em disputa",
+  "edicao.especial.produtoEmDisputa": "Produto em disputa",
   "edicao.especial.brasilia": "(horário de Brasília)",
   // MC94.4.1 — R18: a especial é RELÂMPAGO e debita SALDO (a partir de R$ 0,01). O texto
   // anterior ("Rodada programada · ... cada lance usa 1 senha (R$ 2,00)") descrevia o

@@ -35,7 +35,7 @@ export function abrirStore(name) {
  * metadados para descobrir endereco/qtd a creditar — o MP só nos devolve o
  * `external_reference` (= pedidoId), não o destino on-chain.
  */
-export async function gravarMetaPedido({ pedidoId, endereco, qtd, valorBRL, paymentId, tipo = null, categoria = null, produtoValor = null, produtoNome = null }) {
+export async function gravarMetaPedido({ pedidoId, endereco, qtd, valorBRL, paymentId, tipo = null, categoria = null, produtoValor = null, produtoNome = null, produtoId = null }) {
   const store = abrirStore(BLOB_PEDIDOS_META);
   if (!store) {
     console.warn("[meta] gravarMetaPedido: store indisponível", { pedidoId });
@@ -52,6 +52,8 @@ export async function gravarMetaPedido({ pedidoId, endereco, qtd, valorBRL, paym
       categoria,
       produtoValor,
       produtoNome,
+      // UTAC111 — PIX do produto físico: o pedido de entrega a marcar como pago.
+      produtoId,
       criadoEm: new Date().toISOString(),
     });
     console.info("[meta] meta gravada", { pedidoId, endereco: mascararEndereco(endereco), qtd, paymentId: paymentId ? String(paymentId) : null });

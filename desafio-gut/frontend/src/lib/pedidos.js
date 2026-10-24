@@ -58,6 +58,29 @@ export const ROTULO_ESTADO = {
 };
 
 /**
+ * UTAC111 — o vencedor ainda tem de pagar o produto (o valor do seu lance, por PIX)? Só ao DONO,
+ * só sem `pago_em`, só ANTES do envio (um pedido com rastreio já seguiu — pedidos anteriores a este
+ * fluxo nunca pedem pagamento), só com um valor de lance válido. O servidor volta a verificar o
+ * dono e o valor (`iniciar-pagamento` + `marcarPedidoPago`): isto só decide o que se mostra.
+ */
+export function precisaPagarProduto(p, endereco) {
+  if (!p || !endereco || p.pago_em || p.rastreio) return false;
+  if (String(p.comprador ?? "").toLowerCase() !== String(endereco).toLowerCase()) return false;
+  return Number.isInteger(p.valorPagoCentavos) && p.valorPagoCentavos > 0;
+}
+
+/**
+ * UTAC111 — o rótulo do pedido. Por pagar → «Aguardando pagamento»; pago e ainda por enviar →
+ * «Pago — aguardando envio». O resto é o `ROTULO_ESTADO` de sempre (o envio não muda).
+ */
+export function rotuloDoPedido(p, endereco) {
+  if (precisaPagarProduto(p, endereco)) return "Aguardando pagamento";
+  const passo = estadoDoPedido(p);
+  if (p?.pago_em && passo === "aguarda_envio") return "Pago — aguardando envio";
+  return ROTULO_ESTADO[passo];
+}
+
+/**
  * MC102 — o botão «Recebi» aparece? Só ao DONO do pedido, só depois do envio (há rastreio),
  * e só enquanto não confirmou. O servidor volta a verificar tudo (`marcarRecebido`): isto só
  * decide o que se mostra. «Entregue» (marcado pelo lojista/admin no produto) exige rastreio,

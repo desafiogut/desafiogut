@@ -115,7 +115,7 @@ export default function CardEdicaoEspecial({
   const alvo = alvoDaContagem(edicao, estado);
   const restanteMs = Number.isFinite(offsetMs) && alvo != null ? alvo - agora : null;
   const badge = BADGE[estado];
-  const produto = edicao.produto || t("edicao.especial.premio", "Produto especial");
+  const produto = edicao.produto || t("edicao.especial.produto", "Produto especial");
   // O alt do banner diz o que a imagem mostra (o produto), não só que existe.
   const altArte = `${t("edicao.especial.altArte", "Arte da edição especial")}: ${produto}`;
   const semRelogio = !Number.isFinite(offsetMs);
@@ -180,7 +180,7 @@ export default function CardEdicaoEspecial({
         <EdicaoBanner edicao={edicao} size={size} alt={altArte} />
 
         <div style={{ minWidth: 0 }}>
-          <div style={ROTULO}>{t("edicao.especial.premioEmDisputa", "Produto em disputa")}</div>
+          <div style={ROTULO}>{t("edicao.especial.produtoEmDisputa", "Produto em disputa")}</div>
           <div style={{ fontSize: isMobile ? "0.95rem" : "1.05rem", color: COR.text, fontWeight: 800, lineHeight: 1.25 }}>
             {produto}
           </div>
