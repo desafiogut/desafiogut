@@ -156,6 +156,16 @@ export default async function handler(req) {
           ecoQuildo: Number(registo.eco_quildo ?? 0),
         }, 200);
       }
+      // UTAC115 (ALTO-1) — CORRIDA ENTRE CONTAS: o registo que ganhou a corrida pode pertencer a
+      // OUTRA carteira. Sem esta guarda, o pedido perdedor seguia para a Google e creditava o MESMO
+      // recibo numa segunda carteira (N Passes por um pagamento, com N sessões em paralelo).
+      // Mesmo tratamento da leitura inicial: não se credita no endereço errado nem se revela o dono.
+      if (registo && registo.endereco && registo.endereco !== endereco) {
+        captureSecurityAlert(`${NOME}_recibo_de_outra_conta_corrida`, { produto: sku }, "warning").catch(() => {});
+        return jsonError(409, "compra_nao_encontrada", "compra não encontrada para esta conta");
+      }
+      // Colisão sem conseguir reler o registo: fail-CLOSED. Creditar aqui seria creditar às cegas.
+      if (!registo) return jsonError(503, "registo_falhou", "não foi possível ler o registo da compra");
     }
   }
 

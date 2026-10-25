@@ -573,6 +573,39 @@ test("CORRIDA: o mesmo recibo chega 2× ao mesmo tempo (o INSERT colide na PK) �
   assert.ok(ref.length <= 200);
 });
 
+test("CORRIDA ENTRE CONTAS: o mesmo recibo, duas carteiras em paralelo ⇒ 409 na segunda (ALTO-1)", async () => {
+  // UTAC115: o registo que ganha a corrida é de OUTRA carteira e está em "recebida".
+  // Antes da correção o pedido perdedor seguia para a Google e creditava o mesmo recibo na sua
+  // carteira — N Passes por um pagamento com N sessões concorrentes.
+  const original = cliente.from;
+  cliente = {
+    from: (t) => {
+      const api = original(t);
+      if (t !== "google_play_compras") return api;
+      return new Proxy(api, {
+        get: (alvoApi, prop) => {
+          if (prop !== "insert") return alvoApi[prop];
+          return (dados) => {
+            // Concorrente B (outra conta) insere primeiro, ainda não creditado.
+            S.tabelas.google_play_compras.push({
+              ...dados, endereco: OUTRO, estado: "recebida", pontos: null,
+              creditos_lance: null, eco_quildo: null, criado_em: "x", atualizado_em: "x",
+            });
+            return alvoApi.insert(dados); // o INSERT de A colide (23505)
+          };
+        },
+      });
+      return proxy;
+    },
+  };
+  const r = await pedirGoogle();
+  assert.equal(r.status, 409, JSON.stringify(r.json));
+  assert.equal(r.json.error.code, "compra_nao_encontrada");
+  assert.equal(chamadasGoogle.length, 0, "foi à Google depois de perder a corrida para OUTRA conta");
+  assert.equal(pontos(), undefined, "creditou benefícios na carteira errada");
+  assert.equal(S.tabelas.google_play_compras.length, 1, "duas linhas para o mesmo recibo");
+});
+
 test("o ECOQUILDO é o ÚLTIMO passo: se o crédito dos PONTOS DE LANCE falhar, o ECOQUILDO NÃO é emitido", async () => {
   // Invariante da ordem da cadeia (110e): uma falha no crédito de lance não pode deixar um ECOQUILDO
   // emitido sem lastro de contrapartida — e o PIX seria reembolsado. B14 (mutante) creditava o
