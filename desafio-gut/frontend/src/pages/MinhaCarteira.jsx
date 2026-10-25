@@ -7,7 +7,7 @@ import { useComprarPasse } from "../hooks/useComprarPasse.js";
 // UTAC110d-front — os dois saldos (pontos de fidelidade + créditos de lance) vêm do `ler-pontos`.
 import { usePontos } from "../hooks/usePontos.js";
 import { useEcoQuildo } from "../hooks/useEcoQuildo.js";
-import { passeDoTipo } from "../lib/passes.js";
+import { passeDoTipo, precoTotal } from "../lib/passes.js";
 import { conversoesFeitas } from "../lib/pontosLance.js"; // UTAC110j.5 — pontos de lance
 import ComprarPasseModal from "../components/ComprarPasseModal.jsx";
 import Toast from "../widgets/toast/Toast.jsx";
@@ -100,6 +100,8 @@ export default function MinhaCarteira() {
   // o Passe só se compra com saldo R$. A condição é a PONTE nativa (como no `useComprarPasse`, 110i.2),
   // nunca `?plataforma=` (sobreponível). O saldo R$ antigo continua visível nos dois.
   const depositoPix = !androidNativo();
+  // UTAC112 — pacote escolhido no balão do Passe (1, 3, 5, 10); volta a 1 ao reabrir o balão.
+  const [qtdPasse, setQtdPasse] = useState(1);
   // UTAC106c — balão de confirmação do Passe Desafio. UTAC106e — o balão passou a COMPRAR
   // (chama o endpoint `comprar-passe-pontos`); o estado do balão mantém o nome do 106c.
   const [passeAberto, setPasseAberto] = useState(false);
@@ -190,23 +192,27 @@ export default function MinhaCarteira() {
   ] : [];
   const todasFeitas = MISSOES.length > 0 && MISSOES.every((m) => m.feito);
 
-  async function escolherPasse(tipo) {
+  async function escolherPasse(tipo, quantidade = 1) {
     if (tipoEmCurso) return;
     setTipoEmCurso(tipo);
     setErroPasse("");
     try {
-      const r = await comprarPasse(tipo);
+      const r = await comprarPasse(tipo, quantidade);
       if (r?.ok) {
         setPasseAberto(false);
         setPasseSemSaldo(false);
-        setToastPasse({ variant: "success", message: passeDoTipo(tipo)?.sucesso ?? "Passe comprado" });
+        // UTAC112 — com mais de um, a mensagem diz quantos (a quantidade confirmada pelo servidor).
+        const n = Number.isSafeInteger(r.quantidade) ? r.quantidade : quantidade;
+        setToastPasse({ variant: "success", message: n > 1 ? `${n} passes comprados` : (passeDoTipo(tipo)?.sucesso ?? "Passe comprado") });
         try { await refetchPontos?.(); } catch { /* releitura é best-effort */ }
         // UTAC110e (D3) — cada Passe comprado dá 1 ECOQUILDO (R18-110e-1): relê-se também.
         try { await refetchEco?.(); } catch { /* releitura é best-effort */ }
       } else if (r?.status === 402 || r?.code === "saldo_insuficiente") {
         setPasseSemSaldo(true);
         // UTAC111 (achado 3 do validador) — no APK não se convida a depositar por PIX.
-        setErroPasse(depositoPix ? "Saldo insuficiente. Deposite via PIX e tente de novo." : "Saldo insuficiente.");
+        // UTAC112 — o aviso diz para QUANTOS passes falta saldo.
+        const falta = quantidade > 1 ? `Saldo insuficiente para ${quantidade} passes (${precoTotal(quantidade)}).` : "Saldo insuficiente.";
+        setErroPasse(depositoPix ? `${falta} Deposite via PIX e tente de novo.` : falta);
         setToastPasse({ variant: "error", message: "Saldo insuficiente. Carregar agora?" });
       } else {
         const msg = r?.message || "Erro. Tente de novo.";
@@ -342,7 +348,7 @@ export default function MinhaCarteira() {
                 </button>}
                 <button
                   type="button"
-                  onClick={() => { setErroPasse(""); setPasseAberto(true); }}
+                  onClick={() => { setErroPasse(""); setQtdPasse(1); setPasseAberto(true); }}
                   style={{
                     ...botaoPrimario,
                     // UTAC109h.3 (decisão do operador, 2026-10-09) — este botão deixou de ser
@@ -641,6 +647,9 @@ export default function MinhaCarteira() {
         pontosCartao={saldosIlegiveis ? null : pontosCartao}
         onCancelar={() => { setErroPasse(""); setPasseAberto(false); }}
         onComprar={escolherPasse}
+        quantidade={qtdPasse}
+        onQuantidade={setQtdPasse}
+        quantidadeNaLoja={!depositoPix}
       />
 
       {/* UTAC106e — TOAST do repo (`widgets/toast/Toast.jsx`; posiciona-se sozinho, auto-dismiss 4 s). */}

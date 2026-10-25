@@ -201,7 +201,10 @@ export async function validarCompra({ produtoId, purchaseToken } = {}) {
     acknowledgementState: Number.isInteger(Number(corpo?.acknowledgementState)) ? Number(corpo.acknowledgementState) : null,
     orderId: typeof corpo?.orderId === "string" && corpo.orderId !== "" ? corpo.orderId : null,
     purchaseTimeMillis: Number.isFinite(Number(corpo?.purchaseTimeMillis)) ? Number(corpo.purchaseTimeMillis) : null,
-    quantity: Number.isInteger(Number(corpo?.quantity)) ? Number(corpo.quantity) : 1,
+    // UTAC112 — «Multi-quantity»: o utilizador escolhe N no ecrã da Google e o recibo traz `quantity`.
+    // Ausente → 1 (compra simples). `null`/0/negativo/fracção NÃO viram 0 nem passam: ficam 1 e o
+    // crédito valida o intervalo (antes `Number(null) === 0` passava como inteiro).
+    quantity: Number.isSafeInteger(corpo?.quantity) && corpo.quantity >= 1 ? corpo.quantity : 1,
   };
 }
 
@@ -282,6 +285,8 @@ export async function fecharCompra(purchaseToken, estado, numeros = {}) {
     motivo: typeof numeros.motivo === "string" ? numeros.motivo : null,
     atualizado_em: new Date().toISOString(),
   };
+  // UTAC112 (R18-112-C) — a quantidade comprada vai no `payload jsonb` (a tabela não tem coluna própria).
+  if (Number.isSafeInteger(numeros.quantidade)) patch.payload = { quantidade: numeros.quantidade };
   const { error } = await getSupabase().from(TABELA_COMPRAS).update(patch).eq("purchase_token", purchaseToken);
   return error ? { ok: false, code: "registo_falhou" } : { ok: true };
 }

@@ -75,6 +75,12 @@ const RESPOSTA_VALIDACAO = {
   validacao_indisponivel: [503, "google_play_indisponivel"],
 };
 
+/** UTAC112 — a quantidade de uma compra já creditada (guardada no `payload`); registos antigos = 1. */
+function quantidadeDoRegisto(registo) {
+  const q = registo?.payload?.quantidade;
+  return Number.isSafeInteger(q) && q >= 1 ? q : 1;
+}
+
 export default async function handler(req) {
   const preflight = respostaPreflight(req);
   if (preflight) return preflight;
@@ -124,7 +130,8 @@ export default async function handler(req) {
   }
   if (registo?.estado === "creditada") {
     return jsonResponse({
-      ok: true, idempotent: true, tipo: registo.tipo_passe, pontosFidelidade: Number(registo.pontos ?? 0),
+      ok: true, idempotent: true, tipo: registo.tipo_passe, quantidade: quantidadeDoRegisto(registo),
+      pontosFidelidade: Number(registo.pontos ?? 0),
       ...(tipo === "relampago" ? { creditosLance: Number(registo.creditos_lance ?? 0) } : {}),
       ecoQuildo: Number(registo.eco_quildo ?? 0),
     }, 200);
@@ -143,7 +150,8 @@ export default async function handler(req) {
       try { registo = await lerCompra(purchaseToken); } catch { registo = null; }
       if (registo?.estado === "creditada" && registo.endereco === endereco) {
         return jsonResponse({
-          ok: true, idempotent: true, tipo: registo.tipo_passe, pontosFidelidade: Number(registo.pontos ?? 0),
+          ok: true, idempotent: true, tipo: registo.tipo_passe, quantidade: quantidadeDoRegisto(registo),
+      pontosFidelidade: Number(registo.pontos ?? 0),
           ...(tipo === "relampago" ? { creditosLance: Number(registo.creditos_lance ?? 0) } : {}),
           ecoQuildo: Number(registo.eco_quildo ?? 0),
         }, 200);
@@ -163,12 +171,18 @@ export default async function handler(req) {
   const ref = refGoogle(tipo, purchaseToken);
   let creditado;
   try {
-    creditado = await creditarPasseGoogle({ endereco, tipoPasse: tipo, ref });
+    // UTAC112 — os benefícios multiplicam-se pela quantidade do RECIBO validado na Google (nunca do corpo).
+    creditado = await creditarPasseGoogle({ endereco, tipoPasse: tipo, ref, quantidade: v.quantity });
   } catch {
     creditado = { ok: false, etapa: "store", code: "ERRO_DB" };
   }
   if (!creditado.ok) {
     await fecharCompra(purchaseToken, "falhada", { motivo: `${creditado.etapa}:${creditado.code}` }).catch(() => {});
+    // UTAC112 — recibo PAGO com quantidade acima do limite: não se credita; alerta para tratar à mão
+    // (o cliente só fecha a compra na loja depois de o servidor confirmar ⇒ a Google reembolsa a não reconhecida).
+    if (creditado.code === "quantidade_invalida") {
+      captureSecurityAlert(`${NOME}_quantidade_fora_do_limite`, { produto: sku, quantidade: v.quantity }, "error").catch(() => {});
+    }
     const mapa = {
       pontos: "creditar_pontos_falhou",
       lance: "creditar_pontos_lance_falhou", // UTAC110n: a etapa «lance» passou a creditar pontos
@@ -180,7 +194,7 @@ export default async function handler(req) {
 
   const fecho = await fecharCompra(purchaseToken, "creditada", {
     pontos: creditado.pontos, creditosLance: creditado.creditosLance, ecoQuildo: creditado.ecoQuildo,
-    motivo: v.orderId ?? null,
+    motivo: v.orderId ?? null, quantidade: v.quantity,
   }).catch(() => ({ ok: false }));
   if (!fecho.ok) {
     // Os benefícios JÁ foram entregues: devolver erro faria o cliente repetir (e repetir é inócuo,
@@ -189,7 +203,7 @@ export default async function handler(req) {
   }
 
   return jsonResponse({
-    ok: true, idempotent: creditado.idempotent === true, tipo,
+    ok: true, idempotent: creditado.idempotent === true, tipo, quantidade: v.quantity,
     pontosFidelidade: creditado.pontos,
     ...(tipo === "relampago" ? { creditosLance: creditado.creditosLance ?? 0 } : {}),
     ecoQuildo: creditado.ecoQuildo,

@@ -353,3 +353,105 @@ test("B11 ler-pontos devolve os DOIS ledgers (e mantém os campos antigos)", asy
   assert.equal(c.lance.pontos, 203, "200 do Passe + 3 do login");
   assert.equal(c.lance.historico.length, 2);
 });
+
+// ── UTAC112 — compra múltipla por saldo R$ (PWA): pacotes 1, 3, 5, 10 ─────────────────────────────
+async function comprarN(handler, quantidade, key = K(112)) {
+  const req = new Request("https://x/.netlify/functions/comprar-passe", {
+    method: "POST", body: JSON.stringify(quantidade === undefined ? { idempotencyKey: key } : { idempotencyKey: key, quantidade }),
+    headers: { "content-type": "application/json", "x-nf-client-connection-ip": `10.9.1.${++ip % 250}`,
+      authorization: `Bearer ${await assinarUserSession(A)}` },
+  });
+  const r = await handler(req);
+  return { status: r.status, corpo: await r.json().catch(() => null) };
+}
+const ecoA = () => S.tabelas.eco_quildo.find((l) => l.endereco === A);
+
+test("UTAC112 P1: 5 Passes Relâmpago ⇒ debita R$ 10,00 · +50 fidelidade · +1000 pontos de lance · +5 ECOQUILDO", async () => {
+  S.tabelas.saldo_rs.find((l) => l.cliente_id === A).payload.centavos = 1500;
+  const r = await comprarN(hRelampago, 5);
+  assert.equal(r.status, 201, JSON.stringify(r.corpo));
+  assert.equal(r.corpo.quantidade, 5);
+  assert.equal(saldo(), 500);
+  assert.equal(linha().pontos, 50);
+  assert.equal(linha().pontos_lance, 1000);
+  assert.equal(ecoA().saldo, 5);
+  assert.equal(S.tabelas.eco_quildo_lastro[0].total_emitido, 5);
+});
+
+test("UTAC112 P2: 3 Passes Programados ⇒ R$ 6,00 · +30 · +3 ECOQUILDO · sem pontos de lance; repetir a chave não cobra 2×", async () => {
+  S.tabelas.saldo_rs.find((l) => l.cliente_id === A).payload.centavos = 1000;
+  const r1 = await comprarN(hProgramado, 3);
+  const r2 = await comprarN(hProgramado, 3);
+  assert.equal(r1.status, 201);
+  assert.equal(r2.status, 200);
+  assert.equal(r2.corpo.quantidade, 3);
+  assert.equal(saldo(), 400);
+  assert.equal(linha().pontos, 30);
+  assert.equal(linha().pontos_lance ?? 0, 0);
+  assert.equal(ecoA().saldo, 3);
+});
+
+test("UTAC112 P3: saldo insuficiente para o pacote ⇒ 402 com o total, NADA debitado nem creditado", async () => {
+  const r = await comprarN(hRelampago, 3); // R$ 6,00 > R$ 5,00
+  assert.equal(r.status, 402);
+  assert.equal(r.corpo.error?.quantidade ?? r.corpo.quantidade, 3);
+  assert.match(JSON.stringify(r.corpo), /3 Passes \(R\$ 6,00\)/);
+  assert.equal(saldo(), 500);
+  assert.equal(linha()?.pontos ?? 0, 0);
+});
+
+test("UTAC112 P4: só 1, 3, 5 ou 10 — o resto é 400 sem tocar no saldo; ausente = 1 (contrato antigo)", async () => {
+  for (const [i, q] of [0, 2, 4, 11, -1, 1.5, "5", null, true].entries()) {
+    const r = await comprarN(hRelampago, q, K(`inv-${i}`));
+    assert.equal(r.status, 400, `quantidade ${JSON.stringify(q)}`);
+    assert.equal(r.corpo.error?.code ?? r.corpo.code, "quantidade_invalida");
+  }
+  assert.equal(saldo(), 500);
+  const r = await comprarN(hRelampago, undefined, K("um"));
+  assert.equal(r.status, 201);
+  assert.equal(r.corpo.quantidade, 1);
+  assert.equal(saldo(), 300);
+});
+
+test("UTAC112 P5: compra de 10 a MEIO (ECOQUILDO falhou) ⇒ o retry completa 10 ECOQUILDO, sem cobrar de novo", async () => {
+  S.tabelas.saldo_rs.find((l) => l.cliente_id === A).payload.centavos = 2500;
+  const lastroOriginal = S.tabelas.eco_quildo_lastro.splice(0); // sem lastro ⇒ o ECOQUILDO é revertido
+  const r1 = await comprarN(hRelampago, 10);
+  assert.equal(r1.status, 502);
+  assert.equal(saldo(), 2500, "tudo desfeito e reembolsado");
+  S.tabelas.eco_quildo_lastro.push(...lastroOriginal);
+  const r2 = await comprarN(hRelampago, 10);
+  assert.equal(r2.status, 201);
+  assert.equal(saldo(), 500);
+  assert.equal(linha().pontos, 100);
+  assert.equal(ecoA().saldo, 10);
+});
+
+test("UTAC112 P6: creditarPasseGoogle recusa quantidade fora de 1..100 (0, 101, fracção, texto) sem creditar", async () => {
+  const { creditarPasseGoogle, MAX_QUANTIDADE_GOOGLE } = await import("../_lib/comprar-passe-tipado.mjs");
+  assert.equal(MAX_QUANTIDADE_GOOGLE, 100);
+  for (const q of [0, -1, 101, 1.5, "3", null]) {
+    const r = await creditarPasseGoogle({ endereco: A, tipoPasse: "relampago", ref: `gp-${String(q)}`, quantidade: q });
+    assert.equal(r.code, "quantidade_invalida", `q=${q}`);
+  }
+  assert.equal(linha()?.pontos ?? 0, 0);
+  const ok = await creditarPasseGoogle({ endereco: A, tipoPasse: "programado", ref: "gp-100", quantidade: 100 });
+  assert.equal(ok.ok, true);
+  assert.equal(linha().pontos, 1000);
+});
+
+test("UTAC112 P7 (achado 1 do validador): compra de 5 A MEIO completada por um retry que pede 1 ⇒ usa os 5 já creditados, sem cobrar", async () => {
+  const key = K("meio-5");
+  const ref = P.refPasse("relampago", key);
+  // Estado a meio: os 50 pontos de fidelidade (5×) já entraram com esta ref; lance e ECOQUILDO não.
+  const c = await P.creditarPontos(A, 50, P.TIPO_COMPRA, ref);
+  assert.equal(c.ok, true);
+  const r = await comprarN(hRelampago, 1, key);
+  assert.equal(r.status, 200, JSON.stringify(r.corpo));
+  assert.equal(r.corpo.quantidade, 5, "a resposta diz a quantidade JÁ creditada, não a do retry");
+  assert.equal(linha().pontos, 50);
+  assert.equal(linha().pontos_lance, 1000);
+  assert.equal(ecoA().saldo, 5);
+  assert.equal(S.tabelas.eco_quildo_lastro[0].total_emitido, 5);
+  assert.equal(saldo(), 500, "completar não cobra");
+});

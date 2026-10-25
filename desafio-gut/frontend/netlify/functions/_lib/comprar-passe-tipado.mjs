@@ -40,7 +40,7 @@ import {
   PONTOS_FIDELIDADE_POR_PASSE, VALOR_PASSE_CENTAVOS, TIPO_COMPRA, TIPOS_PASSE, refPasse,
 } from "./passe-pontos.mjs";
 import {
-  creditarPontosLanceDoPasseRelampago, lerLedgerLance, reverterMovimentoLance,
+  creditarPontosLance, lerLedgerLance, reverterMovimentoLance, PONTOS_LANCE_POR_PASSE_RELAMPAGO,
 } from "./ledger-lance.mjs";
 import {
   creditarEcoQuildo, lerEcoQuildo, reverterEcoQuildo, registarEmissaoNoLastro,
@@ -49,6 +49,14 @@ import {
 
 // 8–180: a `ref` leva o prefixo `passe-<tipo>:` e o limite da `ref` é 200.
 const IDEMPOTENCY_RE = /^[A-Za-z0-9._:-]{8,180}$/;
+
+// UTAC112 — compra múltipla. No PIX/saldo (PWA) o cliente escolhe um dos pacotes; na Google Play a quantidade
+// vem do RECIBO (o utilizador escolhe-a no ecrã da Google — «Multi-quantity», R18-112-A), logo aceita-se
+// qualquer inteiro de 1 a MAX_QUANTIDADE_GOOGLE. Os benefícios multiplicam-se DENTRO da mesma `ref`: um só
+// movimento de N× em cada ledger, o que mantém a idempotência e a reversão por `ref` exactamente como em 1×.
+export const QUANTIDADES_PASSE = Object.freeze([1, 3, 5, 10]);
+export const MAX_QUANTIDADE_GOOGLE = 100;
+const quantidadeGoogleValida = (q) => Number.isSafeInteger(q) && q >= 1 && q <= MAX_QUANTIDADE_GOOGLE;
 
 async function titular(req) {
   const h = req.headers.get("authorization") || "";
@@ -69,10 +77,22 @@ function chaveIdempotencia(req, body) {
 
 const temRef = (lista, ref) => Array.isArray(lista) && lista.some((h) => h?.ref === ref);
 
+/** UTAC112 — +200 pontos de lance por Passe Relâmpago, × N (o mesmo motivo «passe-relampago» de sempre). */
+const creditarPontosLanceDoPasse = (endereco, ref, quantidade) =>
+  creditarPontosLance(endereco, PONTOS_LANCE_POR_PASSE_RELAMPAGO * quantidade, "passe-relampago", ref);
+
+/** UTAC112 — N de uma compra já creditada = pontos de fidelidade desta `ref` ÷ 10 (1 se ilegível). */
+function quantidadeJaCreditada(reg, ref) {
+  const e = Array.isArray(reg?.historico) ? reg.historico.find((h) => h?.ref === ref) : null;
+  const n = Number(e?.pontos) / PONTOS_FIDELIDADE_POR_PASSE;
+  return Number.isSafeInteger(n) && n >= 1 ? n : 1;
+}
+
 /** Contexto de um tipo de Passe (o que a cadeia precisa de saber do tipo). */
-function contexto(tipoPasse) {
+function contexto(tipoPasse, quantidade = 1) {
   return {
     tipoPasse,
+    quantidade,
     ehRelampago: tipoPasse === "relampago",
     nome: `comprar-passe-${tipoPasse}`,
     // `MOTIVOS_EMISSAO` não tem um motivo genérico «compra»: o do ECOQUILDO é o tipo do Passe.
@@ -94,10 +114,10 @@ async function estadoDaCompra(ctx, endereco, ref) {
 
 /** Credita o ECOQUILDO do Passe (+ lastro em R$) — idempotente pelo `ref` da compra. */
 async function garantirEcoDoPasse(ctx, endereco, ref) {
-  const ec = await creditarEcoQuildo(endereco, ECOQUILDO_POR_PASSE, ctx.motivoEco, ref).catch(() => ({ ok: false, code: "ERRO_DB" }));
+  const ec = await creditarEcoQuildo(endereco, ECOQUILDO_POR_PASSE * ctx.quantidade, ctx.motivoEco, ref).catch(() => ({ ok: false, code: "ERRO_DB" }));
   if (!ec.ok) return { ok: false, code: ec.code };
   if (ec.criado === true) {
-    const el = await registarEmissaoNoLastro(ECOQUILDO_POR_PASSE).catch(() => ({ ok: false, code: "ERRO_DB" }));
+    const el = await registarEmissaoNoLastro(ECOQUILDO_POR_PASSE * ctx.quantidade).catch(() => ({ ok: false, code: "ERRO_DB" }));
     if (!el.ok) {
       // ECOQUILDO sem lastro em R$ não existe (Art. 50º): desfaz a emissão antes de desistir.
       const rev = await reverterEcoQuildo(endereco, ref).catch(() => ({ ok: false, code: "ERRO_DB" }));
@@ -115,12 +135,15 @@ async function garantirEcoDoPasse(ctx, endereco, ref) {
  * lance (só Relâmpago) e o ECOQUILDO. É o que permite a um retry fechar uma compra a meio.
  * @returns {Promise<{ok:true, pontos:number, pontosLance:number|undefined, ecoQuildo:number}|{ok:false, etapa:string, code:string}>}
  */
-async function completarPendentes(ctx, endereco, ref, st) {
+async function completarPendentes(ctxPedido, endereco, ref, st) {
+  // A quantidade de uma compra A MEIO é a que JÁ foi creditada nos pontos (10 × N, com esta `ref`) —
+  // nunca a do retry: o que falta completa-se na mesma proporção.
+  const ctx = { ...ctxPedido, quantidade: quantidadeJaCreditada(st.reg, ref) };
   let pontosLance;
   if (ctx.ehRelampago) {
     if (st.completa || temRef(st.led?.historico, ref)) pontosLance = st.led.pontos;
     else {
-      const c = await creditarPontosLanceDoPasseRelampago(endereco, ref);
+      const c = await creditarPontosLanceDoPasse(endereco, ref, ctx.quantidade);
       if (!c.ok) return { ok: false, etapa: "lance", code: c.code ?? "ERRO_DB" };
       pontosLance = c.pontos;
     }
@@ -139,7 +162,7 @@ async function completarPendentes(ctx, endereco, ref, st) {
  */
 async function creditarBeneficios(ctx, endereco, ref) {
   let p;
-  try { p = await creditarPontos(endereco, PONTOS_FIDELIDADE_POR_PASSE, TIPO_COMPRA, ref); }
+  try { p = await creditarPontos(endereco, PONTOS_FIDELIDADE_POR_PASSE * ctx.quantidade, TIPO_COMPRA, ref); }
   catch { p = { ok: false, code: "ERRO_DB" }; }
 
   if (!p.ok || !p.criado) {
@@ -150,7 +173,7 @@ async function creditarBeneficios(ctx, endereco, ref) {
   let pontosLance;
   if (ctx.ehRelampago) {
     let c;
-    try { c = await creditarPontosLanceDoPasseRelampago(endereco, ref); }
+    try { c = await creditarPontosLanceDoPasse(endereco, ref, ctx.quantidade); }
     catch { c = { ok: false, code: "ERRO_DB" }; }
     if (!c.ok) {
       // Sem os pontos de lance, o Passe Relâmpago não foi entregue: desfaz os 10 pontos (o pagamento é do chamador).
@@ -201,7 +224,7 @@ async function respostaIdempotente(ctx, endereco, ref, st) {
       : jsonError(502, "creditar_eco_quildo_falhou", "não foi possível creditar o ECOQUILDO", { motivo: c.code });
   }
   return jsonResponse({
-    ok: true, idempotent: true, tipo: ctx.tipoPasse, pontosFidelidade: c.pontos,
+    ok: true, idempotent: true, tipo: ctx.tipoPasse, quantidade: quantidadeJaCreditada(st.reg, ref), pontosFidelidade: c.pontos,
     ...(ctx.ehRelampago ? {
       pontosLance: c.pontosLance,
       // LEGADO (110d): o crédito já não é creditado; o campo fica a 0 para não partir clientes antigos.
@@ -214,7 +237,7 @@ async function respostaIdempotente(ctx, endereco, ref, st) {
 /** Handler da compra de um Passe tipado por SALDO R$ (`tipoPasse` ∈ TIPOS_PASSE, fixado pelo endpoint). */
 export async function comprarPasseTipado(req, tipoPasse) {
   if (!TIPOS_PASSE.includes(tipoPasse)) throw new Error(`tipo de Passe desconhecido: ${tipoPasse}`);
-  const ctx = contexto(tipoPasse);
+  let ctx = contexto(tipoPasse);
 
   if (req.method !== "POST") return jsonError(405, "metodo_invalido", "use POST", { allowed: ["POST"] });
   const rl = await aplicarRateLimit(req, ctx.nome, 5);
@@ -235,24 +258,34 @@ export async function comprarPasseTipado(req, tipoPasse) {
   if (!idempotencyKey) return jsonError(400, "idempotencyKey_invalida", "envie { idempotencyKey } (8–180 chars [A-Za-z0-9._:-])");
   const ref = refPasse(tipoPasse, idempotencyKey);
 
+  // UTAC112 — pacote de 1, 3, 5 ou 10 Passes (ausente = 1, o comportamento de sempre). SEM coerção.
+  const quantidade = body?.quantidade === undefined ? 1 : body.quantidade;
+  if (!QUANTIDADES_PASSE.includes(quantidade)) {
+    return jsonError(400, "quantidade_invalida", `quantidade tem de ser ${QUANTIDADES_PASSE.join(", ")}`);
+  }
+  ctx = contexto(tipoPasse, quantidade);
+  const valorCentavos = VALOR_PASSE_CENTAVOS * quantidade;
+
   let st;
   try { st = await estadoDaCompra(ctx, endereco, ref); }
   catch { return jsonError(503, "store_indisponivel", "não foi possível ler os pontos"); }
   if (st.fid) return respostaIdempotente(ctx, endereco, ref, st);
 
-  const debito = await debitarSaldoRs({ endereco, valorCentavos: VALOR_PASSE_CENTAVOS, motivo: ctx.nome });
+  const debito = await debitarSaldoRs({ endereco, valorCentavos, motivo: ctx.nome });
   if (!debito.ok) {
     if (debito.code === "saldo_insuficiente") {
       // Cliques concorrentes na MESMA chave: o vencedor já debitou e creditou.
       const st2 = await estadoDaCompra(ctx, endereco, ref).catch(() => null);
       if (st2?.fid) return respostaIdempotente(ctx, endereco, ref, st2);
-      return jsonError(402, "saldo_insuficiente", "saldo R$ insuficiente para o Passe (R$ 2,00)");
+      return jsonError(402, "saldo_insuficiente",
+        `saldo R$ insuficiente para ${quantidade === 1 ? "o Passe" : `${quantidade} Passes`} (R$ ${(valorCentavos / 100).toFixed(2).replace(".", ",")})`,
+        { quantidade, valorCentavos });
     }
     return jsonError(502, "debito_falhou", "não foi possível debitar o saldo R$", { motivo: debito.code });
   }
 
   const reembolsar = async () => {
-    const r = await reembolsarSaldoRs({ endereco, valorCentavos: VALOR_PASSE_CENTAVOS, motivo: ctx.nome });
+    const r = await reembolsarSaldoRs({ endereco, valorCentavos, motivo: ctx.nome });
     if (!r.ok) captureSecurityAlert(`${ctx.nome}_reembolso_falhou`, { code: r.code }, "error").catch(() => {});
     return r.ok;
   };
@@ -283,7 +316,7 @@ export async function comprarPasseTipado(req, tipoPasse) {
   }
 
   return jsonResponse({
-    ok: true, idempotent: false, tipo: tipoPasse, pontosFidelidade: cred.pontos,
+    ok: true, idempotent: false, tipo: tipoPasse, quantidade, pontosFidelidade: cred.pontos,
     ...(ctx.ehRelampago ? { pontosLance: cred.pontosLance, creditosLance: 0 } : {}),
     ecoQuildo: cred.ecoQuildo,
     saldoRsAntesCentavos: debito.resultado.saldoAntesCentavos,
@@ -296,15 +329,17 @@ export async function comprarPasseTipado(req, tipoPasse) {
  * Chamado por `validar-compra-google.mjs` SÓ depois de a Google Play Developer API ter confirmado o
  * recibo (`purchaseState === 0`). R18-110i.1-1: reusa a MESMA cadeia de crédito do PIX.
  *
- * @param {{endereco:string, tipoPasse:"relampago"|"programado", ref:string}} args
+ * @param {{endereco:string, tipoPasse:"relampago"|"programado", ref:string, quantidade?:number}} args
  *   `ref` = derivada do `purchaseToken` (a idempotência é do recibo, não do clique).
  * @returns {Promise<{ok:true, idempotent:boolean, pontos:number, creditosLance:number|undefined,
  *                    ecoQuildo:number} | {ok:false, etapa:string, code:string}>}
  */
-export async function creditarPasseGoogle({ endereco, tipoPasse, ref }) {
+export async function creditarPasseGoogle({ endereco, tipoPasse, ref, quantidade = 1 }) {
   if (!TIPOS_PASSE.includes(tipoPasse)) return { ok: false, etapa: "pedido", code: "tipo_invalido" };
   if (typeof ref !== "string" || ref.length === 0 || ref.length > 200) return { ok: false, etapa: "pedido", code: "ref_invalida" };
-  const ctx = contexto(tipoPasse);
+  // UTAC112 — a quantidade é a do RECIBO da Google (já validado pelo servidor): 1..MAX_QUANTIDADE_GOOGLE.
+  if (!quantidadeGoogleValida(quantidade)) return { ok: false, etapa: "pedido", code: "quantidade_invalida" };
+  const ctx = contexto(tipoPasse, quantidade);
 
   let st;
   try { st = await estadoDaCompra(ctx, endereco, ref); }

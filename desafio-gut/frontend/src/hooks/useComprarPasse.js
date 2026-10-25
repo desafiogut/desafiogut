@@ -37,7 +37,7 @@ import { useCallback, useRef, useState } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
 import { apiPost } from "../lib/api.js";
 import { gerarIdempotencyKey } from "../utils/idempotency.js";
-import { passeDoTipo, inteiroNaoNegativo } from "../lib/passes.js";
+import { passeDoTipo, inteiroNaoNegativo, QUANTIDADES_PASSE } from "../lib/passes.js";
 import { useRecursosApp } from "./useRecursosApp.js";
 import { billingDisponivel, iniciarCompra, confirmarCompra, androidNativo } from "../lib/google-play-billing.js";
 
@@ -121,15 +121,19 @@ export function useComprarPasse() {
     const p = inteiroNaoNegativo(data?.pontosFidelidade);
     setPontos(p);
     return {
-      ok: true, tipo, pontos: p,
+      ok: true, tipo, pontos: p, quantidade: Number.isSafeInteger(data?.quantidade) ? data.quantidade : 1,
       creditosLance: inteiroNaoNegativo(data?.creditosLance),
       idempotent: Boolean(data?.idempotent),
     };
   }, [authToken]);
 
-  const comprar = useCallback(async (tipo) => {
+  // UTAC112 — `quantidade` ∈ {1,3,5,10} (default 1). No PIX/saldo vai para o servidor; no Billing a Google
+  // NÃO aceita quantidade imposta pela app (o adaptador GooglePlay do plugin não tem `orderQuantity`): o
+  // utilizador escolhe-a no ecrã da Google («Multi-quantity», R18-112-A) e o servidor credita a do RECIBO.
+  const comprar = useCallback(async (tipo, quantidade = 1) => {
     const passe = passeDoTipo(tipo);
     if (!passe) return { ok: false, code: "tipo_invalido", message: "Escolha um Passe Desafio válido." };
+    if (!QUANTIDADES_PASSE.includes(quantidade)) return { ok: false, code: "quantidade_invalida", message: "Escolha 1, 3, 5 ou 10 passes." };
     if (!address) return { ok: false, code: "sem_endereco", message: "Carteira não conectada" };
     // ⚠️ UTAC106j-fix: `authToken` (user-session) é cunhado pelo AppContext em `POST /auth-user` e
     // pode chegar DEPOIS do `address`; sem ele o endpoint daria 401. Devolve um código próprio.
@@ -162,7 +166,7 @@ export function useComprarPasse() {
       // Chave NOVA por CHAMADA (nunca reutilizada): a idempotência do servidor cobre o RETRY do
       // MESMO pedido. Contra dois pedidos diferentes, a trava é a guarda de corrida (`emCurso`).
       const idempotencyKey = gerarIdempotencyKey();
-      const { ok, status, data } = await apiPost(passe.endpoint, { idempotencyKey }, { token: authToken });
+      const { ok, status, data } = await apiPost(passe.endpoint, { idempotencyKey, quantidade }, { token: authToken });
 
       if (ok) {
         const p = inteiroNaoNegativo(data?.pontosFidelidade);
@@ -170,7 +174,7 @@ export function useComprarPasse() {
         // O saldo R$ desceu no servidor: manda reler (o ecrã mostra-o).
         try { refetchSaldoRs?.(); } catch { /* refetch é best-effort */ }
         return {
-          ok: true, tipo: passe.tipo, pontos: p,
+          ok: true, tipo: passe.tipo, pontos: p, quantidade: data?.quantidade ?? quantidade,
           creditosLance: inteiroNaoNegativo(data?.creditosLance),
           idempotent: Boolean(data?.idempotent),
         };

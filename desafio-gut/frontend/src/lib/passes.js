@@ -13,6 +13,18 @@
 // O tipo do Passe vem do ENDPOINT, nunca do corpo (`_lib/comprar-passe-tipado.mjs`).
 
 export const PRECO_PASSE = "R$ 2,00";
+// UTAC112 — compra múltipla: os pacotes que o PWA oferece (o servidor aceita só estes no saldo R$).
+export const QUANTIDADES_PASSE = Object.freeze([1, 3, 5, 10]);
+export const VALOR_PASSE_CENTAVOS = 200;
+/** «R$ 10,00» para N Passes (N fora dos pacotes → null; sem coerção). */
+export function precoTotal(quantidade) {
+  if (!QUANTIDADES_PASSE.includes(quantidade)) return null;
+  return `R$ ${((VALOR_PASSE_CENTAVOS * quantidade) / 100).toFixed(2).replace(".", ",")}`;
+}
+/** Texto do botão: 1 → «Comprar <nome>» (como sempre); N → «Comprar N passes por R$ X,XX». */
+export function rotuloCompra(nome, quantidade) {
+  return quantidade === 1 ? `Comprar ${nome}` : `Comprar ${quantidade} passes por ${precoTotal(quantidade)}`;
+}
 export const PONTOS_FIDELIDADE_POR_PASSE = 10;
 
 // Congelado + lido com `Object.hasOwn`: um tipo vindo de fora («constructor», «__proto__», «pontos»)

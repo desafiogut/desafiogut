@@ -41,5 +41,8 @@ test("achado 3 do validador: no APK nenhum TEXTO convida a depositar por PIX", (
   const i = fonte.indexOf("Depósito por PIX via Mercado Pago");
   assert.ok(i > 0);
   assert.equal(fonte.lastIndexOf("{depositoPix && <p", i) + "{depositoPix && ".length, fonte.lastIndexOf("<p", i));
-  assert.match(fonte, /setErroPasse\(depositoPix \? "Saldo insuficiente\. Deposite via PIX e tente de novo\." : "Saldo insuficiente\."\)/);
+  // UTAC112: o aviso passou a dizer para QUANTOS passes falta saldo; a invariante fica — o convite a
+  // depositar por PIX só existe com depositoPix (antes: um literal fixo com a mesma condição).
+  assert.match(fonte, /setErroPasse\(depositoPix \? `\$\{falta\} Deposite via PIX e tente de novo\.` : falta\)/);
+  assert.doesNotMatch(fonte.replace(/depositoPix \? `\$\{falta\} Deposite via PIX e tente de novo\.`/, ""), /Deposite via PIX/);
 });

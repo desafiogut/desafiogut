@@ -104,12 +104,14 @@ test("UTAC106c/SEG1 · o botão «Comprar Passe» abre o BALÃO, que fecha e COM
   assert.match(CART, /onCancelar=\{\(\) => \{[^}]*setPasseAberto\(false\);?\s*\}\}/,
     "o balão não fecha (falta o `onCancelar`)");
   assert.match(CART, /onComprar=\{escolherPasse\}/, "o balão não está ligado à compra (`onComprar`)");
-  assert.match(CART, /async function escolherPasse\(tipo\)[\s\S]{0,200}await comprarPasse\(tipo\)/,
+  // UTAC112: a escolha passou a levar também a quantidade (1/3/5/10); a ligação ao endpoint é a mesma.
+  assert.match(CART, /async function escolherPasse\(tipo, quantidade = 1\)[\s\S]{0,200}await comprarPasse\(tipo, quantidade\)/,
     "escolher um Passe não chama `comprarPasse(tipo)` (o botão não está ligado ao endpoint)");
   // as saídas existem no componente do balão: «Cancelar» + um «Comprar <Passe>» por cartão.
   const MODAL = codigo(ler("components/ComprarPasseModal.jsx"));
   assert.match(MODAL, />\s*Cancelar\s*</, "o balão não tem o botão «Cancelar»");
-  assert.match(MODAL, /`Comprar \$\{p\.nome\}`/, "o balão não tem os botões «Comprar <Passe>»");
+  // UTAC112: o rótulo passou a `rotuloCompra(p.nome, q)` («Comprar <Passe>» com 1; «Comprar N passes por R$ X» com N).
+  assert.match(MODAL, /rotuloCompra\(p\.nome, q\)/, "o balão não tem os botões «Comprar <Passe>»");
 });
 
 test("UTAC106c/SEG1 · a Carteira delega a compra ao hook (sem I/O inline) — UTAC106e", () => {

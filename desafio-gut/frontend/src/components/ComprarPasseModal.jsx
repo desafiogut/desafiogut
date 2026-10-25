@@ -19,7 +19,7 @@
 //     (vindo de `comprar-passe-pontos`) e tinha de o declarar «(total)»; a Carteira passa a ler o
 //     `usePontos`, logo o número aqui é o MESMO da barra «X / 50» das Ofertas Programadas.
 import { Modal } from "@/components/ui";
-import { TIPOS_PASSE, PRECO_PASSE } from "../lib/passes.js";
+import { TIPOS_PASSE, PRECO_PASSE, QUANTIDADES_PASSE, precoTotal, rotuloCompra } from "../lib/passes.js";
 
 const COR = { gold: "#f5a623", muted: "#6b7db8", text: "#e8f0fe", danger: "#ef4444" };
 const PONTOS_PARA_CARTAO = 50;
@@ -27,8 +27,13 @@ const ORDEM = [TIPOS_PASSE.relampago, TIPOS_PASSE.programado];
 
 export default function ComprarPasseModal({
   aberto, onComprar, onCancelar, emCurso = null, erro = "", pontosCartao = null,
+  quantidade = 1, onQuantidade, quantidadeNaLoja = false,
 }) {
   const ocupado = emCurso != null;
+  // UTAC112 — pacote escolhido (1, 3, 5, 10), CONTROLADO por quem abre o balão. No APK (`quantidadeNaLoja`)
+  // a Google não aceita quantidade imposta pela app: o seletor some e explica-se que a quantidade se escolhe
+  // no ecrã da Google (R18-112-A). Valor fora dos pacotes → 1 (sem coerção).
+  const q = quantidadeNaLoja || !QUANTIDADES_PASSE.includes(quantidade) ? 1 : quantidade;
   // Durante a compra não se fecha: nem por ESC/backdrop, nem pelo botão Cancelar.
   const fechar = ocupado ? () => {} : onCancelar;
 
@@ -41,8 +46,37 @@ export default function ComprarPasseModal({
         Escolha o seu Passe Desafio
       </h2>
       <p style={{ margin: "0 0 0.9rem", color: COR.muted, fontSize: "0.85rem", lineHeight: 1.5 }}>
-        Cada Passe custa <strong style={{ color: COR.gold }}>{PRECO_PASSE}</strong>, debitados do seu saldo.
+        Cada Passe custa <strong style={{ color: COR.gold }}>{PRECO_PASSE}</strong>
+        {quantidadeNaLoja ? "." : ", debitados do seu saldo."}
+        {!quantidadeNaLoja && q > 1 && (
+          <> Total: <strong data-total-passes="" style={{ color: COR.gold }}>{q} × {PRECO_PASSE} = {precoTotal(q)}</strong>.</>
+        )}
       </p>
+
+      {quantidadeNaLoja ? (
+        <p data-quantidade-na-loja="" style={{ margin: "0 0 0.9rem", color: COR.muted, fontSize: "0.82rem", lineHeight: 1.5 }}>
+          Quer mais de um? Se a Google Play oferecer a opção, escolha a quantidade na tela de pagamento dela.
+        </p>
+      ) : (
+        <div role="radiogroup" aria-label="Quantidade de passes" data-quantidade-passes=""
+          style={{ display: "flex", gap: "0.5rem", margin: "0 0 0.9rem", flexWrap: "wrap" }}>
+          {QUANTIDADES_PASSE.map((n) => {
+            const ativo = n === q;
+            return (
+              <button key={n} type="button" role="radio" aria-checked={ativo ? "true" : "false"} data-quantidade={n}
+                disabled={ocupado} onClick={() => onQuantidade?.(n)}
+                style={{
+                  minWidth: "56px", minHeight: "48px", padding: "0.5rem 0.9rem", borderRadius: "12px", fontWeight: 800,
+                  fontSize: "0.9rem", cursor: ocupado ? "not-allowed" : "pointer",
+                  background: ativo ? "rgba(245,166,35,0.22)" : "transparent",
+                  border: `1px solid ${ativo ? COR.gold : "rgba(245,166,35,0.35)"}`, color: ativo ? COR.gold : COR.text,
+                }}>
+                {n}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {Number.isSafeInteger(pontosCartao) && pontosCartao >= 0 && (
         <p data-pontos-cartao="" style={{ margin: "0 0 0.9rem", color: COR.muted, fontSize: "0.82rem" }}>
@@ -67,14 +101,14 @@ export default function ComprarPasseModal({
                 <h3 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 800, color: COR.text }}>
                   {p.icone} {p.nome}
                 </h3>
-                <strong style={{ color: COR.gold, fontSize: "0.95rem", whiteSpace: "nowrap" }}>{PRECO_PASSE}</strong>
+                <strong style={{ color: COR.gold, fontSize: "0.95rem", whiteSpace: "nowrap" }}>{precoTotal(q)}</strong>
               </div>
               <p style={{ margin: "0.3rem 0 0.7rem", color: COR.text, opacity: 0.85, fontSize: "0.82rem", lineHeight: 1.45 }}>
                 {p.beneficio}
               </p>
               <button
                 type="button"
-                onClick={() => onComprar?.(p.tipo)}
+                onClick={() => onComprar?.(p.tipo, q)}
                 disabled={ocupado}
                 aria-busy={esteEmCurso ? "true" : undefined}
                 style={{
@@ -95,7 +129,7 @@ export default function ComprarPasseModal({
                     ⏳
                   </span>
                 )}
-                {esteEmCurso ? "Processando…" : `Comprar ${p.nome}`}
+                {esteEmCurso ? "Processando…" : rotuloCompra(p.nome, q)}
               </button>
             </section>
           );

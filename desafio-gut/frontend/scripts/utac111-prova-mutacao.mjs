@@ -20,7 +20,7 @@ const M = [
   ["M3 webhook sem ramo do produto", `${FN}/webhook-mercadopago.mjs`, `if (meta?.tipo === "produto") {`, "if (false) {", T_BACK, FN],
   ["M4 sem conferência do valor", `${FN}/_lib/pedidos.mjs`, "valorCentavos !== pedido.valorPagoCentavos) return", "false) return", T_BACK, FN],
   ["M5 sem idempotência", `${FN}/_lib/pedidos.mjs`, "if (pedido.pago_em) {\n      // Outro PIX", "if (false) {\n      // Outro PIX", T_BACK, FN],
-  ["M6 consulta sem ramo do produto", `${FN}/confirmar-pagamento.mjs`, `  if (tipo === "produto") {\r\n    const pago`, `  if (false) {\r\n    const pago`, T_BACK, FN],
+  ["M6 consulta sem ramo do produto", `${FN}/confirmar-pagamento.mjs`, `if (tipo === "produto") {`, `if (false) {`, T_BACK, FN], // UTAC112 (achado 4 do validador): âncora sem fim de linha — reproduzível em checkout LF
   ["M7 produto sem paymentId aceite", `${FN}/confirmar-pagamento.mjs`, "(!produtoId || !paymentId)", "(!produtoId)", T_BACK, FN],
   ["M8 pede pagamento depois do envio", "src/lib/pedidos.js", "p.pago_em || p.rastreio) return false;", "p.pago_em) return false;", T_CARTAO, "."],
   ["M9 rótulo pago perdido", "src/lib/pedidos.js", `if (p?.pago_em && passo === "aguarda_envio") return "Pago — aguardando envio";`, "", T_CARTAO, "."],

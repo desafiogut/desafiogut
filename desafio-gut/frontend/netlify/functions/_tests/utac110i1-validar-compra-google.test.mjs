@@ -208,7 +208,7 @@ function instalarDuploGoogle() {
       if (HTTP.httpStatus !== 200) return new Response("{}", { status: HTTP.httpStatus });
       return new Response(JSON.stringify({
         purchaseState: HTTP.estado, consumptionState: HTTP.consumo, acknowledgementState: HTTP.reconhecida,
-        orderId: HTTP.orderId, purchaseTimeMillis: "1700000000000", quantity: 1,
+        orderId: HTTP.orderId, purchaseTimeMillis: "1700000000000", quantity: HTTP.quantidade, // UTAC112: parametrizável (default 1)
       }), { status: 200, headers: { "content-type": "application/json" } });
     }
     throw new Error(`fetch inesperado: ${u}`);
@@ -221,7 +221,7 @@ beforeEach(() => {
   alertas.length = 0;
   Object.assign(HTTP, {
     estado: 0, consumo: 0, reconhecida: 0, orderId: "GPA.3399-0000-0000-00001",
-    httpStatus: 200, redeEmBaixo: false, tokenHttpStatus: 200,
+    httpStatus: 200, redeEmBaixo: false, tokenHttpStatus: 200, quantidade: 1,
   });
   instalarDuploGoogle();
   // ⚠️ O access token da Google é CACHEADO no módulo. Sem o limpar, o caso «OAuth2 recusa» nunca
@@ -583,4 +583,51 @@ test("o ECOQUILDO é o ÚLTIMO passo: se o crédito dos PONTOS DE LANCE falhar, 
   assert.equal(lance() ?? 0, 0);
   assert.equal(registo().estado, "falhada");
   assert.equal(saldoRs(), 500, "mexeu no saldo R$");
+});
+
+// ── UTAC112 — compra múltipla pela Google Play («Multi-quantity»: a quantidade vem do RECIBO) ────
+const lastro = () => S.tabelas.eco_quildo_lastro.find((l) => l.id === 1);
+
+test("UTAC112 G1: recibo com quantity 5 (Relâmpago) ⇒ +50 fidelidade · +1000 pontos de lance · +5 ECOQUILDO · lastro 5", async () => {
+  HTTP.quantidade = 5;
+  const r = await pedirGoogle();
+  assert.equal(r.status, 201, JSON.stringify(r.json));
+  assert.equal(r.json.quantidade, 5);
+  assert.equal(pontos().pontos, 50);
+  assert.equal(lance(), 1000);
+  assert.equal(eco().saldo, 5);
+  assert.equal(lastro().total_emitido, 5);
+  assert.equal(historicoPasse().length, 1, "um só movimento de 5× na mesma ref");
+  assert.equal(registo().payload?.quantidade, 5, "a quantidade fica registada no payload (R18-112-C)");
+  assert.equal(saldoRs(), 500, "a Google não toca no saldo R$");
+});
+
+test("UTAC112 G2: o MESMO recibo de 3 entregue 2× ⇒ 200 com quantidade 3 e nada creditado 2×", async () => {
+  HTTP.quantidade = 3;
+  const r1 = await pedirGoogle({ corpo: { tipo: "programado", sku: PROD.programado } });
+  const r2 = await pedirGoogle({ corpo: { tipo: "programado", sku: PROD.programado } });
+  assert.equal(r1.status, 201);
+  assert.equal(r2.status, 200);
+  assert.equal(r2.json.quantidade, 3);
+  assert.equal(pontos().pontos, 30);
+  assert.equal(eco().saldo, 3);
+  assert.equal(lance() ?? 0, 0, "o Programado não dá pontos de lance");
+});
+
+test("UTAC112 G3: quantity ausente, null, 0, fracção ou texto no recibo ⇒ conta como 1 (nunca 0)", async () => {
+  for (const [i, q] of [undefined, null, 0, 2.5, "7"].entries()) {
+    HTTP.quantidade = q;
+    const r = await pedirGoogle({ corpo: { purchaseToken: `${TOKEN}-q${i}` } });
+    assert.equal(r.status, 201, `quantity ${q}`);
+    assert.equal(r.json.quantidade, 1, `quantity ${q}`);
+  }
+  assert.equal(pontos().pontos, 50);
+});
+
+test("UTAC112 G4: a quantidade NUNCA vem do corpo do cliente — só do recibo", async () => {
+  HTTP.quantidade = 1;
+  const r = await pedirGoogle({ corpo: { quantidade: 10, quantity: 10 } });
+  assert.equal(r.status, 201);
+  assert.equal(r.json.quantidade, 1);
+  assert.equal(pontos().pontos, 10);
 });

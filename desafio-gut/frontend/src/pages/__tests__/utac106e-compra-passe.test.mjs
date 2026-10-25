@@ -109,7 +109,9 @@ test("HOOK · comprar('relampago') → POST /comprar-passe-relampago com Bearer;
   assert.match(dup.chamadas[0].url, URL_RELAMPAGO);
   assert.equal(dup.chamadas[0].headers.Authorization, "Bearer AUTHCTX-106e");
   assert.match(corpos[0].idempotencyKey, /^[A-Za-z0-9._:-]{8,180}$/, "a chave não casa a regex do servidor (8–180)");
-  assert.deepEqual(Object.keys(corpos[0]), ["idempotencyKey"], "o tipo NÃO vai no corpo (vem do endpoint)");
+  // UTAC112: o corpo passou a levar a `quantidade` (1 por omissão); o TIPO continua a NÃO ir no corpo.
+  assert.deepEqual(Object.keys(corpos[0]), ["idempotencyKey", "quantidade"], "o tipo NÃO vai no corpo (vem do endpoint)");
+  assert.equal(corpos[0].quantidade, 1);
 });
 
 test("HOOK · comprar('programado') → POST /comprar-passe-programado (e NUNCA o endpoint do outro Passe)", async () => {
@@ -337,7 +339,8 @@ test("RENDER · durante a compra: SPINNER no Passe escolhido e TODOS os botões 
   assert.equal((h.match(/aria-busy="true"/g) || []).length, 1, "só o Passe escolhido anuncia o estado ocupado");
   assert.match(h, /data-passe="programado"[\s\S]*aria-busy="true"/, "o spinner está no Passe errado");
   const desactivados = (h.match(/disabled=""/g) || []).length;
-  assert.equal(desactivados, 3, `os 2 «Comprar» + «Cancelar» deviam estar desactivados; medidos ${desactivados}`);
+  // UTAC112: + os 4 botões do seletor de quantidade (1/3/5/10) — TODOS desactivados durante a compra.
+  assert.equal(desactivados, 7, `os 4 da quantidade + 2 «Comprar» + «Cancelar» deviam estar desactivados; medidos ${desactivados}`);
 });
 
 test("RENDER · o balão mostra os pontos de CARTÃO «X / 50» (o mesmo número da barra das Ofertas)", () => {
@@ -359,6 +362,81 @@ test("RENDER · alvos de toque: os botões do balão têm ≥ 48 px", () => {
     aberto: true, onComprar: () => {}, onCancelar: () => {},
   }));
   const botoesHtml = h.match(/<button[^>]*>/g) || [];
-  assert.equal(botoesHtml.length, 3);
+  assert.equal(botoesHtml.length, 7, "UTAC112: 4 da quantidade + 2 «Comprar» + «Cancelar»");
   for (const b of botoesHtml) assert.match(b, /min-height:48px/, `botão sem 48 px: ${b}`);
+});
+
+// ═══ UTAC112 — compra múltipla (1, 3, 5, 10) ═══════════════════════════════════════════════════════
+test("UTAC112 · HOOK · comprar('relampago', 5) envia quantidade 5 e devolve a quantidade confirmada", async () => {
+  definirContexto(CONECTADO);
+  const { r, corpos } = await comFetch(() => ({ status: 201, json: { ok: true, tipo: "relampago", quantidade: 5, pontosFidelidade: 50 } }), async () => {
+    const c = montar(useComprarPasse, []);
+    await c.assentar();
+    return await c.resultado().comprar("relampago", 5);
+  });
+  assert.equal(r.ok, true);
+  assert.equal(r.quantidade, 5);
+  assert.equal(corpos[0].quantidade, 5);
+});
+
+test("UTAC112 · HOOK · quantidade fora dos pacotes (2, 0, '5') → erro SEM chamar a rede", async () => {
+  definirContexto(CONECTADO);
+  for (const q of [2, 0, "5", 11]) {
+    const { r, dup } = await comFetch(() => ({ status: 201, json: { ok: true } }), async () => {
+      const c = montar(useComprarPasse, []);
+      await c.assentar();
+      return await c.resultado().comprar("relampago", q);
+    });
+    assert.equal(r.code, "quantidade_invalida", `q=${q}`);
+    assert.equal(dup.chamadas.filter(ehCompra).length, 0, `q=${q}`);
+  }
+});
+
+const modal = (props) => renderToStaticMarkup(React.createElement(ComprarPasseModal, { aberto: true, onComprar: () => {}, onCancelar: () => {}, ...props }));
+
+test("UTAC112 · RENDER · seletor 1/3/5/10 (rádio acessível); 5 ⇒ «Comprar 5 passes por R$ 10,00» e o total", () => {
+  const h = modal({ quantidade: 5 });
+  assert.match(h, /role="radiogroup"/);
+  for (const n of [1, 3, 5, 10]) assert.match(h, new RegExp(`data-quantidade="${n}"`));
+  assert.match(h, /data-quantidade="5"[^>]*aria-checked="true"|aria-checked="true"[^>]*data-quantidade="5"/);
+  assert.equal((h.match(/aria-checked="true"/g) || []).length, 1);
+  assert.equal((h.match(/Comprar 5 passes por R\$ 10,00/g) || []).length, 2, "os dois Passes mostram o total");
+  assert.match(h, /5 × R\$ 2,00 = R\$ 10,00/);
+  assert.doesNotMatch(h, /Comprar Passe Relâmpago/);
+});
+
+test("UTAC112 · RENDER · 1 (por omissão) mantém «Comprar Passe Relâmpago» e R$ 2,00; 10 ⇒ R$ 20,00", () => {
+  const um = modal({});
+  assert.match(um, /Comprar Passe Relâmpago/);
+  assert.match(um, /Comprar Passe Programado/);
+  assert.doesNotMatch(um, /data-total-passes/);
+  assert.match(modal({ quantidade: 10 }), /Comprar 10 passes por R\$ 20,00/);
+  assert.match(modal({ quantidade: 7 }), /Comprar Passe Relâmpago/, "fora dos pacotes cai em 1");
+});
+
+test("UTAC112 · RENDER · no APK (quantidadeNaLoja) não há seletor: a quantidade escolhe-se no ecrã da Google", () => {
+  const h = modal({ quantidade: 5, quantidadeNaLoja: true });
+  assert.doesNotMatch(h, /role="radiogroup"/);
+  assert.match(h, /data-quantidade-na-loja/);
+  assert.match(h, /tela de pagamento dela/);
+  assert.doesNotMatch(h, /ecrã/, "pt-BR: tela, não ecrã");
+  assert.match(h, /Comprar Passe Relâmpago/, "no APK compra-se 1 de cada vez pela app (N no ecrã da Google)");
+  assert.doesNotMatch(h, /debitados do seu saldo/);
+});
+
+test("UTAC112 · CABLAGEM · o clique passa (tipo, quantidade) e a Carteira guarda a quantidade e desliga-a no APK", () => {
+  const M = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "../../components/ComprarPasseModal.jsx"), "utf8");
+  assert.match(M, /onClick=\{\(\) => onComprar\?\.\(p\.tipo, q\)\}/);
+  assert.match(M, /onClick=\{\(\) => onQuantidade\?\.\(n\)\}/);
+  const C = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "../MinhaCarteira.jsx"), "utf8");
+  assert.match(C, /quantidade=\{qtdPasse\}\s+onQuantidade=\{setQtdPasse\}\s+quantidadeNaLoja=\{!depositoPix\}/);
+  assert.match(C, /setQtdPasse\(1\); setPasseAberto\(true\)/, "reabrir o balão volta a 1");
+});
+
+test("UTAC112 · CARTEIRA (achado 2 do validador) · o aviso 402 e o toast de sucesso dizem QUANTOS passes", () => {
+  // Guarda de FONTE (o arnês de render não isola o ramo 402 com N > 1): a condição e o texto, juntos.
+  const C = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "../MinhaCarteira.jsx"), "utf8");
+  assert.match(C, /const falta = quantidade > 1 \? `Saldo insuficiente para \$\{quantidade\} passes \(\$\{precoTotal\(quantidade\)\}\)\.` : "Saldo insuficiente\.";/);
+  assert.match(C, /message: n > 1 \? `\$\{n\} passes comprados` : \(passeDoTipo\(tipo\)\?\.sucesso \?\? "Passe comprado"\)/);
+  assert.match(C, /const n = Number\.isSafeInteger\(r\.quantidade\) \? r\.quantidade : quantidade;/, "o toast usa a quantidade confirmada pelo servidor");
 });
