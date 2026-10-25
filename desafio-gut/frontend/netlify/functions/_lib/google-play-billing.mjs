@@ -71,6 +71,25 @@ let _cacheToken = null; // { token, expiraEm }
  * A env var está presente e é um JSON de service account utilizável?
  * @returns {{ok:true, conta:object}|{ok:false, code:string}}
  */
+const CHAVE_SECRET = "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON";
+
+/** Cache em memória da credencial já carregada (instância quente — não vai ao banco por pedido). */
+let _contaCache = null;
+/** Leitor remoto injectável (testes). `null` = usa o Supabase. */
+let _leitorRemoto = null;
+
+/** A conta tem a forma mínima de uma service account utilizável? */
+function validarConta(conta) {
+  if (!conta || typeof conta.client_email !== "string" || typeof conta.private_key !== "string") {
+    return { ok: false, code: "google_play_credencial_invalida" };
+  }
+  return { ok: true, conta };
+}
+
+/**
+ * Credencial a partir da ENV VAR (síncrono, caminho rápido).
+ * Devolve `google_play_nao_configurado` quando a var não existe — quem chama decide se cai para o banco.
+ */
 export function lerCredencial() {
   const bruto = process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON;
   if (typeof bruto !== "string" || bruto.trim() === "") return { ok: false, code: "google_play_nao_configurado" };
@@ -80,15 +99,72 @@ export function lerCredencial() {
   } catch {
     return { ok: false, code: "google_play_credencial_invalida" };
   }
-  if (!conta || typeof conta.client_email !== "string" || typeof conta.private_key !== "string") {
-    return { ok: false, code: "google_play_credencial_invalida" };
-  }
-  return { ok: true, conta };
+  return validarConta(conta);
 }
 
-/** A validação está operacional (credencial presente e com a forma certa)? */
+/** Leitura predefinida do segredo na tabela `config_secrets` (RLS: só service_role). */
+async function lerRemotoPadrao() {
+  const { data, error } = await getSupabase()
+    .from("config_secrets")
+    .select("valor")
+    .eq("chave", CHAVE_SECRET)
+    .maybeSingle();
+  if (error) return null;
+  return typeof data?.valor === "string" ? data.valor : null;
+}
+
+/**
+ * Cascata da credencial (UTAC114):
+ *   1. env var `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`;
+ *   2. tabela `config_secrets` no Supabase (service_role);
+ *   3. cache em memória da instância quente.
+ * Falha FECHADO: sem credencial em nenhum dos sítios devolve `google_play_nao_configurado`.
+ * Env var PRESENTE mas inválida NÃO cai para o banco (é erro de configuração, não ausência).
+ */
+export async function carregarCredencial() {
+  if (_contaCache) return { ok: true, conta: _contaCache, origem: "cache" };
+
+  const daEnv = lerCredencial();
+  if (daEnv.ok) {
+    _contaCache = daEnv.conta;
+    return { ...daEnv, origem: "env" };
+  }
+  if (daEnv.code === "google_play_credencial_invalida") return daEnv;
+
+  let bruto = null;
+  try {
+    bruto = await (_leitorRemoto ? _leitorRemoto() : lerRemotoPadrao());
+  } catch {
+    return { ok: false, code: "google_play_nao_configurado" };
+  }
+  if (typeof bruto !== "string" || bruto.trim() === "") return { ok: false, code: "google_play_nao_configurado" };
+
+  let conta;
+  try {
+    conta = JSON.parse(bruto);
+  } catch {
+    return { ok: false, code: "google_play_credencial_invalida" };
+  }
+  const val = validarConta(conta);
+  if (!val.ok) return val;
+  _contaCache = val.conta;
+  return { ...val, origem: "supabase" };
+}
+
+/** A validação está operacional (credencial em cache ou na env var)? */
 export function configurado() {
-  return lerCredencial().ok;
+  return Boolean(_contaCache) || lerCredencial().ok;
+}
+
+/** Só para testes: força o leitor remoto (ou volta ao Supabase com `null`) e limpa a cache. */
+export function _setLeitorRemoto(fn) {
+  _leitorRemoto = typeof fn === "function" ? fn : null;
+  _contaCache = null;
+}
+
+/** Só para testes: esquece a credencial em cache. */
+export function _limparCacheCredencial() {
+  _contaCache = null;
 }
 
 /** Só para testes: esquece o token cacheado. */
@@ -101,7 +177,7 @@ export function _limparCacheToken() {
  * @returns {Promise<{ok:true, token:string}|{ok:false, code:string}>}
  */
 export async function obterAccessToken() {
-  const cred = lerCredencial();
+  const cred = await carregarCredencial();
   if (!cred.ok) return cred;
   const agora = Date.now();
   if (_cacheToken && _cacheToken.expiraEm > agora) return { ok: true, token: _cacheToken.token };

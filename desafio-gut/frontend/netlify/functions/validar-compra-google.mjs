@@ -36,7 +36,7 @@ import { captureSecurityAlert } from "./_lib/sentry-server.mjs";
 import { TIPOS_PASSE } from "./_lib/passe-pontos.mjs";
 import { creditarPasseGoogle } from "./_lib/comprar-passe-tipado.mjs";
 import {
-  SKU_PASSE, TIPO_POR_SKU, validarCompra, configurado, lerCredencial,
+  SKU_PASSE, TIPO_POR_SKU, validarCompra, carregarCredencial,
   lerCompra, registarCompra, fecharCompra,
 } from "./_lib/google-play-billing.mjs";
 
@@ -114,12 +114,12 @@ export default async function handler(req) {
     return jsonError(400, "token_invalido", `purchaseToken tem de ter ${TOKEN_MIN}–${TOKEN_MAX} caracteres`);
   }
 
-  const cred = lerCredencial();
+  // UTAC114 — cascata: env var -> tabela `config_secrets` (Supabase) -> cache em memória.
+  const cred = await carregarCredencial();
   if (!cred.ok) {
-    // Pendência declarada (A3): sem a env var, o Billing não valida. Falha FECHADO, com código próprio.
+    // Falha FECHADO, com código próprio: sem credencial não se valida nada.
     return jsonError(503, cred.code, "pagamento pela loja indisponível de momento");
   }
-  if (!configurado()) return jsonError(503, "google_play_nao_configurado", "pagamento pela loja indisponível de momento");
 
   // ── idempotência pelo RECIBO ──────────────────────────────────────────────────────────────────
   let registo;

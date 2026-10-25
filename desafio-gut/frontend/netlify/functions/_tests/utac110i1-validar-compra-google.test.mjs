@@ -178,7 +178,7 @@ mock.module("../_lib/sentry-server.mjs", { namedExports: {
 mock.module("../_lib/rate-limiter.mjs", { namedExports: { aplicarRateLimit: async () => null } });
 
 const { default: hValidar, refGoogle } = await import("../validar-compra-google.mjs");
-const { _limparCacheToken } = await import("../_lib/google-play-billing.mjs");
+const { _limparCacheToken, _limparCacheCredencial } = await import("../_lib/google-play-billing.mjs");
 const { default: hPixRelampago } = await import("../comprar-passe-relampago.mjs");
 const { assinarUserSession } = await import("../_lib/jwt.mjs");
 
@@ -381,6 +381,9 @@ test("(b) SEM a env var da service account ⇒ 503 google_play_nao_configurado e
   const guardado = process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON;
   try {
     delete process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON;
+    // UTAC114: a credencial é cacheada por instância quente. Sem limpar a cache, este cenário
+    // estaria a medir a cache (que é o comportamento desejado em produção) e não a ausência total.
+    _limparCacheCredencial();
     const r = await pedirGoogle();
     assert.equal(r.status, 503, JSON.stringify(r.json));
     assert.equal(r.json.error.code, "google_play_nao_configurado");
@@ -394,6 +397,7 @@ test("(b) a credencial existe mas está ILEGÍVEL ⇒ 503, sem ir à Google", as
   const guardado = process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON;
   try {
     process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON = "{nao-e-json}";
+    _limparCacheCredencial(); // UTAC114: mede a env var, não a cache da instância quente
     const r = await pedirGoogle();
     assert.equal(r.status, 503, JSON.stringify(r.json));
     assert.equal(r.json.error.code, "google_play_credencial_invalida");
