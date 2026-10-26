@@ -13,10 +13,14 @@ import { readFileSync } from "node:fs";
 const semComentarios = (s) => s.replace(/\{\/\*[\s\S]*?\*\/\}/g, "").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 const fonte = semComentarios(readFileSync(new URL("../pages/MinhaCarteira.jsx", import.meta.url), "utf8"));
 
-test("a condição é a ponte nativa: depositoPix = !androidNativo()", () => {
-  assert.match(fonte, /import\s*\{\s*androidNativo\s*\}\s*from\s*"\.\.\/lib\/google-play-billing\.js"/);
-  assert.match(fonte, /const depositoPix = !androidNativo\(\);/);
-  assert.doesNotMatch(fonte, /depositoPix\s*=.*plataforma/);
+test("a condição é a ponte nativa (UTAC116: pixPermitido) e NUNCA ?plataforma=", () => {
+  // UTAC116 — o AAB v3 mostrou o botão porque a decisão vinha de um único sinal, avaliado uma vez.
+  // O contrato passou a `pixPermitido(plataformaNativa)`, com a plataforma reavaliada no mount.
+  assert.match(fonte, /import\s*\{[^}]*pixPermitido[^}]*\}\s*from\s*"\.\.\/lib\/google-play-billing\.js"/);
+  assert.match(fonte, /const depositoPix = pixPermitido\(plataformaNativa\);/);
+  // O que continua PROIBIDO: decidir pelo parâmetro sobreponível `?plataforma=`.
+  assert.doesNotMatch(fonte, /\?plataforma=/);
+  assert.doesNotMatch(fonte, /depositoPix\s*=\s*[^;]*(===?\s*["']android["']|plataforma\s*===)/);
 });
 
 test("o botão «Depositar PIX» só existe com depositoPix", () => {

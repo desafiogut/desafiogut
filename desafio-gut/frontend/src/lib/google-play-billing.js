@@ -103,9 +103,50 @@ export function billingDisponivel() {
  *
  * Fail-closed: excepção → `false` (nunca bloqueia o PIX por engano).
  */
+export function detectarPlataformaNativa(win) {
+  const w = win === undefined ? (typeof window !== "undefined" ? window : null) : win;
+  // 1) Capacitor empacotado no bundle (fonte de verdade do wrapper).
+  try {
+    if (Capacitor?.isNativePlatform?.() === true) {
+      const p = Capacitor.getPlatform?.();
+      if (p === "android" || p === "ios") return p;
+    }
+  } catch { /* segue para os outros sinais */ }
+  // 2) Bridge injectado pelo nativo no window (o objeto global pode chegar depois do bundle).
+  try {
+    const capWin = w?.Capacitor;
+    if (capWin?.isNativePlatform?.() === true) {
+      const p = capWin.getPlatform?.();
+      if (p === "android" || p === "ios") return p;
+    }
+    if (w?.androidBridge) return "android";
+  } catch { /* segue */ }
+  // 3) Origem do WebView do Capacitor: https://localhost SEM porta. O PWA vive no domínio real
+  //    (desafiogut.com / *.netlify.app) e o `vite dev` corre em http://localhost:5173 — nenhum
+  //    dos dois cai aqui. É o sinal que sobrevive quando o bridge não está visível no primeiro
+  //    render (o bug do AAB v3: o botão PIX aparecia porque a única fonte era o Capacitor).
+  //    NÃO se usa o User-Agent: o navegador in-app do WhatsApp/Facebook também traz «; wv)» e
+  //    esconder o PIX lá partiria o fluxo de um utilizador legítimo do PWA.
+  try {
+    const loc = w?.location;
+    if (loc && loc.protocol === "https:" && loc.hostname === "localhost" && !loc.port) return "android";
+  } catch { /* segue */ }
+  return "web";
+}
+
+/**
+ * O PIX genérico pode aparecer nesta plataforma?
+ * iOS fica de FORA de propósito (não há Billing iOS implementado — bloquear o PIX lá partiria um
+ * fluxo que funciona). Android: NUNCA (produto digital na Play).
+ */
+export function pixPermitido(plataforma) {
+  return plataforma !== "android";
+}
+
+/** Compatibilidade: `true` só quando a plataforma nativa é Android. */
 export function androidNativo() {
   try {
-    return Capacitor?.isNativePlatform?.() === true && Capacitor?.getPlatform?.() === "android";
+    return detectarPlataformaNativa() === "android";
   } catch {
     return false;
   }

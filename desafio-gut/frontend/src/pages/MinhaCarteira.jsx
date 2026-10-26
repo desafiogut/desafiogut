@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
@@ -12,7 +12,7 @@ import { conversoesFeitas } from "../lib/pontosLance.js"; // UTAC110j.5 — pont
 import ComprarPasseModal from "../components/ComprarPasseModal.jsx";
 import Toast from "../widgets/toast/Toast.jsx";
 import ComprarFichasModal from "../components/ComprarFichasModal.jsx";
-import { androidNativo } from "../lib/google-play-billing.js";
+import { pixPermitido, detectarPlataformaNativa } from "../lib/google-play-billing.js";
 import PainelIndicacao from "../components/PainelIndicacao.jsx";
 import BotaoLoginPrincipal from "../components/BotaoLoginPrincipal.jsx";
 // UTAC110g.1 (R18-110g.1-2 / decisão D-110g-4) — o RESGATE do cartão colecionável mudou de casa: o
@@ -99,7 +99,25 @@ export default function MinhaCarteira() {
   // Google Play Billing (política de Pagamentos da Play). O PWA mantém o depósito, porque no browser
   // o Passe só se compra com saldo R$. A condição é a PONTE nativa (como no `useComprarPasse`, 110i.2),
   // nunca `?plataforma=` (sobreponível). O saldo R$ antigo continua visível nos dois.
-  const depositoPix = !androidNativo();
+  // UTAC116 — o PIX genérico não pode existir no APK (política de Pagamentos da Play).
+  // O AAB v3 mostrou o botão: a decisão era tomada UMA vez, no 1.º render, e só pelo Capacitor.
+  // Agora a plataforma é estado e volta a ser medida no mount, no foco e ao voltar à app — se o
+  // bridge do Capacitor chegar depois do primeiro render, o botão desaparece na reavaliação.
+  const [plataformaNativa, setPlataformaNativa] = useState(() => detectarPlataformaNativa());
+  useEffect(() => {
+    const reavaliar = () => setPlataformaNativa(detectarPlataformaNativa());
+    reavaliar();
+    // Guardas de ambiente: o arnês de testes corre os efeitos em Node (sem window/document).
+    if (typeof window === "undefined") return undefined;
+    const temDocumento = typeof document !== "undefined";
+    window.addEventListener("focus", reavaliar);
+    if (temDocumento) document.addEventListener("visibilitychange", reavaliar);
+    return () => {
+      window.removeEventListener("focus", reavaliar);
+      if (temDocumento) document.removeEventListener("visibilitychange", reavaliar);
+    };
+  }, []);
+  const depositoPix = pixPermitido(plataformaNativa);
   // UTAC112 — pacote escolhido no balão do Passe (1, 3, 5, 10); volta a 1 ao reabrir o balão.
   const [qtdPasse, setQtdPasse] = useState(1);
   // UTAC106c — balão de confirmação do Passe Desafio. UTAC106e — o balão passou a COMPRAR
