@@ -78,7 +78,7 @@ test("(a) Android nativo + plugin ⇒ compra aprovada devolve o purchaseToken do
   assert.equal(r.purchaseToken, "TOKEN-PLAY-AAA");
   assert.equal(r.orderId, "GPA.3399-1");
   assert.equal(r.acknowledged, false);
-  assert.deepEqual(skusRegistados(), ["passe_relampago_r2"], "registou o SKU errado");
+  assert.deepEqual(skusRegistados(), ["passe_relampago_r2", "passe_programado_r2"], "UTAC119: os DOIS SKUs registam-se juntos, antes do initialize");
   assert.equal(REGISTO.register[0][0].type, "consumable", "R18-110i-7: os dois SKUs são CONSUMÍVEIS");
   assert.equal(REGISTO.register[0][0].platform, "android-playstore");
   assert.equal(REGISTO.initialize, 1, "a loja inicializa uma vez");
@@ -92,7 +92,7 @@ test("(a) o Programado regista o SEU SKU (nunca o do Relâmpago) e não traz cr�
   const r = await modulo.iniciarCompra("programado");
   assert.equal(r.ok, true, JSON.stringify(r));
   assert.equal(r.tipo, "programado");
-  assert.deepEqual(skusRegistados(), ["passe_programado_r2"]);
+  assert.deepEqual(skusRegistados(), ["passe_relampago_r2", "passe_programado_r2"], "UTAC119: idem na compra do Programado");
   assert.match(REGISTO.order[0].productId, /programado/);
 });
 
@@ -103,6 +103,36 @@ test("(a) duas compras seguidas: UM só listener `approved` (registar o mesmo ca
   assert.equal((await modulo.iniciarCompra("relampago")).ok, true);
   assert.equal(REGISTO.listeners.approved, 1, `listeners approved instalados: ${REGISTO.listeners.approved}`);
   assert.equal(REGISTO.initialize, 1, "inicializou mais de uma vez");
+});
+
+
+// ─── UTAC119 — ORDEM DO REGISTO (bug ITEM_UNAVAILABLE do Passe Programado) ─────────────────────
+test("UTAC119: comprar o PROGRAMADO sem nunca ter comprado o Relâmpago ⇒ registo completo ANTES do initialize", async () => {
+  ARRANCAR_ANDROID();
+  reiniciarBillingDuplo({ transacaoAprovada: { sku: "passe_programado_r2", purchaseToken: "TOKEN-PLAY-BBB", orderId: "GPA.3399-2" } });
+
+  const r = await modulo.iniciarCompra("programado");
+
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.deepEqual(skusRegistados(), ["passe_relampago_r2", "passe_programado_r2"]);
+  assert.equal(REGISTO.initialize, 1);
+  // A prova da ORDEM: o `register` tem de vir antes do `initialize` no log do duplo.
+  const iReg = REGISTO.ordem.findIndex((e) => e.op === "register");
+  const iInit = REGISTO.ordem.findIndex((e) => e.op === "initialize");
+  assert.ok(iReg >= 0 && iInit >= 0, `ordem registada: ${JSON.stringify(REGISTO.ordem)}`);
+  assert.ok(iReg < iInit, `UTAC119: register ANTES do initialize (obtido: ${JSON.stringify(REGISTO.ordem)})`);
+  assert.equal(REGISTO.order[0].productId, "passe_programado_r2");
+});
+
+test("UTAC119: SKU não carregado ⇒ chama store.update() e conclui (não falha em silêncio)", async () => {
+  ARRANCAR_ANDROID();
+  reiniciarBillingDuplo({ produtosImediatos: false, transacaoAprovada: { sku: "passe_programado_r2", purchaseToken: "TOKEN-UPD", orderId: "GPA.UPD" } });
+
+  const r = await modulo.iniciarCompra("programado");
+
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.ok(REGISTO.ordem.some((e) => e.op === "update"), "não pediu reload à loja");
+  assert.equal(REGISTO.order[0].productId, "passe_programado_r2");
 });
 
 // ─── (b) NEGATIVO — o PWA continua por PIX ────────────────────────────────────────────────────
@@ -196,7 +226,9 @@ test("transacção aprovada SEM purchaseToken ⇒ `sem_token` (não se manda lix
 
 test("a loja nunca entrega a transacção (produtos não carregam) ⇒ `produto_indisponivel`, não `ok`", async () => {
   ARRANCAR_ANDROID();
-  reiniciarBillingDuplo({ produtosImediatos: false, transacaoAprovada: null });
+  reiniciarBillingDuplo({ produtosImediatos: false, updateTrazProdutos: false, transacaoAprovada: null });
+  // UTAC119: o módulo passou a chamar `store.update()` como fallback; «nunca carrega» tem de
+  // significar também que o reload não traz o produto.
   const r = await modulo.iniciarCompra("relampago");
   assert.equal(r.ok, false);
   assert.equal(r.code, "produto_indisponivel");

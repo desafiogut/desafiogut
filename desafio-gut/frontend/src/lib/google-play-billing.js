@@ -186,11 +186,24 @@ function garantirListenerAprovado(store) {
   });
 }
 
-/** Regista o SKU e inicializa a loja — uma vez por SKU e uma vez no total. */
+/** Todos os SKUs de Passe — registados SEMPRE em conjunto (UTAC119). */
+const SKUS_TODOS = [SKU_PASSE.relampago, SKU_PASSE.programado];
+
+/**
+ * Regista os SKUs e inicializa a loja.
+ *
+ * ⚠️ UTAC119 — A ORDEM IMPORTA. O Google Play Billing só carrega os produtos que já estavam
+ * registados QUANDO o `store.initialize()` corre. Antes desta correção registava-se apenas o SKU
+ * pedido: o primeiro Passe (Relâmpago) era registado antes do initialize e funcionava; o segundo
+ * (Programado) era registado com a loja já inicializada e **nunca era carregado da Google** —
+ * o checkout abria sem produto e devolvia `ITEM_UNAVAILABLE` (bug reportado pelo Ruan).
+ * Agora o registo é feito com a lista COMPLETA, antes de inicializar.
+ */
 async function prepararLoja(store, ProductType, Platform, sku) {
-  if (!_registados.has(sku)) {
-    store.register([{ id: sku, type: ProductType.CONSUMABLE, platform: Platform.GOOGLE_PLAY }]);
-    _registados.add(sku);
+  const novos = SKUS_TODOS.filter((s) => !_registados.has(s));
+  if (novos.length) {
+    store.register(novos.map((id) => ({ id, type: ProductType.CONSUMABLE, platform: Platform.GOOGLE_PLAY })));
+    for (const id of novos) _registados.add(id);
   }
   if (!_inicializada) {
     await store.initialize();
@@ -229,6 +242,13 @@ function aguardarOferta(store, sku) {
       const o = ofertaDe();
       if (o) terminar(resolve, o);
     });
+    // UTAC119 — fallback: pedir à loja para recarregar em vez de falhar em silêncio. Tem de ser
+    // DEPOIS de instalar o ouvinte: o `update()` pode disparar `productUpdated` de imediato
+    // (medido no duplo — com o pedido antes do ouvinte, o evento perdia-se e dava timeout).
+    try {
+      const p = store.update?.();
+      if (p && typeof p.catch === "function") p.catch(() => {});
+    } catch { /* segue para a espera */ }
   });
 }
 

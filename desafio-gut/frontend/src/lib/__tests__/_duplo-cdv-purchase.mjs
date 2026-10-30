@@ -26,7 +26,7 @@ const ESTADO_INICIAL = () => ({
     adaptadorPronto: true, produtosImediatos: true, resultadoOrder: "sucesso",
     resultadoFinish: "sucesso", transacaoAprovada: null, skuForcado: null, recibosLocais: [],
   },
-  registo: { register: [], initialize: 0, order: [], finish: [], listeners: { productUpdated: 0, approved: 0 } },
+  registo: { register: [], initialize: 0, order: [], finish: [], ordem: [], listeners: { productUpdated: 0, approved: 0 } },
   produtos: new Map(),
   pendentes: [],
   when: null,
@@ -47,6 +47,7 @@ export function reiniciarBillingDuplo(over = {}) {
   REGISTO.order.length = 0;
   REGISTO.finish.length = 0;
   REGISTO.initialize = 0;
+  REGISTO.ordem.length = 0;
   REGISTO.listeners = { productUpdated: 0, approved: 0 };
   E.produtos.clear();
   E.pendentes.length = 0;
@@ -81,6 +82,7 @@ export const store = {
   },
   register(lista) {
     REGISTO.register.push(lista);
+    REGISTO.ordem.push({ op: 'register', skus: lista.map((p) => p.id) });
     // ⚠️ Fiel ao real: SEM adaptador pronto o pacote não carrega produto nenhum (`store.products`
     // fica vazio em Node). Com adaptador, os produtos carregam por REDE — logo podem chegar depois
     // do `initialize()`; é isso que `espoletarProduto()` modela.
@@ -91,10 +93,24 @@ export const store = {
   },
   async initialize() {
     REGISTO.initialize += 1;
+    REGISTO.ordem.push({ op: 'initialize' });
     return [];
   },
   get(id) {
     return produtoDe(id);
+  },
+  // UTAC119 — o fallback do módulo sob teste chama `update()` quando o SKU ainda não está
+  // carregado. Fiel ao pacote real: recarrega os pendentes por «rede» e dispara `productUpdated`.
+  async update() {
+    REGISTO.ordem.push({ op: 'update' });
+    // `updateTrazProdutos: false` modeliza a loja que, mesmo depois de um reload, não tem o
+    // produto (SKU inexistente/desactivado no Console).
+    if (CONTROLO.updateTrazProdutos !== false) {
+      for (const p of E.pendentes) E.produtos.set(p.id, p);
+      E.pendentes.length = 0;
+    }
+    try { store.when().__dispararProduto(); } catch { /* sem ouvintes */ }
+    return [];
   },
   ready() {
     return CONTROLO.adaptadorPronto && E.produtos.size > 0;

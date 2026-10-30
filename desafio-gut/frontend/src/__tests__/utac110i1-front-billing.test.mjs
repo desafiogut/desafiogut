@@ -109,7 +109,10 @@ test("(a) Android com a flag ligada ⇒ encomenda na loja, SERVIDOR valida e só
   assert.equal(r.pontos, 10);
   assert.equal(r.creditosLance, 1);
 
-  assert.deepEqual(skusRegistados(), ["passe_relampago_r2"], "a loja foi encomendada com o SKU errado");
+  // UTAC119 — o registo passou a ser o CONJUNTO dos SKUs, antes do initialize (era esta a causa do
+  // ITEM_UNAVAILABLE no Programado). O que este teste continua a provar é que a ENCOMENDA é do
+  // Relâmpago — isso está na asserção seguinte (`REGISTO.order[0]`).
+  assert.deepEqual(skusRegistados(), ["passe_relampago_r2", "passe_programado_r2"], "a loja não registou os dois SKUs");
   assert.equal(REGISTO.order.length, 1, "não encomendou na loja");
   const chamadas = dup.chamadas.map((c) => c.url);
   assert.equal(chamadas.length, 1, `esperava 1 ida à rede (o servidor): ${JSON.stringify(chamadas)}`);
