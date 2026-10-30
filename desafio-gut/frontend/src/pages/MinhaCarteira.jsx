@@ -7,6 +7,7 @@ import { useComprarPasse } from "../hooks/useComprarPasse.js";
 // UTAC110d-front — os dois saldos (pontos de fidelidade + créditos de lance) vêm do `ler-pontos`.
 import { usePontos } from "../hooks/usePontos.js";
 import { useEcoQuildo } from "../hooks/useEcoQuildo.js";
+import { useInventarioPasses } from "../hooks/useInventarioPasses.js"; // UTAC120 — inventário de Passes
 import { passeDoTipo, precoTotal } from "../lib/passes.js";
 import { conversoesFeitas } from "../lib/pontosLance.js"; // UTAC110j.5 — pontos de lance
 import ComprarPasseModal from "../components/ComprarPasseModal.jsx";
@@ -158,6 +159,13 @@ export default function MinhaCarteira() {
   const {
     saldo: saldoEco, loading: ecoCarregando, erro: ecoErro, refetch: refetchEco,
   } = useEcoQuildo();
+  // UTAC120 (Frente B) — o que se COMPRA com o Passe passa a estar à vista: quantos Passes Relâmpago e
+  // Programado o titular tem. No APK é o que substitui o saldo R$ (lá não há depósito PIX).
+  const {
+    passesRelampago, passesProgramado,
+    carregando: passesCarregando, erro: passesErro, recarregar: recarregarPasses,
+  } = useInventarioPasses();
+  const semNenhumPasse = !passesCarregando && !passesErro && passesRelampago === 0 && passesProgramado === 0;
   const [tipoEmCurso, setTipoEmCurso] = useState(null);
   const [erroPasse, setErroPasse] = useState("");
   // UTAC106e — feedback da compra: toast do repo + atalho «Carregar agora» no caso 402.
@@ -225,6 +233,8 @@ export default function MinhaCarteira() {
         try { await refetchPontos?.(); } catch { /* releitura é best-effort */ }
         // UTAC110e (D3) — cada Passe comprado dá 1 ECOQUILDO (R18-110e-1): relê-se também.
         try { await refetchEco?.(); } catch { /* releitura é best-effort */ }
+        // UTAC120 — o Passe comprado entra no inventário: relê-se para o número mudar já.
+        try { await recarregarPasses?.(); } catch { /* releitura é best-effort */ }
       } else if (r?.status === 402 || r?.code === "saldo_insuficiente") {
         setPasseSemSaldo(true);
         // UTAC111 (achado 3 do validador) — no APK não se convida a depositar por PIX.
@@ -313,6 +323,10 @@ export default function MinhaCarteira() {
                 </button>
               </div>
 
+              {/* UTAC120 (Frente B) — o saldo R$ só existe onde há depósito PIX (PWA). No APK o Passe paga-se
+                  pelo Google Play Billing e um «Saldo Disponível» sem forma de o carregar só confundia: sai, e
+                  fica o inventário de Passes logo abaixo. Mesma condição do botão PIX (`depositoPix`). */}
+              {depositoPix && (<>
               {/* MC99 — a etiqueta veio do glass de cabeçalho removido: o número
                   grande precisa de dizer o que é. UTAC106c — o título passou a
                   «Carteira» e a etiqueta a amarelo, a par do valor. */}
@@ -335,6 +349,44 @@ export default function MinhaCarteira() {
                 <span style={{ fontSize: "0.85rem", color: COR.muted, fontWeight: 700, marginLeft: "0.4rem" }}>
                   {statusRsSuffix}
                 </span>
+              </div>
+              </>)}
+
+              {/* UTAC120 (Frente B) — INVENTÁRIO de Passes: o que o utilizador tem para dar lances (Relâmpago) e
+                  palpites (Programado). Vidro interior no MESMO padrão dos saldos abaixo (tingido amarelo +
+                  contorno), rótulo à esquerda e número em destaque. Leitura honesta: «…» a carregar, «—» em erro. */}
+              <div data-inventario-passes="" style={{
+                padding: "0.75rem 0.85rem", borderRadius: "12px", marginBottom: "0.95rem",
+                background: "rgba(245,166,35,0.06)", border: "1px solid rgba(245,166,35,0.25)",
+              }}>
+                <div style={{
+                  fontSize: "0.75rem", color: COR.gold, fontWeight: 700,
+                  textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.4rem",
+                }}>Meus Passes</div>
+                {[
+                  { id: "relampago", rotulo: "Passe Relâmpago", n: passesRelampago },
+                  { id: "programado", rotulo: "Passe Programado", n: passesProgramado },
+                ].map((p) => (
+                  <div key={p.id} data-passe={p.id} style={{
+                    display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "0.75rem",
+                    padding: "0.3rem 0",
+                  }}>
+                    <span style={{ fontSize: "0.85rem", color: COR.text, fontWeight: 700 }}>🎟️ {p.rotulo}</span>
+                    <span style={{ fontSize: isMobile ? "1.5rem" : "1.7rem", fontWeight: 900, color: COR.gold, lineHeight: 1.1 }}>
+                      {textoSaldo(p.n, passesCarregando, passesErro)}
+                    </span>
+                  </div>
+                ))}
+                {semNenhumPasse && (
+                  <p data-sem-passes="" style={{ margin: "0.35rem 0 0", fontSize: "0.75rem", color: COR.muted, lineHeight: 1.4 }}>
+                    Ainda não tem Passes — compre abaixo para dar lances e palpites.
+                  </p>
+                )}
+                {passesErro && (
+                  <p style={{ margin: "0.35rem 0 0", fontSize: "0.72rem", color: COR.danger, lineHeight: 1.4 }}>
+                    {passesErro}
+                  </p>
+                )}
               </div>
 
               {/* UTAC110j.3 (R18-110j.3-B) — os 4 botões e o aviso 402 vêm ANTES dos saldos: o vidro lê-se

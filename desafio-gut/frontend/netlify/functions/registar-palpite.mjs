@@ -21,6 +21,7 @@ import { respostaPreflight } from "./_lib/cors.mjs";
 import { sistemaPausado, lerEstadoSistema } from "./_lib/system-state.mjs";
 import { buscarEdicao } from "./_lib/edicoes-core.mjs";
 import { registarPalpite } from "./_lib/passe-pontos.mjs";
+import { consumirPasse, devolverPasse } from "./_lib/passes-inventario.mjs"; // UTAC120 — inventário
 
 async function titular(req) {
   const h = req.headers.get("authorization") || "";
@@ -75,11 +76,29 @@ export default async (req) => {
     return jsonError(409, "edicao_nao_aberta", `a edição está "${edicao.status}" — o palpite só abre enquanto decorre`);
   }
 
+  // UTAC120 — o palpite consome 1 PASSE PROGRAMADO do inventário. Sem Passe não se palpita:
+  // antes desta camada o palpite era gratuito para quem já tinha comprado um Passe alguma vez.
+  const passe = await consumirPasse({ endereco: t.endereco, tipo: "programado" });
+  if (!passe.ok) {
+    if (passe.code === "sem_passes") {
+      return jsonError(400, "sem_passes_disponiveis",
+        "Precisa de 1 Passe Programado para palpitar. Compre um Passe na Carteira.",
+        { passesProgramado: 0 });
+    }
+    return jsonError(502, "inventario_indisponivel",
+      "não foi possível verificar o inventário de Passes; tente de novo", { motivo: passe.code });
+  }
+
   let r;
   try { r = await registarPalpite(t.endereco, edicaoId, valor); }
-  catch { return jsonError(503, "store_indisponivel", "não foi possível registar o palpite"); }
+  catch {
+    await devolverPasse({ endereco: t.endereco, tipo: "programado" }).catch(() => {});
+    return jsonError(503, "store_indisponivel", "não foi possível registar o palpite");
+  }
 
   if (!r.ok) {
+    // o palpite não foi registado: o Passe volta ao inventário
+    await devolverPasse({ endereco: t.endereco, tipo: "programado" }).catch(() => {});
     if (r.code === "SEM_PASSE") {
       return jsonError(409, "sem_passe", "é preciso ter comprado pelo menos 1 Passe para palpitar");
     }
@@ -93,6 +112,8 @@ export default async (req) => {
   }
 
   const palpite = { edicaoId: r.palpite.edicao_id, valor: r.palpite.valor, criadoEm: r.palpite.criado_em };
+  // UTAC120 — palpite IDEMPOTENTE (o mesmo pedido repetido) não pode custar um segundo Passe.
+  if (r.criado !== true) await devolverPasse({ endereco: t.endereco, tipo: "programado" }).catch(() => {});
   return r.criado
     ? jsonResponse({ ok: true, idempotent: false, palpite }, 201)
     : jsonResponse({ ok: true, idempotent: true, palpite }, 200);

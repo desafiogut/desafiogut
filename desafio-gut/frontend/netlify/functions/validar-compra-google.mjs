@@ -35,6 +35,7 @@ import { sistemaPausado, lerEstadoSistema } from "./_lib/system-state.mjs";
 import { captureSecurityAlert } from "./_lib/sentry-server.mjs";
 import { TIPOS_PASSE } from "./_lib/passe-pontos.mjs";
 import { creditarPasseGoogle } from "./_lib/comprar-passe-tipado.mjs";
+import { creditarPasse, lerInventario } from "./_lib/passes-inventario.mjs"; // UTAC120 — inventário de Passes
 import {
   SKU_PASSE, TIPO_POR_SKU, validarCompra, carregarCredencial,
   lerCompra, registarCompra, fecharCompra,
@@ -129,11 +130,15 @@ export default async function handler(req) {
     return jsonError(503, "registo_falhou", "não foi possível ler o registo da compra");
   }
   if (registo?.estado === "creditada") {
+    // UTAC120 — retry de um recibo já creditado: devolve também o inventário actual, para a
+    // resposta ter a MESMA forma da primeira (o cliente mostra os Passes que tem).
+    const inv = await lerInventario(endereco);
     return jsonResponse({
       ok: true, idempotent: true, tipo: registo.tipo_passe, quantidade: quantidadeDoRegisto(registo),
       pontosFidelidade: Number(registo.pontos ?? 0),
       ...(tipo === "relampago" ? { creditosLance: Number(registo.creditos_lance ?? 0) } : {}),
       ecoQuildo: Number(registo.eco_quildo ?? 0),
+      ...(inv.ok ? { passesRelampago: inv.passesRelampago, passesProgramado: inv.passesProgramado } : {}),
     }, 200);
   }
   if (registo && registo.endereco && registo.endereco !== endereco) {
@@ -202,6 +207,21 @@ export default async function handler(req) {
       "a compra foi confirmada mas os benefícios não foram entregues; tente de novo", { motivo: creditado.code });
   }
 
+  // UTAC120 — o Passe comprado passa a FICAR GUARDADO no inventário (não só pontos).
+  // Só na primeira creditação (idempotência pelo recibo): um retry devolve 200 e NÃO soma outra vez.
+  let inventario = null;
+  if (creditado.idempotent !== true) {
+    inventario = await creditarPasse({ endereco, tipo, quantidade: v.quantity });
+    if (!inventario.ok) {
+      // Os benefícios já foram entregues: falhar aqui deixaria o cliente a repetir uma compra paga.
+      // Alerta para tratamento manual e responde-se ok (a compra está registada como creditada).
+      captureSecurityAlert(`${NOME}_inventario_falhou`, { produto: sku, quantidade: v.quantity }, "error").catch(() => {});
+    }
+  } else {
+    // Retry idempotente: não soma outra vez, mas devolve o inventário actual (mesma forma de resposta).
+    inventario = await lerInventario(endereco);
+  }
+
   const fecho = await fecharCompra(purchaseToken, "creditada", {
     pontos: creditado.pontos, creditosLance: creditado.creditosLance, ecoQuildo: creditado.ecoQuildo,
     motivo: v.orderId ?? null, quantidade: v.quantity,
@@ -217,5 +237,9 @@ export default async function handler(req) {
     pontosFidelidade: creditado.pontos,
     ...(tipo === "relampago" ? { creditosLance: creditado.creditosLance ?? 0 } : {}),
     ecoQuildo: creditado.ecoQuildo,
+    // UTAC120 — inventário actualizado (null quando a escrita falhou ou quando é idempotente)
+    ...(inventario?.ok
+      ? { passesRelampago: inventario.passesRelampago, passesProgramado: inventario.passesProgramado }
+      : {}),
   }, creditado.idempotent === true ? 200 : 201);
 }

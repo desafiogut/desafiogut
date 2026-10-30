@@ -38,6 +38,16 @@ const ESQUEMA = {
     checks: [],
   },
   saldo_rs: { colunas: ["cliente_id", "payload", "atualizado_em"], notNull: ["cliente_id"], unicos: [["cliente_id"]], uuid: [], defaults: () => ({}), checks: [] },
+  // UTAC120 — inventário de Passes. Sem linha = utilizador novo; os testes que não se interessam
+  // pelo inventário recebem `g.passesIniciais` (99 de cada) para continuarem a medir o que mediam.
+  passes_inventario: {
+    colunas: ["endereco", "passes_relampago", "passes_programado", "criado_em", "atualizado_em"],
+    notNull: ["endereco"],
+    unicos: [["endereco"]],
+    uuid: [],
+    defaults: () => ({ passes_relampago: 0, passes_programado: 0, criado_em: new Date().toISOString(), atualizado_em: new Date().toISOString() }),
+    checks: [(l) => Number(l.passes_relampago) >= 0 && Number(l.passes_programado) >= 0],
+  },
   saldo_rs_creditos: { colunas: ["pedido_id", "payload", "criado_em"], notNull: ["pedido_id"], unicos: [["pedido_id"]], uuid: [], defaults: () => ({ criado_em: new Date().toISOString() }), checks: [] },
   saldo_rs_debitos: { colunas: ["operacao_id", "payload", "criado_em"], notNull: ["operacao_id"], unicos: [["operacao_id"]], uuid: [], defaults: () => ({ criado_em: new Date().toISOString() }), checks: [] },
   // UTAC110e — migração `20261014_utac110e_eco_quildo.sql`: ECOQUILDO (saldo >= 0, histórico array) e o
@@ -104,7 +114,7 @@ const erro = (code, message) => ({ data: null, error: { code, message, details: 
 
 export function criarSupabase() {
   const tabelas = Object.fromEntries(Object.keys(ESQUEMA).map((t) => [t, []]));
-  const g = { antesDeInserir: null, falhar: {}, chamadas: [] };
+  const g = { antesDeInserir: null, falhar: {}, chamadas: [], passesIniciais: { relampago: 99, programado: 99 } };
 
   function valor(linha, col) {
     const m = /^(\w+)->>(\w+)$/.exec(col);
@@ -216,5 +226,35 @@ export function criarSupabase() {
     }
     return api;
   }
-  return { cliente: { from }, tabelas, g };
+  // UTAC120 — RPCs do inventário de Passes (as três funções da migração 20261030).
+  function linhaInventario(endereco) {
+    let l = tabelas.passes_inventario.find((o) => o.endereco === endereco);
+    if (!l) {
+      const ini = g.passesIniciais || { relampago: 0, programado: 0 };
+      l = { endereco, passes_relampago: ini.relampago, passes_programado: ini.programado,
+            criado_em: new Date().toISOString(), atualizado_em: new Date().toISOString() };
+      tabelas.passes_inventario.push(l);
+    }
+    return l;
+  }
+  async function rpc(nome, params = {}) {
+    const { p_endereco, p_tipo, p_qtd = 1 } = params;
+    if (!["passes_creditar", "passes_consumir", "passes_devolver"].includes(nome)) {
+      return erro("42883", `function ${nome} does not exist`);
+    }
+    if (p_tipo !== "relampago" && p_tipo !== "programado") return erro("22023", "tipo_invalido");
+    const l = linhaInventario(p_endereco);
+    const campo = p_tipo === "relampago" ? "passes_relampago" : "passes_programado";
+    if (nome === "passes_consumir") {
+      if (l[campo] < p_qtd) return { data: false, error: null };   // atómico: não desconta
+      l[campo] -= p_qtd;
+      l.atualizado_em = new Date().toISOString();
+      return { data: true, error: null };
+    }
+    l[campo] += p_qtd;                                            // creditar / devolver
+    l.atualizado_em = new Date().toISOString();
+    return { data: { ...l }, error: null };
+  }
+
+  return { cliente: { from, rpc }, tabelas, g };
 }

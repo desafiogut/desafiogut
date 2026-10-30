@@ -29,6 +29,9 @@ import Toast from "../widgets/toast/Toast.jsx";
 import { useAppContext } from "../context/AppContext.jsx";
 import { usePontos } from "../hooks/usePontos.js";
 import { usePalpite, usePalpitesDaEdicao } from "../hooks/usePalpite.js";
+// UTAC120 (Frente B) — o palpite consome 1 PASSE PROGRAMADO (backend UTAC120): sem ele, não se envia.
+import { useInventarioPasses, semPasses } from "../hooks/useInventarioPasses.js";
+import BalaoComprarPasse, { AvisoSemPasse } from "../components/BalaoComprarPasse.jsx";
 // UTAC108h.3 — as regras do palpite mudaram de casa (vivem em `lib/palpite.js`), porque o Início
 // passou a mostrar o vidro «🎫 Programada» com a zona de palpite dentro. Uma só verdade para as
 // duas telas: `estaAberta` / `edicoesProgramadasDe` / `estadoPalpite` / `PILULA`.
@@ -70,7 +73,7 @@ export default function OfertasProgramadas() {
   const { edicoes, address, isConnected, userLabel, ready, abrirModal } = useAppContext();
   // ⚠️ R1 (UTAC106f, decisão do operador = opção A): o CARTÃO conta SÓ pontos de COMPRA
   // (`pontosCartao`); `pontos` é o TOTAL e `bonusPalpite` é a parte que NÃO conta (prestígio).
-  const { pontos, pontosCartao, bonusPalpite, historico, palpites, pontosParaCartao, loading, erro } = usePontos();
+  const { pontos, pontosCartao, bonusPalpite, historico, palpites, pontosParaCartao, loading, erro, refetch: refetchPontos } = usePontos();
 
   const programadas = useMemo(() => edicoesProgramadasDe(edicoes), [edicoes]);
   // A tabela do fim é da 1.ª edição da lista (a aberta, quando há).
@@ -86,6 +89,10 @@ export default function OfertasProgramadas() {
   const palpiteDe = (id) => registados[id]
     ?? (Array.isArray(palpites) ? palpites.find((p) => p?.edicaoId === id) ?? null : null);
   const [toast, setToast] = useState(null);
+  // UTAC120 — só bloqueia com um 0 LIDO do servidor; a carregar/em erro fica como antes (o servidor recusa).
+  const inventario = useInventarioPasses();
+  const semPasseProgramado = isConnected && semPasses(inventario, "passesProgramado");
+  const [balaoPasseAberto, setBalaoPasseAberto] = useState(false);
 
   const progresso = Math.min(100, Math.round((pontosCartao / Math.max(1, pontosParaCartao)) * 100));
   const semPontos = !loading && !erro && pontos === 0;
@@ -93,6 +100,9 @@ export default function OfertasProgramadas() {
   async function palpitar(edicaoId) {
     const n = Number(String(valores[edicaoId] ?? "").trim());
     const r = await registar(Number.isInteger(n) ? n : NaN, edicaoId);
+    // UTAC120 — o palpite gasta (ou o servidor recusou por falta de) 1 Passe Programado: relê-se o inventário.
+    // O `usePalpite` não expõe o código do erro, por isso relê-se em qualquer resposta do servidor.
+    if (r?.ok || r?.status) { try { inventario.recarregar?.(); } catch { /* best-effort */ } }
     if (r?.ok) {
       setRegistados((m) => ({ ...m, [edicaoId]: r.palpite }));
       setValores((m) => ({ ...m, [edicaoId]: "" }));
@@ -132,13 +142,22 @@ export default function OfertasProgramadas() {
                   placeholder="Ex.: 120"
                   style={{ flex: "1 1 120px", minHeight: "48px", padding: "0.6rem 0.75rem", borderRadius: "10px", border: "1px solid rgba(107,125,184,0.45)", background: "rgba(12,16,24,0.55)", color: COR.text, fontSize: "0.9rem" }}
                 />
+                {/* UTAC120 — sem Passe Programado o envio fica desligado, com o MESMO cinzento do estado
+                    «Enviando…» deste botão (o desligado do app); o motivo e a compra ficam logo abaixo. */}
                 <button
-                  type="button" onClick={() => palpitar(ed.id)} disabled={aPalpitar}
-                  style={{ minHeight: "48px", padding: "0.6rem 1.1rem", borderRadius: "10px", cursor: aPalpitar ? "wait" : "pointer", border: "none", background: aPalpitar ? "rgba(107,125,184,0.35)" : COR.gold, color: "#12161f", fontWeight: 800, fontSize: "0.86rem" }}
+                  type="button" onClick={() => palpitar(ed.id)} disabled={aPalpitar || semPasseProgramado}
+                  style={{ minHeight: "48px", padding: "0.6rem 1.1rem", borderRadius: "10px", cursor: aPalpitar ? "wait" : semPasseProgramado ? "not-allowed" : "pointer", border: "none", background: aPalpitar || semPasseProgramado ? "rgba(107,125,184,0.35)" : COR.gold, color: "#12161f", fontWeight: 800, fontSize: "0.86rem" }}
                 >
                   {aPalpitar ? "Enviando…" : ACOES.palpite.botao}
                 </button>
               </div>
+              {semPasseProgramado && (
+                <AvisoSemPasse
+                  mensagem="Precisa de 1 Passe Programado para palpitar."
+                  rotuloCta="Comprar Passe Programado"
+                  onComprar={() => setBalaoPasseAberto(true)}
+                />
+              )}
             </div>
           )}
           {estado === "com_palpite" && (
@@ -353,6 +372,15 @@ export default function OfertasProgramadas() {
       {toast && (
         <Toast id={1} variant={toast.variant} message={toast.message} onDismiss={() => setToast(null)} />
       )}
+      {/* UTAC120 — o balão de compra do Passe (o da Carteira). Em sucesso relêem-se inventário e pontos. */}
+      <BalaoComprarPasse
+        aberto={balaoPasseAberto}
+        onFechar={() => setBalaoPasseAberto(false)}
+        onComprado={async () => {
+          try { await inventario.recarregar?.(); } catch { /* best-effort */ }
+          try { await refetchPontos?.(); } catch { /* best-effort */ }
+        }}
+      />
     </div>
   );
 }

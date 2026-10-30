@@ -18,6 +18,9 @@ import StatTile from "../components/StatTile.jsx";
 // UTAC108h.3 — o vidro ÚNICO das duas famílias (o mesmo da aba OP) e a zona de palpite.
 import CartaoEdicao from "../components/CartaoEdicao.jsx";
 import { usePalpite } from "../hooks/usePalpite.js";
+// UTAC120 (Frente B) — o palpite consome 1 PASSE PROGRAMADO: a zona de palpite do Início segue a MESMA regra da aba.
+import { useInventarioPasses, semPasses } from "../hooks/useInventarioPasses.js";
+import BalaoComprarPasse, { AvisoSemPasse } from "../components/BalaoComprarPasse.jsx";
 import { edicoesProgramadasDe, estadoPalpite, PILULA } from "../lib/palpite.js";
 import { EtiquetaMeuLance } from "../components/EtiquetaEstadoLance.jsx";
 import { GlassCard } from "@/components/ui";
@@ -124,6 +127,10 @@ export default function Dashboard() {
   // regras da aba Ofertas Programadas (uma só verdade sobre quando se pode palpitar).
   const [valorPalpite, setValorPalpite] = useState("");
   const { registar: registarPalpite, loading: aPalpitar, erro: erroPalpite } = usePalpite(null);
+  // UTAC120 — só bloqueia com um 0 LIDO do servidor; a carregar/em erro fica como antes (o servidor recusa).
+  const inventario = useInventarioPasses();
+  const semPasseProgramado = isConnected && semPasses(inventario, "passesProgramado");
+  const [balaoPasseAberto, setBalaoPasseAberto] = useState(false);
 
   // ── UTAC000.9 (DEBT-008) — O VENCEDOR MOSTRADO É O OFICIAL QUANDO EXISTE ──────────
   // O `vencedor` do contexto é derivado dos lances que ESTE browser viu (em mainnet: nada, ou
@@ -160,6 +167,8 @@ export default function Dashboard() {
     const valor = Number.parseInt(String(valorPalpite ?? "").trim(), 10);
     const r = await registarPalpite(valor, edicaoId);
     if (r?.ok) setValorPalpite("");
+    // UTAC120 — gastou (ou faltou) 1 Passe Programado: relê-se o inventário em qualquer resposta do servidor.
+    if (r?.ok || r?.status) { try { inventario.recarregar?.(); } catch { /* best-effort */ } }
   }
   const estProgramada = edicaoProgramada ? getEstadoEdicao(edicaoProgramada) : null;
   const palpiteDoUsuario = edicaoProgramada ? (palpites?.[edicaoProgramada.id] ?? null) : null;
@@ -457,13 +466,21 @@ export default function Dashboard() {
                   placeholder="Ex.: 120"
                   style={{ flex: "1 1 120px", minHeight: "48px", padding: "0.6rem 0.75rem", borderRadius: "10px", border: "1px solid rgba(107,125,184,0.45)", background: "rgba(12,16,24,0.55)", color: COR.text, fontSize: "0.9rem" }}
                 />
+                {/* UTAC120 — sem Passe Programado: desligado com o cinzento do «Enviando…» (o desligado do app). */}
                 <button
-                  type="button" onClick={() => palpitar(edicaoProgramada.id)} disabled={aPalpitar}
-                  style={{ minHeight: "48px", padding: "0.6rem 1.1rem", borderRadius: "10px", cursor: aPalpitar ? "wait" : "pointer", border: "none", background: aPalpitar ? "rgba(107,125,184,0.35)" : COR.gold, color: "#12161f", fontWeight: 800, fontSize: "0.86rem" }}
+                  type="button" onClick={() => palpitar(edicaoProgramada.id)} disabled={aPalpitar || semPasseProgramado}
+                  style={{ minHeight: "48px", padding: "0.6rem 1.1rem", borderRadius: "10px", cursor: aPalpitar ? "wait" : semPasseProgramado ? "not-allowed" : "pointer", border: "none", background: aPalpitar || semPasseProgramado ? "rgba(107,125,184,0.35)" : COR.gold, color: "#12161f", fontWeight: 800, fontSize: "0.86rem" }}
                 >
                   {aPalpitar ? "Enviando…" : "Dar palpite"}
                 </button>
               </div>
+              {semPasseProgramado && (
+                <AvisoSemPasse
+                  mensagem="Precisa de 1 Passe Programado para palpitar."
+                  rotuloCta="Comprar Passe Programado"
+                  onComprar={() => setBalaoPasseAberto(true)}
+                />
+              )}
               {erroPalpite && (
                 <p role="alert" style={{ margin: "0.4rem 0 0", color: "#ff8a8d", fontSize: "0.78rem" }}>{erroPalpite}</p>
               )}
@@ -549,6 +566,13 @@ export default function Dashboard() {
           onClose={fecharOverlay}
         />
       )}
+
+      {/* UTAC120 — balão de compra do Passe (o da Carteira), aberto pelo CTA da zona de palpite. */}
+      <BalaoComprarPasse
+        aberto={balaoPasseAberto}
+        onFechar={() => setBalaoPasseAberto(false)}
+        onComprado={async () => { try { await inventario.recarregar?.(); } catch { /* best-effort */ } }}
+      />
 
       {/* MC16 — botões temporários de teste do cronómetro (DEV only) */}
       {import.meta.env.DEV && (
