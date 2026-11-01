@@ -71,6 +71,10 @@ const contrato = lerEnvInlined(conteudos, "VITE_CONTRATO_SEPOLIA");
 const rpc      = lerEnvInlined(conteudos, "VITE_ALCHEMY_URL");
 const chainId  = lerEnvInlined(conteudos, "VITE_CHAIN_ID");
 const stage    = lerEnvInlined(conteudos, "VITE_NETWORK_STAGE");
+// UTAC123 (DEBT-082) — Supabase: sem ele o APK cai no fallback do Blob (DEBT-061). Só se
+// regista a PRESENÇA; os valores não são impressos.
+const supabaseUrl  = lerEnvInlined(conteudos, "VITE_SUPABASE_URL");
+const supabaseAnon = lerEnvInlined(conteudos, "VITE_SUPABASE_ANON_KEY");
 
 const redeRpc = rpc && /eth-mainnet/i.test(rpc) ? "mainnet"
               : rpc && /sepolia/i.test(rpc)     ? "sepolia"
@@ -81,6 +85,8 @@ console.log(`VITE_CONTRATO_SEPOLIA    : ${contrato ?? "(AUSENTE)"}`);
 console.log(`VITE_ALCHEMY_URL (rede)  : ${redeRpc ?? "(AUSENTE)"}`);
 console.log(`VITE_CHAIN_ID            : ${chainId ?? "(AUSENTE)"}`);
 console.log(`VITE_NETWORK_STAGE       : ${stage ?? "(AUSENTE)"}`);
+console.log(`VITE_SUPABASE_URL        : ${supabaseUrl ? "presente" : "(AUSENTE)"}`);
+console.log(`VITE_SUPABASE_ANON_KEY   : ${supabaseAnon ? "presente" : "(AUSENTE)"}`);
 console.log("");
 
 const erros = [];
@@ -106,6 +112,29 @@ if (!chainId) {
     "VITE_CHAIN_ID ausente: network.js cai no default 11155111 (Sepolia) EM SILÊNCIO.\n" +
     "    É este o sinal de que o env do contexto de produção não foi injectado.",
   );
+}
+
+// 3b. UTAC123 (DEBT-082) — RPC ausente: antes passava em silêncio e o src/utils/web3.js caía
+//     num URL Alchemy de SEPOLIA escrito no código (removido no UTAC123; hoje lança erro).
+if (!rpc) {
+  erros.push("VITE_ALCHEMY_URL ausente: sem RPC configurado as leituras on-chain falham.");
+}
+
+// 3c. UTAC123 — Supabase ausente: o APK lê a config pelo fallback (DEBT-061) e não pelo Supabase.
+if (!supabaseUrl || !supabaseAnon) {
+  erros.push("VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY ausente: a app perde o Supabase (config cai no fallback).");
+}
+
+// 3d. UTAC123 — nenhuma CHAVE de RPC Sepolia embutida num bundle de produção. No v7 a chave
+//     removida do web3.js voltou a entrar pela var MORTA VITE_RPC_URL_SEPOLIA do Netlify, porque
+//     src/lib/network.js lê `import.meta.env` inteiro e o Vite embute TODAS as VITE_*.
+//     O URL só conta se trouxer chave (16+ caracteres) — as definições de rede do viem/Privy
+//     têm URLs de Sepolia sem chave e esses não são segredo. A chave nunca é impressa.
+const RE_CHAVE_SEPOLIA = /https:\/\/eth-sepolia\.g\.alchemy\.com\/v2\/[A-Za-z0-9_-]{16,}/;
+const comChaveSepolia = ficheiros.filter((f, i) => RE_CHAVE_SEPOLIA.test(conteudos[i]));
+console.log(`chave RPC Sepolia embutida: ${comChaveSepolia.length ? `SIM (${comChaveSepolia.length} ficheiro(s))` : "não"}`);
+if (comChaveSepolia.length && !PERMITIR_TESTNET) {
+  erros.push("chave de RPC Sepolia (Alchemy) embutida no bundle — segredo exposto e var de testnet num build de produção.");
 }
 
 // 4. Coerência: os quatro sinais têm de descrever a MESMA rede.

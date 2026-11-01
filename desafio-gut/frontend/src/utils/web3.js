@@ -119,9 +119,12 @@ export async function assinarLance(signer, idEdicao, valorEmCentavos) {
  * Usa window.ethereum se disponível, ou JsonRpcProvider público como fallback.
  * Retorna null em caso de erro (UI usa localStorage como fallback).
  */
-const ALCHEMY_RPC =
-  import.meta.env.VITE_ALCHEMY_URL ||
-  "https://eth-sepolia.g.alchemy.com/v2/qU_kw3WpEY4gttS0Cfr2B";
+// UTAC123 (DEBT-082) — RPC SÓ do env. Antes havia aqui um fallback para um URL Alchemy de
+// SEPOLIA com a chave escrita no código: um bundle sem VITE_ALCHEMY_URL lia a mainnet num nó de
+// testnet, em silêncio, e a chave ficava publicada em todos os bundles. Agora não há fallback:
+// sem a variável, getProvider() lança um erro claro (fail-fast). O erro é lançado no 1.º uso e
+// não no import, para não deixar a app inteira em branco — os consumidores já tratam a falha.
+const ALCHEMY_RPC = String(import.meta.env.VITE_ALCHEMY_URL ?? "").trim();
 
 // MC88.31 (Achado 1 do MC88.30) — provider único e partilhado.
 // Antes: cada função criava `new JsonRpcProvider`, cada um com deteção de rede
@@ -151,6 +154,12 @@ function getContratoLeitura() {
 let _provider = null;
 export function getProvider() {
   if (!_provider) {
+    if (!ALCHEMY_RPC) {
+      throw new Error(
+        "VITE_ALCHEMY_URL ausente: o RPC não está configurado neste build. " +
+        "Compilar com `npm run build:apk` / `netlify build` (injecta o env de produção).",
+      );
+    }
     _provider = new JsonRpcProvider(ALCHEMY_RPC, undefined, {
       staticNetwork: true,
       pollingInterval: 15_000,
@@ -214,8 +223,24 @@ export async function enviarLance(signer, contratoEndereco, idEdicao, valorEmCen
  *
  * Retorna função de unsubscribe — chamar no cleanup do useEffect.
  */
+/**
+ * UTAC123 (achado do validador SEG4) — os `subscribe*` são SÍNCRONOS e chamados num useEffect
+ * do AppContext: se getProvider() lançar (VITE_ALCHEMY_URL ausente, ex. `npm run dev` só com o
+ * .env local), o erro subia ao RaizErrorBoundary e trocava a app inteira pelo ecrã de erro.
+ * Degrada-se para «sem tempo real» (unsubscribe vazio) e avisa-se uma vez na consola.
+ */
+function contratoLeituraOuNull(origem) {
+  try {
+    return getContratoLeitura();
+  } catch (e) {
+    console.warn(`[web3] ${origem}: sem eventos em tempo real —`, e?.message ?? e);
+    return null;
+  }
+}
+
 export function subscribeLanceDado(idEdicao, onLance) {
-  const contrato = getContratoLeitura();   // MC88.34 (P2) — filtro partilhado
+  const contrato = contratoLeituraOuNull("subscribeLanceDado");   // MC88.34 (P2) — filtro partilhado
+  if (!contrato) return () => {};
 
   const handler = (eventoIdEdicao, lancador, valorEmCentavos, repetido, timestamp, ev) => {
     if (eventoIdEdicao !== idEdicao) return; // filtra outras edições
@@ -271,7 +296,8 @@ export async function getSaldoSenhasOnChain(address) {
  */
 export function subscribeSaldoSenhas(address, onUpdate) {
   if (!address) throw new Error("address obrigatório para subscribe");
-  const contrato = getContratoLeitura();   // MC88.34 (P2) — filtro partilhado
+  const contrato = contratoLeituraOuNull("subscribeSaldoSenhas");   // MC88.34 (P2) — filtro partilhado
+  if (!contrato) return () => {};
   const target   = String(address).toLowerCase();
 
   const onCreditadas = (usuario, quantidade, ev) => {

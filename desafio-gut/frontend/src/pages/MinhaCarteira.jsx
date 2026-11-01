@@ -298,7 +298,9 @@ export default function MinhaCarteira() {
                 display: "flex", justifyContent: "space-between", alignItems: "center",
                 marginBottom: "0.55rem", gap: "0.5rem",
               }}>
-                <h3 style={{ ...tituloStyle, margin: 0, color: COR.gold }}>Carteira</h3>
+                {/* UTAC123 (R18, pedido do operador) — o nome «Carteira» estava pequeno
+                    (herdava 0.85rem do tituloStyle das secções); sobe só neste título. */}
+                <h3 style={{ ...tituloStyle, margin: 0, color: COR.gold, fontSize: isMobile ? "1.15rem" : "1.25rem" }}>Carteira</h3>
                 {/* MC99 (correcção do HARD GATE 4 — refutação do validador) — o botão
                     "↻ Atualizar saldo" vivia no card "Saldo de Senhas" e foi removido com
                     ele. Medido: NÃO tinha substituto nenhum — o auto-refresh é de 30 s

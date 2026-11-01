@@ -24,7 +24,7 @@ android {
         applicationId "com.desafiogut.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 6
+        versionCode 7
         versionName "1.0.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
@@ -61,6 +61,27 @@ dependencies {
 }
 
 apply from: 'capacitor.build.gradle'
+
+// UTAC123 (DEBT-081/082) — TRAVA DE AMBIENTE DE PRODUÇÃO.
+// Os AAB v3-v6 saíram com `npm run build` (Vite puro, lê só os .env do disco): bundle em
+// Sepolia, sem contrato, sem RPC, sem Supabase. O guarda scripts/validar-dist-rede.mjs existia
+// mas só corria dentro do `npm run build:apk` — qualquer outro caminho até ao Gradle o
+// contornava. Agora TODO o build release (bundleRelease, assembleRelease) passa pelo guarda,
+// aplicado aos assets que vão de facto para dentro do AAB. Se falhar, o Gradle aborta.
+// Builds debug não são afectados.
+def frontendDir = rootProject.projectDir.parentFile
+def validarAmbienteProducao = tasks.register("validarAmbienteProducao", Exec) {
+    group = "verification"
+    description = "Recusa o build release se o bundle web não tiver o env de produção (mainnet)."
+    workingDir = frontendDir
+    commandLine "node", "scripts/validar-dist-rede.mjs", file("src/main/assets/public").absolutePath
+    outputs.upToDateWhen { false }
+}
+tasks.configureEach { t ->
+    if (t.name == "preReleaseBuild") {
+        t.dependsOn validarAmbienteProducao
+    }
+}
 
 try {
     def servicesJSON = file('google-services.json')

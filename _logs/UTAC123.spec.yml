@@ -1,0 +1,38 @@
+schema: utac/1
+name: UTAC123
+title: "Blindagem do build + AAB v7 com ambiente de produção (+ título Carteira e ícone adaptativo, R18)"
+type: publicacao
+baseline: 7f8200e
+motivo: >-
+  UTAC122: os AAB v3-v6 saíram com `npm run build` (Sepolia, contrato vazio, sem RPC/Supabase/Sentry,
+  pílula AvisoRede). Remover a chave Alchemy hardcoded, ligar o guarda ao Gradle, gerar o v7 pelo
+  `build:apk`. R18 durante o UTAC (operador): título «Carteira» maior e ícone do app preenchido.
+frentes:
+  - id: A
+    nome: Chave hardcoded fora (web3.js) + fail-fast
+    entrega: [src/utils/web3.js, teste]
+  - id: B
+    nome: Trava no Gradle + versionCode 7 (+ guarda fecha RPC/Supabase ausentes)
+    entrega: [android/app/build.gradle, scripts/validar-dist-rede.mjs, teste]
+  - id: R18
+    nome: Título Carteira + ícone adaptativo
+    entrega: [src/pages/MinhaCarteira.jsx, res/mipmap-anydpi-v26/*.xml, res/values/ic_launcher_background.xml]
+  - id: C
+    nome: AAB v7
+    entrega: [npm run build:apk, gradlew bundleRelease, Desktop/DesafioGUT-v7/DesafioGUT-v7.aab, SHA-256, link]
+autoriza:
+  - editar src/utils/web3.js, android/app/build.gradle (versionCode 7)
+  - "R18: MinhaCarteira.jsx (título) e recursos do ícone Android (pedido do operador em sessão)"
+  - "desvio declarado: scripts/validar-dist-rede.mjs (necessário para «faltar Supabase aborta»)"
+  - testes + script de mutação; correr build:apk, Gradle, suíte
+  - commit + push (bypass declarado)
+proibe:
+  - AvisoRede.jsx, netlify.toml, env do Netlify, netlify deploy, Play Console
+  - git add -A; commitar package-lock.json
+dependencias:
+  - UTAC122 fechado (DEBT-081/082)
+regras_activas: [E, T, G, L, S, A, P, AU, ST, HI]
+ressalvas:
+  - "HI5: 3 h"
+  - "A14: RAM < 1 500 MB bloqueia o Gradle — trim + medir antes"
+  - "Se build:apk falhar por env, reportar o erro exacto"
