@@ -1,0 +1,40 @@
+schema: utac/1
+name: UTAC122
+title: "Inspecção e plano de correcção do aviso «Ambiente de teste — rede Sepolia» no AAB v6"
+type: diagnostico
+baseline: 7f8200e
+motivo: >-
+  O AAB v6 (teste fechado) mostra na Carteira «Ambiente de teste — rede Sepolia · contrato não
+  configurado. Os saldos aqui não são os reais.» — bloqueador para Produção na Play Store.
+  Rastrear a origem, a causa raiz e escrever o plano para o UTAC123 executar sem ambiguidade.
+frentes:
+  - id: A
+    nome: Origem do aviso (frontend)
+    entrega: [ficheiro:linha do componente, condição exacta que o activa]
+  - id: B
+    nome: Variáveis de ambiente e build do AAB v6
+    entrega: [inventário VITE_* de rede, valores embutidos no bundle v6, env Netlify production]
+  - id: C
+    nome: Plano de correcção
+    entrega: [lista de ficheiros/variáveis, passos do UTAC123, critérios de aceitação]
+autoriza:
+  - ler todo o repo (src/, netlify/, android/, scripts/, _logs/, Desktop/)
+  - comandos de leitura (grep, cat, git log, sha256sum, node do guarda validar-dist-rede em modo leitura)
+  - netlify env:get / api getEnvVars (só leitura, valores secretos não impressos)
+  - criar _logs/UTAC122_* e Desktop/RELATORIO-UTAC122.txt
+  - despachar validador adversarial (só leitura)
+proibe:
+  - alterar código ou config (src/, netlify/, android/, package.json, netlify.toml)
+  - gerar AAB / build / cap sync
+  - mexer em netlify/functions, env do Netlify, Supabase, Play Console
+  - commit / push / git add -A
+dependencias:
+  - HEAD 7f8200e (UTAC120 fechado, AAB v6 em teste fechado)
+regras_activas: [E, T, G, L, S, A, P, AU, ST, HI]
+regras_extra: []
+stop_conditions_extra: []
+ressalvas:
+  - "HI5: se exceder 1 h, PARAR e reportar"
+  - "A14: RAM >= 1 500 MB (medido 366-387 MB livres — desvio declarado no SEG-1)"
+  - Não assumir que é só ambiente; pode ser lógica de UI
+  - Mapeamento de segmentos do enunciado → skill: SEG3 «fecho» do enunciado = SEG3 validador + SEG6 fecho (tipo diagnostico)
