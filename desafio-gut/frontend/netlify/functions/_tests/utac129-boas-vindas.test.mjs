@@ -16,8 +16,15 @@ process.env.JWT_SECRET = "segredo-de-teste-utac129-boas-vindas-comprimento-sufic
 
 let T = criarTabelaPontos();
 let falharDb = false;
+let pendurarDb = false;
+// Cliente que nunca responde (Supabase pendurado): todo o método devolve-se a si próprio e o await nunca resolve.
+const pendurado = new Proxy({}, { get: (_o, k) => (k === "then" ? () => {} : () => pendurado) });
 mock.module("../_lib/supabase-client.mjs", { namedExports: {
-  getSupabase: () => { if (falharDb) throw new Error("db em baixo"); return { from: () => T.from() }; },
+  getSupabase: () => {
+    if (falharDb) throw new Error("db em baixo");
+    if (pendurarDb) return { from: () => pendurado };
+    return { from: () => T.from() };
+  },
   getSupabaseReadOnly: () => ({ from: () => T.from() }), supabaseConfigurado: () => true } });
 mock.module("../_lib/rate-limiter.mjs", { namedExports: { aplicarRateLimit: async () => null } });
 mock.module("../_lib/jwt-fail-counter.mjs", { namedExports: { registrarFalhaJwt: async () => {} } });
@@ -27,7 +34,7 @@ mock.module("../_lib/sybil-check.mjs", { namedExports: { registerAndCheck: async
 const { default: hAuth } = await import("../auth-user.mjs");
 const F = await import("../_lib/fontes-lance.mjs");
 
-beforeEach(() => { T = criarTabelaPontos(); falharDb = false; });
+beforeEach(() => { T = criarTabelaPontos(); falharDb = false; pendurarDb = false; });
 
 const carteira = Wallet.createRandom();
 const END = carteira.address.toLowerCase();
@@ -99,4 +106,13 @@ test("B6 (fail-soft) com a base de dados em baixo o LOGIN continua 200 — o bó
   assert.equal(pontos(END), 0);
   await login();
   assert.equal(pontos(END), 50);
+});
+
+test("B7 (achado ℹ️1 do SEG4) Supabase PENDURADO → o login responde 200 dentro do teto (não fica à espera)", async () => {
+  pendurarDb = true;
+  const t0 = Date.now();
+  const r = await login();
+  const ms = Date.now() - t0;
+  assert.equal(r.status, 200);
+  assert.ok(ms < 3000, `o login demorou ${ms} ms com o Supabase pendurado`);
 });

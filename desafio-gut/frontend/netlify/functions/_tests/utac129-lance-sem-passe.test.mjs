@@ -17,6 +17,7 @@ let mockPontos = 0;
 let creditos = [];           // creditarPontosLance: [endereco, quantidade, motivo, ref]
 let refs = new Set();
 let chamadasInventario = [];  // consumirPasse/devolverPasse chamados pelo lance
+let falharBlindagem = false;
 
 const mem = new Map();
 const fakeStore = {
@@ -35,7 +36,7 @@ mock.module("../_lib/system-state.mjs", { namedExports: { lerEstadoSistema: asyn
 mock.module("../_lib/notificacoes-usuario.mjs", { namedExports: { registrarEventosDeLance: async () => {} } });
 mock.module("../_lib/data-store.mjs", { namedExports: { addLance: async (e, r) => `key-${e}-${r.lanceId}` } });
 mock.module("../_lib/contract.mjs", { namedExports: {
-  comprometerLanceOnchain: async () => ({}), lerSaldoSenhas: async () => 5,
+  comprometerLanceOnchain: async () => { if (falharBlindagem) throw new Error("rpc"); return {}; }, lerSaldoSenhas: async () => 5,
 } });
 mock.module("../_lib/edicoes-core.mjs", { namedExports: { buscarEdicao: async () => mockEdicao } });
 mock.module("../_lib/saldoRs.mjs", { namedExports: { debitarSaldoRs: async () => ({ ok: true, resultado: {} }) } });
@@ -70,7 +71,7 @@ before(async () => {
 });
 beforeEach(() => {
   mem.clear(); mockEdicao = { id: "RELAMP-1", tipo: "relampago" }; mockPontos = 0;
-  creditos = []; refs = new Set(); chamadasInventario = [];
+  creditos = []; refs = new Set(); chamadasInventario = []; falharBlindagem = false;
 });
 
 const req = (valorCentavos, extra = {}) => ({
@@ -121,4 +122,15 @@ test("A4 (entrada inválida) lance de 0 → recusado com erro visível, sem déb
 test("A5 (R18-129-3) o PALPITE continua a consumir 1 Passe Programado — fonte vigiada", () => {
   const src = readFileSync(new URL("../registar-palpite.mjs", import.meta.url), "utf8");
   assert.match(src, /consumirPasse\(\{\s*endereco:\s*t\.endereco,\s*tipo:\s*"programado"/);
+});
+
+test("A6 (achado MA2 do SEG4) a falha da blindagem devolve os PONTOS e nunca cria Passe", async () => {
+  mockPontos = 50;
+  falharBlindagem = true;
+  const r = await lance(7);
+  assert.equal(r.status, 502);
+  assert.deepEqual(chamadasInventario, [], "um lance falhado mexeu no inventário de Passes");
+  const src = readFileSync(new URL("../lance-relampago.mjs", import.meta.url), "utf8")
+    .split("\n").filter((l) => !/^\s*\/\//.test(l)).join("\n");
+  assert.doesNotMatch(src, /devolverPasse\(|passeConsumido/, "os ramos de devolução do Passe voltaram");
 });

@@ -32,7 +32,6 @@ import { verificarJanelaLance, EDICAO_ESPECIAL_RE } from "./_lib/edicao-janela.m
 import { registrarConsumoSenha, BLOB_SENHAS_CONSUMO } from "./_lib/senhas-programado.mjs"; // MC91.11 — ledger
 import { keccak256, AbiCoder } from "ethers";
 import { consumirPontosLance, reverterMovimentoLance } from "./_lib/ledger-lance.mjs"; // UTAC110n (era UTAC110d)
-import { devolverPasse } from "./_lib/passes-inventario.mjs"; // UTAC120 — inventário (UTAC129: o lance já não consome Passe; a devolução fica inerte)
 import { creditarMissaoLance, PONTOS_MISSAO_LANCE } from "./_lib/fontes-lance.mjs"; // UTAC110f — missão «1 lance do dia»
 import { respostaPreflight } from "./_lib/cors.mjs";
 import { mascararEndereco } from "./_lib/validate.mjs"; // UTAC110h.4 (DEBT-031)
@@ -199,7 +198,6 @@ export default async (req) => {
   const ehProgramado = tipoEdicao === "programado";
   const lanceId = randomUUID();
   let refConsumoPontos = null; // UTAC110n — preenchido só quando o lance gasta pontos de lance
-  let passeConsumido = false;  // UTAC120 — true quando o inventário já pagou 1 Passe Relâmpago
 
   // ── 6. Consumo do pagamento (programado = senha; flash = saldo R$) ────────
   let debito;
@@ -248,8 +246,8 @@ export default async (req) => {
     // tinha posto aqui `consumirPasse` + 400 `sem_passes_disponiveis`). Motivo medido (UTAC128, furo F1):
     // a missão «Completar 1 lance» (+10, mais abaixo) só é creditada depois do lance, logo o Passe pago
     // tornava a via gratuita impossível. O lance gasta SÓ os pontos de lance do seu valor (UTAC110n).
-    // O Passe continua a dar os +200 pontos de lance na compra (atalho, não condição). `passeConsumido`
-    // fica sempre `false`: os ramos de devolução abaixo ficam inertes de propósito (GATE 4).
+    // O Passe continua a dar os +200 pontos de lance na compra (atalho, não condição).
+    // Os ramos de devolução do Passe saíram com a trava (achado MA2 do validador do UTAC129: armados, criavam Passes).
     let consumo;
     try { consumo = await consumirPontosLance(endereco, valorCentavos, refConsumoPontos); }
     catch { consumo = { ok: false, code: "ERRO_DB" }; }
@@ -317,12 +315,6 @@ export default async (req) => {
         const rev = await reverterMovimentoLance(endereco, refConsumoPontos).catch(() => ({ ok: false }));
         if (!rev.ok) console.error("[lance-relampago] devolver os pontos de lance falhou");
       }
-      // UTAC120 — o Passe também volta: o lance não existe, o direito de licitar não foi usado.
-      if (passeConsumido) {
-        const dev = await devolverPasse({ endereco, tipo: "relampago" }).catch(() => ({ ok: false }));
-        if (!dev.ok) console.error("[lance-relampago] devolver o Passe Relâmpago falhou");
-        passeConsumido = false;
-      }
       return jsonError(502, "blindagem_falhou", "não foi possível registar o lance blindado");
     }
   } else {
@@ -361,11 +353,6 @@ export default async (req) => {
     }
     if (!gravou) {
       // Sem persistência não há lance: devolve-se o que foi gasto (pontos, ou o crédito legado).
-      if (passeConsumido) {
-        const dev = await devolverPasse({ endereco, tipo: "relampago" }).catch(() => ({ ok: false }));
-        if (!dev.ok) console.error("[lance-relampago] devolver o Passe Relâmpago falhou");
-        passeConsumido = false;
-      }
       if (refConsumoPontos) {
         const rev = await reverterMovimentoLance(endereco, refConsumoPontos).catch(() => ({ ok: false }));
         if (!rev.ok) console.error("[lance-relampago] devolver os pontos de lance falhou");

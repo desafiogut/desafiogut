@@ -1,0 +1,1 @@
+{"chave":"recursos_app","valor":{"isLeilaoAtivo":{"ios":false,"pwa":true,"android":false},"isPagamentoNativoAtivo":{"ios":false,"pwa":false,"android":true}},"atualizado_em":"2026-10-18 12:27:12+00","lido_em":"2026-11-05 (UTAC129, antes do jsonb_set)"}

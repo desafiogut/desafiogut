@@ -25,6 +25,7 @@ import { mascararEndereco } from "./_lib/validate.mjs"; // UTAC110h.4 (DEBT-031)
 import { creditarBoasVindas } from "./_lib/fontes-lance.mjs"; // UTAC129 — boas-vindas (Art. 16º, I)
 
 const TTL_USER_SESSION = 24 * 60 * 60; // 24h
+const TIMEOUT_BOAS_VINDAS_MS = 1500;    // UTAC129 — teto para o crédito das boas-vindas não atrasar o login
 
 export default async (req) => {
   // MC88.12 — preflight CORS do APK. Tem de ser a primeira coisa: o OPTIONS não
@@ -122,9 +123,16 @@ export default async (req) => {
   // UTAC129 (Frente B, R18-129-1) — bónus de boas-vindas: +50 pontos de lance, uma vez por conta
   // (idempotente pela ref no ledger). Mesmo princípio do bloco acima: NUNCA bloqueia o login — o token
   // já está assinado; uma falha aqui só adia o bónus para o próximo login.
-  await creditarBoasVindas(endereco)
-    .then((r) => { if (!r?.ok) console.warn("[auth-user] boas-vindas falhou (não-fatal):", r?.code); })
-    .catch((err) => { console.warn("[auth-user] boas-vindas lançou (não-fatal):", err?.message); });
+  // Achado ℹ️1 do validador (SEG4): com o Supabase pendurado o login ficava à espera sem limite ⇒ teto de
+  // TIMEOUT_BOAS_VINDAS_MS. Se estourar, o login segue; o crédito é idempotente e repete no próximo login.
+  let temporizador;
+  const limite = new Promise((resolve) => {
+    temporizador = setTimeout(() => resolve({ ok: false, code: "TIMEOUT" }), TIMEOUT_BOAS_VINDAS_MS);
+  });
+  const boasVindas = await Promise.race([creditarBoasVindas(endereco), limite])
+    .catch((err) => ({ ok: false, code: `excecao:${err?.message}` }));
+  clearTimeout(temporizador);
+  if (!boasVindas?.ok) console.warn("[auth-user] boas-vindas não creditadas (não-fatal):", boasVindas?.code);
 
   console.info("[auth-user] sessão emitida", { endereco: mascararEndereco(endereco), visitorId: visitorId ? "presente" : "ausente" }); // UTAC110h.4 (DEBT-031)
   return jsonResponse({ token, ttl: TTL_USER_SESSION });
