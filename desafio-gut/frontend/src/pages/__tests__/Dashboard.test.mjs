@@ -48,6 +48,7 @@ let definirPontos = null;
 let chamadasPontos = null;
 let definirInventario = null; // UTAC130
 let estadoPasse = null;
+let tileCarteiraComMemo = null, tilePassesComMemo = null; // UTAC130 (⚠️1 do validador)
 // UTAC108h.2 — a separação das edições não-ativas nas duas prateleiras (função pura).
 let prateleirasDeEdicoes = null;
 // UTAC109f
@@ -88,7 +89,7 @@ before(async () => {
   ({ definirInventario } = await vite.ssrLoadModule(`${STUBS}/useInventarioPasses.js`));
   // react-router-dom é CJS: carregado pelo node, que é o que o Vite externaliza em SSR.
   ({ MemoryRouter } = await vite.ssrLoadModule("/src/__tests__/_ponte-ssr.mjs"));
-  ({ default: Pagina, estadoPasse, prateleirasDeEdicoes } = await vite.ssrLoadModule("/src/pages/Dashboard.jsx"));
+  ({ default: Pagina, estadoPasse, prateleirasDeEdicoes, tileCarteiraComMemo, tilePassesComMemo } = await vite.ssrLoadModule("/src/pages/Dashboard.jsx"));
   ({ definirEmBreve } = await vite.ssrLoadModule(`${STUBS}/leilaoLock.js`));
   ({ getEstadoEdicao } = await vite.ssrLoadModule("/src/utils/edicao.js"));
 });
@@ -367,10 +368,32 @@ describe("UTAC107c · Início — Passe Desafio, destino e remoções", () => {
     assert.match(tile(html, "Passe Desafio"), /data-testid="passe-skeleton"/, "o Passe mostrou um número enquanto carregava");
   });
 
-  test("UTAC130 · sessão ainda a cunhar o token: a Carteira fica em skeleton", () => {
-    definirPontos({ loading: false, lance: null });
-    const b = tile(renderizar({ ...COM_SESSAO, authToken: null }), "Carteira");
-    assert.match(b, /data-testid="carteira-skeleton"/, "mostrou um valor antes do token chegar");
+  test("UTAC130 · sessão ainda a cunhar o token: os DOIS tiles ficam em skeleton (mesmo com o inventário dito lido)", () => {
+    definirPontos({ loading: false, lance: { pontos: 7, movimentos: [] } });
+    definirInventario({ carregando: false, passesRelampago: 3, passesProgramado: 0 }); // ⚠️2: explícito, sem herdar estado
+    const html = renderizar({ ...COM_SESSAO, authToken: null });
+    assert.match(tile(html, "Carteira"), /data-testid="carteira-skeleton"/, "a Carteira mostrou um valor antes do token chegar");
+    assert.match(tile(html, "Passe Desafio"), /data-testid="passe-skeleton"/, "o Passe mostrou um valor antes do token chegar");
+  });
+
+  // UTAC130 — achado ⚠️1 do validador: a janela de UM render em que o token acabou de chegar (ou a conta mudou) e o
+  // hook ainda não voltou a pedir. Sequência de renders com o MESMO memo (o SSR cria um memo novo por render, por isso
+  // a sequência prova-se nas funções puras que o Dashboard usa).
+  test("UTAC130 · ⚠️1: token a chegar com o hook ainda «lido 0/0» ⇒ skeleton, nunca «0» falso; depois do pedido ⇒ número", () => {
+    const memo = { chave: null, pendente: false };
+    const A = "0xaaaa000000000000000000000000000000000001";
+    assert.equal(tilePassesComMemo(memo, { address: A, authToken: null, carregando: false, erro: "", passesRelampago: 0, passesProgramado: 0 }), null, "sem token: skeleton");
+    assert.equal(tilePassesComMemo(memo, { address: A, authToken: "t1", carregando: false, erro: "", passesRelampago: 0, passesProgramado: 0 }), null, "o «0» falso apareceu no render em que o token chegou");
+    assert.equal(tilePassesComMemo(memo, { address: A, authToken: "t1", carregando: true, erro: "", passesRelampago: 0, passesProgramado: 0 }), null);
+    assert.equal(tilePassesComMemo(memo, { address: A, authToken: "t1", carregando: false, erro: "", passesRelampago: 2, passesProgramado: 1 }), "3");
+    // troca de conta: o total da conta anterior não pode aparecer
+    const B = "0xbbbb000000000000000000000000000000000002";
+    assert.equal(tilePassesComMemo(memo, { address: B, authToken: "t2", carregando: false, erro: "", passesRelampago: 2, passesProgramado: 1 }), null, "mostrou o total da conta anterior");
+    const m2 = { chave: null, pendente: false };
+    assert.equal(tileCarteiraComMemo(m2, { address: A, authToken: null, loading: false, erro: "", lance: null }), null);
+    assert.equal(tileCarteiraComMemo(m2, { address: A, authToken: "t1", loading: false, erro: "", lance: { pontos: 9 } }), null, "a Carteira mostrou pontos antes do pedido do par novo");
+    tileCarteiraComMemo(m2, { address: A, authToken: "t1", loading: true, erro: "", lance: null });
+    assert.equal(tileCarteiraComMemo(m2, { address: A, authToken: "t1", loading: false, erro: "", lance: { pontos: 9 } }), "9 pts");
   });
 
   test("UTAC130 · erro ou campo ilegível: «—», nunca um 0 falso", () => {
@@ -384,6 +407,11 @@ describe("UTAC107c · Início — Passe Desafio, destino e remoções", () => {
     }
     definirPontos({ lance: null });
     assert.match(texto(tile(renderizar(COM_SESSAO), "Carteira")), /—/, "lance ilegível virou número");
+    definirPontos({ erro: "falhou", lance: { pontos: 9, movimentos: [] } });
+    definirInventario({ erro: "falhou", passesRelampago: 4, passesProgramado: 1 });
+    const h2 = renderizar(COM_SESSAO);
+    assert.match(texto(tile(h2, "Carteira")), /—/, "com erro, a Carteira mostrou o número (ramo erro ignorado)");
+    assert.match(texto(tile(h2, "Passe Desafio")), /—/, "com erro, o Passe mostrou o número (ramo erro ignorado)");
   });
 
   test("UTAC130 · vazio (lido 0/0 e 0 pontos): «0» e «0 pts»", () => {
@@ -587,7 +615,7 @@ describe("UTAC109f · Início — ordem final e pendências do 109e", () => {
     const bloco = (a, b) => { const i = s.indexOf(a), j = s.indexOf(b); assert.ok(i > 0 && j > i, `bloco ${a}`); return s.slice(i, j); };
     const sha = (t) => createHash("sha256").update(t).digest("hex");
     assert.equal(sha(bloco("  const carteiraStat = {", "  const cardPad")),
-      "c25c78e539ced45d5d0c7c32d403750f5ba8a1d752625e309c9534f1cf40b2c8", "os dados dos 4 tiles mudaram");
+      "c76cc1c0352167a0219f60e69cc0f4f5fc293399dec4f3ba9fe129df68f60afe", "os dados dos 4 tiles mudaram");
     assert.equal(sha(bloco("      {/* ── KPIs ── */}", "      {/* ── UTAC108h.3")),
       "0b037a7abb13b9db6272de47aadddafdc98da2121615d967d11f51a3ce68db69", "o render dos 4 tiles mudou");
     assert.doesNotMatch(s, /label: "Saldo \(R\$\)"/, "o KPI «Saldo (R$)» voltou ao Início (UTAC130)");

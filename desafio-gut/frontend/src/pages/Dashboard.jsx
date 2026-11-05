@@ -121,6 +121,21 @@ export function estadoPasse(memo, { address, authToken, loading, erro, pontosCar
   return pontosCartao > 0 ? "dados" : "vazio";
 }
 
+/**
+ * UTAC130 (achado ⚠️1 do validador) — os dois tiles novos passam pelo MESMO memo `address|authToken` do
+ * `estadoPasse`: quando o token chega (ou a conta muda), há um render em que o hook ainda não voltou a pedir
+ * (`loading/carregando:false` com os valores da forma vazia ou da conta anterior). Sem o memo, o «Passe Desafio»
+ * mostrava um «0» falso (ou o total da conta anterior) nesse render. `null` = skeleton.
+ */
+export function tileCarteiraComMemo(memo, { address, authToken, loading, erro, lance }) {
+  const est = estadoPasse(memo, { address, authToken, loading, erro, pontosCartao: 0 });
+  return est === "carregando" ? null : valorTileCarteira({ address, authToken, loading, erro, lance });
+}
+export function tilePassesComMemo(memo, { address, authToken, carregando, erro, passesRelampago, passesProgramado }) {
+  const est = estadoPasse(memo, { address, authToken, loading: carregando, erro, pontosCartao: 0 });
+  return est === "carregando" ? null : valorTilePasses({ address, carregando, erro, passesRelampago, passesProgramado });
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -146,7 +161,7 @@ export default function Dashboard() {
   // UTAC107c — o tile «Passe Desafio» conta SÓ os pontos de CARTÃO (R1 do UTAC106f: o bónus
   // do palpite não entra). NÃO é o `saldoSenhas` (Via A, senhas on-chain) nem o `pontos` total.
   const {
-    pontosCartao, pontosParaCartao, palpites,
+    palpites, // UTAC130 — pontosCartao/pontosParaCartao saíram com o «X / 50» do Início
     lance: pontosLanceLidos, // UTAC130 — o tile «Carteira» mostra os pontos de lance
     loading: pontosLoading, erro: pontosErro,
   } = usePontos();
@@ -231,40 +246,23 @@ export default function Dashboard() {
   // UTAC130 (Frente B) — o tile «Saldo (R$)» saiu do Início (no APK mostrava um saldo R$ que a Play não deixa
   // vender lá); o lugar é do tile «Carteira» (pontos de lance). O saldo R$ continua na Carteira do PWA.
 
-  // UTAC107c — tile «Passe Desafio» (era «Senhas», Via A). Mostra os pontos de CARTÃO «X / 50»
-  // e leva às Ofertas Programadas (mockup `docs/mockups-107a/inicio.html`, variante A — R18-B
-  // do UTAC107c: sem barra de progresso). Estados (decisões 8 e 9 do operador):
-  //   • sem conta                    → «—» (não há pontos de ninguém a mostrar)
-  //   • a carregar / sessão a cunhar → skeleton (o `usePontos` devolve 0 enquanto o `authToken`
-  //                                    não chega — mostrar «0 / 50» nesse intervalo seria falso)
-  //   • erro                         → «—» (o número fica oculto)
-  //   • 0 pontos                     → «0 / 50» + convite para começar
-  const metaCartao = Number.isSafeInteger(pontosParaCartao) && pontosParaCartao > 0 ? pontosParaCartao : 50;
-  const passeMemo = useRef({ chave: null, pendente: false });
-  const passeEstado = estadoPasse(passeMemo.current, {
-    address, authToken, loading: pontosLoading, erro: pontosErro, pontosCartao,
-  });
-  const passeValor = passeEstado === "carregando"
-    // As classes são as do `Skeleton` (ui/Skeleton.jsx), num <span>: o valor vive dentro de um
-    // <button>, onde um <div> seria HTML inválido.
-    ? <span data-testid="passe-skeleton" aria-hidden="true" className="inline-block animate-pulse rounded-lg bg-white/[0.06] border border-white/5" style={{ width: "4.5rem", height: "1.2em" }} />
-    : (passeEstado === "dados" || passeEstado === "vazio")
-      ? `${pontosCartao} / ${metaCartao}`
-      : "—";
-  void passeValor; // UTAC130 — o «X / 50» de cartão deixou de ir para o tile (fica o cálculo, sem uso)
+  // UTAC130 — o «X / 50» de cartão do UTAC107c saiu do Início (tile 2 = inventário). O memo `address|authToken`
+  // que ele usava passou para os dois tiles novos (achado ⚠️1 do validador: «0» falso quando o token chega).
+  const carteiraMemo = useRef({ chave: null, pendente: false });
+  const inventarioMemo = useRef({ chave: null, pendente: false });
 
   // UTAC130 (Frente B) — skeleton comum aos dois tiles novos (mesmas classes do `Skeleton`, num <span>).
   const skeletonTile = (id) => (
     <span data-testid={id} aria-hidden="true" className="inline-block animate-pulse rounded-lg bg-white/[0.06] border border-white/5" style={{ width: "4.5rem", height: "1.2em" }} />
   );
   // Tile 1 «Carteira» — pontos de lance (decisão C2), leva à Carteira. Substitui «Saldo (R$)».
-  const carteiraValor = valorTileCarteira({ address, authToken, loading: pontosLoading, erro: pontosErro, lance: pontosLanceLidos });
+  const carteiraValor = tileCarteiraComMemo(carteiraMemo.current, { address, authToken, loading: pontosLoading, erro: pontosErro, lance: pontosLanceLidos });
   const carteiraStat = {
     label: "Carteira", value: carteiraValor ?? skeletonTile("carteira-skeleton"),
     color: COR.gold, icon: "👛", to: "/carteira",
   };
   // Tile 2 «Passe Desafio» — total de Passes no inventário, leva à Carteira (era «X / 50» → Ofertas Programadas).
-  const passesValor = valorTilePasses({ address, ...inventario });
+  const passesValor = tilePassesComMemo(inventarioMemo.current, { address, authToken, ...inventario });
   const passeStat = {
     label: "Passe Desafio", value: passesValor ?? skeletonTile("passe-skeleton"),
     color: COR.gold, icon: "🎟️", to: "/carteira",
