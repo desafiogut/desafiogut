@@ -1,0 +1,24 @@
+HEAD    : {
+  'sem tile «Saldo (R$)»': true,
+  'tile Carteira com memo': true,
+  'tile Passe = inventário com memo': true,
+  'lista: carteiraStat, passeStat, Lances Únicos, Total de Lances': true,
+  'Carteira (MinhaCarteira) intacta': true
+}
+eae7654 : {
+  'sem tile «Saldo (R$)»': false,
+  'tile Carteira com memo': false,
+  'tile Passe = inventário com memo': false,
+  'lista: carteiraStat, passeStat, Lances Únicos, Total de Lances': false,
+  'Carteira (MinhaCarteira) intacta': true
+}
+entregáveis: {
+  'AAB v8 = 222e3065…': true,
+  'UTAC130_SEG-1_MEDICAO.md': true,
+  'UTAC130_SEG0_SEG1.md': true,
+  'UTAC130_SEG2_BUILD.md': true,
+  'UTAC130_SEG4_VALIDADOR.md': true,
+  'UTAC130_RELATORIO.md': true,
+  'UTAC130_SUITE.txt': true
+}
+VEREDITO: VERDE · controlo positivo (eae7654 tem de falhar): OK, falhou
