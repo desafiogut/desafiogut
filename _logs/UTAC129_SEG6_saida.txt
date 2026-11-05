@@ -1,0 +1,28 @@
+# 1.ª corrida: VERMELHO por erro do INSTRUMENTO (semCom não tirava comentários de fim de linha; o comentário do PainelIndicacao contém 'window.location.origin'). Instrumento corrigido; 2.ª corrida abaixo:
+HEAD   : {
+  'lance sem consumirPasse': true,
+  'auth-user credita boas-vindas': true,
+  'convite com ORIGEM_PRODUCAO': true,
+  'palpite MANTÉM consumirPasse': true,
+  'versionCode 8': true
+}
+HEAD~2 : {
+  'lance sem consumirPasse': false,
+  'auth-user credita boas-vindas': false,
+  'convite com ORIGEM_PRODUCAO': false,
+  'palpite MANTÉM consumirPasse': true,
+  'versionCode 8': false
+}
+entregáveis: {
+  'AAB v8 existe': true,
+  'UTAC129.spec.yml': true,
+  'UTAC129_SEG-1_MEDICAO.md': true,
+  'UTAC129_SEG0_FRENTE-A.md': true,
+  'UTAC129_SEG0_FRENTE-B.md': true,
+  'UTAC129_SEG1_FRENTE-C.md': true,
+  'UTAC129_SEG4_VALIDADOR.md': true,
+  'UTAC129_SEG5_VERIFICACAO.md': true,
+  'UTAC129_RELATORIO.md': true
+}
+VEREDITO: VERDE · controlo positivo (HEAD~2 tem de falhar): OK, falhou
+exit=0

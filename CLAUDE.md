@@ -1021,3 +1021,16 @@ resolvia. Era falso — corrigido no código e na spec.)*
 **Registo:** `_logs/UTAC115_AUDITORIA.md` · `_logs/UTAC115_FECHO-ENGENHARIA.md` · `_logs/UTAC115_PLANO-MIGRACAO-V2.md` · `_logs/UTAC113_CHECKLIST-LOJA.md` · `Desktop/RELATORIO-UTAC115.txt`.
 
 **Estado:** fase de engenharia encerrada. O proximo passo e operacional (Ruan): subir o AAB v3, testar o Billing em License Testing e so promover para Producao depois de a DEBT-078 estar fechada.
+
+
+## R14 (append) -- UTAC129 -- LANCE SEM PASSE, BOAS-VINDAS, LINKS DO APK E AAB v8 (Opus 5.5, 2026-11-05)
+
+**Decisões do operador (R18):** **R18-129-1** boas-vindas = **50 pontos de lance**, uma vez por conta · **R18-129-2** `EM_BREVE_MODE = true` **mantém-se** (a missão «Completar 1 lance» continua inalcançável na prática → DEBT-087) · **R18-129-3** só o **LANCE** Relâmpago fica sem Passe; o **PALPITE continua a consumir 1 Passe Programado** (Arts. 25º/29º) · **R18-129-4** seguir com RAM medida antes da suíte e do build.
+
+**Feito:** `lance-relampago.mjs` deixou de consumir Passe (o UTAC120 tinha posto `consumirPasse`; a missão +10 ficava atrás de uma compra, furo F1 do UTAC128) · `auth-user.mjs` credita +50 de boas-vindas (`creditarBoasVindas`, ref fixa, CAS, teto de 1 500 ms, fail-soft) · `ORIGEM_PRODUCAO` exportada e usada nos links de convite (no APK `window.location.origin` é `https://localhost`) e no lugar do domínio morto `desafiogut.com` · `CardLance` sem trava/compra de Passe · **flag `isLeilaoAtivo.android = true`** (Supabase `jsonb_set` + Blob), virada **depois** do deploy · deploy `6aec4d74…` · **AAB v8** `Desktop/DesafioGUT-v8/DesafioGUT-v8.aab` (versionCode 8, SHA-256 `40934701…2b00`, certificado = v7, guarda exit 0 sobre o `.aab` extraído).
+
+**Provas:** suíte **1301/1301 · 1456/1462**; mutantes M1-M6 RED (md5 restaurado); validador adversarial **APROVADO COM RESSALVAS** (1 ⚠️ escalado = DEBT-083, GUTO com `desafiogut.com`; ℹ️1 e MA2 corrigidos, não re-validados).
+
+⚠️ **Já vale na v7 instalada (servidor/config):** lance sem Passe, boas-vindas e flag. **Só vale com a v8 aprovada pela Google:** link de convite correcto, `CardLance` sem «Precisa de 1 Passe», link «versão Web». Na v7 o `CardLance` ainda bloqueia o botão quando o inventário lido é 0. Hoje isso não se vê, porque o `EM_BREVE_MODE` esconde o formulário.
+
+⚖️ Riscos do UTAC126/127 que este UTAC **não** resolve (decisão do operador de ligar mesmo assim): **sem parecer jurídico** no repo; o Passe continua a dar **+200 pontos de lance** (compra de vantagem). Dívidas novas: DEBT-083..087. Registo: `_logs/UTAC129_*` · `Desktop/UTAC129-RELATORIO.md`.
