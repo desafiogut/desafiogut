@@ -50,3 +50,6 @@ logo verificadas. Verificação no aparelho: `adb shell pm get-app-links com.des
 
 Nota de método: a cache parece ser **por consulta (site + chave)** e não só por site: a chave da Play ligou ~1 h depois da 1.ª consulta pós-deploy, a de upload ainda não.
 **Veredicto: FECHADO** (linked:true para a chave da Play); pendente só o `linked` da chave de upload (cache) e o teste no aparelho.
+
+## ✅ Actualização final (18:12 UTC) — as TRÊS chaves ligadas
+upload `85:44…` → `{"linked":true,"maxAge":"2953s"}`. Play, debug e upload: todas `linked:true` na API do Google. Só falta o teste no aparelho.
