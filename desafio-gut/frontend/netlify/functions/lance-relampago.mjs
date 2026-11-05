@@ -32,7 +32,7 @@ import { verificarJanelaLance, EDICAO_ESPECIAL_RE } from "./_lib/edicao-janela.m
 import { registrarConsumoSenha, BLOB_SENHAS_CONSUMO } from "./_lib/senhas-programado.mjs"; // MC91.11 — ledger
 import { keccak256, AbiCoder } from "ethers";
 import { consumirPontosLance, reverterMovimentoLance } from "./_lib/ledger-lance.mjs"; // UTAC110n (era UTAC110d)
-import { consumirPasse, devolverPasse } from "./_lib/passes-inventario.mjs"; // UTAC120 — inventário
+import { devolverPasse } from "./_lib/passes-inventario.mjs"; // UTAC120 — inventário (UTAC129: o lance já não consome Passe; a devolução fica inerte)
 import { creditarMissaoLance, PONTOS_MISSAO_LANCE } from "./_lib/fontes-lance.mjs"; // UTAC110f — missão «1 lance do dia»
 import { respostaPreflight } from "./_lib/cors.mjs";
 import { mascararEndereco } from "./_lib/validate.mjs"; // UTAC110h.4 (DEBT-031)
@@ -244,19 +244,12 @@ export default async (req) => {
     // SEG4 W5/V1 (110d, mantido): com `idempotencyKey`, a ref deriva DELA — dois pedidos concorrentes
     // com a mesma chave tentam o MESMO débito e o 2.º recebe `criado:false` (409, sem 2.º débito).
     refConsumoPontos = idempotencyKey ? `lance:${idempotencyKey}` : `lance:${lanceId}`;
-    // UTAC120 — o lance consome 1 PASSE RELÂMPAGO do inventário (o Passe é o direito de licitar;
-    // os pontos do valor do lance continuam a ser gastos a seguir, como antes).
-    const passe = await consumirPasse({ endereco, tipo: "relampago" });
-    if (!passe.ok) {
-      if (passe.code === "sem_passes") {
-        return jsonError(400, "sem_passes_disponiveis",
-          "Precisa de 1 Passe Relâmpago para dar este lance. Compre um Passe na Carteira.",
-          { passesRelampago: 0 });
-      }
-      return jsonError(502, "inventario_indisponivel",
-        "não foi possível verificar o inventário de Passes; tente de novo", { motivo: passe.code });
-    }
-    passeConsumido = true;
+    // UTAC129 (Frente A, R18-129-3) — o lance JÁ NÃO consome Passe Relâmpago do inventário (UTAC120
+    // tinha posto aqui `consumirPasse` + 400 `sem_passes_disponiveis`). Motivo medido (UTAC128, furo F1):
+    // a missão «Completar 1 lance» (+10, mais abaixo) só é creditada depois do lance, logo o Passe pago
+    // tornava a via gratuita impossível. O lance gasta SÓ os pontos de lance do seu valor (UTAC110n).
+    // O Passe continua a dar os +200 pontos de lance na compra (atalho, não condição). `passeConsumido`
+    // fica sempre `false`: os ramos de devolução abaixo ficam inertes de propósito (GATE 4).
     let consumo;
     try { consumo = await consumirPontosLance(endereco, valorCentavos, refConsumoPontos); }
     catch { consumo = { ok: false, code: "ERRO_DB" }; }

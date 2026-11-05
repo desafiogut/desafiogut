@@ -21,6 +21,7 @@ import SemSaldoBanner, { mostrarAvisoSemSaldo } from "../components/SemSaldoBann
 import CartaoEdicao from "../components/CartaoEdicao.jsx";
 import { EM_BREVE_MODE } from "../lib/leilaoLock.js";
 import { getEstadoEdicao } from "../utils/edicao.js";
+import { ORIGEM_PRODUCAO } from "../lib/apiOrigin.js"; // UTAC129
 
 // MC99 — `CATEGORIAS_POR_TIPO` + `buscarClienteDoLeilaoAtivo` viveram aqui para
 // alimentar o banner do cliente (REQ-01). Com o banner removido desta tela, o
@@ -447,7 +448,9 @@ export default function MercadoLances() {
 // Transparente: declara que o leilão está na versão Web, sem o esconder e sem
 // dark patterns (taste-engineering). Glass UI .gut-glass-standard (impeccable-
 // design), contraste WCAG AA, acento laranja cirúrgico. Dimensões fixas → CLS=0.
-const PWA_URL = "https://desafiogut.com";
+// UTAC129 (Frente C) — `desafiogut.com` não responde (UTAC124: curl → 000); passa à origem de produção.
+const PWA_URL = ORIGEM_PRODUCAO;
+const PWA_HOST = PWA_URL.replace("https://", "");
 
 function MercadoConformidade({ isMobile }) {
   return (
@@ -472,7 +475,7 @@ function MercadoConformidade({ isMobile }) {
           fontSize: isMobile ? "0.9rem" : "0.95rem", lineHeight: 1.6,
         }}>
           As edições do DesafioGUT acontecem na nossa versão Web. Abra{" "}
-          <strong style={{ color: COR.gold }}>desafiogut.com</strong> no seu navegador
+          <strong style={{ color: COR.gold }}>{PWA_HOST}</strong> no seu navegador
           para participar com saldo, lances e carteira — tudo o que você já usa.
           Por aqui, continue explorando a loja e os produtos.
         </p>

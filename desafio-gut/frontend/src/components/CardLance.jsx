@@ -33,8 +33,8 @@ import { usePontos } from "../hooks/usePontos.js";
 import { estadoPontosLance, rotuloPontosLance } from "../lib/pontosLance.js";
 // UTAC120 (Frente B) — o lance Relâmpago consome 1 PASSE RELÂMPAGO do inventário (backend UTAC120);
 // sem Passe, o botão passa a ser o atalho de compra (o MESMO balão da Carteira).
-import { useInventarioPasses, semPasses } from "../hooks/useInventarioPasses.js";
-import BalaoComprarPasse from "./BalaoComprarPasse.jsx";
+// UTAC129 (Frente C, R18-129-3) — saíram o inventário e o balão de compra do CardLance: o lance já não
+// consome Passe no servidor (UTAC129 Frente A); só gasta pontos de lance. O Passe compra-se na Carteira.
 
 const SEPOLIA_CHAIN_ID = CHAIN_ID_DEC;
 
@@ -106,11 +106,6 @@ export default function CardLance({
     lance: pontosLanceLidos, loading: pontosCarregando, erro: pontosErro, refetch: refetchPontosLance,
   } = usePontos();
 
-  // UTAC120 — inventário de Passes. Só bloqueia com um 0 LIDO do servidor (`semPasses`): a carregar ou
-  // em erro o comportamento fica o de antes e o servidor continua a ser quem recusa (`sem_passes_disponiveis`).
-  const inventario = useInventarioPasses();
-  const [balaoPasseAberto, setBalaoPasseAberto] = useState(false);
-
   const [valor,             setValor]             = useState("");
   const idCampoLance = useId(); // UTAC107d — liga o <label> ao <input>
   const [fase,              setFase]              = useState(FASES.IDLE);
@@ -150,8 +145,6 @@ export default function CardLance({
     loading: pontosCarregando || (isConnected && !authToken), erro: pontosErro,
   });
   const semPontosFlash = !isProgramado && isConnected && !pontosL.podeLancar;
-  // UTAC120 — sem Passe Relâmpago não há lance possível: o botão vira «Comprar Passe Relâmpago».
-  const semPasseRelampago = !isProgramado && isConnected && semPasses(inventario, "passesRelampago");
   // UTAC110j.5 — o que o servidor devolveu no último lance (`pontosLanceConsumidos/Restantes`).
   const [ultimoGasto, setUltimoGasto] = useState(null);
 
@@ -286,12 +279,7 @@ export default function CardLance({
             saldo_pontos_insuficiente: mensagemSaldoInsuficiente(data?.error, valorCentavos),
             consumo_pontos_falhou:    "Não foi possível usar seus pontos de lance. Tente novamente.",
             lance_em_processamento:   "Este lance já está sendo processado. Aguarde um instante.",
-            // UTAC120 — o servidor consome 1 Passe Relâmpago por lance.
-            sem_passes_disponiveis:   "Precisa de 1 Passe Relâmpago para este lance.",
-            inventario_indisponivel:  "Não foi possível verificar seus Passes. Tente novamente.",
           };
-          // Sem Passe no servidor: relê-se o inventário — o botão passa a «Comprar Passe Relâmpago».
-          if (data?.error?.code === "sem_passes_disponiveis") { try { inventario.recarregar?.(); } catch {} }
           // O servidor diz que não há pontos que cheguem: relê-se para o ecrã não mentir.
           if (data?.error?.code === "saldo_pontos_insuficiente") { try { refetchPontosLance?.(); } catch {} }
           throw new Error(msgMap[data?.error?.code] ?? data?.error?.message ?? "Erro no lance relâmpago.");
@@ -311,8 +299,6 @@ export default function CardLance({
               restantes: Number.isSafeInteger(data?.pontosLanceRestantes) ? data.pontosLanceRestantes : null }
           : null);
         try { refetchPontosLance?.(); } catch {}
-        // UTAC120 — o lance gastou 1 Passe Relâmpago: o inventário relê-se (na Carteira e aqui).
-        try { inventario.recarregar?.(); } catch {}
         onLanceSucesso?.({ address, valorCentavos, txHash: data.lanceId, nomeExibicao: userLabel || null });
         return;
       }
@@ -610,15 +596,7 @@ export default function CardLance({
       {/* UTAC110d-front (Frente C) — sem créditos de lance, o motivo fica À VISTA (não só no
           `title` do botão desligado). UTAC110j.5 — em PONTOS: a carregar, erro de leitura, sem pontos ou
           lance acima do saldo; nos dois últimos, um atalho para ganhar pontos (missões e login na Carteira). */}
-      {/* UTAC120 — sem Passe Relâmpago, UMA só mensagem à vista: a do Passe (comprá-lo também resolve
-          os pontos — o Passe Relâmpago dá +200 pontos de lance). A dos pontos volta quando houver Passe. */}
-      {!encerrado && semPasseRelampago && (
-        <div role="status" data-sem-passe="relampago" style={estilos.boxAvisoNeutro}>
-          Precisa de 1 Passe Relâmpago para este lance.
-        </div>
-      )}
-
-      {!isProgramado && !encerrado && semPontosFlash && !semPasseRelampago && pontosL.mensagem && (
+      {!isProgramado && !encerrado && semPontosFlash && pontosL.mensagem && (
         <div
           role="status"
           data-pontos-lance={pontosL.estado}
@@ -635,22 +613,7 @@ export default function CardLance({
         </div>
       )}
 
-      {!encerrado && semPasseRelampago && !ocupado && (
-        // UTAC120 — o mesmo botão (forma e mola), mas abre a compra do Passe em vez de licitar.
-        <motion.button
-          type="button"
-          data-cta-comprar-passe="relampago"
-          style={{ ...estilos.botaoLance, cursor: "pointer" }}
-          onClick={() => setBalaoPasseAberto(true)}
-          whileHover={reduce ? undefined : { scale: 1.02 }}
-          whileTap={reduce ? undefined : { scale: 0.96 }}
-          transition={{ type: "spring", stiffness: 420, damping: 22 }}
-        >
-          Comprar Passe Relâmpago
-        </motion.button>
-      )}
-
-      {!encerrado && !(semPasseRelampago && !ocupado) && (
+      {!encerrado && (
         // MC20.2 ITEM 6 — botão morphing (apresentação): feedback elástico whileTap/
         // whileHover por spring. onClick/disabled/title/label e TODA a lógica de lance
         // (handleDarLance) ficam intactos (R1 — fluxo on-chain não alterado).
@@ -675,17 +638,6 @@ export default function CardLance({
         🔒 Lance protegido e sanitizado
       </p>
 
-      {/* UTAC120 — balão de compra do Passe (o da Carteira). Em sucesso relêem-se o inventário, os pontos
-          de lance (o Passe Relâmpago dá +200) e o saldo R$ (no PWA a compra debita-o). */}
-      <BalaoComprarPasse
-        aberto={balaoPasseAberto}
-        onFechar={() => setBalaoPasseAberto(false)}
-        onComprado={async () => {
-          try { await inventario.recarregar?.(); } catch {}
-          try { refetchPontosLance?.(); } catch {}
-          try { refetchSaldoRs?.(); } catch {}
-        }}
-      />
     </Card>
   );
 }

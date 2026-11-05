@@ -29,6 +29,7 @@ import { historicoParaEnviar } from "../lib/historicoChat.js"; // MC96.1
 // MC88.22 — identidade do visitante para a chave do histórico (já existente,
 // gravado pelo FingerprintJS). Leitura síncrona, sem await.
 import { getCachedVisitorId } from "../lib/fingerprint.js";
+import { ORIGEM_PRODUCAO } from "../lib/apiOrigin.js"; // UTAC129
 
 // MC88.22 — o histórico vivia numa chave ÚNICA e GLOBAL ("gut_chat_history"),
 // sem carteira e sem perfil, e nada a limpava ao trocar de conta. Quem abrisse o
@@ -144,8 +145,8 @@ function salvarHistorico(chave, hist) {
 function CardIndicacao({ indicacao }) {
   const [copiado, setCopiado] = useState(false);
   const codigo = indicacao?.codigo || "—";
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const link = codigo && codigo !== "—" ? `${origin}/?ref=${codigo}` : "";
+  // UTAC129 — origem de PRODUÇÃO: no APK window.location.origin é https://localhost (link morto).
+  const link = codigo && codigo !== "—" ? `${ORIGEM_PRODUCAO}/?ref=${codigo}` : "";
   const copiar = useCallback(async () => {
     if (!link) return;
     try {

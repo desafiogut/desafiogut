@@ -1,0 +1,33 @@
+schema: utac/1
+name: UTAC129
+title: "Destravar a jornada gratuita, blindar a conformidade e gerar o AAB v8"
+type: produto          # + componente publicacao (deploy) e infra (config remota)
+baseline: 12e31d4
+motivo: >-
+  UTAC126-128: a missão exige lance, o lance exige Passe pago, o link de indicação quebra no APK,
+  as boas-vindas não existem e a vista de conformidade aponta para um domínio morto.
+frentes:
+  - {id: A, nome: "Backend — lance/palpite sem consumo de Passe", entrega: [netlify/functions/lance-relampago.mjs, netlify/functions/registar-palpite.mjs, netlify/functions/_tests/utac120-inventario.test.mjs]}
+  - {id: B, nome: "Backend — bónus de boas-vindas idempotente", entrega: [netlify/functions/auth-user.mjs, netlify/functions/_lib/fontes-lance.mjs, teste novo]}
+  - {id: C, nome: "Frontend — links e textos", entrega: [src/components/PainelIndicacao.jsx, src/components/ChatbotWidget.jsx, src/components/CardLance.jsx, src/pages/Dashboard.jsx, src/pages/MercadoLances.jsx, src/hooks/useComprarPasse.js, src/lib/apiOrigin.js]}
+  - {id: D, nome: "Config — isLeilaoAtivo.android=true (Supabase jsonb_set + Blob)", entrega: [config_remota.recursos_app, Blob config-experiencia/recursos_app]}
+  - {id: E, nome: "Build — AAB v8", entrega: [android/app/build.gradle (versionCode 8), Desktop/DesafioGUT-v8/DesafioGUT-v8.aab]}
+autoriza:
+  - alterar os ficheiros nomeados nas frentes (+ testes que codificam o comportamento removido)
+  - UPDATE em config_remota (jsonb_set) e blobs:set do Blob config-experiencia
+  - correr a suíte, npm run build:apk, gradlew bundleRelease
+  - deploy Netlify (--prod --build, foreground) · commit nomeado + push (SEG5 da skill)
+  - despachar validador adversarial (subagente, worktree próprio)
+proibe:
+  - alterar o Regulamento v5.1 · enviar o AAB à Play · tocar no site do cliente
+  - remover a validação do Google Play Billing na compra do Passe
+  - git add -A · deploy em background · --dir=dist · npm run build para o APK
+  - migrações DDL (não autorizadas)
+dependencias: [UTAC126, UTAC127, UTAC128 (diagnósticos)]
+regras_activas: [E, T, G, L, S, A, P, AU, ST, HI]
+stop_conditions_extra: [ST3, ST4, ST5, ST6]
+ressalvas:
+  - HI5 3 h
+  - "A14: RAM >= 1500 MB antes do SEG-1 e do build"
+  - "Frente D: jsonb_set só na chave, sem apagar as outras"
+  - "No fecho: explicar o que vale já na v7 (servidor) e o que só vale com a v8 aprovada"

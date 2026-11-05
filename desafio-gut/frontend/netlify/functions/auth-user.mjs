@@ -22,6 +22,7 @@ import { registarAtividade } from "./_lib/atividade-utilizadores.mjs";
 import { registerAndCheck } from "./_lib/sybil-check.mjs";
 import { respostaPreflight } from "./_lib/cors.mjs";
 import { mascararEndereco } from "./_lib/validate.mjs"; // UTAC110h.4 (DEBT-031)
+import { creditarBoasVindas } from "./_lib/fontes-lance.mjs"; // UTAC129 — boas-vindas (Art. 16º, I)
 
 const TTL_USER_SESSION = 24 * 60 * 60; // 24h
 
@@ -117,6 +118,13 @@ export default async (req) => {
   await registarAtividade(endereco).catch((err) => {
     console.warn("[auth-user] registo de atividade falhou (não-fatal):", err?.message);
   });
+
+  // UTAC129 (Frente B, R18-129-1) — bónus de boas-vindas: +50 pontos de lance, uma vez por conta
+  // (idempotente pela ref no ledger). Mesmo princípio do bloco acima: NUNCA bloqueia o login — o token
+  // já está assinado; uma falha aqui só adia o bónus para o próximo login.
+  await creditarBoasVindas(endereco)
+    .then((r) => { if (!r?.ok) console.warn("[auth-user] boas-vindas falhou (não-fatal):", r?.code); })
+    .catch((err) => { console.warn("[auth-user] boas-vindas lançou (não-fatal):", err?.message); });
 
   console.info("[auth-user] sessão emitida", { endereco: mascararEndereco(endereco), visitorId: visitorId ? "presente" : "ausente" }); // UTAC110h.4 (DEBT-031)
   return jsonResponse({ token, ttl: TTL_USER_SESSION });

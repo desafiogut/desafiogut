@@ -170,7 +170,8 @@ test("(b) Android nativo mas SEM o plugin nativo ⇒ SEM compra (o APK não vend
   const { r, dup } = await comprar(() => ({ status: 201, json: { ok: true, pontosFidelidade: 10 } }));
   assert.equal(r.ok, false);
   assert.equal(r.code, "pix_indisponivel_no_apk");
-  assert.match(r.message, /desafiogut\.com/, "a mensagem tem de remeter para o site");
+  // UTAC129 (Frente C) — `desafiogut.com` não responde (UTAC124); a mensagem remete para a origem de produção.
+  assert.match(r.message, /silly-stardust-ca71bc\.netlify\.app/, "a mensagem tem de remeter para o site");
   assert.equal(dup.chamadas.filter((c) => /comprar-passe/.test(c.url)).length, 0,
     "o APK foi ao endpoint PIX — é exactamente a violação da Play");
 });
@@ -348,7 +349,7 @@ test("(C/estado) o bloqueio da frente C põe a mensagem no ESTADO `erro` do hook
     const r = await c.resultado().comprar("relampago");
     assert.equal(r.ok, false);
     assert.equal(r.code, "pix_indisponivel_no_apk");
-    assert.match(c.resultado().erro, /desafiogut\.com/,
+    assert.match(c.resultado().erro, /silly-stardust-ca71bc\.netlify\.app/, // UTAC129 — era desafiogut.com (morto)
       "o erro do bloqueio não chegou ao estado que o balão pinta (utilizador veria um balão mudo)");
   } finally { dup.restaurar(); }
 });

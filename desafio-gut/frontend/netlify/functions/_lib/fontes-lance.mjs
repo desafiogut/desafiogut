@@ -34,6 +34,9 @@ export const PONTOS_LOGIN_DIARIO = 5;
 export const PONTOS_MISSAO_LANCE = 10;
 export const PONTOS_INDICACAO = 50;
 export const LIMITE_INDICACOES_MES = 10;
+/** UTAC129 (R18-129-1) — bónus de boas-vindas do Art. 16º, I: 50 pontos de lance, UMA vez por conta. */
+export const PONTOS_BOAS_VINDAS = 50;
+export const REF_BOAS_VINDAS = "boas-vindas";
 
 /**
  * UTAC110n (R18-110j.4b-5) — CICLO DE MISSÕES, alcançável DE GRAÇA.
@@ -93,6 +96,16 @@ export function creditarLoginDiario(endereco, agora = new Date()) {
   const dia = diaManaus(agora);
   if (!dia) return Promise.resolve({ ok: false, code: "DATA_INVALIDA" });
   return creditarDoDia(endereco, PONTOS_LOGIN_DIARIO, "login", refLoginDiario(dia));
+}
+
+/**
+ * UTAC129 (Frente B, R18-129-1) — +50 pontos de lance de boas-vindas (Art. 16º, I), UMA vez por conta.
+ * Idempotente pela `ref` fixa `boas-vindas` no histórico do ledger (CAS em `ledger-lance.mjs`): relogar,
+ * repetir o pedido ou dois logins em paralelo nunca creditam duas vezes. Contas que já existiam antes
+ * do UTAC129 recebem-no no próximo login (uma vez), porque a regra é «uma vez por conta».
+ */
+export function creditarBoasVindas(endereco) {
+  return creditarDoDia(endereco, PONTOS_BOAS_VINDAS, "boas-vindas", REF_BOAS_VINDAS);
 }
 
 /** +10 pontos de lance no 1.º lance do dia de Manaus. Chamado pelo servidor, depois de o lance existir. */

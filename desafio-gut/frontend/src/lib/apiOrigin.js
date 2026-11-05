@@ -30,7 +30,10 @@
 // pelo browser na resposta — o que já é um progresso diagnosticável: passa de
 // "200 com HTML fingindo sucesso" para um erro de CORS visível.
 
-const ORIGEM_PRODUCAO = "https://silly-stardust-ca71bc.netlify.app";
+// UTAC129 (Frente C) — exportada: é também a origem dos links PARTILHADOS (convite de indicação, «versão Web»).
+// No APK, `window.location.origin` é `https://localhost` (servido do telemóvel) ⇒ um link montado com ela
+// é morto para quem o recebe (furo F3 do UTAC128).
+export const ORIGEM_PRODUCAO = "https://silly-stardust-ca71bc.netlify.app";
 const PREFIXO = "/.netlify/functions/";
 
 /** true apenas dentro do APK/IPA (Capacitor), false em qualquer browser. */

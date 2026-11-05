@@ -16,6 +16,7 @@ import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { GlassCard } from "@/components/ui";
 import { apiGet } from "../lib/api.js";
+import { ORIGEM_PRODUCAO } from "../lib/apiOrigin.js"; // UTAC129
 
 // UTAC109h.2 (decisão do operador, 2026-10-09) — UMA só cor de destaque: o amarelo `#f5a623`
 // (o dourado do botão «Dar palpite»). Saíram o verde-água `#00d4aa`, o gradiente `#0aa37e`,
@@ -83,7 +84,7 @@ export default function PainelIndicacao({ isMobile: isMobileProp }) {
   useEffect(() => { carregar(); }, [carregar]);
 
   const linkConvite = dados.codigo
-    ? `${typeof window !== "undefined" ? window.location.origin : ""}/?ref=${dados.codigo}`
+    ? `${ORIGEM_PRODUCAO}/?ref=${dados.codigo}` // UTAC129 — nunca window.location.origin (no APK é https://localhost)
     : null;
 
   async function copiarCodigo() {

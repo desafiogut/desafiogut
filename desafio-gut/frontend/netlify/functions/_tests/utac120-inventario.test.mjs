@@ -86,11 +86,14 @@ test("UTAC120 · erro da RPC ⇒ fail-closed inventario_indisponivel (nunca ok:t
 // ── nível (2): cablagem nos endpoints ────────────────────────────────────────────────────────
 const fonte = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
 
-test("UTAC120 · o LANCE consome 1 Passe Relâmpago e responde sem_passes_disponiveis a zero", () => {
+// UTAC129 (R18-129-3) — INVERTIDO: o lance deixou de consumir Passe (furo F1 do UTAC128). O texto
+// original deste teste exigia `consumirPasse` + `sem_passes_disponiveis` no lance; o comportamento novo
+// é provado no handler real em `utac129-lance-sem-passe.test.mjs` (A1-A4).
+test("UTAC120→UTAC129 · o LANCE NÃO consome Passe nem responde sem_passes_disponiveis", () => {
   const src = fonte("../lance-relampago.mjs");
-  assert.match(src, /consumirPasse\(\{\s*endereco,\s*tipo:\s*"relampago"/, "o lance não consome o Passe");
-  assert.match(src, /"sem_passes_disponiveis"/, "o lance não devolve o erro próprio");
-  assert.match(src, /devolverPasse\(/, "o lance não devolve o Passe quando o fluxo falha depois");
+  const codigo = src.split("\n").filter((l) => !/^\s*\/\//.test(l)).join("\n"); // sem comentários
+  assert.doesNotMatch(codigo, /consumirPasse\(/, "o lance voltou a consumir o Passe");
+  assert.doesNotMatch(codigo, /"sem_passes_disponiveis"/, "o lance voltou a exigir Passe");
 });
 
 test("UTAC120 · o PALPITE consome 1 Passe Programado e devolve o Passe se não registar", () => {

@@ -40,6 +40,7 @@ import { gerarIdempotencyKey } from "../utils/idempotency.js";
 import { passeDoTipo, inteiroNaoNegativo, QUANTIDADES_PASSE } from "../lib/passes.js";
 import { useRecursosApp } from "./useRecursosApp.js";
 import { billingDisponivel, iniciarCompra, confirmarCompra, androidNativo } from "../lib/google-play-billing.js";
+import { ORIGEM_PRODUCAO } from "../lib/apiOrigin.js"; // UTAC129
 
 // Mensagens por código HTTP dos endpoints (`_lib/comprar-passe-tipado.mjs`): nunca em silêncio.
 const MSG_POR_STATUS = {
@@ -67,7 +68,8 @@ const MSG_BILLING = {
 // digital e a política de Pagamentos da Play exige o Billing; oferecer PIX como alternativa ou
 // fallback é a violação que o bloqueante do AAB descreve. A mensagem remete para o mesmo sítio que
 // a vista de conformidade do Mercado já usa (`MercadoLances.jsx`, `PWA_URL`).
-const PWA_PASSE = "https://desafiogut.com";
+// UTAC129 (Frente C) — `desafiogut.com` não responde (UTAC124: curl → 000); passa à origem de produção.
+const PWA_PASSE = ORIGEM_PRODUCAO;
 const MSG_PIX_NO_APK =
   "O Passe Desafio nesta app é comprado pela Google Play, não com saldo. " +
   `Se a loja não abrir, compre em ${PWA_PASSE.replace("https://", "")}, no seu navegador.`;
