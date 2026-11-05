@@ -40,3 +40,13 @@ logo verificadas. Verificação no aparelho: `adb shell pm get-app-links com.des
 - Confirmação `linked:true` da chave da Play na API do Google (cache de até 1 h): a correr em segundo plano.
 - Teste no aparelho: instalar pela Play (ou reinstalar) e fazer login Google. Deve voltar à app, sem ficar no Chrome.
 - O browser padrão continua a importar (MC88.5.3: com o Opera o ciclo não fechava). Esta correcção resolve a verificação, não esse caso.
+
+## ✅ Actualização — confirmação do Google (2026-11-05 18:02 UTC)
+| Chave | Resposta da API `assetlinks:check` |
+|---|---|
+| **Play App Signing `10:25…`** | **`{"linked":true,"maxAge":"3599.6s"}`** ✅ (entregável cumprido) |
+| debug `70:6F…` | `{"linked":true}` |
+| upload `85:44…` | `{"maxAge":"3600s"}`: ainda sem `linked`, à espera de expirar a resposta negativa em cache (consultada logo após o deploy). Só afecta builds release instaladas FORA da Play (o APK da loja é assinado com a chave da Play). Verificador em segundo plano até 75 min |
+
+Nota de método: a cache parece ser **por consulta (site + chave)** e não só por site: a chave da Play ligou ~1 h depois da 1.ª consulta pós-deploy, a de upload ainda não.
+**Veredicto: FECHADO** (linked:true para a chave da Play); pendente só o `linked` da chave de upload (cache) e o teste no aparelho.
