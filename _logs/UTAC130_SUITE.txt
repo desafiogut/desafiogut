@@ -1,0 +1,7 @@
+
+> desafiogut-frontend@1.0.0 test
+> node ../../scripts/mc966-suite-harness.mjs ambos
+
+frontend: VERDE 1302/1302 pass
+backend: VERDE 1456/1462 pass
+VEREDITO: VERDE

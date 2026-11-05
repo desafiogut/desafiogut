@@ -118,8 +118,10 @@ test("UTAC123/B · o guarda nunca imprime a chave anon do Supabase", () => {
 // ── 3. Gradle ────────────────────────────────────────────────────────────────────
 const GRADLE = ler("android/app/build.gradle");
 
-test("UTAC123/B · versionCode 7", () => {
-  assert.match(GRADLE, /^\s*versionCode 7\s*$/m);
+// UTAC129 subiu para 8 (AAB v8) sem actualizar este teste: só o backend foi re-corrido depois do bump.
+// Achado e corrigido no UTAC130. O número tem de acompanhar o AAB entregue.
+test("UTAC123/B · versionCode 8 (era 7; AAB v8 — UTAC129/UTAC130)", () => {
+  assert.match(GRADLE, /^\s*versionCode 8\s*$/m);
 });
 
 test("UTAC123/B · tarefa validarAmbienteProducao corre o guarda sobre os assets do AAB", () => {

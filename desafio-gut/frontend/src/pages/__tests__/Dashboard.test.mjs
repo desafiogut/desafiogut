@@ -46,6 +46,7 @@ let edicoesPedidas = null;
 // UTAC107c
 let definirPontos = null;
 let chamadasPontos = null;
+let definirInventario = null; // UTAC130
 let estadoPasse = null;
 // UTAC108h.2 — a separação das edições não-ativas nas duas prateleiras (função pura).
 let prateleirasDeEdicoes = null;
@@ -69,6 +70,8 @@ before(async () => {
         { find: /^\.\.\/hooks\/useResultadoOficial\.js$/, replacement: `${STUBS}/useResultadoOficial.js` },
         // UTAC107c — os pontos de CARTÃO do tile «Passe Desafio».
         { find: /^\.\.\/hooks\/usePontos\.js$/, replacement: `${STUBS}/usePontos.js` },
+        // UTAC130 — o tile «Passe Desafio» passou a ser o total do inventário.
+        { find: /^\.\.\/hooks\/useInventarioPasses\.js$/, replacement: `${STUBS}/useInventarioPasses.js` },
         // UTAC109f — o `EM_BREVE_MODE` real é a constante `true`; o duplo (UTAC108d) deixa testar os DOIS ramos
         // (vidro Relâmpago vazio / com edição; P1 «palpite já!» só existe com a edição ATIVA). Default = true.
         { find: /^\.\.\/lib\/leilaoLock\.js$/, replacement: `${STUBS}/leilaoLock.js` },
@@ -82,6 +85,7 @@ before(async () => {
   ({ definirResultadoOficial, argumentos: edicoesPedidas } =
     await vite.ssrLoadModule(`${STUBS}/useResultadoOficial.js`));
   ({ definirPontos, chamadasPontos } = await vite.ssrLoadModule(`${STUBS}/usePontos.js`));
+  ({ definirInventario } = await vite.ssrLoadModule(`${STUBS}/useInventarioPasses.js`));
   // react-router-dom é CJS: carregado pelo node, que é o que o Vite externaliza em SSR.
   ({ MemoryRouter } = await vite.ssrLoadModule("/src/__tests__/_ponte-ssr.mjs"));
   ({ default: Pagina, estadoPasse, prateleirasDeEdicoes } = await vite.ssrLoadModule("/src/pages/Dashboard.jsx"));
@@ -311,73 +315,91 @@ describe("UTAC107c · Início — Passe Desafio, destino e remoções", () => {
     return botoes.find((b) => texto(b).includes(rotulo)) ?? null;
   }
 
-  test("o tile «Senhas» saiu e o «Passe Desafio» entrou no lugar dele (2.º tile)", () => {
+  // UTAC130 (Frente B, decisões do operador) — os 4 tiles passam a: «Carteira» (pontos de lance) · «Passe Desafio»
+  // (TOTAL do inventário) · «Lances Únicos» · «Total de Lances». Os dois primeiros levam à Carteira. Substitui os
+  // testes do UTAC107c que fixavam «Saldo (R$)» e o «X / 50» de cartão (o desenho mudou por decisão do operador).
+  test("UTAC130 · ordem: Carteira, Passe Desafio, Lances Únicos, Total de Lances — e «Saldo (R$)» saiu", () => {
     definirResultadoOficial(null);
-    definirPontos({ pontos: 14, pontosCartao: 12 });
+    definirPontos({ pontos: 14, pontosCartao: 12, lance: { pontos: 55, movimentos: [] } });
+    definirInventario({ passesRelampago: 2, passesProgramado: 1 });
     const html = renderizar(COM_SESSAO);
     const t = texto(html);
     assert.doesNotMatch(t, /\bSenhas\b/, "o tile «Senhas» continua no Início");
-    assert.ok(tile(html, "Passe Desafio"), "o tile «Passe Desafio» não existe");
-    const ordem = ["Saldo (R$)", "Passe Desafio", "Lances Únicos", "Total de Lances"].map((r) => t.indexOf(r));
+    assert.doesNotMatch(t, /Saldo \(R\$\)/, "o tile «Saldo (R$)» continua no Início");
+    assert.doesNotMatch(texto(tile(html, "Carteira") ?? ""), /R\$/, "o tile «Carteira» mostra reais");
+    const ordem = ["Carteira", "Passe Desafio", "Lances Únicos", "Total de Lances"].map((r) => t.indexOf(r));
     assert.ok(ordem.every((i) => i >= 0), `faltam tiles: ${ordem}`);
     assert.deepEqual([...ordem].sort((a, b) => a - b), ordem, "a ordem dos 4 tiles mudou");
   });
 
-  test("o número é `pontosCartao` «X / 50» — não o total, nem as senhas", () => {
-    definirPontos({ pontos: 14, pontosCartao: 12, pontosParaCartao: 50 });
-    const html = renderizar({ ...COM_SESSAO, saldoSenhas: 7, saldoSenhasStatus: "ok" });
-    const b = tile(html, "Passe Desafio");
-    assert.ok(texto(b).includes("12 / 50"), `esperava «12 / 50»; o tile diz: «${texto(b)}»`);
-    assert.ok(!texto(b).includes("14"), "o tile mostra o TOTAL (compras + bónus), não os pontos de cartão");
-    assert.ok(!/\b7\b/.test(texto(b)), "o tile mostra as SENHAS on-chain (Via A)");
-    assert.ok(chamadasPontos() > 0, "controlo: a página não chamou o `usePontos`");
+  test("UTAC130 · «Carteira» mostra os PONTOS DE LANCE (não o total de fidelidade, nem o cartão)", () => {
+    definirPontos({ pontos: 14, pontosCartao: 12, lance: { pontos: 55, movimentos: [] } });
+    const b = tile(renderizar(COM_SESSAO), "Carteira");
+    assert.ok(texto(b).includes("55 pts"), `esperava «55 pts»; o tile diz: «${texto(b)}»`);
+    assert.ok(!/\b14\b|\b12\b/.test(texto(b)), "o tile mostra pontos de fidelidade/cartão em vez dos de lance");
   });
 
-  test("clicar no Passe leva às Ofertas Programadas (não à Carteira)", async () => {
-    // O StatTile navega com `navigate(to)`; em SSR não há clique, por isso a prova é a rota que
-    // o tile recebe, lida da fonte: o objecto do tile tem de apontar para /ofertas-programadas.
+  test("UTAC130 · «Passe Desafio» mostra o TOTAL do inventário (Relâmpago + Programado), não o «X / 50»", () => {
+    definirPontos({ pontos: 14, pontosCartao: 12, pontosParaCartao: 50 });
+    definirInventario({ passesRelampago: 2, passesProgramado: 3 });
+    const b = tile(renderizar({ ...COM_SESSAO, saldoSenhas: 7, saldoSenhasStatus: "ok" }), "Passe Desafio");
+    assert.match(texto(b), /\b5\b/, `esperava 5 (2 + 3); o tile diz: «${texto(b)}»`);
+    assert.doesNotMatch(texto(b), /\/ 50/, "o tile ainda mostra os pontos de cartão");
+    assert.ok(!/\b7\b/.test(texto(b)), "o tile mostra as SENHAS on-chain (Via A)");
+  });
+
+  test("UTAC130 · os tiles «Carteira» e «Passe Desafio» levam à Carteira", async () => {
     const { readFileSync } = await import("node:fs");
     const fonte = readFileSync(caminho(AQUI, "../Dashboard.jsx"), "utf8");
-    const bloco = fonte.match(/const passeStat = \{[\s\S]*?\};/)?.[0];
-    assert.ok(bloco, "o objecto do tile «Passe Desafio» (`passeStat`) desapareceu");
-    assert.match(bloco, /to:\s*"\/ofertas-programadas"/, "o Passe não leva às Ofertas Programadas");
-    assert.doesNotMatch(bloco, /"\/carteira"/, "o Passe ainda leva à Carteira");
-    assert.match(fonte, /\n\s*passeStat,\s*\r?\n/, "o tile não entra na lista `stats`");
+    for (const nome of ["carteiraStat", "passeStat"]) {
+      const bloco = fonte.match(new RegExp(`const ${nome} = \\{[\\s\\S]*?\\};`))?.[0];
+      assert.ok(bloco, `o objecto do tile \`${nome}\` desapareceu`);
+      assert.match(bloco, /to:\s*"\/carteira"/, `${nome} não leva à Carteira`);
+    }
+    assert.match(fonte, /\n\s*carteiraStat,\s*\r?\n\s*passeStat,\s*\r?\n/, "os dois tiles não abrem a lista `stats`");
   });
 
-  test("a carregar: skeleton, nunca «0 / 50» prematuro", () => {
+  test("UTAC130 · a carregar: skeleton nos dois tiles, nunca um 0 prematuro", () => {
     definirPontos({ loading: true });
-    const b = tile(renderizar(COM_SESSAO), "Passe Desafio");
-    assert.match(b, /data-testid="passe-skeleton"/, "sem skeleton durante o carregamento");
-    assert.doesNotMatch(texto(b), /\/ 50/, "mostrou um número enquanto carregava");
+    definirInventario({ carregando: true });
+    const html = renderizar(COM_SESSAO);
+    assert.match(tile(html, "Carteira"), /data-testid="carteira-skeleton"/, "a Carteira mostrou um número enquanto carregava");
+    assert.match(tile(html, "Passe Desafio"), /data-testid="passe-skeleton"/, "o Passe mostrou um número enquanto carregava");
   });
 
-  test("sessão ainda a cunhar o token: skeleton (o hook devolve 0 nesse intervalo)", () => {
-    definirPontos({ loading: false, pontosCartao: 0 });
-    const b = tile(renderizar({ ...COM_SESSAO, authToken: null }), "Passe Desafio");
-    assert.match(b, /data-testid="passe-skeleton"/, "mostrou «0 / 50» antes do token chegar");
+  test("UTAC130 · sessão ainda a cunhar o token: a Carteira fica em skeleton", () => {
+    definirPontos({ loading: false, lance: null });
+    const b = tile(renderizar({ ...COM_SESSAO, authToken: null }), "Carteira");
+    assert.match(b, /data-testid="carteira-skeleton"/, "mostrou um valor antes do token chegar");
   });
 
-  test("erro: o número fica oculto («—»), sem «0 / 50» falso", () => {
-    definirPontos({ erro: "Não foi possível carregar os pontos", pontosCartao: 0 });
-    const b = tile(renderizar(COM_SESSAO), "Passe Desafio");
-    assert.doesNotMatch(texto(b), /\d+ \/ 50/, "mostrou um número com o pedido em erro");
-    assert.doesNotMatch(b, /passe-skeleton/, "o erro ficou preso no skeleton");
-    assert.match(texto(b), /—/, "o erro devia mostrar «—»");
+  test("UTAC130 · erro ou campo ilegível: «—», nunca um 0 falso", () => {
+    definirPontos({ erro: "falhou", lance: null });
+    definirInventario({ erro: "falhou" });
+    const html = renderizar(COM_SESSAO);
+    for (const r of ["Carteira", "Passe Desafio"]) {
+      const b = tile(html, r);
+      assert.match(texto(b), /—/, `${r}: o erro devia mostrar «—»`);
+      assert.doesNotMatch(b, /-skeleton/, `${r}: o erro ficou preso no skeleton`);
+    }
+    definirPontos({ lance: null });
+    assert.match(texto(tile(renderizar(COM_SESSAO), "Carteira")), /—/, "lance ilegível virou número");
   });
 
-  test("vazio: «0 / 50» com convite para começar", () => {
-    definirPontos({ pontosCartao: 0 });
-    const b = tile(renderizar(COM_SESSAO), "Passe Desafio");
-    assert.match(texto(b), /0 \/ 50/);
-    assert.match(texto(b), /comece já/, "sem convite no estado vazio");
+  test("UTAC130 · vazio (lido 0/0 e 0 pontos): «0» e «0 pts»", () => {
+    definirPontos({ lance: { pontos: 0, movimentos: [] } });
+    definirInventario({ passesRelampago: 0, passesProgramado: 0 });
+    const html = renderizar(COM_SESSAO);
+    assert.match(texto(tile(html, "Passe Desafio")), /\b0\b/);
+    assert.match(texto(tile(html, "Carteira")), /0 pts/);
   });
 
-  test("sem conta: «—» (não há pontos de ninguém a mostrar)", () => {
-    definirPontos({ pontosCartao: 0 });
-    const b = tile(renderizar({ address: null, authToken: null }), "Passe Desafio");
-    assert.doesNotMatch(texto(b), /\/ 50/);
-    assert.match(texto(b), /—/);
+  test("UTAC130 · sem conta: «—» nos dois tiles", () => {
+    definirPontos({ lance: { pontos: 9, movimentos: [] } });
+    definirInventario({ passesRelampago: 4 });
+    const html = renderizar({ address: null, authToken: null });
+    assert.match(texto(tile(html, "Carteira")), /—/);
+    assert.match(texto(tile(html, "Passe Desafio")), /—/);
   });
 
   test("os KPIs «Lances Únicos» e «Total de Lances» FICAM (R18-A do UTAC107c)", () => {
@@ -538,34 +560,38 @@ describe("UTAC109f · Início — ordem final e pendências do 109e", () => {
   test("a ordem dos 6 blocos: carrossel → 4 glass pequenos → MLC → OP → acessos → glass final", () => {
     definirPontos({}); definirResultadoOficial(null);
     const html = renderizar({ edicoes: { "R-1": R1, "PROG-1": PROG } });
-    const marcas = ["guto-1.png?v=", "Saldo (R$)", ">⚡ Relâmpago<", ">🎫 Programada<", 'data-testid="acessos-rapidos"', 'data-testid="vencedores"'];
+    // UTAC130 — o 1.º tile deixou de ser «Saldo (R$)»; a marca dos 4 glass pequenos passa a «Lances Únicos».
+    const marcas = ["guto-1.png?v=", "Lances Únicos", ">⚡ Relâmpago<", ">🎫 Programada<", 'data-testid="acessos-rapidos"', 'data-testid="vencedores"'];
     const pos = marcas.map((m) => html.indexOf(m));
     assert.ok(pos.every((p, k) => p > 0 && (k === 0 || p > pos[k - 1])),
       `ordem: ${JSON.stringify(Object.fromEntries(marcas.map((m, k) => [m, pos[k]])))}`);
   });
 
-  test("os 4 glass pequenos: Saldo · Passe Desafio · Lances Únicos · Total de Lances (por esta ordem)", () => {
+  test("os 4 glass pequenos: Carteira · Passe Desafio · Lances Únicos · Total de Lances (por esta ordem — UTAC130)", () => {
     definirPontos({}); definirResultadoOficial(null);
     const html = renderizar();
-    const ini = html.indexOf("Saldo (R$)"), fim = html.indexOf(">⚡ Relâmpago<");
+    const ini = html.indexOf("Lances Únicos"), fim = html.indexOf(">⚡ Relâmpago<");
     const rotulos = (html.slice(html.lastIndexOf("<section", ini), fim).match(/<button[\s\S]*?<\/button>/g) || []).map(texto);
     assert.equal(rotulos.length, 4, JSON.stringify(rotulos));
-    ["Saldo (R$)", "Passe Desafio", "Lances Únicos", "Total de Lances"].forEach((r, k) => assert.ok(rotulos[k].includes(r), `${k}: ${rotulos[k]}`));
+    ["Carteira", "Passe Desafio", "Lances Únicos", "Total de Lances"].forEach((r, k) => assert.ok(rotulos[k].includes(r), `${k}: ${rotulos[k]}`));
   });
 
   // ⚠️2 do validador (109f): sem esta guarda, mudar o destino/cor de um tile passava a suíte. Os blocos do
   // `passeStat`/`stats` e do render dos KPIs têm de ser BYTE-IGUAIS ao baseline `731ec28` (fins de linha normalizados).
-  test("os 4 glass pequenos ficam BYTE-IGUAIS ao baseline 731ec28 (diff zero) e o Saldo leva à Carteira", async () => {
+  // UTAC130 — os DADOS dos tiles mudaram por decisão do operador (Carteira = pontos de lance; Passe = inventário):
+  // nova linha de base do bloco de dados = UTAC130. O RENDER dos 4 tiles continua byte-igual ao `731ec28`.
+  test("os 4 glass pequenos: dados = baseline UTAC130, render BYTE-IGUAL ao 731ec28, Carteira e Passe levam à Carteira", async () => {
     const { readFileSync } = await import("node:fs");
     const { createHash } = await import("node:crypto");
     const s = readFileSync(caminho(AQUI, "../Dashboard.jsx"), "utf8").replace(/\r\n/g, "\n");
     const bloco = (a, b) => { const i = s.indexOf(a), j = s.indexOf(b); assert.ok(i > 0 && j > i, `bloco ${a}`); return s.slice(i, j); };
     const sha = (t) => createHash("sha256").update(t).digest("hex");
-    assert.equal(sha(bloco("  const passeStat = {", "  const cardPad")),
-      "92686ab28a655631dbffe87c3469d6f7eb5f14c25ade0b1fd7f8c15c1c67922d", "os dados dos 4 tiles mudaram");
+    assert.equal(sha(bloco("  const carteiraStat = {", "  const cardPad")),
+      "c25c78e539ced45d5d0c7c32d403750f5ba8a1d752625e309c9534f1cf40b2c8", "os dados dos 4 tiles mudaram");
     assert.equal(sha(bloco("      {/* ── KPIs ── */}", "      {/* ── UTAC108h.3")),
       "0b037a7abb13b9db6272de47aadddafdc98da2121615d967d11f51a3ce68db69", "o render dos 4 tiles mudou");
-    assert.match(s, /label: "Saldo \(R\$\)"[^\n]*to: "\/carteira"/, "o KPI «Saldo» deixou de levar à Carteira");
+    assert.doesNotMatch(s, /label: "Saldo \(R\$\)"/, "o KPI «Saldo (R$)» voltou ao Início (UTAC130)");
+    assert.match(bloco("  const carteiraStat = {", "  const cardPad"), /label: "Carteira"[\s\S]*?to: "\/carteira"/, "o tile «Carteira» não leva à Carteira");
   });
 
   test("glass final: dentro de vidro, aviso honesto (LACUNA), sem dados inventados, sem 🏆 nem «ver todos»", () => {

@@ -69,7 +69,33 @@ export const ATALHOS = [
 ];
 
 /**
+ * UTAC130 (Frente B, decisão C2 do operador) — tile 1 «Carteira»: mostra os PONTOS DE LANCE (era «Saldo (R$)»,
+ * que no APK exibia um saldo R$ que a Play não deixa vender lá). Devolve `null` para «a carregar» (skeleton).
+ * Sem conta, em erro ou com o campo ilegível → «—»: nunca um 0 inventado (o `usePontos` devolve `lance:null`
+ * na forma vazia, logo o commit intermédio da sessão a cunhar cai em «—», não em «0»).
+ */
+export function valorTileCarteira({ address, authToken, loading, erro, lance }) {
+  if (!address) return "—";
+  if (loading || !authToken) return null;
+  if (erro || !Number.isSafeInteger(lance?.pontos) || lance.pontos < 0) return "—";
+  return `${lance.pontos} pts`;
+}
+
+/**
+ * UTAC130 (Frente B) — tile 2 «Passe Desafio»: o TOTAL de Passes no inventário (Relâmpago + Programado),
+ * lido de `useInventarioPasses` (era «X / 50» pontos de cartão). `null` = a carregar; sem conta/erro → «—».
+ */
+export function valorTilePasses({ address, carregando, erro, passesRelampago, passesProgramado }) {
+  if (!address) return "—";
+  if (carregando) return null;
+  const ok = (n) => Number.isSafeInteger(n) && n >= 0;
+  if (erro || !ok(passesRelampago) || !ok(passesProgramado)) return "—";
+  return String(passesRelampago + passesProgramado);
+}
+
+/**
  * UTAC107c — estado do tile «Passe Desafio»: "sem-sessao" | "carregando" | "erro" | "vazio" | "dados".
+ * (UTAC130: o tile passou a mostrar o inventário — `valorTilePasses`; esta função fica exportada, sem uso no tile.)
  *
  * ⚠️ Achado do validador adversarial: sem `address`+`authToken` o `usePontos` devolve a forma
  * VAZIA com `loading:false`. Quando o par fica completo (login; refresh com o token em cache e o
@@ -100,7 +126,7 @@ export default function Dashboard() {
   const isMobile = useIsMobile();
   const {
     lances, vencedor,
-    saldoRsCentavos, saldoRsStatus,
+    // UTAC130 — saldoRsCentavos/saldoRsStatus saíram: só serviam o tile «Saldo (R$)», removido.
     encerrado, modalidade, DURACAO,
     // MC88.38 — `pareceAutenticado` substitui `isConnected` APENAS no texto do
     // cabeçalho. `isConnected` deixou de ser usado neste ficheiro; continua a
@@ -121,6 +147,7 @@ export default function Dashboard() {
   // do palpite não entra). NÃO é o `saldoSenhas` (Via A, senhas on-chain) nem o `pontos` total.
   const {
     pontosCartao, pontosParaCartao, palpites,
+    lance: pontosLanceLidos, // UTAC130 — o tile «Carteira» mostra os pontos de lance
     loading: pontosLoading, erro: pontosErro,
   } = usePontos();
   // UTAC108h.3 — a zona de PALPITE do vidro «🎫 Programada» do Início usa o MESMO hook e as MESMAS
@@ -186,15 +213,6 @@ export default function Dashboard() {
   // exatamente esta chamada com o mesmo `encerrado` — é isso que fecha o B4.
   const estAtiva = getEstadoEdicao(edicaoAtiva, { encerrado });
 
-  // MC88.40 — o estado "stale" deixou de ter sufixo textual. " (antigo)" era
-  // jargão interno do MC88.34 exposto ao utilizador, e as alternativas textuais
-  // não cabiam no tile (medido: 145 px contra 121 px disponíveis → seriam
-  // cortadas). Passa a ser sinalizado por opacidade — ver `.gut-valor-pendente`
-  // em globals.css. "loading" e "error" mantêm os seus ícones: são estados
-  // diferentes e ocupam um caractere.
-  const statusRsSuffix =
-    saldoRsStatus === "loading" ? " ⏳" :
-    saldoRsStatus === "error"   ? " ✗" : "";
 
   const totalLances  = lances.length;
   const lancesUnicos = lances.filter((l) => !l.repetido).length;
@@ -210,13 +228,8 @@ export default function Dashboard() {
     return `${pad(m)}:${pad(s)}`;
   })();
 
-  // Modelo dual (Frente B.9): "Saldo (R$)" = saldo-rs blob (PIX → +R$,
-  // comprar-senhas → -R$, lance-relâmpago → -R$). "Senhas" = saldoSenhas
-  // on-chain. Os dois nunca derivam um do outro — sem duplicação.
-  const saldoReais = saldoRsCentavos == null ? null : saldoRsCentavos / 100;
-  const saldoReaisStr = saldoReais == null
-    ? `R$ —${statusRsSuffix}`
-    : `R$ ${saldoReais.toFixed(2)}${statusRsSuffix}`;
+  // UTAC130 (Frente B) — o tile «Saldo (R$)» saiu do Início (no APK mostrava um saldo R$ que a Play não deixa
+  // vender lá); o lugar é do tile «Carteira» (pontos de lance). O saldo R$ continua na Carteira do PWA.
 
   // UTAC107c — tile «Passe Desafio» (era «Senhas», Via A). Mostra os pontos de CARTÃO «X / 50»
   // e leva às Ofertas Programadas (mockup `docs/mockups-107a/inicio.html`, variante A — R18-B
@@ -238,13 +251,27 @@ export default function Dashboard() {
     : (passeEstado === "dados" || passeEstado === "vazio")
       ? `${pontosCartao} / ${metaCartao}`
       : "—";
+  void passeValor; // UTAC130 — o «X / 50» de cartão deixou de ir para o tile (fica o cálculo, sem uso)
+
+  // UTAC130 (Frente B) — skeleton comum aos dois tiles novos (mesmas classes do `Skeleton`, num <span>).
+  const skeletonTile = (id) => (
+    <span data-testid={id} aria-hidden="true" className="inline-block animate-pulse rounded-lg bg-white/[0.06] border border-white/5" style={{ width: "4.5rem", height: "1.2em" }} />
+  );
+  // Tile 1 «Carteira» — pontos de lance (decisão C2), leva à Carteira. Substitui «Saldo (R$)».
+  const carteiraValor = valorTileCarteira({ address, authToken, loading: pontosLoading, erro: pontosErro, lance: pontosLanceLidos });
+  const carteiraStat = {
+    label: "Carteira", value: carteiraValor ?? skeletonTile("carteira-skeleton"),
+    color: COR.gold, icon: "👛", to: "/carteira",
+  };
+  // Tile 2 «Passe Desafio» — total de Passes no inventário, leva à Carteira (era «X / 50» → Ofertas Programadas).
+  const passesValor = valorTilePasses({ address, ...inventario });
   const passeStat = {
-    label: passeEstado === "vazio" ? "Passe Desafio · comece já" : "Passe Desafio",
-    value: passeValor, color: COR.gold, icon: "🎟️", to: "/ofertas-programadas",
+    label: "Passe Desafio", value: passesValor ?? skeletonTile("passe-skeleton"),
+    color: COR.gold, icon: "🎟️", to: "/carteira",
   };
 
   const stats = [
-    { label: "Saldo (R$)",      value: saldoReaisStr,                    color: COR.gold,    icon: "💰", to: "/carteira", pendente: saldoRsStatus === "stale" },
+    carteiraStat,
     passeStat,
     { label: "Lances Únicos",   value: lancesUnicos,                     color: COR.success, icon: "✅", to: "/mercado"  },
     { label: "Total de Lances", value: totalLances,                      color: COR.amber,   icon: "📊", to: "/ativos"   },
