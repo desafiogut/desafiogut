@@ -246,7 +246,8 @@ export default function MinhaCarteira() {
         // UTAC112 — o aviso diz para QUANTOS passes falta saldo.
         const falta = quantidade > 1 ? `Saldo insuficiente para ${quantidade} passes (${precoTotal(quantidade)}).` : "Saldo insuficiente.";
         setErroPasse(depositoPix ? `${falta} Deposite via PIX e tente de novo.` : falta);
-        setToastPasse({ variant: "error", message: "Saldo insuficiente. Carregar agora?" });
+        // UTAC132.2 (DEBT-088) — «Carregar agora?» só onde há depósito PIX (some do bundle do APK).
+        setToastPasse({ variant: "error", message: depositoPix ? "Saldo insuficiente. Carregar agora?" : "Saldo insuficiente." });
       } else {
         const msg = r?.message || "Erro. Tente de novo.";
         setErroPasse(msg);
@@ -677,7 +678,8 @@ export default function MinhaCarteira() {
                 (crédito automático após a aprovação). Passe Desafio: R$ {VALOR_POR_SENHA_BRL.toFixed(2)} (Art. 6º).
               </p>}
 
-              {saldoRsStatus === "error" && (
+              {/* UTAC132.2 (DEBT-088) — o saldo R$ só existe com depositoPix; o erro da sua leitura também. */}
+              {depositoPix && saldoRsStatus === "error" && (
                 <p style={{ margin: "0.6rem 0 0", fontSize: "0.72rem", color: COR.danger, lineHeight: 1.4 }}>
                   ⚠️ Não foi possível ler o saldo R$ agora.
                 </p>

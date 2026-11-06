@@ -50,7 +50,8 @@ export default {
   "config.emBreve": "EM BREVE",
   "config.notifLances": "Novos lances na edição",
   "config.notifVencedor": "Resultado do vencedor",
-  "config.notifPix": "Confirmação de depósito PIX",
+  // UTAC132.2 (DEBT-088) — no APK não há depósito PIX: a chave nem entra no bundle (flag do `build:apk`).
+  ...(import.meta.env.VITE_IS_ANDROID_APP === "true" ? {} : { "config.notifPix": "Confirmação de depósito PIX" }),
   "config.intensidadeVidro": "Intensidade do vidro",
   "config.sobre": "ℹ️ Sobre o DesafioGUT",
   "config.salvar": "💾 Salvar Configurações",

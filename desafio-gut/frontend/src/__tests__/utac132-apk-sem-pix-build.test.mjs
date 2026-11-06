@@ -67,7 +67,11 @@ test("UTAC132 · guarda RECUSA VITE_IS_ANDROID_APP diferente de \"true\"", () =>
   assert.match(r.out, /VITE_IS_ANDROID_APP ausente\/diferente/);
 });
 
-for (const s of ["Depositar PIX", "Saldo Disponível", "Saldo R$ insuficiente. Recarregue via PIX."]) {
+for (const s of [
+  "Depositar PIX", "Saldo Disponível", "Saldo R$ insuficiente. Recarregue via PIX.",
+  // UTAC132.2 (DEBT-088)
+  "Não foi possível ler o saldo R$ agora.", "Saldo insuficiente. Carregar agora?", "Confirmação de depósito PIX",
+]) {
   test(`UTAC132 · guarda RECUSA o bundle com «${s}» mesmo com a flag (prova o artefacto, não a intenção)`, () => {
     const r = correrGuarda(PROD, `var t="${s}";`);
     assert.equal(r.code, 1, r.out);
@@ -116,6 +120,24 @@ test("UTAC132.1 · CardLance: a frase de recarga por PIX só existe fora do APK 
   // A mensagem do APK não pode falar em R$ nem em PIX.
   assert.doesNotMatch("Saldo insuficiente para este lance.", /R\$|PIX/);
   assert.equal((f.match(/Recarregue via PIX/g) || []).length, 1, "a frase não pode aparecer fora do ramo do site");
+});
+
+test("UTAC132.2 · Carteira: erro de leitura do saldo R$ e toast «Carregar agora?» só com depositoPix", () => {
+  const f = ler("src/pages/MinhaCarteira.jsx");
+  assert.match(f, /\{depositoPix && saldoRsStatus === "error" && \(/);
+  assert.match(f, /message: depositoPix \? "Saldo insuficiente\. Carregar agora\?" : "Saldo insuficiente\." \}/);
+  assert.equal((f.match(/Não foi possível ler o saldo R\$ agora\./g) || []).length, 1);
+  assert.equal((f.match(/"Saldo insuficiente\. Carregar agora\?"/g) || []).length, 1);
+});
+
+test("UTAC132.2 · Configurações: interruptor e chave de PIX cortados pela flag", () => {
+  const c = ler("src/pages/Configuracoes.jsx");
+  assert.match(c, /const APK_BUILD = import\.meta\.env\.VITE_IS_ANDROID_APP === "true";/);
+  assert.match(c, /\.\.\.\(APK_BUILD \? \[\] : \[\{ label: t\("config\.notifPix"\)/);
+  assert.equal((c.match(/config\.notifPix/g) || []).length, 1, "notifPix usado fora do corte");
+  const pt = ler("src/i18n/pt.js");
+  assert.match(pt, /\.\.\.\(import\.meta\.env\.VITE_IS_ANDROID_APP === "true" \? \{\} : \{ "config\.notifPix": "Confirmação de depósito PIX" \}\),/);
+  assert.equal((pt.match(/Confirmação de depósito PIX/g) || []).length, 1, "a frase aparece fora do corte no pt.js");
 });
 
 // ── 4. splash ────────────────────────────────────────────────────────────────────────────────────

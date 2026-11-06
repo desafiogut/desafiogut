@@ -158,7 +158,11 @@ if (chainId === "1" && redeRpc === "sepolia") {
 //    strings tenham saído de facto do bundle. A 2.ª verificação é a que conta — prova o artefacto, não a intenção.
 const flagApk = lerEnvInlined(conteudos, "VITE_IS_ANDROID_APP");
 // UTAC132.1 (DEBT-088) — + a frase de recarga do CardLance.
-const STRINGS_PROIBIDAS_APK = ["Depositar PIX", "Saldo Disponível", "Saldo R$ insuficiente. Recarregue via PIX."];
+// UTAC132.2 (DEBT-088) — + os três textos latentes de R$/PIX (Carteira e Configurações).
+const STRINGS_PROIBIDAS_APK = [
+  "Depositar PIX", "Saldo Disponível", "Saldo R$ insuficiente. Recarregue via PIX.",
+  "Não foi possível ler o saldo R$ agora.", "Saldo insuficiente. Carregar agora?", "Confirmação de depósito PIX",
+];
 const proibidasEncontradas = STRINGS_PROIBIDAS_APK
   .map((s) => ({ s, n: conteudos.filter((c) => c.includes(s)).length }))
   .filter((x) => x.n > 0);
