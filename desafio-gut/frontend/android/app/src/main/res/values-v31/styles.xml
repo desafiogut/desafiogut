@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- UTAC132 (R18-132-2): no Android 12+ o sistema mostra SEMPRE um splash com o ícone do
+         launcher, seja qual for o tema. Para não aparecer ícone nenhum, o ícone do splash é
+         transparente e o fundo é o navy da app (#050818). -->
+    <style name="AppTheme.NoActionBarLaunch" parent="AppTheme.NoActionBar">
+        <item name="android:windowBackground">#050818</item>
+        <item name="android:windowSplashScreenBackground">#050818</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@android:color/transparent</item>
+    </style>
+</resources>

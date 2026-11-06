@@ -152,6 +152,24 @@ if (chainId === "1" && redeRpc === "sepolia") {
   erros.push("INCOERENTE: chainId=1 (mainnet) com RPC de Sepolia.");
 }
 
+// 5. UTAC132 (R18-132-1) — este guarda só corre sobre bundles do APK (`build:apk` e a tarefa Gradle
+//    `validarAmbienteProducao`). No APK o PIX/Saldo R$ não pode existir (política de Pagamentos da
+//    Play): exige-se o corte de build (VITE_IS_ANDROID_APP=true, injectado pelo `build:apk`) E que as
+//    strings tenham saído de facto do bundle. A 2.ª verificação é a que conta — prova o artefacto, não a intenção.
+const flagApk = lerEnvInlined(conteudos, "VITE_IS_ANDROID_APP");
+const STRINGS_PROIBIDAS_APK = ["Depositar PIX", "Saldo Disponível"];
+const proibidasEncontradas = STRINGS_PROIBIDAS_APK
+  .map((s) => ({ s, n: conteudos.filter((c) => c.includes(s)).length }))
+  .filter((x) => x.n > 0);
+console.log(`VITE_IS_ANDROID_APP      : ${flagApk ?? "(AUSENTE)"}`);
+console.log(`strings PIX/Saldo no APK : ${proibidasEncontradas.length ? proibidasEncontradas.map((x) => `«${x.s}» em ${x.n}`).join(", ") : "nenhuma"}`);
+if (flagApk !== "true") {
+  erros.push("VITE_IS_ANDROID_APP ausente/diferente de \"true\": o corte de PIX/Saldo em tempo de build não foi aplicado (usar `npm run build:apk`).");
+}
+if (proibidasEncontradas.length) {
+  erros.push(`strings proibidas no APK: ${proibidasEncontradas.map((x) => `«${x.s}»`).join(", ")} — PIX/Saldo R$ não pode ir no AAB (política de Pagamentos da Play).`);
+}
+
 if (erros.length) {
   console.error("✖ BUNDLE REJEITADO — não sincronizar para o APK nem publicar:\n");
   erros.forEach((e, i) => console.error(`  ${i + 1}. ${e}`));

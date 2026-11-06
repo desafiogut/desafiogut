@@ -22,6 +22,11 @@ import BotaoLoginPrincipal from "../components/BotaoLoginPrincipal.jsx";
 import { useResgatarCartao } from "../hooks/useResgatarCartao.js";
 import ResgatarCartaoModal, { CARTAO_ID } from "../components/ResgatarCartaoModal.jsx";
 
+// UTAC132 (R18-132-1) — corte em TEMPO DE BUILD. O `build:apk` injecta VITE_IS_ANDROID_APP=true
+// (variável de processo, nunca num .env: o site não a tem). Com ela o Vite substitui a expressão por
+// uma constante e o minificador apaga os blocos de Saldo R$/PIX do bundle do APK — as strings deixam
+// de existir no AAB, em vez de só ficarem escondidas. A detecção em runtime (UTAC116) fica como 2.ª camada.
+const APK_BUILD = import.meta.env.VITE_IS_ANDROID_APP === "true";
 const VALOR_POR_SENHA_BRL = 2;
 // UTAC106c — Passe Desafio: R$ 2,00 (NORTE Via B). Aqui vive só o PREÇO e o balão de
 // confirmação; a compra (débito/crédito/gravação) é do UTAC106e — este ecrã não toca em lógica.
@@ -118,7 +123,7 @@ export default function MinhaCarteira() {
       if (temDocumento) document.removeEventListener("visibilitychange", reavaliar);
     };
   }, []);
-  const depositoPix = pixPermitido(plataformaNativa);
+  const depositoPix = !APK_BUILD && pixPermitido(plataformaNativa);
   // UTAC112 — pacote escolhido no balão do Passe (1, 3, 5, 10); volta a 1 ao reabrir o balão.
   const [qtdPasse, setQtdPasse] = useState(1);
   // UTAC106c — balão de confirmação do Passe Desafio. UTAC106e — o balão passou a COMPRAR
@@ -734,7 +739,9 @@ export default function MinhaCarteira() {
         />
       )}
 
-      <ComprarFichasModal
+      {/* UTAC132 — montado só onde há PIX: com o modal sempre montado (aberto=false) o módulo e o seu
+          «Depositar PIX» ficavam no bundle do APK mesmo com o corte de build. */}
+      {depositoPix && <ComprarFichasModal
         aberto={depositoPix && comprarAberto}
         onFechar={() => setComprarAberto(false)}
         address={address}
@@ -743,7 +750,7 @@ export default function MinhaCarteira() {
           try { refetchSaldoRs?.(); } catch {}
           try { refetchSaldo?.();   } catch {}
         }}
-      />
+      />}
 
       {/* UTAC110g.1 — BALÃO do resgate do cartão (o MESMO `ResgatarCartaoModal` do UTAC106g, agora
           aberto a partir da Carteira). A lógica de rede vive no `useResgatarCartao`. */}

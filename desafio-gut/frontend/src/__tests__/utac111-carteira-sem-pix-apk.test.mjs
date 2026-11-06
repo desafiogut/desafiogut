@@ -17,7 +17,8 @@ test("a condição é a ponte nativa (UTAC116: pixPermitido) e NUNCA ?plataforma
   // UTAC116 — o AAB v3 mostrou o botão porque a decisão vinha de um único sinal, avaliado uma vez.
   // O contrato passou a `pixPermitido(plataformaNativa)`, com a plataforma reavaliada no mount.
   assert.match(fonte, /import\s*\{[^}]*pixPermitido[^}]*\}\s*from\s*"\.\.\/lib\/google-play-billing\.js"/);
-  assert.match(fonte, /const depositoPix = pixPermitido\(plataformaNativa\);/);
+  // UTAC132 — o corte de build (APK_BUILD) vem antes; a ponte nativa continua a ser a 2.ª camada.
+  assert.match(fonte, /const depositoPix = !APK_BUILD && pixPermitido\(plataformaNativa\);/);
   // O que continua PROIBIDO: decidir pelo parâmetro sobreponível `?plataforma=`.
   assert.doesNotMatch(fonte, /\?plataforma=/);
   assert.doesNotMatch(fonte, /depositoPix\s*=\s*[^;]*(===?\s*["']android["']|plataforma\s*===)/);

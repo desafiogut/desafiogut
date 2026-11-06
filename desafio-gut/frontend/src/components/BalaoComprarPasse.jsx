@@ -19,7 +19,8 @@ export default function BalaoComprarPasse({ aberto, onFechar, onComprado }) {
   const [erro, setErro] = useState("");
   const [quantidade, setQuantidade] = useState(1);
   // Medido no clique (não no 1.º render): o bridge do Capacitor pode chegar depois (lição do UTAC116).
-  const depositoPix = pixPermitido(detectarPlataformaNativa());
+  // UTAC132 — corte de build (VITE_IS_ANDROID_APP só existe no `build:apk`); runtime fica como 2.ª camada.
+  const depositoPix = import.meta.env.VITE_IS_ANDROID_APP !== "true" && pixPermitido(detectarPlataformaNativa());
 
   function fechar() {
     setErro("");

@@ -16,7 +16,10 @@
     </style>
 
 
-    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <item name="android:background">@drawable/splash</item>
+    <!-- UTAC132 (R18-132-2): sem splash nativo. O tema de arranque deixa de herdar de
+         Theme.SplashScreen e de pintar o @drawable/splash (logo por omissão do Capacitor);
+         o arranque mostra só o fundo navy da app. Android 12+: ver values-v31/styles.xml. -->
+    <style name="AppTheme.NoActionBarLaunch" parent="AppTheme.NoActionBar">
+        <item name="android:windowBackground">#050818</item>
     </style>
 </resources>
