@@ -1,0 +1,10 @@
+M13 erro saldo R$ sem corte: ℹ fail 1
+   restaurado md5 igual: True
+M14 toast sem corte: ℹ fail 1
+   restaurado md5 igual: True
+M15 interruptor PIX no APK: ℹ fail 1
+   restaurado md5 igual: True
+M16 chave PIX sem corte no pt.js: ℹ fail 1
+   restaurado md5 igual: True
+M17 guarda sem os 3 textos: ℹ fail 3
+   restaurado md5 igual: True
