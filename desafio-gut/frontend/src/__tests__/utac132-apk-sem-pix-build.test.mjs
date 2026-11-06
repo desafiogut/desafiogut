@@ -67,11 +67,11 @@ test("UTAC132 · guarda RECUSA VITE_IS_ANDROID_APP diferente de \"true\"", () =>
   assert.match(r.out, /VITE_IS_ANDROID_APP ausente\/diferente/);
 });
 
-for (const s of ["Depositar PIX", "Saldo Disponível"]) {
+for (const s of ["Depositar PIX", "Saldo Disponível", "Saldo R$ insuficiente. Recarregue via PIX."]) {
   test(`UTAC132 · guarda RECUSA o bundle com «${s}» mesmo com a flag (prova o artefacto, não a intenção)`, () => {
     const r = correrGuarda(PROD, `var t="${s}";`);
     assert.equal(r.code, 1, r.out);
-    assert.match(r.out, new RegExp(`strings proibidas no APK: .*«${s}»`));
+    assert.ok(r.out.includes(`«${s}»`) && /strings proibidas no APK:/.test(r.out), r.out);
   });
 }
 
@@ -107,6 +107,15 @@ test("UTAC132 · Carteira: APK_BUILD vem da flag e corta depositoPix; o modal de
 test("UTAC132 · balão do Passe: depositoPix também corta pela flag", () => {
   const f = ler("src/components/BalaoComprarPasse.jsx");
   assert.match(f, /const depositoPix = import\.meta\.env\.VITE_IS_ANDROID_APP !== "true" && pixPermitido\(detectarPlataformaNativa\(\)\);/);
+});
+
+test("UTAC132.1 · CardLance: a frase de recarga por PIX só existe fora do APK (corte pela flag)", () => {
+  const f = ler("src/components/CardLance.jsx");
+  assert.match(f, /const APK_BUILD = import\.meta\.env\.VITE_IS_ANDROID_APP === "true";/);
+  assert.match(f, /saldo_insuficiente:\s*APK_BUILD \? "Saldo insuficiente para este lance\." : "Saldo R\$ insuficiente\. Recarregue via PIX\.",/);
+  // A mensagem do APK não pode falar em R$ nem em PIX.
+  assert.doesNotMatch("Saldo insuficiente para este lance.", /R\$|PIX/);
+  assert.equal((f.match(/Recarregue via PIX/g) || []).length, 1, "a frase não pode aparecer fora do ramo do site");
 });
 
 // ── 4. splash ────────────────────────────────────────────────────────────────────────────────────

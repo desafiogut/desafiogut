@@ -31,6 +31,10 @@ import { usePontos } from "../hooks/usePontos.js";
 // UTAC110j.5 — o lance GASTA o seu valor em pontos de lance (backend UTAC110n). O estado por créditos
 // (`estadoCreditosLance`/`rotuloCreditos` de `lib/passes.js`) deixou de ser usado aqui; fica como legado.
 import { estadoPontosLance, rotuloPontosLance } from "../lib/pontosLance.js";
+
+// UTAC132.1 (DEBT-088) — corte em TEMPO DE BUILD, a mesma flag do UTAC132 (só o `build:apk` a define).
+// No APK não há saldo R$ nem PIX: o minificador apaga a frase de recarga e o guarda recusa-a no AAB.
+const APK_BUILD = import.meta.env.VITE_IS_ANDROID_APP === "true";
 // UTAC120 (Frente B) — o lance Relâmpago consome 1 PASSE RELÂMPAGO do inventário (backend UTAC120);
 // sem Passe, o botão passa a ser o atalho de compra (o MESMO balão da Carteira).
 // UTAC129 (Frente C, R18-129-3) — saíram o inventário e o balão de compra do CardLance: o lance já não
@@ -267,7 +271,9 @@ export default function CardLance({
         if (!resp.ok) {
           if (resp.status === 401) flashAuthRef.current = { token: null, expiresAt: 0 };
           const msgMap = {
-            saldo_insuficiente:       "Saldo R$ insuficiente. Recarregue via PIX.",
+            // UTAC132.1 — no APK a chave fica com mensagem neutra: sem ela caía no `message` do servidor,
+            // que também fala em R$ (`saldoRs.mjs:178`).
+            saldo_insuficiente:       APK_BUILD ? "Saldo insuficiente para este lance." : "Saldo R$ insuficiente. Recarregue via PIX.",
             params_invalidos:         "Parâmetros inválidos.",
             debito_falhou:            "Falha ao debitar saldo. Tente novamente.",
             token_expirado:           "Sessão expirada — nova autenticação necessária na próxima tentativa.",
