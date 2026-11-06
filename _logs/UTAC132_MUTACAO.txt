@@ -1,0 +1,18 @@
+M1 sem corte na Carteira: ℹ fail 2
+   restaurado md5 igual: True
+M2 modal montado sempre: ℹ fail 1
+   restaurado md5 igual: True
+M3 balão sem corte: ℹ fail 1
+   restaurado md5 igual: True
+M4 guarda sem strings: ℹ fail 2
+   restaurado md5 igual: True
+M5 guarda sem flag: ℹ fail 2
+   restaurado md5 igual: True
+M6 build:apk sem flag: ℹ fail 1
+   restaurado md5 igual: True
+M7 splash parent antigo: ℹ fail 1
+   restaurado md5 igual: True
+M8 v31 com ícone: ℹ fail 1
+   restaurado md5 igual: True
+M9 versionCode 8: ℹ fail 2
+   restaurado md5 igual: True
