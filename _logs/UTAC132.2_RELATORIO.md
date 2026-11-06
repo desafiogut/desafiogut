@@ -25,3 +25,7 @@ grep no AAB inteiro: as 6 frases da lista + «Carregar PIX» → **0**. Controlo
 
 ## O que fica com PIX no AAB (não é DEBT-088)
 Texto legal (Regulamento/Privacidade), ecrãs de admin («Receita PIX»), pagamento de **produto físico** («Pagar Produto via PIX»), ícones do SDK do Privy. ⚠️ Não observado num aparelho.
+
+## Link para o Ruan (2026-11-06)
+https://litter.catbox.moe/rkh2sb.aab: litterbox, válido 72 h (método do UTAC119). Verificado ao baixar: HTTP 200, 32 438 215 B, SHA-256 `90661aae…872a` = AAB v9 limpo.
+⚠️ Ficou no Supabase de produção um bucket `entregas-temp` (público, **vazio**), criado numa tentativa abandonada (o `supabase storage cp` 2.107 deu `Unsupported operation`). Apagar quando o operador autorizar.
