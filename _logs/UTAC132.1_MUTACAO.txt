@@ -1,0 +1,6 @@
+M10 CardLance sem corte: ℹ fail 1
+   restaurado md5 igual: True
+M11 guarda sem a frase: ℹ fail 1
+   restaurado md5 igual: True
+M12 APK com R$ na mensagem: ℹ fail 1
+   restaurado md5 igual: True
