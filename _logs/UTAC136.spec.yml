@@ -1,0 +1,40 @@
+schema: utac/1
+name: UTAC136
+title: "Backend alinhado ao Regulamento v6.0 (sem frontend, sem AAB)"
+type: produto
+baseline: f08b572
+motivo: >-
+  O Regulamento v6.0 foi aprovado. Para a Google Play (Gamified Loyalty) o Passe deixa de dar pontos
+  de lance (Art. 6º), passa a dar 1 ponto de fidelidade (Art. 7º), o palpite deixa de consumir Passe,
+  o ECOQUILDO passa a valer R$ 0,50 (Art. 21º) e 50 ECOQUILDOs convertem-se em 1 Passe (Art. 23º).
+frentes:
+  - id: A
+    nome: Passe sem +200 pontos de lance
+    entrega: [netlify/functions/_lib/comprar-passe-tipado.mjs]
+  - id: B
+    nome: Fidelidade 10 -> 1 e palpite gratuito
+    entrega: [netlify/functions/_lib/passe-pontos.mjs, netlify/functions/registar-palpite.mjs]
+  - id: C
+    nome: ECOQUILDO R$ 0,50 + conversão 50 -> 1 Passe Programado
+    entrega: [netlify/functions/_lib/eco-quildo.mjs, netlify/functions/_lib/conversao-eco-passe.mjs,
+              chamadores de creditarEcoQuildo]
+autoriza:
+  - editar netlify/functions/ e netlify/functions/_lib/ (e os testes em _tests/)
+  - correr a suíte do backend
+  - UPDATE CAS único em eco_quildo_lastro id=1 (reserva 1800 -> 900) — R18-136-3
+  - commit + push (incl. f08b572) + netlify deploy --prod --build — R18-136-4
+  - despachar validador adversarial
+proibe:
+  - alterar src/ (frontend)
+  - gerar AAB
+  - alterar o Regulamento
+  - git add -A
+  - migração de schema
+dependencias:
+  - Regulamento v6.0 em docs/REGULAMENTO-v6.md
+regras_activas: [E, T, G, L, S, A, P, AU, ST, HI]
+stop_conditions_extra: [ST5]
+ressalvas:
+  - HI5 1,5 h
+  - A14 RAM >= 1500 MB antes da suíte
+  - o app v9 continua a mostrar os textos antigos (resolve-se no UTAC do AAB v10)

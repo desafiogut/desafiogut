@@ -156,14 +156,14 @@ async function pedir(handler, { metodo = "POST", corpo, token, headers = {} } = 
 const comprar = (handler, key = K(1)) => pedir(handler, { corpo: { idempotencyKey: key } });
 
 // ═══════════════════════════ FRENTE A — o modelo e a lib ═════════════════════════════════════════
-test("A1 constantes: 1 ECOQUILDO = R$ 1,00 = 100 centavos; 1 por Passe; motivos fechados", () => {
-  assert.equal(E.CENTAVOS_POR_ECOQUILDO, 100, "Art. 47º");
+test("A1 constantes: 1 ECOQUILDO = R$ 0,50 = 50 centavos (UTAC136; era R$ 1,00 = 100); 1 por Passe; motivos fechados", () => {
+  assert.equal(E.CENTAVOS_POR_ECOQUILDO, 50, "Art. 21º v6 (era 100, Art. 47º v5)");
   assert.equal(E.ECOQUILDO_POR_PASSE, 1, "R18-110e-1");
   assert.deepEqual([...E.MOTIVOS_EMISSAO], ["passe-relampago", "passe-programado", "boas-vindas", "indicacao"]);
   assert.equal(E.MOTIVO_USO, "uso-site");
   assert.equal(E.refUso("abc"), "eco-uso:abc");
   assert.equal(E.refCreditoAdmin("abc"), "eco-admin:abc");
-  assert.equal(E.reservaDe(3, 1), 200, "reserva derivada = (emitido − usado) × 100");
+  assert.equal(E.reservaDe(3, 1), 100, "reserva derivada = (emitido − usado) × 50");
 });
 
 test("A2 o duplo modela os CHECKs da migração 20261014 (saldo >= 0, histórico array, lastro linha única)", async () => {
@@ -256,17 +256,17 @@ test("A7 reverter devolve o valor e remove a entrada; o retry com a MESMA chave 
 test("A8 lastro: emissão soma e uso subtrai; a reserva é DERIVADA; estado impossível é recusado", async () => {
   assert.deepEqual(await E.lerLastro(), { total_emitido: 0, total_usado: 0, reserva_rs_centavos: 0 });
   let l = await E.registarEmissaoNoLastro(3);
-  assert.deepEqual([l.total_emitido, l.total_usado, l.reserva_rs_centavos], [3, 0, 300], "3 ECOQUILDO = R$ 3,00 = 300 centavos");
+  assert.deepEqual([l.total_emitido, l.total_usado, l.reserva_rs_centavos], [3, 0, 150], "3 ECOQUILDO = R$ 1,50 = 150 centavos");
   l = await E.registarUsoNoLastro(1);
-  assert.deepEqual([l.total_emitido, l.total_usado, l.reserva_rs_centavos], [3, 1, 200]);
+  assert.deepEqual([l.total_emitido, l.total_usado, l.reserva_rs_centavos], [3, 1, 100]);
   l = await E.reverterUsoNoLastro(1);
-  assert.deepEqual([l.total_emitido, l.total_usado, l.reserva_rs_centavos], [3, 0, 300]);
+  assert.deepEqual([l.total_emitido, l.total_usado, l.reserva_rs_centavos], [3, 0, 150]);
   l = await E.reverterEmissaoNoLastro(1);
-  assert.deepEqual([l.total_emitido, l.total_usado, l.reserva_rs_centavos], [2, 0, 200]);
+  assert.deepEqual([l.total_emitido, l.total_usado, l.reserva_rs_centavos], [2, 0, 100]);
   // usar mais do que se emitiu → recusado (a reserva ficaria negativa — Art. 50º)
   const mau = await E.registarUsoNoLastro(9);
   assert.equal(mau.ok, false); assert.equal(mau.code, "LASTRO_INCONSISTENTE");
-  assert.deepEqual([lastro().total_emitido, lastro().total_usado, lastro().reserva_rs_centavos], [2, 0, 200], "nada mudou");
+  assert.deepEqual([lastro().total_emitido, lastro().total_usado, lastro().reserva_rs_centavos], [2, 0, 100], "nada mudou");
   // valor inválido
   assert.equal((await E.registarEmissaoNoLastro(0)).code, "VALOR_INVALIDO");
 });
@@ -279,7 +279,7 @@ test("A9 lastro sem a linha única → LASTRO_AUSENTE (não inventa um lastro); 
   S.g.antesDeActualizar = (rows) => { rows[0].total_emitido += 2; rows[0].reserva_rs_centavos += 200; rows[0].atualizado_em = "outro"; };
   const l = await E.registarEmissaoNoLastro(1);
   assert.equal(l.ok, true);
-  assert.deepEqual([l.total_emitido, l.total_usado, l.reserva_rs_centavos], [3, 0, 300], "2 (concorrente) + 1");
+  assert.deepEqual([l.total_emitido, l.total_usado, l.reserva_rs_centavos], [3, 0, 150], "2 (concorrente) + 1");
 });
 
 // ═══════════════════════════ FRENTE B — os endpoints ═════════════════════════════════════════════
@@ -293,7 +293,7 @@ test("B1 ler-eco-quildo: 401 sem token e com lance-auth; 405 com POST; 200 com u
   assert.equal(r.corpo.ok, true);
   assert.equal(r.corpo.saldo, 2);
   assert.equal(r.corpo.historico.length, 1);
-  assert.equal(r.corpo.centavosPorEcoQuildo, 100);
+  assert.equal(r.corpo.centavosPorEcoQuildo, 50);
 });
 
 test("B2 usar-eco-quildo: debita e move o lastro; idempotente pela chave; acima do saldo é 400", async () => {
@@ -303,11 +303,11 @@ test("B2 usar-eco-quildo: debita e move o lastro; idempotente pela chave; acima 
   assert.equal(r.status, 200, JSON.stringify(r.corpo));
   assert.equal(r.corpo.saldo, 2);
   assert.equal(r.corpo.usado, 3);
-  assert.deepEqual([lastro().total_emitido, lastro().total_usado, lastro().reserva_rs_centavos], [5, 3, 200]);
+  assert.deepEqual([lastro().total_emitido, lastro().total_usado, lastro().reserva_rs_centavos], [5, 3, 100]);
   // idempotência: a mesma chave não gasta outra vez NEM mexe no lastro
   const r2 = await pedir(hUsar, { corpo: { valor: 3, idempotencyKey: U(1) } });
   assert.equal(r2.status, 200); assert.equal(r2.corpo.idempotent, true); assert.equal(r2.corpo.saldo, 2);
-  assert.deepEqual([lastro().total_emitido, lastro().total_usado, lastro().reserva_rs_centavos], [5, 3, 200]);
+  assert.deepEqual([lastro().total_emitido, lastro().total_usado, lastro().reserva_rs_centavos], [5, 3, 100]);
   // acima do saldo
   const r3 = await pedir(hUsar, { corpo: { valor: 9, idempotencyKey: U(2) } });
   assert.equal(r3.status, 400); assert.equal(r3.corpo.error.code, "saldo_insuficiente");
@@ -342,7 +342,7 @@ test("B4 creditar-eco-quildo (admin): guarda real; emite + lastro; idempotente; 
   const r = await pedir(hCreditar, { corpo: { endereco: OUTRO, valor: 2, motivo: "indicacao", chave: "adm-chave-1" }, token: adm });
   assert.equal(r.status, 201, JSON.stringify(r.corpo));
   assert.equal(r.corpo.saldo, 2);
-  assert.deepEqual([lastro().total_emitido, lastro().total_usado, lastro().reserva_rs_centavos], [2, 0, 200]);
+  assert.deepEqual([lastro().total_emitido, lastro().total_usado, lastro().reserva_rs_centavos], [2, 0, 100]);
   assert.equal(auditoria[0][0], "registar");
   assert.equal(auditoria[0][1].tipo_acao, "creditar_eco_quildo");
   assert.equal(auditoria[0][1].admin_endereco, ADM, "a auditoria leva o endereço do admin, não um literal");
@@ -350,7 +350,7 @@ test("B4 creditar-eco-quildo (admin): guarda real; emite + lastro; idempotente; 
   // idempotente
   const r2 = await pedir(hCreditar, { corpo: { endereco: OUTRO, valor: 2, motivo: "indicacao", chave: "adm-chave-1" }, token: adm });
   assert.equal(r2.status, 200); assert.equal(r2.corpo.idempotent, true);
-  assert.deepEqual([lastro().total_emitido, lastro().reserva_rs_centavos], [2, 200], "não emitiu 2×");
+  assert.deepEqual([lastro().total_emitido, lastro().reserva_rs_centavos], [2, 100], "não emitiu 2×");
   // validações
   assert.equal((await pedir(hCreditar, { corpo: { endereco: "x", valor: 1, motivo: "indicacao", chave: "adm-chave-2" }, token: adm })).status, 400);
   assert.equal((await pedir(hCreditar, { corpo: { endereco: OUTRO, valor: 0, motivo: "indicacao", chave: "adm-chave-3" }, token: adm })).status, 400);
@@ -360,7 +360,7 @@ test("B4 creditar-eco-quildo (admin): guarda real; emite + lastro; idempotente; 
   auditoriaFalha = true;
   const r5 = await pedir(hCreditar, { corpo: { endereco: OUTRO, valor: 5, motivo: "indicacao", chave: "adm-chave-5" }, token: adm });
   assert.equal(r5.status, 503); assert.equal(r5.corpo.error.code, "log_indisponivel");
-  assert.deepEqual([lastro().total_emitido, lastro().reserva_rs_centavos], [2, 200], "nada emitido sem auditoria");
+  assert.deepEqual([lastro().total_emitido, lastro().reserva_rs_centavos], [2, 100], "nada emitido sem auditoria");
   assert.equal(ecoLinha(OUTRO).saldo, 2);
 });
 
@@ -372,11 +372,11 @@ test("B5 lastro-eco-quildo (admin): 401 sem ser admin; 200 com os três números
   assert.equal(r.status, 200, JSON.stringify(r.corpo));
   assert.deepEqual([r.corpo.total_emitido, r.corpo.total_usado, r.corpo.reserva_rs_centavos], [0, 0, 0]);
   assert.equal(r.corpo.em_circulacao, 0);
-  assert.equal(r.corpo.centavos_por_eco_quildo, 100);
+  assert.equal(r.corpo.centavos_por_eco_quildo, 50);
   assert.equal(r.corpo.coerente, true);
   await E.registarEmissaoNoLastro(4);
   const r2 = await pedir(hLastro, { metodo: "GET", token: adm });
-  assert.deepEqual([r2.corpo.total_emitido, r2.corpo.reserva_rs_centavos, r2.corpo.coerente], [4, 400, true]);
+  assert.deepEqual([r2.corpo.total_emitido, r2.corpo.reserva_rs_centavos, r2.corpo.coerente], [4, 200, true]);
   // escrito à mão (fora da lib) → `coerente: false` (o invariante é medido, não presumido)
   lastro().reserva_rs_centavos = 999;
   const r3 = await pedir(hLastro, { metodo: "GET", token: adm });
@@ -386,36 +386,36 @@ test("B5 lastro-eco-quildo (admin): 401 sem ser admin; 200 com os três números
 // ═══════════════════════════ FRENTE C — integração com a compra ═══════════════════════════════════
 // ⚠️ UTAC110n (R18-110j.4b-3): o título e a última asserção fixavam «+1 crédito» (modelo do 110d).
 // O Passe passou a dar +200 PONTOS de lance; o objecto deste teste (ECOQUILDO + lastro) não mudou.
-test("C1 Passe Relâmpago: 201 com +10 pontos +200 pontos de lance +1 ECOQUILDO, e o lastro leva +R$ 1,00", async () => {
+test("C1 Passe Relâmpago: 201 com (UTAC136) +1 ponto, SEM pontos de lance, +1 ECOQUILDO, e o lastro leva +R$ 0,50", async () => {
   const r = await comprar(hRelampago);
   assert.equal(r.status, 201, JSON.stringify(r.corpo));
   assert.equal(r.corpo.ecoQuildo, 1);
   assert.equal(ecoLinha().saldo, 1);
   assert.equal(ecoLinha().historico[0].motivo, "passe-relampago");
   assert.equal(ecoLinha().historico[0].ref, `passe-relampago:${K(1)}`, "a ref do ECOQUILDO é a da compra (idempotência herdada)");
-  assert.deepEqual([lastro().total_emitido, lastro().total_usado, lastro().reserva_rs_centavos], [1, 0, 100]);
-  assert.equal(pLinha().pontos, 10);
+  assert.deepEqual([lastro().total_emitido, lastro().total_usado, lastro().reserva_rs_centavos], [1, 0, 50]);
+  assert.equal(pLinha().pontos, 1);
   assert.equal(pLinha().creditos_lance, 0, "o crédito legado já não é creditado");
-  assert.equal(pLinha().pontos_lance, 200, "o Passe dá 200 pontos de lance (Art. 16º VI)");
+  assert.equal(Number(pLinha().pontos_lance ?? 0), 0, "Art. 6º v6: o Passe NÃO dá pontos de lance (era 200, UTAC110n)");
 });
 
-test("C2 Passe Programado: 201 com +10 pontos +1 ECOQUILDO (motivo próprio) e SEM crédito de lance", async () => {
+test("C2 Passe Programado: 201 com +1 ponto (UTAC136) +1 ECOQUILDO (motivo próprio) e SEM crédito de lance", async () => {
   const r = await comprar(hProgramado);
   assert.equal(r.status, 201, JSON.stringify(r.corpo));
   assert.equal(r.corpo.ecoQuildo, 1);
   assert.equal("creditosLance" in r.corpo, false);
   assert.equal(ecoLinha().historico[0].motivo, "passe-programado");
   assert.equal(pLinha().creditos_lance, 0);
-  assert.deepEqual([lastro().total_emitido, lastro().reserva_rs_centavos], [1, 100]);
+  assert.deepEqual([lastro().total_emitido, lastro().reserva_rs_centavos], [1, 50]);
 });
 
-test("C3 lastro ACUMULA com várias compras (emitido = nº de Passes; reserva = emitido × 100)", async () => {
+test("C3 lastro ACUMULA com várias compras (emitido = nº de Passes; reserva = emitido × 50)", async () => {
   S.tabelas.saldo_rs[0].payload.centavos = 1000; // 3 Passes = R$ 6,00
   await comprar(hRelampago, K(1));
   await comprar(hProgramado, K(2));
   await comprar(hProgramado, K(3));
   assert.equal(ecoLinha().saldo, 3);
-  assert.deepEqual([lastro().total_emitido, lastro().total_usado, lastro().reserva_rs_centavos], [3, 0, 300]);
+  assert.deepEqual([lastro().total_emitido, lastro().total_usado, lastro().reserva_rs_centavos], [3, 0, 150]);
   assert.equal(saldoRs(), 1000 - 600, "3 Passes = R$ 6,00");
 });
 
@@ -426,7 +426,7 @@ test("C4 se o ECOQUILDO falhar, a compra é DESFEITA por inteiro (pontos, crédi
   assert.equal(r.corpo.error.code, "creditar_eco_quildo_falhou");
   assert.equal(r.corpo.error.reembolsado, true, "o reembolso vai DENTRO de error (convenção do jsonError)");
   assert.equal(saldoRs(), 500, "os R$ 2,00 voltaram");
-  assert.equal(pLinha().pontos, 0, "os 10 pontos foram desfeitos");
+  assert.equal(pLinha().pontos, 0, "o ponto de fidelidade foi desfeito");
   assert.deepEqual(pLinha().historico, []);
   assert.equal(pLinha().creditos_lance, 0, "o crédito de lance foi desfeito");
   assert.deepEqual(pLinha().historico_lance, []);
@@ -437,7 +437,7 @@ test("C4 se o ECOQUILDO falhar, a compra é DESFEITA por inteiro (pontos, crédi
   const r2 = await comprar(hRelampago);
   assert.equal(r2.status, 201, JSON.stringify(r2.corpo));
   assert.equal(ecoLinha().saldo, 1);
-  assert.deepEqual([lastro().total_emitido, lastro().reserva_rs_centavos], [1, 100]);
+  assert.deepEqual([lastro().total_emitido, lastro().reserva_rs_centavos], [1, 50]);
 });
 
 test("C5 se o LASTRO falhar, o ECOQUILDO é desfeito e a compra reverte (nunca moeda sem lastro)", async () => {
@@ -459,7 +459,7 @@ test("C6 idempotência: repetir a chave → 200, UM só ECOQUILDO e UM só lastr
   const r2 = await comprar(hRelampago);
   assert.equal(r2.status, 200); assert.equal(r2.corpo.idempotent, true); assert.equal(r2.corpo.ecoQuildo, 1);
   assert.equal(ecoLinha().historico.length, 1);
-  assert.deepEqual([lastro().total_emitido, lastro().reserva_rs_centavos], [1, 100]);
+  assert.deepEqual([lastro().total_emitido, lastro().reserva_rs_centavos], [1, 50]);
   // concorrência
   cliente = novoCliente();
   S.tabelas.saldo_rs.push({ cliente_id: A, payload: { centavos: 500 }, atualizado_em: "x" });
@@ -468,10 +468,10 @@ test("C6 idempotência: repetir a chave → 200, UM só ECOQUILDO e UM só lastr
   assert.equal(rs.filter((x) => x.status === 201).length, 1, rs.map((x) => x.status).join(","));
   assert.ok(rs.every((x) => x.status === 201 || x.status === 200));
   assert.equal(ecoLinha().saldo, 1, "5 cliques = 1 ECOQUILDO");
-  assert.deepEqual([lastro().total_emitido, lastro().reserva_rs_centavos], [1, 100]);
+  assert.deepEqual([lastro().total_emitido, lastro().reserva_rs_centavos], [1, 50]);
 });
 
-test("C7 ciclo completo: comprar 3 Passes → usar 2 no site → saldo 1 e lastro (3, 2, 100)", async () => {
+test("C7 ciclo completo: comprar 3 Passes → usar 2 no site → saldo 1 e lastro (3, 2, 50)", async () => {
   S.tabelas.saldo_rs[0].payload.centavos = 1000;
   await comprar(hRelampago, K(1));
   await comprar(hProgramado, K(2));
@@ -480,20 +480,22 @@ test("C7 ciclo completo: comprar 3 Passes → usar 2 no site → saldo 1 e lastr
   const r = await pedir(hUsar, { corpo: { valor: 2, idempotencyKey: U(1) } });
   assert.equal(r.status, 200);
   assert.equal(r.corpo.saldo, 1);
-  assert.deepEqual([lastro().total_emitido, lastro().total_usado, lastro().reserva_rs_centavos], [3, 2, 100]);
+  assert.deepEqual([lastro().total_emitido, lastro().total_usado, lastro().reserva_rs_centavos], [3, 2, 50]);
   const l = await pedir(hLastro, { metodo: "GET", token: await assinarAdminAccess(ADM) });
   assert.equal(l.corpo.em_circulacao, 1);
   assert.equal(l.corpo.coerente, true);
 });
 
 test("C8 compra a MEIO (pontos + crédito sim, ECOQUILDO não) → o retry completa o ECOQUILDO sem cobrar", async () => {
-  await P.creditarPontos(A, 10, "compra", `passe-relampago:${K(1)}`);
+  // UTAC136: a compra a meio é semeada no formato v6 (1 ponto por Passe). Uma compra ANTIGA a meio (10 pontos)
+  // seria lida como 10 Passes — medido em produção: 0 compras a meio (SEG-1 §-1.4).
+  await P.creditarPontos(A, 1, "compra", `passe-relampago:${K(1)}`);
   await L.creditarCreditoLance(A, `passe-relampago:${K(1)}`);
   const r = await comprar(hRelampago);
   assert.equal(r.status, 200, JSON.stringify(r.corpo));
   assert.equal(r.corpo.ecoQuildo, 1, "completou o que faltava");
   assert.equal(saldoRs(), 500, "não cobrou de novo");
-  assert.deepEqual([lastro().total_emitido, lastro().reserva_rs_centavos], [1, 100]);
+  assert.deepEqual([lastro().total_emitido, lastro().reserva_rs_centavos], [1, 50]);
 });
 
 // ── Fecho dos SOBREVIVENTES do validador adversarial (SEG5, achado A2: V3/V4) ────────────────────
@@ -508,13 +510,13 @@ test("B2b usar: se o LASTRO falhar, o ECOQUILDO é DEVOLVIDO ao saldo (502 lastr
   assert.equal(r.corpo.error.devolvido, true);
   assert.equal(ecoLinha().saldo, 5, "os 2 ECOQUILDO voltaram ao saldo");
   assert.deepEqual(ecoLinha().historico.map((h) => h.ref), ["ind:1"], "a entrada do uso saiu do histórico");
-  assert.deepEqual([lastro().total_emitido, lastro().total_usado, lastro().reserva_rs_centavos], [5, 0, 500], "o lastro ficou coerente");
+  assert.deepEqual([lastro().total_emitido, lastro().total_usado, lastro().reserva_rs_centavos], [5, 0, 250], "o lastro ficou coerente");
   // e o retry (já sem falha) usa normalmente — nada ficou a meio
   S.g.falhar.eco_quildo_lastro = null;
   const r2 = await pedir(hUsar, { corpo: { valor: 2, idempotencyKey: U(9) } });
   assert.equal(r2.status, 200, JSON.stringify(r2.corpo));
   assert.equal(r2.corpo.saldo, 3);
-  assert.deepEqual([lastro().total_emitido, lastro().total_usado, lastro().reserva_rs_centavos], [5, 2, 300]);
+  assert.deepEqual([lastro().total_emitido, lastro().total_usado, lastro().reserva_rs_centavos], [5, 2, 150]);
 });
 
 test("B4b creditar (admin): se o LASTRO falhar, a EMISSÃO é desfeita (nunca moeda sem lastro)", async () => {
@@ -535,5 +537,5 @@ test("B4b creditar (admin): se o LASTRO falhar, a EMISSÃO é desfeita (nunca mo
   const r2 = await pedir(hCreditar, { corpo: { endereco: OUTRO, valor: 3, motivo: "indicacao", chave: "adm-chave-9" }, token: adm });
   assert.equal(r2.status, 201, JSON.stringify(r2.corpo));
   assert.equal(r2.corpo.saldo, 3);
-  assert.deepEqual([lastro().total_emitido, lastro().reserva_rs_centavos], [3, 300]);
+  assert.deepEqual([lastro().total_emitido, lastro().reserva_rs_centavos], [3, 150]);
 });

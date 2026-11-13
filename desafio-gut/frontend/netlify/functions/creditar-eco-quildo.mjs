@@ -28,6 +28,7 @@ import { registrarAcao, confirmarAcao } from "./_lib/admin-log.mjs";
 import { respostaPreflight } from "./_lib/cors.mjs";
 import { sistemaPausado, lerEstadoSistema } from "./_lib/system-state.mjs";
 import { captureSecurityAlert } from "./_lib/sentry-server.mjs";
+import { converterEcoEmPassesSeguro } from "./_lib/conversao-eco-passe.mjs"; // UTAC136
 import {
   creditarEcoQuildo, reverterEcoQuildo, registarEmissaoNoLastro, reverterEmissaoNoLastro,
   MOTIVOS_EMISSAO, refCreditoAdmin,
@@ -128,8 +129,13 @@ export default async (req) => {
   }
 
   await confirmarAcao(logId, { sucesso: true }).catch(() => {});
+  // UTAC136 — Art. 23º v6: ≥ 50 ECOQUILDOs ⇒ conversão automática em Passe(s) (fail-soft). O `lastro` da
+  // resposta é o da EMISSÃO; a conversão regista o seu próprio «usado».
+  const conv = await converterEcoEmPassesSeguro(endereco, "creditar-eco-quildo");
+  const convertidos = conv?.convertidos > 0 ? conv.convertidos : 0;
   return jsonResponse({
-    ok: true, idempotent: false, endereco, saldo: c.saldo, motivo,
+    ok: true, idempotent: false, endereco, saldo: convertidos > 0 && conv.ok ? conv.saldo : c.saldo, motivo,
+    ...(convertidos > 0 ? { passesConvertidos: convertidos } : {}),
     lastro: { total_emitido: l.total_emitido, total_usado: l.total_usado, reserva_rs_centavos: l.reserva_rs_centavos },
   }, 201);
 };

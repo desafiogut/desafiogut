@@ -261,23 +261,25 @@ const registo = (t = TOKEN) => S.tabelas.google_play_compras.find((l) => l.purch
 const historicoPasse = (e = A) => (pontos(e)?.historico ?? []).filter((h) => h?.tipo === "compra");
 
 // ═══ (a) POSITIVO ════════════════════════════════════════════════════════════════════════════════
-test("(a) Relâmpago: 201 · +10 pontos · +200 PONTOS de lance · +1 ECOQUILDO · saldo R$ INTACTO", async () => {
+// ⚠️ UTAC136 (Regulamento v6.0, Arts. 6º/7º): +1 ponto de fidelidade e NENHUM ponto de lance (eram +10 e +200).
+test("(a) Relâmpago: 201 · +1 ponto · SEM pontos de lance · +1 ECOQUILDO · saldo R$ INTACTO (UTAC136)", async () => {
   const r = await pedirGoogle();
   assert.equal(r.status, 201, JSON.stringify(r.json));
   assert.equal(r.json.ok, true);
   assert.equal(r.json.idempotent, false);
   assert.equal(r.json.tipo, "relampago");
-  assert.equal(r.json.pontosFidelidade, 10);
+  assert.equal(r.json.pontosFidelidade, 1);
   // ⚠️ UTAC110n: era `creditosLance: 1`. O Passe passou a dar +200 pontos de lance (Art. 16º VI).
   assert.equal(r.json.creditosLance, 0);
   assert.equal(r.json.ecoQuildo, 1);
-  assert.equal(pontos().pontos, 10);
-  assert.equal(lance(), 200);
+  assert.equal(r.json.pontosLance, undefined, "a resposta já não anuncia pontos de lance");
+  assert.equal(pontos().pontos, 1);
+  assert.equal(lance() ?? 0, 0, "Art. 6º v6: o Passe NÃO dá pontos de lance");
   assert.equal(eco().saldo, 1);
   // ⚠️ O PONTO CENTRAL DESTE UTAC (R18-110i.1-1): o pagamento foi da GOOGLE — não se debita saldo R$.
   assert.equal(saldoRs(), 500, "o Billing debitou saldo R$ (só o PIX pode debitar)");
   assert.equal(registo().estado, "creditada");
-  assert.equal(registo().pontos, 10);
+  assert.equal(registo().pontos, 1);
   assert.equal(registo().creditos_lance, 0, "o registo do recibo já não guarda crédito");
   assert.equal(registo().eco_quildo, 1);
   assert.equal(registo().produto_id, PROD.relampago);
@@ -286,15 +288,15 @@ test("(a) Relâmpago: 201 · +10 pontos · +200 PONTOS de lance · +1 ECOQUILDO 
   assert.equal(lastro.total_emitido, 1, "o ECOQUILDO saiu sem lastro em R$ (Art. 50º)");
 });
 
-test("(a) Programado: 201 · +10 pontos · +1 ECOQUILDO · SEM créditos de lance", async () => {
+test("(a) Programado: 201 · +1 ponto (UTAC136) · +1 ECOQUILDO · SEM créditos de lance", async () => {
   const r = await pedirGoogle({ corpo: { sku: PROD.programado, tipo: "programado", purchaseToken: TOKEN } });
   assert.equal(r.status, 201, JSON.stringify(r.json));
   assert.equal(r.json.tipo, "programado");
-  assert.equal(r.json.pontosFidelidade, 10);
+  assert.equal(r.json.pontosFidelidade, 1);
   assert.equal(r.json.creditosLance, undefined, "o Programado não credita lance");
   assert.equal(r.json.pontosLance, undefined, "o Programado não dá pontos de lance");
   assert.equal(r.json.ecoQuildo, 1);
-  assert.equal(pontos().pontos, 10);
+  assert.equal(pontos().pontos, 1);
   assert.equal(lance() ?? 0, 0);
   assert.equal(saldoRs(), 500);
 });
@@ -306,10 +308,10 @@ test("o MESMO recibo 2× ⇒ 200 idempotente, mesmos números, SEM repetir créd
   const r2 = await pedirGoogle();
   assert.equal(r2.status, 200, JSON.stringify(r2.json));
   assert.equal(r2.json.idempotent, true);
-  assert.equal(r2.json.pontosFidelidade, 10);
-  assert.equal(lance(), 200, "os pontos de lance foram creditados 2×");
+  assert.equal(r2.json.pontosFidelidade, 1);
+  assert.equal(lance() ?? 0, 0, "UTAC136: nem a 1.ª nem a 2.ª entrega dão pontos de lance");
   assert.deepEqual(JSON.parse(JSON.stringify(r2.json)), JSON.parse(JSON.stringify({ ...r1.json, idempotent: true })));
-  assert.equal(pontos().pontos, 10, "os pontos foram creditados 2×");
+  assert.equal(pontos().pontos, 1, "os pontos foram creditados 2×");
   assert.equal(eco().saldo, 1, "o ECOQUILDO foi creditado 2×");
   assert.equal(historicoPasse().length, 1, "o histórico tem 2 entradas da mesma compra");
   assert.equal(soGoogle().length, 1, "a 2.ª entrega voltou a consultar a Google (devia sair do registo)");
@@ -320,19 +322,20 @@ test("dois RECIBOS diferentes ⇒ dois créditos (a chave é o token, não colid
   const r2 = await pedirGoogle({ corpo: { purchaseToken: `${TOKEN}-2` } });
   assert.equal(r1.status, 201);
   assert.equal(r2.status, 201);
-  assert.equal(pontos().pontos, 20);
+  assert.equal(pontos().pontos, 2);
   assert.equal(eco().saldo, 2);
   assert.equal(S.tabelas.google_play_compras.length, 2);
 });
 
-test("compra a MEIO (pontos + lance escritos, ECOQUILDO não) ⇒ o retry COMPLETA sem repetir pontos", async () => {
-  // Estado «a meio» semeado: a 1.ª tentativa creditou pontos + lance e caiu antes do ECOQUILDO
-  // (é o que a cadeia faz: o ECOQUILDO é o ÚLTIMO passo de propósito).
+test("compra a MEIO (ponto escrito, ECOQUILDO não) ⇒ o retry COMPLETA sem repetir pontos (UTAC136: formato v6)", async () => {
+  // Estado «a meio» semeado: a 1.ª tentativa creditou o ponto e caiu antes do ECOQUILDO (o ECOQUILDO é o
+  // ÚLTIMO passo de propósito). UTAC136: semeado no formato v6 (1 ponto, sem pontos de lance). Uma compra
+  // ANTIGA a meio (10 pontos) seria lida como 10 Passes — medido em produção: 0 compras a meio.
   const ref = refGoogle("relampago", TOKEN);
   S.tabelas.pontos.push({
-    endereco: A, pontos: 10, atualizado_em: "x", creditos_lance: 0, pontos_lance: 200,
-    historico: [{ data: "x", tipo: "compra", pontos: 10, ref }],
-    historico_lance: [{ data: "x", campo: "pontos_lance", motivo: "passe-relampago", delta: 200, ref }],
+    endereco: A, pontos: 1, atualizado_em: "x", creditos_lance: 0, pontos_lance: 0,
+    historico: [{ data: "x", tipo: "compra", pontos: 1, ref }],
+    historico_lance: [],
   });
   S.tabelas.google_play_compras.push({
     purchase_token: TOKEN, order_id: null, produto_id: PROD.relampago, tipo_passe: "relampago",
@@ -343,11 +346,11 @@ test("compra a MEIO (pontos + lance escritos, ECOQUILDO não) ⇒ o retry COMPLE
   const r = await pedirGoogle();
   assert.equal(r.status, 200, JSON.stringify(r.json));
   assert.equal(r.json.idempotent, true);
-  assert.equal(r.json.pontosFidelidade, 10);
+  assert.equal(r.json.pontosFidelidade, 1);
   assert.equal(r.json.ecoQuildo, 1);
-  assert.equal(pontos().pontos, 10, "o retry creditou os pontos outra vez");
+  assert.equal(pontos().pontos, 1, "o retry creditou os pontos outra vez");
   assert.equal(historicoPasse().length, 1, "o histórico tem 2 entradas da mesma compra");
-  assert.equal(lance(), 200, "o retry voltou a creditar os pontos de lance");
+  assert.equal(lance() ?? 0, 0, "UTAC136: o retry não credita pontos de lance");
   assert.equal(eco().saldo, 1, "o retry não completou o ECOQUILDO");
   assert.equal(registo().estado, "creditada");
 });
@@ -468,7 +471,7 @@ test("A/B: o PIX DEBITA R$ 2,00; o Google Play NÃO debita — mesmos benefício
   const rPix = await pedir(hPixRelampago, { corpo: { idempotencyKey: "idem-key-110i1-ab-0001" } });
   assert.equal(rPix.status, 201, JSON.stringify(rPix.json));
   assert.equal(saldoRs(), 300, "o PIX devia ter debitado R$ 2,00 de R$ 5,00");
-  assert.equal(pontos().pontos, 10);
+  assert.equal(pontos().pontos, 1);
 
   // Segunda metade do par: o MESMO fluxo pelo Google, com uma conta limpa.
   cliente = novoCliente();
@@ -477,8 +480,8 @@ test("A/B: o PIX DEBITA R$ 2,00; o Google Play NÃO debita — mesmos benefício
   const rGoogle = await pedirGoogle();
   assert.equal(rGoogle.status, 201, JSON.stringify(rGoogle.json));
   assert.equal(saldoRs(), 500, "o Google Play debitou saldo R$");
-  assert.equal(pontos().pontos, 10, "os benefícios deviam ser os MESMOS do PIX");
-  assert.equal(lance(), 200);
+  assert.equal(pontos().pontos, 1, "os benefícios deviam ser os MESMOS do PIX");
+  assert.equal(lance() ?? 0, 0, "UTAC136: nenhum dos dois dá pontos de lance");
   assert.equal(eco().saldo, 1);
 });
 
@@ -518,20 +521,20 @@ test("falha do registo no fecho NÃO esconde a entrega: responde ok, alerta e o 
   };
   const r = await pedirGoogle();
   assert.equal(r.status, 201, JSON.stringify(r.json));
-  assert.equal(pontos().pontos, 10, "os benefícios deviam estar entregues");
+  assert.equal(pontos().pontos, 1, "os benefícios deviam estar entregues");
   assert.ok(alertas.some(([k]) => k === "validar-compra-google_fecho_registo_falhou"), "não alertou o fecho falhado");
   assert.equal(registo().estado, "recebida", "o registo ficou 'recebida' (o retry vai reprocessar)");
   // Retry: o registo diz 'recebida' ⇒ volta a validar e a cadeia é idempotente pela ref do token.
   cliente = novoCliente();
   S.tabelas.saldo_rs.push({ cliente_id: A, payload: { centavos: 500 }, atualizado_em: "x" });
   S.tabelas.eco_quildo_lastro.push({ id: 1, total_emitido: 0, total_usado: 0, reserva_rs_centavos: 0, atualizado_em: "x" });
-  S.tabelas.pontos.push({ endereco: A, pontos: 10, historico: [{ data: "x", tipo: "compra", pontos: 10, ref: refGoogle("relampago", TOKEN) }], atualizado_em: "x", creditos_lance: 0, pontos_lance: 200, historico_lance: [{ data: "x", campo: "pontos_lance", motivo: "passe-relampago", ref: refGoogle("relampago", TOKEN), delta: 200 }] });
+  S.tabelas.pontos.push({ endereco: A, pontos: 1, historico: [{ data: "x", tipo: "compra", pontos: 1, ref: refGoogle("relampago", TOKEN) }], atualizado_em: "x", creditos_lance: 0, pontos_lance: 0, historico_lance: [] });
   S.tabelas.eco_quildo.push({ endereco: A, saldo: 1, historico: [{ data: "x", ref: refGoogle("relampago", TOKEN), delta: 1 }], atualizado_em: "x" });
   S.tabelas.eco_quildo_lastro[0].total_emitido = 1;
   const r2 = await pedirGoogle();
   assert.equal(r2.status, 200, JSON.stringify(r2.json));
   assert.equal(r2.json.idempotent, true);
-  assert.equal(pontos().pontos, 10, "o retry creditou os pontos outra vez");
+  assert.equal(pontos().pontos, 1, "o retry creditou os pontos outra vez");
   assert.equal(eco().saldo, 1, "o retry creditou o ECOQUILDO outra vez");
   assert.equal(registo().estado, "creditada");
 });
@@ -606,15 +609,14 @@ test("CORRIDA ENTRE CONTAS: o mesmo recibo, duas carteiras em paralelo ⇒ 409 n
   assert.equal(S.tabelas.google_play_compras.length, 1, "duas linhas para o mesmo recibo");
 });
 
-test("o ECOQUILDO é o ÚLTIMO passo: se o crédito dos PONTOS DE LANCE falhar, o ECOQUILDO NÃO é emitido", async () => {
-  // Invariante da ordem da cadeia (110e): uma falha no crédito de lance não pode deixar um ECOQUILDO
-  // emitido sem lastro de contrapartida — e o PIX seria reembolsado. B14 (mutante) creditava o
-  // ECOQUILDO primeiro e deixava-o preso depois da falha.
-  S.g.falhar.pontos = { se: (st) => Boolean(st.dados && "pontos_lance" in st.dados) };
+// UTAC136: o passo de PONTOS DE LANCE saiu da cadeia (Art. 6º v6). O invariante «o ECOQUILDO é o ÚLTIMO
+// passo» passa a medir-se contra o passo que ficou antes dele: o ponto de fidelidade.
+test("o ECOQUILDO é o ÚLTIMO passo: se o crédito do PONTO DE FIDELIDADE falhar, o ECOQUILDO NÃO é emitido (UTAC136)", async () => {
+  S.g.falhar.pontos = { se: (st) => Boolean(st.dados && "historico" in st.dados) };
   const r = await pedirGoogle();
   assert.equal(r.status, 502, JSON.stringify(r.json));
-  assert.equal(r.json.error.code, "creditar_pontos_lance_falhou");
-  assert.equal(eco(), undefined, "o ECOQUILDO foi emitido apesar da falha no lance");
+  assert.equal(r.json.error.code, "creditar_pontos_falhou");
+  assert.equal(eco(), undefined, "o ECOQUILDO foi emitido apesar da falha nos pontos");
   assert.equal(S.tabelas.eco_quildo_lastro[0].total_emitido, 0, "o lastro registou uma emissão que não devia existir");
   assert.equal(pontos()?.pontos ?? 0, 0, "os pontos ficaram creditados depois da falha");
   assert.equal(lance() ?? 0, 0);
@@ -625,13 +627,13 @@ test("o ECOQUILDO é o ÚLTIMO passo: se o crédito dos PONTOS DE LANCE falhar, 
 // ── UTAC112 — compra múltipla pela Google Play («Multi-quantity»: a quantidade vem do RECIBO) ────
 const lastro = () => S.tabelas.eco_quildo_lastro.find((l) => l.id === 1);
 
-test("UTAC112 G1: recibo com quantity 5 (Relâmpago) ⇒ +50 fidelidade · +1000 pontos de lance · +5 ECOQUILDO · lastro 5", async () => {
+test("UTAC112 G1: recibo com quantity 5 (Relâmpago) ⇒ +5 fidelidade · 0 pontos de lance · +5 ECOQUILDO · lastro 5 (UTAC136)", async () => {
   HTTP.quantidade = 5;
   const r = await pedirGoogle();
   assert.equal(r.status, 201, JSON.stringify(r.json));
   assert.equal(r.json.quantidade, 5);
-  assert.equal(pontos().pontos, 50);
-  assert.equal(lance(), 1000);
+  assert.equal(pontos().pontos, 5);
+  assert.equal(lance() ?? 0, 0);
   assert.equal(eco().saldo, 5);
   assert.equal(lastro().total_emitido, 5);
   assert.equal(historicoPasse().length, 1, "um só movimento de 5× na mesma ref");
@@ -646,7 +648,7 @@ test("UTAC112 G2: o MESMO recibo de 3 entregue 2× ⇒ 200 com quantidade 3 e na
   assert.equal(r1.status, 201);
   assert.equal(r2.status, 200);
   assert.equal(r2.json.quantidade, 3);
-  assert.equal(pontos().pontos, 30);
+  assert.equal(pontos().pontos, 3);
   assert.equal(eco().saldo, 3);
   assert.equal(lance() ?? 0, 0, "o Programado não dá pontos de lance");
 });
@@ -658,7 +660,7 @@ test("UTAC112 G3: quantity ausente, null, 0, fracção ou texto no recibo ⇒ co
     assert.equal(r.status, 201, `quantity ${q}`);
     assert.equal(r.json.quantidade, 1, `quantity ${q}`);
   }
-  assert.equal(pontos().pontos, 50);
+  assert.equal(pontos().pontos, 5);
 });
 
 test("UTAC112 G4: a quantidade NUNCA vem do corpo do cliente — só do recibo", async () => {
@@ -666,5 +668,5 @@ test("UTAC112 G4: a quantidade NUNCA vem do corpo do cliente — só do recibo",
   const r = await pedirGoogle({ corpo: { quantidade: 10, quantity: 10 } });
   assert.equal(r.status, 201);
   assert.equal(r.json.quantidade, 1);
-  assert.equal(pontos().pontos, 10);
+  assert.equal(pontos().pontos, 1);
 });

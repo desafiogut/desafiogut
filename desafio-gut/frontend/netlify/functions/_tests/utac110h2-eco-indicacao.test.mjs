@@ -86,8 +86,8 @@ test("R1 indicação válida → 200, +50/+50 pontos E +2 ECOQUILDO (indicante) 
   // Papéis NÃO se trocam, e o ref do indicante aponta para o indicado.
   assert.deepEqual(histEco(A).map((h) => [h.ref, h.delta, h.motivo, h.saldo]), [[`eco-indicacao:${B}`, 2, "indicacao", 2]]);
   assert.deepEqual(histEco(B).map((h) => [h.ref, h.delta, h.motivo, h.saldo]), [["eco-indicacao-recebida", 1, "indicacao", 1]]);
-  // Lastro (Art. 50º): +3 emitidos e a reserva DERIVADA a 300 centavos (1 ECOQUILDO = R$ 1,00).
-  assert.deepEqual([lastro().total_emitido, lastro().total_usado, lastro().reserva_rs_centavos], [3, 0, 300]);
+  // Lastro (Art. 50º): +3 emitidos e a reserva DERIVADA a 150 centavos (UTAC136: 1 ECOQUILDO = R$ 0,50; era 300 a R$ 1,00).
+  assert.deepEqual([lastro().total_emitido, lastro().total_usado, lastro().reserva_rs_centavos], [3, 0, 150]);
 });
 
 // ── R2 — o negativo: a auto-indicação é recusada e NÃO credita nada (nem pontos, nem ECOQUILDO) ─────
@@ -108,7 +108,7 @@ test("R3 o mesmo indicado por OUTRO código → 409 ja_indicado e nenhum ECOQUIL
   assert.deepEqual([r.status, r.corpo?.error?.code], [409, "ja_indicado"]);
   assert.deepEqual([pontos(A), pontos(B), pontos(C)], [50, 50, 0]);
   assert.deepEqual([eco(A), eco(B), eco(C)], [2, 1, 0]);
-  assert.deepEqual([lastro().total_emitido, lastro().reserva_rs_centavos], [3, 300]);
+  assert.deepEqual([lastro().total_emitido, lastro().reserva_rs_centavos], [3, 150]);
 });
 
 // ── R4 — idempotência: repetir o MESMO pedido não duplica nem pontos nem ECOQUILDO ─────────────────
@@ -121,7 +121,7 @@ test("R4 re-execução do mesmo pedido → sem crédito duplo (ECOQUILDO idempot
   assert.deepEqual([eco(A), eco(B)], [2, 1]);
   assert.equal(histEco(A).length, 1, "uma só entrada no histórico do indicante");
   assert.equal(histEco(B).length, 1, "uma só entrada no histórico do indicado");
-  assert.deepEqual([lastro().total_emitido, lastro().reserva_rs_centavos], [3, 300]);
+  assert.deepEqual([lastro().total_emitido, lastro().reserva_rs_centavos], [3, 150]);
 });
 
 // ── R5 — o indicante respeita o limite de 10/mês (os +50 param; o ECOQUILDO dele também) ───────────
@@ -139,7 +139,7 @@ test("R5 ao 11.º indicado do mês: indicante sem +50 nem ECOQUILDO, indicado re
   // O 11.º indicado recebe os pontos E o ECOQUILDO dele (são independentes do limite do indicante).
   assert.deepEqual([pontos(ALVO(11)), eco(ALVO(11))], [50, 1]);
   // Lastro: 10 indicações completas (2+1) + a 11.ª, que só emitiu o ECOQUILDO do indicado (1).
-  assert.deepEqual([lastro().total_emitido, lastro().reserva_rs_centavos], [31, 3100]);
+  assert.deepEqual([lastro().total_emitido, lastro().reserva_rs_centavos], [31, 1550]);
 });
 
 // ── R6 — FAIL-SOFT: o ECOQUILDO falha, os pontos de lance mantêm-se (nada quebra a indicação) ──────
@@ -202,4 +202,18 @@ test("R8 unitário: `creditarIndicacao` devolve `ecoQuildo` e usa as constantes 
   assert.deepEqual([eco("nao-e-endereco")], [0]);
   assert.equal(rBad.ecoQuildo.indicado.ok, false);
   assert.equal(rBad.ecoQuildo.indicado.code, "ENDERECO_INVALIDO");
+});
+
+// ── UTAC136 — Art. 23º v6: a indicação que leva o saldo a 50 dispara a conversão em Passe ──────────
+// (fecha o mutante M11 da prova do UTAC136, que sobrevivia: nenhum teste exercitava este emissor)
+test("UTAC136 indicante com 48 ECOQUILDO + 2 da indicação ⇒ converte 50 em 1 Passe (saldo 0, lastro «usado» 50)", async () => {
+  E.tabelas.eco_quildo.push({ endereco: A, saldo: 48, historico: [{ data: "t", motivo: "indicacao", delta: 48, ref: "semente", saldo: 48 }], atualizado_em: "t0" });
+  Object.assign(lastro(), { total_emitido: 48, reserva_rs_centavos: 48 * 50 });
+  const { codigo } = await R.gerarCodigoIndicacao(A);
+  const r = await usar(codigo, B);
+  assert.equal(r.status, 200);
+  assert.equal(eco(A), 0, "os 50 converteram-se");
+  assert.deepEqual(histEco(A).filter((h) => h.motivo === "conversao-passe").map((h) => [h.ref, h.delta]), [["eco-conversao:1", -50]]);
+  assert.equal(eco(B), 1, "o indicado (1) não chega a 50 — não converte");
+  assert.deepEqual([lastro().total_emitido, lastro().total_usado, lastro().reserva_rs_centavos], [51, 50, 50]);
 });

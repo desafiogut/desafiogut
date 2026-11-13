@@ -96,11 +96,14 @@ test("UTAC120→UTAC129 · o LANCE NÃO consome Passe nem responde sem_passes_di
   assert.doesNotMatch(codigo, /"sem_passes_disponiveis"/, "o lance voltou a exigir Passe");
 });
 
-test("UTAC120 · o PALPITE consome 1 Passe Programado e devolve o Passe se não registar", () => {
-  const src = fonte("../registar-palpite.mjs");
-  assert.match(src, /consumirPasse\(\{\s*endereco:\s*t\.endereco,\s*tipo:\s*"programado"/, "o palpite não consome o Passe");
-  assert.match(src, /"sem_passes_disponiveis"/);
-  assert.match(src, /devolverPasse\(/, "o palpite não devolve o Passe quando falha");
+// UTAC136 — Regulamento v6.0: o palpite é GRATUITO. O teste do UTAC120 («o PALPITE consome 1 Passe
+// Programado e devolve o Passe se não registar») foi invertido.
+test("UTAC136 · (era UTAC120: o PALPITE consome 1 Passe) o palpite NÃO consome nem devolve Passe", () => {
+  const src = fonte("../registar-palpite.mjs").replace(/\/\/.*$/gm, "");
+  assert.doesNotMatch(src, /consumirPasse\(/, "o palpite voltou a consumir Passe");
+  assert.doesNotMatch(src, /devolverPasse\(/);
+  assert.doesNotMatch(src, /passes-inventario/, "o palpite voltou a importar o inventário");
+  assert.doesNotMatch(src, /"sem_passes_disponiveis"/);
 });
 
 test("UTAC120 · a COMPRA credita o inventário depois de creditar os benefícios", () => {

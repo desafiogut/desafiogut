@@ -463,7 +463,9 @@ export async function registarResgate(endereco, { cartaoId, morada, idempotencyK
 // o movimento é `tipo:"compra"`, logo CONTA para o cartão (`pontosDeCompra`).
 // ══════════════════════════════════════════════════════════════════════════════════════
 
-export const PONTOS_FIDELIDADE_POR_PASSE = 10;
+// UTAC136 — Regulamento v6.0, Art. 7º: o Passe confere **1** ponto de fidelidade (era 10, UTAC110d).
+// Não retroactivo (mesma regra do R18-110d-4): as compras antigas ficam com os 10 que receberam.
+export const PONTOS_FIDELIDADE_POR_PASSE = 1;
 export const TIPOS_PASSE = Object.freeze(["relampago", "programado"]);
 
 /** `ref` da compra de um Passe tipado: `passe-<tipo>:<chave>`. */

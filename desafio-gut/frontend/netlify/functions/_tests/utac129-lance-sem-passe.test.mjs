@@ -119,9 +119,11 @@ test("A4 (entrada inválida) lance de 0 → recusado com erro visível, sem déb
   assert.deepEqual(chamadasInventario, []);
 });
 
-test("A5 (R18-129-3) o PALPITE continua a consumir 1 Passe Programado — fonte vigiada", () => {
-  const src = readFileSync(new URL("../registar-palpite.mjs", import.meta.url), "utf8");
-  assert.match(src, /consumirPasse\(\{\s*endereco:\s*t\.endereco,\s*tipo:\s*"programado"/);
+// UTAC136 — a R18-129-3 («o palpite continua a consumir 1 Passe Programado») foi SUBSTITUÍDA pelo
+// Regulamento v6.0 (palpite gratuito). A guarda inverte-se; o comportamento é provado em utac136-palpite-gratis.
+test("A5 (UTAC136, substitui R18-129-3) o PALPITE já NÃO consome Passe — fonte vigiada", () => {
+  const src = readFileSync(new URL("../registar-palpite.mjs", import.meta.url), "utf8").replace(/\/\/.*$/gm, "");
+  assert.doesNotMatch(src, /consumirPasse\(/);
 });
 
 test("A6 (achado MA2 do SEG4) a falha da blindagem devolve os PONTOS e nunca cria Passe", async () => {

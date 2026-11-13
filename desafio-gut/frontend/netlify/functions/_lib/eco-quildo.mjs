@@ -1,5 +1,7 @@
 // _lib/eco-quildo.mjs — UTAC110e. ECOQUILDO: moeda social interna com lastro em R$ (Via B).
 //
+// ⚠️ UTAC136 — Regulamento v6.0 (Arts. 21º-24º) substitui os artigos abaixo: 1 ECOQUILDO = R$ 0,50 e
+// 50 ECOQUILDOs convertem-se automaticamente em 1 Passe (`conversao-eco-passe.mjs`). O texto v5 fica à vista.
 // Regulamento 5.0, CAPÍTULO VII (Art. 47º-51º):
 //   • Art. 47º — moeda social do Grupo União e Trabalho, lastro em reais à razão de **1 ECOQUILDO = R$ 1,00**.
 //   • Art. 48º — concedido como benefício da aquisição do **Passe Desafio**; usado para produtos/serviços no
@@ -28,8 +30,17 @@
 
 import { getSupabase } from "./supabase-client.mjs";
 
-/** Art. 47º — 1 ECOQUILDO = R$ 1,00 = 100 centavos. ÚNICO lugar onde a razão é escrita. */
-export const CENTAVOS_POR_ECOQUILDO = 100;
+/** UTAC136 — Regulamento v6.0, Art. 21º: 1 ECOQUILDO = R$ 0,50 = 50 centavos (era R$ 1,00 / 100, Art. 47º v5).
+ *  ÚNICO lugar onde a razão é escrita. A reserva é sempre DERIVADA (`reservaDe`), por isso o próximo
+ *  movimento recalcula-a; a linha de produção foi recalculada no deploy (R18-136-3). */
+export const CENTAVOS_POR_ECOQUILDO = 50;
+
+/** UTAC136 — Art. 23º v6: a cada 50 ECOQUILDOs, conversão automática em 1 Passe Desafio. */
+export const ECOQUILDO_POR_CONVERSAO = 50;
+/** Motivo do débito da conversão (não é «uso-site»: fica separado no histórico — R18-136-2). */
+export const MOTIVO_CONVERSAO = "conversao-passe";
+/** `ref` da k-ésima conversão de um endereço (k ≥ 1). Idempotente pelo CAS do `aplicarMovimento`. */
+export const refConversao = (k) => `eco-conversao:${k}`;
 
 /** R18-110e-1 — 1 ECOQUILDO por Passe comprado. */
 export const ECOQUILDO_POR_PASSE = 1;
@@ -53,7 +64,7 @@ const normalizar = (e) => String(e ?? "").toLowerCase();
 const refValida = (r) => typeof r === "string" && r.length > 0 && r.length <= REF_MAX;
 const ehInteiroPositivo = (v) => Number.isInteger(v) && v > 0;
 
-/** Reserva em centavos que garante o lastro do que está EM CIRCULAÇÃO: (emitido − usado) × R$ 1,00. */
+/** Reserva em centavos que garante o lastro do que está EM CIRCULAÇÃO: (emitido − usado) × CENTAVOS_POR_ECOQUILDO (R$ 0,50 desde o UTAC136). */
 export const reservaDe = (totalEmitido, totalUsado) =>
   (Number(totalEmitido) - Number(totalUsado)) * CENTAVOS_POR_ECOQUILDO;
 
@@ -165,6 +176,15 @@ export function debitarEcoQuildo(endereco, valor, idempotencyKey) {
   const ref = refUso(idempotencyKey);
   if (!refValida(ref)) return Promise.resolve({ ok: false, code: "REF_INVALIDA" });
   return aplicarMovimento(endereco, -valor, MOTIVO_USO, ref);
+}
+
+/**
+ * UTAC136 — DEBITA os ECOQUILDOs de UMA conversão em Passe (Art. 23º v6), com a `ref` dada
+ * (`refConversao(k)`). Mesmo CAS/idempotência do resto do ficheiro; nunca deixa o saldo < 0.
+ */
+export function debitarConversaoEcoQuildo(endereco, ref) {
+  if (!refValida(ref) || !ref.startsWith("eco-conversao:")) return Promise.resolve({ ok: false, code: "REF_INVALIDA" });
+  return aplicarMovimento(endereco, -ECOQUILDO_POR_CONVERSAO, MOTIVO_CONVERSAO, ref);
 }
 
 /**

@@ -1,0 +1,13 @@
+M1 fidelidade volta a 10: RED (19 falha(s)) · md5 restaurado IDÊNTICO
+M2 ECOQUILDO volta a R$ 1,00: RED (21 falha(s)) · md5 restaurado IDÊNTICO
+M3 +200 pontos de lance de volta no Relâmpago: RED (10 falha(s)) · md5 restaurado IDÊNTICO
+M4 palpite volta a consumir Passe: RED (2 falha(s)) · md5 restaurado IDÊNTICO
+M5 conversão credita sem ter ganho o CAS (dupla emissão): RED (1 falha(s)) · md5 restaurado IDÊNTICO
+M6 conversão credita Passe Relâmpago: RED (8 falha(s)) · md5 restaurado IDÊNTICO
+M7 conversão não regista o «usado» no lastro: RED (5 falha(s)) · md5 restaurado IDÊNTICO
+M8 conversão não dá o ponto de fidelidade: RED (4 falha(s)) · md5 restaurado IDÊNTICO
+M9 compra de Passe não chama a conversão: RED (2 falha(s)) · md5 restaurado IDÊNTICO
+M10 crédito de admin não chama a conversão: RED (1 falha(s)) · md5 restaurado IDÊNTICO
+M11 indicação não chama a conversão: RED (1 falha(s)) · md5 restaurado IDÊNTICO
+M12 falha do inventário não desfaz o débito: RED (1 falha(s)) · md5 restaurado IDÊNTICO
+RESULTADO: 12/12 RED

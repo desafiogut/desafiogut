@@ -139,36 +139,35 @@ async function comprar({ key = "idem-110n-1", token } = {}) {
   return { status: r.status, corpo: await r.json().catch(() => null) };
 }
 
-test("B1 · comprar o Passe Relâmpago credita 200 pontos de lance (motivo passe-relampago)", async () => {
+// UTAC136 — Regulamento v6.0, Art. 6º: o Passe NÃO concede pontos de lance. Os B1/B2 abaixo afirmavam
+// o contrário (+200, UTAC110n); foram invertidos, com o texto antigo no nome entre parênteses.
+test("B1 · (era: credita 200 pontos de lance) comprar o Passe Relâmpago NÃO credita pontos de lance (UTAC136)", async () => {
   const { status, corpo } = await comprar({ key: "idem-110n-passe-1" });
   assert.equal(status, 201, JSON.stringify(corpo));
-  assert.equal(corpo.pontosLance, 200);
-  assert.equal(corpo.pontosFidelidade, 10);
+  assert.equal(corpo.pontosLance, undefined, "a resposta não anuncia pontos de lance");
+  assert.equal(corpo.pontosFidelidade, 1, "Art. 7º v6: 1 ponto de fidelidade");
   assert.equal(corpo.creditosLance, 0, "o crédito legado já não é creditado");
 
-  assert.equal(pontosLance(), 200);
-  assert.equal(Number(linha().creditos_lance), 0);
-  const mov = movimentos().at(-1);
-  assert.equal(mov.campo, "pontos_lance");
-  assert.equal(mov.motivo, "passe-relampago");
-  assert.equal(mov.delta, 200);
+  assert.equal(pontosLance(), 0);
+  assert.equal(Number(linha().creditos_lance ?? 0), 0);
+  assert.equal(movimentos().some((h) => h.motivo === "passe-relampago"), false, "nenhum movimento de pontos de lance");
 });
 
-test("B2 · idempotência do Passe: repetir a chave NÃO credita outros 200", async () => {
+test("B2 · idempotência do Passe: repetir a chave continua sem pontos de lance (UTAC136)", async () => {
   await comprar({ key: "idem-110n-passe-2" });
   const { status, corpo } = await comprar({ key: "idem-110n-passe-2" });
   assert.equal(status, 200);
   assert.equal(corpo.idempotent, true);
-  assert.equal(pontosLance(), 200, "uma compra, um crédito");
+  assert.equal(pontosLance(), 0, "o retry também não credita");
 });
 
-test("B3 · rollback: falha do ECOQUILDO desfaz os 200 pontos e o R$ volta", async () => {
+test("B3 · rollback: falha do ECOQUILDO desfaz a compra e o R$ volta (UTAC136: sem pontos de lance a desfazer)", async () => {
   // O lastro é actualizado (não inserido) por `registarEmissaoNoLastro` — a falha tem de ser no UPDATE.
   S.g.falhar.eco_quildo_lastro = { op: "update", code: "XX000" };
   const { status, corpo } = await comprar({ key: "idem-110n-passe-3" });
   assert.equal(status, 502, JSON.stringify(corpo));
-  assert.equal(pontosLance(), 0, "os 200 pontos de lance foram desfeitos");
-  assert.equal(Number(linha().pontos ?? 0), 0, "os 10 de fidelidade também");
+  assert.equal(pontosLance(), 0, "nenhum ponto de lance (nunca foram creditados)");
+  assert.equal(Number(linha()?.pontos ?? 0), 0, "o ponto de fidelidade foi desfeito");
   assert.equal(movimentos().some((h) => h.motivo === "passe-relampago"), false, "nem rasto no histórico");
   const saldo = S.tabelas.saldo_rs.find((l) => l.cliente_id === A)?.payload?.centavos;
   assert.equal(saldo, 500, "o R$ 2,00 voltou");

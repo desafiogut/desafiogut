@@ -218,7 +218,14 @@ async function creditarEcoQuildoDaIndicacao(indicante, indicado, indicanteRes) {
   if (criados.length === 0) return out; // nada criado (idempotência ou falha) → sem lastro a mexer
   const total = criados.reduce((s, c) => s + c.valor, 0);
   const lastro = await registarEmissaoNoLastro(total).catch(() => ({ ok: false, code: "ERRO_DB" }));
-  if (lastro.ok) return { ...out, emitidos: total };
+  if (lastro.ok) {
+    // UTAC136 — Art. 23º v6: depois do crédito com lastro, ≥ 50 ECOQUILDOs ⇒ conversão em Passe (fail-soft).
+    // Import PREGUIÇOSO de propósito: o `fontes-lance` é carregado pelo lance e pelo login; um import
+    // estático puxaria `passe-pontos`/`passes-inventario` para esses caminhos (grafo do lance intacto — GATE 4).
+    const { converterEcoEmPassesSeguro } = await import("./conversao-eco-passe.mjs");
+    for (const c of criados) await converterEcoEmPassesSeguro(c.endereco, "indicacao");
+    return { ...out, emitidos: total };
+  }
 
   // ECOQUILDO sem lastro em R$ não existe (Art. 50º — mesma doutrina do `_lib/comprar-passe-tipado.mjs`):
   // desfaz SÓ o que este passo criou, antes de desistir. ⚠️ A reversão é best-effort: se ELA também falhar
