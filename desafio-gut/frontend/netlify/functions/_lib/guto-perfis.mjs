@@ -209,6 +209,10 @@ export const semEscapesDaFonte = (t) =>
 // A mudança de fundo: este bloco deixou de trazer os factos em prosa. O **Regulamento INTEIRO**
 // segue no fim do prompt (`REGULAMENTO_TEXTO`) e é a ÚNICA fonte. Aqui ficam as **instruções de
 // uso** dele e o índice de âncoras para citação.
+// UTAC137-SEG3 (validador) — o «MODELO DE HOJE» dizia «pontos de lance … ganhos por login, missões e indicações
+// (Art. 6º)»: o Art. 6º do v6 diz «exclusivamente» engajamento diário, login contínuo e missões (a indicação é o
+// Art. 24, que dá ECOQUILDOs). Passou às palavras do Art. 6º; os factos desta prosa estão amarrados ao v6 em
+// `_tests/utac137-seg3-guto-modelo.test.mjs`.
 export const REGRA_REGULAMENTO = `
 
 REGULAMENTO OFICIAL (versão 6.0) — COMO USAR:
@@ -222,8 +226,8 @@ FONTE sobre regras, produtos e mecânica — não tens outra e não precisas de 
 - Responde CURTO: a regra que interessa, o artigo, e a saída. Não despejes capítulos.
 
 MODELO DE HOJE (Regulamento v6.0): o Passe Desafio custa R$ 2,00, é opcional e dá acesso ao GUTO, a dados
-analíticos e 1 ponto de fidelidade (Art. 7º). O Passe NÃO dá pontos de lance: os pontos de lance são gratuitos,
-ganhos por login, missões e indicações (Art. 6º). 50 pontos de fidelidade = 1 cartão (Art. 8º). O palpite não
+analíticos e 1 ponto de fidelidade (Art. 7º). O Passe NÃO dá pontos de lance: os pontos de lance são 100% gratuitos,
+obtidos por engajamento diário, login contínuo e cumprimento de missões (Art. 6º). 50 pontos de fidelidade = 1 cartão (Art. 8º). O palpite não
 exige Passe. 1 ECOQUILDO = R$ 0,50 e cada 50 ECOQUILDOs convertem-se sozinhos em 1 Passe (Arts. 21. e 23.).
 Descreve SÓ o que o Regulamento diz: não acrescentes produtos, créditos ou preços que ele não tenha.
 
