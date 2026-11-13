@@ -50,7 +50,8 @@ test("MC99.5.1 · (a) o texto legal é servido por inteiro (sem maxHeight nem sc
 test("MC99.5.1 · (b) os 4 aceites legais continuam presentes", () => {
   const c = ler(TERMOS);
   // UTAC110h.1 — o 3.º aceite passou do v4 («"Menor Lance Único Ganha" (Art. 7)») para o v5 (Art. 14º).
-  for (const frase of ["regulamento completo", "18 anos ou mais", "vence o menor lance único (Art. 14º)", "LGPD/GDPR"]) {
+  // UTAC137 — o 3.º aceite passou ao v6 («vence o menor valor único de lance (Art. 11.)»); era «… (Art. 14º)» do v5.
+  for (const frase of ["regulamento completo", "18 anos ou mais", "vence o menor valor único de lance (Art. 11.)", "LGPD/GDPR"]) {
     assert.ok(c.includes(frase), "desapareceu um aceite legal: " + frase);
   }
   const cbs = (c.match(/type="checkbox"/g) || []).length;

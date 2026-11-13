@@ -157,23 +157,26 @@ REGRA DE LINGUAGEM (obrigatória):
 // de `docs/GUTO-REGULAMENTO.md`: é um defeito do documento de origem, declarado, não uma
 // divergência destas âncoras. O teste compara-as com a fonte **já sem esse defeito**
 // (`semEscapesDaFonte`, abaixo).
+// ⭐ UTAC137 — as âncoras passaram ao Regulamento **v6.0** (`docs/REGULAMENTO-v6.md`, 30 artigos). Cada uma é
+// um excerto VERBATIM do artigo (o mc963 confere-o). As âncoras do v5.1 (Arts. 6/8/17/37/47…) ficam no git (`b740046`).
 export const ARTIGOS_V4 = {
-  "1":  "O DesafioGUT é um programa de fidelidade gamificado operado pela Associação Recreativa dos Nordestinos no Amazonas",
-  "6":  "O Passe Desafio é o produto digital adquirido pelo utilizador, com preço fixo de R$ 2,00 (dois reais), nas modalidades Passe Relâmpago e Passe Programado.",
-  "8":  "Cada Passe Desafio adquirido concede ao utilizador 10 (dez) pontos de fidelidade.",
-  "9":  "A cada 50 (cinquenta) pontos de fidelidade acumulados, o utilizador poderá resgatar gratuitamente 1 (um) cartão colecionável físico da Família Quildo, sem qualquer pagamento adicional.",
-  "12": "A Oferta Relâmpago é patrocinada pelos patrocinadores que adquirem as Cotas Bronze e Cotas Prata",
-  "14": "A Oferta Relâmpago é uma competição de habilidade: vence o participante que apresentar o menor valor em pontos de lance que ninguém mais escolheu (menor lance único).",
-  "17": "O Passe Desafio (R$ 2,00) é a transação principal que dá acesso a métricas, GUTO, ECOQUILDO e 200 pontos de lance.",
-  "18": "à razão de 1 ponto = R$ 0,01 (um centavo)",
-  "24": "A Oferta Programada é patrocinada pelos patrocinadores que adquirem as Cotas Ouro e Cotas Diamante",
-  "27": "Vence o palpite que ficar mais próximo do número real de lances apurado pela Associação.",
-  "33": "O palpite vencedor concede, como bónus de fidelidade, +2 (dois) pontos de fidelidade ao participante.",
-  "34": "Os pontos de bónus do palpite não contam para o resgate do cartão colecionável",
-  "37": "1 (um) Passe Desafio = 10 (dez) pontos de fidelidade",
-  "47": "O ECOQUILDO é uma moeda social interna do Grupo União e Trabalho, com lastro em reais à razão de 1 ECOQUILDO = R$ 1,00 (um real).",
-  "52": "será realizada exclusivamente por meio do sistema de faturamento do Google Play (Google Play Billing)",
+  "1":  "operado pela Associação Recreativa dos Nordestinos no Amazonas, nome fantasia Grupo União e Trabalho (GUT)",
+  "3":  "A aquisição do Passe Desafio é estritamente opcional",
+  "5":  "O Passe Desafio é um produto digital comercializado pelo valor fixo de R$ 2,00 (dois reais)",
+  "6":  "o Passe não concede pontos de lance. Os pontos utilizados para realizar os lances são 100% gratuitos",
+  "7":  "O Passe Desafio confere ao usuário o acesso ao assistente virtual de inteligência estratégica GUTO, dados analíticos de mercado e 1 (um) ponto de fidelidade ao sistema.",
+  "8":  "a cada 50 pontos de fidelidade acumulados, o sistema credita automaticamente 1 Cartão Digital ao perfil do usuário.",
+  "11": "A Oferta Relâmpago configura modalidade de e-commerce baseada em habilidade, estratégia e menor valor único de lance",
+  "12": "(onde 1 ponto equivale a R$ 0,01)",
+  "16": "prever o número total exato de lances realizados em um determinado ciclo.",
+  "17": "Vence a Oferta Programada apenas 1 (um) palpite",
+  "21": "1 ECOQUILDO equivalente a R$ 0,50 (cinquenta centavos)",
+  "23": "A cada 50 (cinquenta) ECOQUILDOs acumulados pelo usuário na plataforma, o sistema efetuará a conversão automática e imediata desse montante em 1 (um) Passe Desafio digital.",
+  "24": "o usuário indicante recebe 2 ECOQUILDOs e o usuário indicado recebe 1 ECOQUILDO",
+  "25": "será processada exclusivamente por meio do sistema oficial de pagamentos da Google Play (Google Billing).",
 };
+/** UTAC137 — no v6 o rótulo é «Art. 1º» … «Art. 9º» e «Art. 10.» em diante (como está no documento). */
+export const rotuloArtigo = (n) => (Number(n) < 10 ? `Art. ${n}º` : `Art. ${n}.`);
 
 /**
  * Remove o DEFEITO DE ORIGEM do Regulamento (ver **ERRATA DA FONTE** no topo de
@@ -208,27 +211,24 @@ export const semEscapesDaFonte = (t) =>
 // uso** dele e o índice de âncoras para citação.
 export const REGRA_REGULAMENTO = `
 
-REGULAMENTO OFICIAL (versão 5.0) — COMO USAR:
+REGULAMENTO OFICIAL (versão 6.0) — COMO USAR:
 O texto INTEGRAL do Regulamento Oficial do DesafioGUT segue no fim deste prompt. É a TUA ÚNICA
 FONTE sobre regras, produtos e mecânica — não tens outra e não precisas de outra.
-- Quando responderes sobre regras, CITA o artigo que fundamenta a resposta, assim: «segundo o
-  Art. 26º do Regulamento».
+- Quando responderes sobre regras, CITA o artigo que fundamenta a resposta, com o rótulo do documento:
+  «segundo o Art. 7º do Regulamento» ou «segundo o Art. 21. do Regulamento».
 - NUNCA cites um artigo que não esteja no texto abaixo e nunca inventes o número de um artigo.
 - Se a resposta NÃO estiver no Regulamento, di-lo com naturalidade e dá uma saída
   (${EMAIL_SUPORTE}) — não inventes regras, valores nem prazos.
 - Responde CURTO: a regra que interessa, o artigo, e a saída. Não despejes capítulos.
 
-MODELO DE HOJE (Via B): o produto digital é o Passe Desafio (R$ 2,00) — Passe Relâmpago (1 lance)
-e Passe Programado (1 palpite). Cada Passe dá 10 pontos de fidelidade; 50 pontos = 1 cartão
-colecionável físico. Há também a moeda social ECOQUILDO. Descreve SÓ o que o Regulamento diz:
-não acrescentes produtos, créditos ou preços que ele não tenha.
-
-⚠️ DEFEITO CONHECIDO DA FONTE (ver a secção «ERRATA DA FONTE» no texto do Regulamento): o
-documento oficial imprime por engano as marcas «R\\$» e «N\\text{ X}». LÊ-SE «R$» e «N X». Usa
-sempre os valores em reais — nunca repitas «R\\$» nem «\\text{» ao utilizador.
+MODELO DE HOJE (Regulamento v6.0): o Passe Desafio custa R$ 2,00, é opcional e dá acesso ao GUTO, a dados
+analíticos e 1 ponto de fidelidade (Art. 7º). O Passe NÃO dá pontos de lance: os pontos de lance são gratuitos,
+ganhos por login, missões e indicações (Art. 6º). 50 pontos de fidelidade = 1 cartão (Art. 8º). O palpite não
+exige Passe. 1 ECOQUILDO = R$ 0,50 e cada 50 ECOQUILDOs convertem-se sozinhos em 1 Passe (Arts. 21. e 23.).
+Descreve SÓ o que o Regulamento diz: não acrescentes produtos, créditos ou preços que ele não tenha.
 
 ÂNCORAS DE CITAÇÃO (índice curto; o que MANDA é o texto do Regulamento no fim):
-${Object.entries(ARTIGOS_V4).map(([n, t]) => `- Art. ${n}º — ${t}`).join("\n")}`;
+${Object.entries(ARTIGOS_V4).map(([n, t]) => `- ${rotuloArtigo(n)} — ${t}`).join("\n")}`;
 
 export function obterPromptSystem(perfil, { conformidade = false } = {}) {
   const base = conformidade ? PROMPT_CONFORMIDADE : (PROMPT_SYSTEMS[perfil] || PROMPT_SYSTEMS.visitante);

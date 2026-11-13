@@ -52,10 +52,17 @@ export const PROPORCOES = Object.freeze({
   acertosSequencia: 5, //    pontuacao-utils.mjs REGRAS.ACERTOS_PARA_BONUS
   cicloPontos: 225, //       fontes-lance.mjs PONTOS_CICLO_MISSOES
   cicloDias: 15, //          fontes-lance.mjs DIAS_CICLO_MISSOES (ceil(225 / 15))
-  passeRelampago: 200, //    ledger-lance.mjs PONTOS_LANCE_POR_PASSE_RELAMPAGO
-  fidelidadePorPasse: 10, // passe-pontos.mjs PONTOS_FIDELIDADE_POR_PASSE
-  ecoPorPasse: 1, //         R18-110e-1 (comprar-passe-tipado.mjs)
+  // UTAC137 (Regulamento v6.0, Art. 6º): o Passe NÃO dá pontos de lance. Era `passeRelampago: 200`
+  // (ledger-lance.mjs PONTOS_LANCE_POR_PASSE_RELAMPAGO, que deixou de ser usado na compra no UTAC136).
+  pontosLancePorPasse: 0, // comprar-passe-tipado.mjs não credita pontos de lance (UTAC136)
+  fidelidadePorPasse: 1, //  passe-pontos.mjs PONTOS_FIDELIDADE_POR_PASSE (Art. 7º v6; era 10)
+  ecoPorPasse: 1, //         R18-110e-1 (comprar-passe-tipado.mjs ECOQUILDO_POR_PASSE)
+  ecoCentavos: 50, //        eco-quildo.mjs CENTAVOS_POR_ECOQUILDO (Art. 21º v6: R$ 0,50; era R$ 1,00)
+  ecoPorConversao: 50, //    eco-quildo.mjs ECOQUILDO_POR_CONVERSAO (Art. 23º v6: 50 ECOQUILDO = 1 Passe)
+  pontosPorCartao: 50, //    passe-pontos.mjs PONTOS_POR_CARTAO (Art. 8º v6)
 });
+/** «R$ 0,50» a partir dos centavos de 1 ECOQUILDO (fonte única: `PROPORCOES.ecoCentavos`). */
+export const VALOR_ECOQUILDO_TEXTO = `R$ ${(PROPORCOES.ecoCentavos / 100).toFixed(2).replace(".", ",")}`;
 /** Pontos por dia de ciclo (login + missão). */
 export const CICLO_POR_DIA = PROPORCOES.login + PROPORCOES.missao;
 /** A missão exige um lance e o lance mínimo custa 1 ponto ⇒ o ciclo garante, no mínimo, isto LÍQUIDO. */
@@ -83,18 +90,27 @@ export const PROPORCOES_TEXTO = Object.freeze([
     linhas: Object.freeze([
       "Cada lance gasta o valor do lance em pontos de lance: um lance de 37 gasta 37 pontos.",
       "Só é possível dar um lance até o saldo de pontos de lance que você tem.",
-      "Quem vence compra o produto pelo valor do seu lance, à razão de 1 ponto = R$ 0,01 (Art. 18º).",
+      "Quem vence compra o produto pelo valor do seu lance, à razão de 1 ponto = R$ 0,01 (Art. 12).",
+    ]),
+  }),
+  // UTAC137 — era «O que o Passe Relâmpago dá: +200 pontos de lance (bônus) · 10 pontos de fidelidade · 1 ECOQUILDO».
+  Object.freeze({
+    id: "passe",
+    titulo: "O que o Passe Desafio dá",
+    linhas: Object.freeze([
+      "Não dá pontos de lance: os pontos de lance são 100% gratuitos, ganhos pelo engajamento no app (Art. 6º).",
+      `${PROPORCOES.fidelidadePorPasse} ponto de fidelidade; a cada ${PROPORCOES.pontosPorCartao} pontos de fidelidade, 1 cartão colecionável (Arts. 7º e 8º).`,
+      `${PROPORCOES.ecoPorPasse} ECOQUILDO.`,
+      "Acesso aos dados analíticos e ao GUTO (Art. 7º).",
+      "O Passe é opcional (Art. 3º): o lance gasta só pontos de lance e o palpite não exige Passe.",
     ]),
   }),
   Object.freeze({
-    id: "passe",
-    titulo: "O que o Passe Relâmpago dá",
+    id: "ecoquildo",
+    titulo: "ECOQUILDO",
     linhas: Object.freeze([
-      `+${PROPORCOES.passeRelampago} pontos de lance (bônus: não é condição para dar lances).`,
-      `${PROPORCOES.fidelidadePorPasse} pontos de fidelidade (rumo ao cartão colecionável).`,
-      `${PROPORCOES.ecoPorPasse} ECOQUILDO.`,
-      "Acesso às métricas da edição e ao GUTO.",
-      "O Passe Desafio é um produto; os pontos de lance são um benefício suplementar, não uma taxa para participar. Os pontos de lance também se ganham de graça pelo engajamento no app (Art. 17º).",
+      `1 ECOQUILDO vale ${VALOR_ECOQUILDO_TEXTO} (Art. 21).`,
+      `A cada ${PROPORCOES.ecoPorConversao} ECOQUILDOs, o sistema converte-os automaticamente em 1 Passe Desafio (Art. 23).`,
     ]),
   }),
 ]);

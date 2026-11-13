@@ -1,0 +1,11 @@
+M1 Regras Oficiais voltam a importar o v5: RED (11) · md5 IDÊNTICO
+M2 o parser só aceita o formato do v5: RED (2) · md5 IDÊNTICO
+M3 fidelidade por Passe volta a 10 no frontend: RED (3) · md5 IDÊNTICO
+M4 o Passe volta a anunciar +200 pontos de lance: RED (1) · md5 IDÊNTICO
+M5 o gate cita o Art. 6º com texto que o v6 não tem: RED (2) · md5 IDÊNTICO
+M6 a versão do aceite volta a 3.3 só no app: RED (1) · md5 IDÊNTICO
+M7 o palpite do Início volta a depender do Passe: RED (1) · md5 IDÊNTICO
+M8 a Carteira volta a dizer «Usável no site oficial»: RED (2) · md5 IDÊNTICO
+M9 o GUTO volta a declarar a versão 5.1: RED (1) · md5 IDÊNTICO
+M10 a âncora do Art. 6º do GUTO deixa de ser literal: RED (2) · md5 IDÊNTICO
+RESULTADO: 10/10 RED

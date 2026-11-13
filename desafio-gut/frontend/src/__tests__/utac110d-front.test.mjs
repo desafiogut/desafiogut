@@ -81,9 +81,13 @@ test("A · os dois Passes: endpoint, nome e benefício certos; tipo só por chav
   assert.equal(passeDoTipo("programado").endpoint, "comprar-passe-programado");
   // ⚠️ UTAC110j.5 — ALTERADO (declarado): o lance gasta PONTOS de lance pelo seu valor (backend UTAC110n).
   // Antes: assert.match(passeDoTipo("relampago").beneficio, /10 pontos \+ 1 lance/);
-  assert.match(passeDoTipo("relampago").beneficio, /10 pontos de fidelidade \+ 200 pontos de lance/);
+  // UTAC137 (v6, Arts. 6º/7º) — era /10 pontos de fidelidade \+ 200 pontos de lance/.
+  assert.match(passeDoTipo("relampago").beneficio, /^1 ponto de fidelidade \+ 1 ECOQUILDO/);
+  assert.doesNotMatch(passeDoTipo("relampago").beneficio, /pontos de lance|10 pontos/);
   assert.doesNotMatch(passeDoTipo("relampago").beneficio, /1 lance/);
-  assert.match(passeDoTipo("programado").beneficio, /10 pontos \+ 1 palpite/);
+  // UTAC137 — era /10 pontos \+ 1 palpite/ (o palpite deixou de exigir Passe).
+  assert.match(passeDoTipo("programado").beneficio, /^1 ponto de fidelidade \+ 1 ECOQUILDO/);
+  assert.doesNotMatch(passeDoTipo("programado").beneficio, /palpite|10 pontos/);
   for (const t of ["", "pontos", "constructor", "__proto__", "toString", 1, null, undefined, "Relampago"]) {
     assert.equal(passeDoTipo(t), null, `tipo ${String(t)} escolheu um Passe`);
   }

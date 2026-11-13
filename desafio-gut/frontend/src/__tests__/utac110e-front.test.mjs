@@ -152,9 +152,9 @@ const textoBloco = (h, nome) => semTags(bloco(h, nome).slice(bloco(h, nome).inde
 
 test("C · BIDIRECCIONAL — a Carteira mostra 0 ECOQUILDO e mostra 5 ECOQUILDO (e não os confunde com pontos/créditos)", async () => {
   const h0 = await carteiraCom(eco(0));
-  assert.equal(textoBloco(h0, "eco-quildo"), "🪙 ECOQUILDO 0 Usável no site oficial");
+  assert.equal(textoBloco(h0, "eco-quildo"), "🪙 ECOQUILDO 0 1 = R$ 0,50 · 50 = 1 Passe"); // UTAC137: era «Usável no site oficial»
   const h5 = await carteiraCom(eco(5));
-  assert.equal(textoBloco(h5, "eco-quildo"), "🪙 ECOQUILDO 5 Usável no site oficial");
+  assert.equal(textoBloco(h5, "eco-quildo"), "🪙 ECOQUILDO 5 1 = R$ 0,50 · 50 = 1 Passe"); // UTAC137: era «Usável no site oficial»
   // Valores distintos nos três saldos: 30 (cartão), 3 (créditos), 5 (ECOQUILDO).
   assert.match(semTags(bloco(h5, "fidelidade")), /30 \/ 50/);
   // ⚠️ UTAC110j.5 — ALTERADO (declarado): o card «créditos» passou a «pontos-lance» (o lance gasta PONTOS, UTAC110n).
@@ -169,7 +169,7 @@ test("C · BIDIRECCIONAL — a Carteira mostra 0 ECOQUILDO e mostra 5 ECOQUILDO 
 test("C · ilegível (erro de leitura) → «—» no ECOQUILDO + aviso vermelho; NUNCA «0»", async () => {
   for (const resp of [{ status: 500, json: {} }, { status: 200, json: { ok: true, saldo: "7" } }]) {
     const h = await carteiraCom(resp);
-    assert.equal(textoBloco(h, "eco-quildo"), "🪙 ECOQUILDO — Usável no site oficial");
+    assert.equal(textoBloco(h, "eco-quildo"), "🪙 ECOQUILDO — 1 = R$ 0,50 · 50 = 1 Passe"); // UTAC137: era «Usável no site oficial»
     assert.match(h, /data-erro-eco-quildo=""[^>]*color:#ef4444[^>]*>⚠️ Não foi possível ler seu ECOQUILDO agora\./);
   }
   // E o erro do ECOQUILDO não contamina os outros saldos (continuam legíveis).

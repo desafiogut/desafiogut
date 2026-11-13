@@ -97,6 +97,28 @@ function citacoes(src) {
 
 const V4 = ler("../../docs/REGULAMENTO-v4.md");
 const V5 = ler("../../docs/REGULAMENTO-v5.md");
+// UTAC137 — a UI e o gate passaram a citar o Regulamento **v6.0** (o v5 fica lido só como histórico).
+const V6 = ler("../../docs/REGULAMENTO-v6.md");
+/** Linha do artigo N do v6 («Art. 1º …» / «Art. 10. …»), ou null. */
+const artigoV6 = (n) => V6.match(new RegExp("^Art\\. " + n + "(?:º|\\.) .*", "m"));
+/** UTAC137 — palavras-chave por artigo do v6 (cada uma consta do PRÓPRIO artigo — verificado no teste). */
+const EXIGIDO_V6 = {
+  "1":  ["Associação", "Grupo União e Trabalho", "dropshipping"],
+  "2":  ["18", "maiores"],
+  "3":  ["opcional"],
+  "5":  ["Passe Desafio", "R$ 2,00"],
+  "6":  ["pontos de lance", "gratuitos"],
+  "7":  ["ponto de fidelidade", "GUTO", "dados analíticos"],
+  "8":  ["50", "cartão"],
+  "11": ["habilidade", "menor valor único de lance"],
+  "12": ["1 ponto", "R$ 0,01"],
+  "17": ["palpite"],
+  "21": ["ECOQUILDO", "R$ 0,50"],
+  "23": ["ECOQUILDOs", "Passe Desafio"],
+  "25": ["Google"],
+  "27": ["LGPD", "DPO"],
+  "30": ["Cartório"],
+};
 const GATE = "src/components/TermosConsentimento.jsx";
 
 // UTAC110h.1 — mapa do gate contra o v5 (mesma regra: assunto do artigo na janela da citação).
@@ -132,7 +154,7 @@ test("o v4 é legível e tem os artigos citados (guarda contra medição vazia)"
 // A regra deste ficheiro mantém-se igual (assunto do artigo na janela da citação; o desconhecido
 // REPROVA); muda o mapa: era o do v4 (`EXIGIDO`, que fica só como registo histórico verificado
 // contra o v4), passa a ser o do v5 (`EXIGIDO_V5`) — e o assunto tem de constar do artigo no v5.
-test("cada (Art. Nº) na UI aponta para o artigo certo do v5 — palavra-chave na mesma linha", () => {
+test("cada (Art. Nº) na UI aponta para o artigo certo do v6 — palavra-chave na mesma linha (UTAC137; era o v5)", () => {
   const fs_ = ficheirosUI();
   assert.ok(fs_.length > 100, `a varredura viu ${fs_.length} ficheiros — demasiado poucos, medição suspeita`);
   const problemas = [];
@@ -154,8 +176,8 @@ test("cada (Art. Nº) na UI aponta para o artigo certo do v5 — palavra-chave n
       total++;
       const grupo = porLinha.get(c.linha);
       const chaves = grupo.length >= 2
-        ? grupo.flatMap((n) => EXIGIDO_V5[n] || [])
-        : EXIGIDO_V5[c.artigo];
+        ? grupo.flatMap((n) => EXIGIDO_V6[n] || [])
+        : EXIGIDO_V6[c.artigo];
       // ⚠️ O DEFAULT É REPROVAR, não ignorar. A 1.ª versão fazia `continue` para artigos fora
       // do mapa — e a mutação do validador (`Art. 7º` -> `Art. 9º`) SOBREVIVEU por isso mesmo:
       // o 9 não estava mapeado, logo não era julgado. Uma citação que o teste não sabe verificar
@@ -168,10 +190,11 @@ test("cada (Art. Nº) na UI aponta para o artigo certo do v5 — palavra-chave n
       if (!chaves.some((k) => linha.includes(k.toLowerCase()))) {
         problemas.push(`${f}:${c.linha + 1} cita Art. ${c.artigo}º sem nenhuma de [${chaves.join(", ")}]`);
       }
-      // E o assunto tem de estar no PRÓPRIO artigo do v5 (não basta o mapa dizer).
-      const art = V5.match(new RegExp("^Art\\. " + c.artigo + "º — .*", "m"));
-      if (!art || !chaves.some((k) => art[0].toLowerCase().includes(k.toLowerCase()))) {
-        problemas.push(`${f}:${c.linha + 1} Art. ${c.artigo}º: o v5 não trata de [${chaves.join(", ")}]`);
+      // E o assunto tem de estar no PRÓPRIO artigo do v6 (não basta o mapa dizer). Numa linha com vários artigos,
+      // basta que um deles trate do assunto.
+      const arts = (grupo.length >= 2 ? grupo : [c.artigo]).map(artigoV6).filter(Boolean).map((a) => a[0].toLowerCase());
+      if (!arts.length || !chaves.some((k) => arts.some((a) => a.includes(k.toLowerCase())))) {
+        problemas.push(`${f}:${c.linha + 1} Art. ${c.artigo}: o v6 não trata de [${chaves.join(", ")}]`);
       }
     }
   }
@@ -189,17 +212,17 @@ test("as palavras-chave exigidas constam mesmo do texto do artigo no v4 (não in
   }
 });
 
-test("UTAC110h.1 · o gate legal cita o Regulamento v5.0 com o assunto certo (e o assunto está no v5)", () => {
+test("UTAC137 · o gate legal cita o Regulamento v6.0 com o assunto certo (e o assunto está no v6)", () => {
   const lista = citacoes(ler(GATE));
   assert.ok(lista.length >= 10, `o gate tem só ${lista.length} citações — medição suspeita`);
   const problemas = [];
   for (const c of lista) {
-    const chaves = EXIGIDO_V5[c.artigo];
-    if (!chaves) { problemas.push(`gate:${c.linha + 1} cita Art. ${c.artigo}º, fora do mapa do v5`); continue; }
+    const chaves = EXIGIDO_V6[c.artigo];
+    if (!chaves) { problemas.push(`gate:${c.linha + 1} cita Art. ${c.artigo}, fora do mapa do v6`); continue; }
     const janela = c.texto.toLowerCase();
     if (!chaves.some((k) => janela.includes(k.toLowerCase()))) problemas.push(`gate:${c.linha + 1} Art. ${c.artigo}º sem [${chaves.join(", ")}]`);
-    const m = V5.match(new RegExp("^Art\\. " + c.artigo + "º — .*", "m"));
-    if (!m || !chaves.some((k) => m[0].toLowerCase().includes(k.toLowerCase()))) problemas.push(`v5 Art. ${c.artigo}º não trata de [${chaves.join(", ")}] — mapa inventado`);
+    const m = artigoV6(c.artigo);
+    if (!m || !chaves.some((k) => m[0].toLowerCase().includes(k.toLowerCase()))) problemas.push(`v6 Art. ${c.artigo} não trata de [${chaves.join(", ")}] — mapa inventado`);
   }
   assert.deepEqual(problemas, [], problemas.join(" | "));
 });

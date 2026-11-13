@@ -46,8 +46,10 @@ const DOC_OK = semEscapesDaFonte(DOC);
 const DOC_UMA = DOC_OK.replace(/\s+/g, " ");
 
 /** Texto de um artigo do documento, normalizado (espaços colapsados). */
+// UTAC137 — o v6 escreve «Art. 1º O presente…» e «Art. 10. A…» (sem travessão). O padrão aceita os dois
+// formatos (o do v5 era «Art. Nº — …») e corta no artigo seguinte ou no capítulo seguinte.
 function artigo(n) {
-  const m = DOC_UMA.match(new RegExp(`Art\\. ${n}º\\s*[—–-]\\s*([\\s\\S]*?)(?=Art\\. \\d+º|$)`));
+  const m = DOC_UMA.match(new RegExp(`Art\\. ${n}(?:º|\\.)(?:\\s*[—–-])?\\s+([\\s\\S]*?)(?=Art\\. \\d+(?:º|\\.) |#+ CAPÍTULO|$)`));
   return m ? m[1].trim() : null;
 }
 
@@ -96,9 +98,10 @@ test("(b) cada âncora de ARTIGOS_V4 é um excerto VERBATIM do artigo correspond
 });
 
 test("(b2) os valores críticos estão ancorados nos artigos certos", () => {
+  // UTAC137 (v6) — eram Arts. 6/8/9/18/33/47 do v5 (R$ 2,00 · 10 pontos · 50 pontos · R$ 0,01 · +2 · R$ 1,00).
   for (const [n, frag] of [
-    ["6", "R$ 2,00"], ["8", "10 (dez) pontos"], ["9", "50 (cinquenta) pontos"],
-    ["18", "R$ 0,01"], ["33", "+2 (dois) pontos"], ["47", "R$ 1,00"],
+    ["5", "R$ 2,00"], ["6", "o Passe não concede pontos de lance"], ["7", "1 (um) ponto de fidelidade"],
+    ["8", "a cada 50 pontos de fidelidade"], ["12", "R$ 0,01"], ["21", "R$ 0,50"], ["23", "50 (cinquenta) ECOQUILDOs"],
   ]) {
     assert.ok(artigo(n), `Art. ${n}º ausente`);
     assert.ok(artigo(n).includes(frag), `Art. ${n}º não contém «${frag}»`);
@@ -108,11 +111,15 @@ test("(b2) os valores críticos estão ancorados nos artigos certos", () => {
 // ── (c) o módulo do RUNTIME espelha o documento ─────────────────────────────
 
 test("(c) `_lib/guto-regulamento.mjs` é o documento tal e qual (controlo de vitalidade incluído)", () => {
-  assert.ok(DOC.length > 15_000, `o documento parece vazio (${DOC.length} chars) — medição inválida`);
+  // UTAC137: o v6 tem ~7,5 mil caracteres (era > 15 000 com o v5.1). O controlo de vitalidade acompanha.
+  assert.ok(DOC.length > 6_000, `o documento parece vazio (${DOC.length} chars) — medição inválida`);
   assert.equal(REGULAMENTO_TEXTO, DOC,
     "o módulo que o runtime importa DIVERGIU de " + REGULAMENTO_FONTE +
     " — regenerar (ver cabeçalho do módulo)");
-  assert.equal(REGULAMENTO_VERSAO, "5.1", "UTAC110k.1: o Regulamento passou a v5.1 (Art. 17º) — o módulo do GUTO acompanha");
+  assert.equal(REGULAMENTO_VERSAO, "6.0", "UTAC137: o Regulamento passou a v6.0 — o módulo do GUTO acompanha");
+  // e o corpo do documento do GUTO é o texto registado, byte a byte (3.º sítio da invariante)
+  const V6 = readFileSync(resolve(RAIZ, "docs", "REGULAMENTO-v6.md"), "utf8");
+  assert.ok(DOC.endsWith(V6), "docs/GUTO-REGULAMENTO.md deixou de terminar no texto de docs/REGULAMENTO-v6.md");
 });
 
 test("(c2) o texto que vai no prompt está LIMPO das marcas de formatação (UTAC110c-1b)", () => {
@@ -123,66 +130,43 @@ test("(c2) o texto que vai no prompt está LIMPO das marcas de formatação (UTA
   // continua defeituoso — isso é documentado na ERRATA, não propagado para o prompt.
   assert.doesNotMatch(REGULAMENTO_TEXTO, /\\text\{/, "sobrou a marca `text{` no texto do prompt");
   assert.doesNotMatch(REGULAMENTO_TEXTO, /\\\$/, "sobrou barra invertida antes do cifrão");
-  assert.match(REGULAMENTO_TEXTO, /preço fixo de R\$ 2,00/, "o Art. 6º tem de trazer o valor legível");
-  assert.match(REGULAMENTO_TEXTO, /1 ponto = R\$ 0,01/, "o Art. 18º tem de trazer o valor legível");
-  assert.match(REGULAMENTO_TEXTO, /1 ECOQUILDO = R\$ 1,00/, "o Art. 47º tem de trazer o valor legível");
+  // UTAC137 (v6): Art. 5º R$ 2,00 · Art. 12. R$ 0,01 · Art. 21. R$ 0,50 (no v5 eram os Arts. 6º/18º/47º).
+  assert.match(REGULAMENTO_TEXTO, /valor fixo de R\$ 2,00/, "o Art. 5º tem de trazer o valor legível");
+  assert.match(REGULAMENTO_TEXTO, /1 ponto equivale a R\$ 0,01/, "o Art. 12. tem de trazer o valor legível");
+  assert.match(REGULAMENTO_TEXTO, /1 ECOQUILDO equivalente a R\$ 0,50/, "o Art. 21. tem de trazer o valor legível");
+  assert.doesNotMatch(REGULAMENTO_TEXTO, /1 ECOQUILDO = R\$ 1,00|10 \(dez\) pontos de fidelidade|200 pontos de lance/,
+    "sobrou um valor do v5 no texto do GUTO");
 });
 
 // ── (d) estrutura do documento ─────────────────────────────────────────────
 
-test("(d) o documento tem 12 capítulos e os 72 artigos, sem lacunas", () => {
+// UTAC137 — (d) e (e) eram do v5.1: 12 capítulos / 72 artigos e a ERRATA DA FONTE do PDF (as marcas `R\$`).
+// O v6 é texto limpo (sem marcas de formatação), 6 capítulos e 30 artigos.
+test("(d) o documento tem 6 capítulos e os 30 artigos (v6.0), sem lacunas", () => {
   const caps = DOC_UMA.match(/CAPÍTULO [IVX]+/g) || [];
-  assert.equal(new Set(caps).size, 12, `capítulos: ${new Set(caps).size}`);
-  const arts = new Set([...DOC_UMA.matchAll(/Art\. (\d+)º/g)].map((m) => Number(m[1])));
+  assert.equal(new Set(caps).size, 6, `capítulos: ${new Set(caps).size}`);
+  const arts = new Set([...DOC_UMA.matchAll(/Art\. (\d+)(?:º|\.) /g)].map((m) => Number(m[1])));
   const falta = [];
-  for (let i = 1; i <= 72; i++) if (!arts.has(i)) falta.push(i);
+  for (let i = 1; i <= 30; i++) if (!arts.has(i)) falta.push(i);
   assert.deepEqual(falta, [], `artigos em falta no documento: ${falta.join(", ")}`);
-  assert.ok(arts.has(72), "o Art. 72º (disposições finais) tem de existir");
+  assert.ok(!arts.has(31), "o v6 acaba no Art. 30.");
 });
 
-// ── (e) ZERO marcas de formatação, e a ERRATA a documentar o defeito ───────
-
-test("(e) ZERO marcas de formatação no ficheiro, com a ERRATA a documentar o defeito", () => {
-  // ⚠️ ATÉ ao UTAC110c-1 (inclusive) este teste contava **9** escapes no CORPO e exigia-os lá.
-  // O UTAC110c-1b inverteu-o: o corpo é o texto que o GUTO lê, logo não pode conter as marcas.
-  // ✅ **RATIFICADO PELO OPERADOR (R18-110c-1b-1, 2026-10-13)**, depois de o validador adversarial
-  // julgar a mudança legítima. NÃO é uma decisão do executor: o conflito do enunciado (§7 «zero
-  // ocorrências no ficheiro» vs §11 «não alterar a ERRATA») foi declarado ANTES de agir, com 3 opções
-  // medidas em `_logs/UTAC110c-1b_SEG-1_MEDICAO.md §-1.e`. A notação que o teste agora vigia é a
-  // ratificada.
-  // Conta-se no FICHEIRO INTEIRO (não só no corpo): a ERRATA passou a descrever o defeito em
-  // PALAVRAS, sem o reproduzir — foi a forma de satisfazer os dois critérios do enunciado
-  // («zero ocorrências no ficheiro limpo» E «manter a ERRATA»), que colidiam enquanto a ERRATA
-  // citava os escapes literalmente.
+test("(e) ZERO marcas de formatação no ficheiro (o v6 não tem o defeito do PDF do v5.1)", () => {
   const marcas = DOC.match(/\\text\{|\\\$/g) || [];
-  assert.equal(marcas.length, 0,
-    `ficaram ${marcas.length} marcas de formatação em ${REGULAMENTO_FONTE}`);
-  const errata = DOC.slice(0, DOC.indexOf("CAPÍTULO I"));
-  assert.match(errata, /ERRATA DA FONTE/, "a ERRATA tem de ficar (documenta o defeito do PDF)");
-  assert.match(errata, /barra invertida/i, "a ERRATA descreve o defeito em palavras");
-  assert.match(errata, /Art\. 6º/);
-  assert.match(errata, /Art\. 47º/);
-  // e a ERRATA já NÃO pode afirmar que a transcrição mantém o escape (era verdade até ao 1b)
-  assert.doesNotMatch(errata, /NÃO corrige o escape/);
-
-  // ⭐ FIX DO ACHADO 2 DO VALIDADOR DO 1b. A 1.ª versão deste teste (e) fixava apenas a EXISTÊNCIA
-  // da ERRATA e 3 needles de forma — e por isso a coluna «valor correcto» ficou SEM guarda: medido
-  // pelo validador, corromper «**R$ 2,00**» para «**R$ 9,99**» em SIMETRIA nas duas cópias dava
-  // 10/10 VERDE. E a ERRATA ENTRA NO PROMPT (o validador mediu: `includes('ERRATA DA FONTE')` = true
-  // nos 5 prompts), logo o valor errado seria lido pelo GUTO. Fixam-se as 5 células de valor.
-  for (const celula of ["**R$ 2,00**", "**1 ponto = R$ 0,01**", "**1 Passe Desafio = 10 pontos**",
-                        "**50 pontos = 1 cartão**", "**1 ECOQUILDO = R$ 1,00**"]) {
-    assert.ok(errata.includes(celula), `a ERRATA perdeu o valor «${celula}» (entra no prompt!)`);
-  }
+  assert.equal(marcas.length, 0, `ficaram ${marcas.length} marcas de formatação em ${REGULAMENTO_FONTE}`);
+  assert.doesNotMatch(REGRA_REGULAMENTO, /ERRATA DA FONTE|DEFEITO CONHECIDO/, "o prompt ainda fala do defeito do PDF do v5.1");
 });
 
 // ── (f) a metade que faz o teste valer: o verificador MORDE ────────────────
 
 test("(f) BIDIRECCIONAL: o verificador RECUSA uma âncora que o artigo não diz", () => {
   assert.doesNotThrow(() => exigirAncora("6", ARTIGOS_V4["6"]), "o caso válido tem de passar");
-  assert.throws(() => exigirAncora("6", "O Passe Desafio custa R$ 5,00 (cinco reais)"),
+  assert.throws(() => exigirAncora("5", "O Passe Desafio é um produto digital comercializado pelo valor fixo de R$ 5,00"),
     /não contém/, "uma âncora falsa tem de ser recusada");
-  assert.throws(() => exigirAncora("34", "Os pontos do palpite CONTAM para o cartão"),
-    /não contém/, "uma âncora com o sentido invertido tem de ser recusada");
+  assert.throws(() => exigirAncora("6", "o Passe concede 200 pontos de lance"),
+    /não contém/, "uma âncora com o sentido invertido (o +200 do v5.1) tem de ser recusada");
+  assert.throws(() => exigirAncora("7", "1 (um) ponto de fidelidade ao sistema. Os pontos de lance"),
+    /não contém/, "o corte do artigo não pode engolir o artigo seguinte");
   assert.throws(() => exigirAncora("999", "seja o que for"), /ausente/);
 });

@@ -1,304 +1,55 @@
-# Regulamento Oficial do DesafioGUT — Programa de Fidelidade Gamificado
+# Regulamento Oficial do DesafioGUT — fonte do GUTO
 
-> **Versão 5.1** · **vigente a partir de 02 de novembro de 2026**
+> **Versão 6.0** · aprovada pelo jurídico · vigência a partir do registo no RTD (Art. 30)
 >
 > **Fonte de verdade para o GUTO. Não alterar sem actualizar o regulamento oficial.**
 >
-> Transcrição do ficheiro oficial `Regulamento Oficial DesafioGUT.pdf` (7 páginas, 156 810 B),
-> obtida do **texto nativo do PDF** (`pymupdf 1.28.2` — não de OCR).
-> **Duas normalizações, ambas declaradas e provadas por asserção a cada geração:**
-> (a) as **quebras de linha do PDF** foram reagrupadas em parágrafos e o **espaço de largura zero**
-> (U+200B) que o PDF cola aos marcadores foi removido — alterações **só de espaços brancos**;
-> (b) o glifo `●` do PDF passou a marcador de lista Markdown (`- `).
-> **O conteúdo não foi editado** — 12 capítulos, 72 artigos (1..72), sem lacunas.
+> UTAC137: o corpo abaixo do separador é **cópia byte a byte** de `docs/REGULAMENTO-v6.md` (o texto
+> registado em cartório no UTAC135; 6 capítulos, 30 artigos). Nenhuma normalização.
+> A transcrição do v5.1 (com a ERRATA DA FONTE do PDF) fica no histórico do git — commit `b740046`.
 
 ---
 
-## ⚠️ ERRATA DA FONTE — **anotação desta transcrição, NÃO é texto do Regulamento**
-
-> **UTAC110c-1b.** O CORPO abaixo está LIMPO (é o texto que o GUTO lê). Esta ERRATA mantém-se,
-> noutra notação, para **documentar o defeito do PDF oficial** — pendência do cliente.
-
-O PDF oficial **imprime as marcas de formatação com que foi gerado**: uma **barra invertida** antes do
-**cifrão** e a sequência **`text{` … `}`**, também precedida de barra invertida. Está no documento
-**visível** (confirmado por renderização a 150 dpi e por dois extractores independentes). São **9
-marcas**, nos artigos dos valores:
-
-| artigo | o PDF oficial imprime | valor correcto |
-|---|---|---|
-| Art. 6º | `R` + barra invertida + `$` + ` 2,00` | **R$ 2,00** |
-| Art. 18º | `1` + barra invertida + `text{` + ` ponto}` + ` = R` + barra invertida + `$` + ` 0,01` | **1 ponto = R$ 0,01** |
-| Art. 37º | `1` + barra invertida + `text{ (um) Passe Desafio}` = `10` + barra invertida + `text{ (dez) pontos de fidelidade}` | **1 Passe Desafio = 10 pontos** |
-| Art. 37º | `50` + barra invertida + `text{ (cinquenta) pontos de fidelidade}` = `1` + barra invertida + `text{ (um) cartão colecionável físico}` | **50 pontos = 1 cartão** |
-| Art. 47º | `1` + barra invertida + `text{ ECOQUILDO}` = `R` + barra invertida + `$` + ` 1,00` | **1 ECOQUILDO = R$ 1,00** |
-
-Onde o PDF mostra essas marcas, o valor é o da última coluna. **Pendência (RTD/Cartório):** o
-documento registado não deve imprimir marcas de formatação no lugar dos valores.
-
----
-
-REGULAMENTO OFICIAL DO DESAFIOGUT
-
-Programa de Fidelidade Gamificado
-
-Versão 5.1 · Vigente a partir de 02 de novembro de 2026
-
-CAPÍTULO I — DISPOSIÇÕES PRELIMINARES
-
-Art. 1º — O DesafioGUT é um programa de fidelidade gamificado operado pela Associação Recreativa dos Nordestinos no Amazonas, nome fantasia Grupo União e Trabalho (GUT), CNPJ nº 23.040.066/0001-00, com sede em Manaus/AM, no âmbito do projeto ambiental Família Quildo — Todos Contra os Desperdícios.
-
-Art. 2º — O DesafioGUT funciona como plataforma de comércio eletrónico por dropshipping, com duas modalidades distintas:
-
-- I — Oferta Relâmpago: modalidade de menor lance único, com duração entre minutos e horas;
-
-- II — Oferta Programada: modalidade de palpite, com duração entre dias e semanas.
-
-Art. 3º — O objetivo do DesafioGUT é captar recursos financeiros para as ações sociais e ambientais do Grupo União e Trabalho, em especial o projeto Família Quildo.
-
-Art. 4º — O DesafioGUT será implantado a partir de 02 de novembro de 2026, por tempo indeterminado, sob a coordenação da diretoria do Grupo União e Trabalho.
-
-Art. 5º — Poderão participar do DesafioGUT pessoas físicas e jurídicas, maiores de 18 (dezoito) anos, regularmente cadastradas no aplicativo. O aplicativo é classificado como 18 (dezoito) anos pela Classificação Indicativa (ClassInd) e pelo sistema IARC. Parágrafo único — A participação de menores de idade é expressamente vedada. Cadastros com dados fraudulentos serão cancelados automaticamente, com as implicações judiciais cabíveis.
-
-CAPÍTULO II — DOS PASSES DESAFIO
-
-Art. 6º — O Passe Desafio é o produto digital adquirido pelo utilizador, com preço fixo de R$ 2,00 (dois reais), nas modalidades Passe Relâmpago e Passe Programado.
-
-Art. 7º — A aquisição do Passe Desafio é uma transação separada e genuína para fornecimento de produtos digitais independentes do programa de fidelidade. O benefício de participação é complementar e subordinado a essa aquisição.
-
-Art. 8º — Cada Passe Desafio adquirido concede ao utilizador 10 (dez) pontos de fidelidade. Esta proporção é fixa e igual para todos os utilizadores.
-
-Art. 9º — A cada 50 (cinquenta) pontos de fidelidade acumulados, o utilizador poderá resgatar gratuitamente 1 (um) cartão colecionável físico da Família Quildo, sem qualquer pagamento adicional. Esta proporção é fixa e igual para todos os utilizadores.
-
-Art. 10º — Os pontos de fidelidade não têm prazo de validade enquanto o programa estiver ativo e a conta se mantiver em situação regular. Os pontos não são convertíveis em dinheiro e não são transferíveis entre contas.
-
-Art. 11º — A aquisição de qualquer Passe é opcional e decorre de decisão livre do utilizador. O aplicativo é gratuito e não exige nenhuma compra para ser utilizado.
-
-CAPÍTULO III — DA OFERTA RELÂMPAGO (MENOR LANCE ÚNICO)
-
-Secção I — Do Patrocínio
-
-Art. 12º — A Oferta Relâmpago é patrocinada pelos patrocinadores que adquirem as Cotas Bronze e Cotas Prata, cujas condições, valores, prazos, visibilidade e obrigações são definidos em contrato privado de patrocínio firmado entre a Associação e cada patrocinador, não integrando o presente Regulamento.
-
-Secção II — Do Passe Relâmpago
-
-Art. 13º — O Passe Relâmpago é o produto digital que concede ao utilizador:
-
-- I — 1 (um) lance na Oferta Relâmpago;
-
-- II — 10 (dez) pontos de fidelidade;
-
-- III — Moeda social ECOQUILDO;
-
-- IV — Acesso às métricas e dados estratégicos;
-
-- V — Acesso ao assistente virtual GUTO.
-
-Secção III — Da Mecânica do Menor Lance Único
-
-Art. 14º — A Oferta Relâmpago é uma competição de habilidade: vence o participante que apresentar o menor valor em pontos de lance que ninguém mais escolheu (menor lance único).
-
-Art. 15º — O resultado depende exclusivamente da estratégia do participante — escolha do valor e leitura do comportamento dos demais — e não de mecanismos de aleatoriedade, geradores de números aleatórios (RNG) ou sorteios.
-
-Art. 16º — O lance é registado em pontos de lance, obtidos por engajamento no aplicativo:
-
-- I — Bónus de boas-vindas no registo;
-
-- II — Login diário no aplicativo;
-
-- III — Conclusão de missões diárias;
-
-- IV — Indicação de novos utilizadores;
-
-- V — Sequências de participação;
-
-- VI — Bónus incluído na aquisição do Passe Relâmpago.
-
-Art. 17º — O Passe Desafio (R$ 2,00) é a transação principal que dá acesso a métricas, GUTO, ECOQUILDO e 200 pontos de lance. Os pontos de lance são um benefício suplementar e não são condição para participar: o aplicativo concede-os também gratuitamente por engajamento, e a aquisição do Passe apenas antecipa esse saldo, não sendo uma taxa separada.
-
-Secção IV — Da Aquisição do Produto
-
-Art. 18º — O vencedor do Menor Lance Único adquire o produto patrocinado pelo patrocinador (Cota Bronze ou Prata) pelo valor do seu lance, à razão de 1 ponto = R$ 0,01 (um centavo).
-
-Art. 19º — O pagamento do produto pelo vencedor é realizado via PIX (código/QR Code gerado pelo aplicativo) para a conta institucional do Grupo União e Trabalho (CNPJ 23.040.066/0001-00), caracterizando uma compra de bem físico, fora do âmbito de aplicação do Google Play Billing.
-
-Art. 20º — O produto é entregue no endereço indicado pelo adquirente, por dropshipping, nos
-
-termos do Capítulo VI deste Regulamento.
-
-Art. 21º — O participante que não vencer mantém integralmente os pontos de fidelidade e o ECOQUILDO adquiridos com o Passe, bem como o acesso ao assistente virtual GUTO e às métricas e dados estratégicos a que o Passe adquirido dá acesso.
-
-Secção V — Das Mensagens de Acompanhamento
-
-Art. 22º — Durante a Oferta Relâmpago, o sistema envia mensagens recorrentes ao participante:
-
-- a) "Seu lance é o menor e único até agora — parabéns";
-
-- b) "Seu lance não é o menor, mas é único — tente novamente";
-
-- c) "Já recebemos um lance igual ao seu — tente novamente";
-
-- d) "O valor digitado não é válido — tente novamente";
-
-- e) "Lance escrito errado — envie apenas o valor do seu lance";
-
-- f) "Fique de olho no relógio para o final da edição e o lance vencedor".
-
-Art. 23º — O sistema bloqueia o lance que utilize pontos de lance repetidos, inexistentes ou não creditados.
-
-CAPÍTULO IV — DA OFERTA PROGRAMADA (PALPITE)
-
-Secção I — Do Patrocínio
-
-Art. 24º — A Oferta Programada é patrocinada pelos patrocinadores que adquirem as Cotas Ouro e Cotas Diamante, cujas condições, valores, prazos, visibilidade e obrigações são definidos em contrato privado de patrocínio firmado entre a Associação e cada patrocinador, não integrando o presente Regulamento.
-
-Secção II — Do Passe Programado
-
-Art. 25º — O Passe Programado é o produto digital que concede ao utilizador:
-
-- I — 1 (um) palpite na Oferta Programada;
-
-- II — 10 (dez) pontos de fidelidade;
-
-- III — Moeda social ECOQUILDO;
-
-- IV — Acesso às métricas e dados estratégicos;
-
-- V — Acesso ao assistente virtual GUTO.
-
-Secção III — Da Mecânica do Palpite
-
-Art. 26º — O palpite consiste na previsão, pelo participante, do número total de lances registados numa edição da Oferta Programada.
-
-Art. 27º — O participante regista o seu palpite (ex: "a edição terá 148 lances"). Vence o palpite que ficar mais próximo do número real de lances apurado pela Associação.
-
-Art. 28º — Em caso de empate (dois ou mais palpites com a mesma diferença), vence o palpite registado primeiro.
-
-Art. 29º — O palpite é um benefício complementar e subordinado à aquisição do Passe Programado.
-
-Secção IV — Da Aquisição do Produto
-
-Art. 30º — O vencedor do palpite adquire o produto patrocinado pelo patrocinador (Cota Ouro ou Diamante) de forma gratuita, sendo este o benefício do vencedor da edição do produto em questão, decorrente do Passe Programado vigente.
-
-Art. 31º — O produto é entregue no endereço indicado pelo adquirente, por dropshipping, nos termos do Capítulo VI deste Regulamento.
-
-Art. 32º — O participante que não acertar mantém integralmente os pontos de fidelidade e o ECOQUILDO adquiridos com o Passe, bem como o acesso ao assistente virtual GUTO e às métricas e dados estratégicos a que o Passe adquirido dá acesso.
-
-Secção V — Do Bónus de Fidelidade
-
-Art. 33º — O palpite vencedor concede, como bónus de fidelidade, +2 (dois) pontos de fidelidade ao participante.
-
-Art. 34º — Os pontos de bónus do palpite não contam para o resgate do cartão colecionável — servem apenas para o placar do utilizador.
-
-Art. 35º — Os pontos de fidelidade obtidos com a compra do Passe Programado contam para o resgate do cartão colecionável.
-
-CAPÍTULO V — DO PROGRAMA DE FIDELIDADE
-
-Art. 36º — O programa de fidelidade funciona por acumulação de pontos de fidelidade obtidos na compra do Passe Desafio.
-
-Art. 37º — As proporções fixas de acúmulo e resgate são:
-
-- 1 (um) Passe Desafio = 10 (dez) pontos de fidelidade;
-
-- 50 (cinquenta) pontos de fidelidade = 1 (um) cartão colecionável físico.
-
-Art. 38º — Os pontos de fidelidade são atribuídos por critério objetivo, fixo e divulgado: a acumulação de compras de Passes. Não existe sorteio, apuração aleatória, julgamento subjetivo ou número limitado de contemplados. Todo o utilizador que atingir 50 pontos de fidelidade tem direito ao cartão.
-
-Art. 39º — A Associação pode alterar, suspender ou encerrar o programa de fidelidade, bem como as presentes regras, mediante aviso prévio publicado no aplicativo. Alterações que reduzam direitos já adquiridos só produzem efeitos para pedidos formalizados depois da comunicação da alteração.
-
-CAPÍTULO VI — DA ENTREGA E DO ACOMPANHAMENTO DOS PRODUTOS
-
-Art. 40º — Os produtos serão entregues no endereço indicado pelo adquirente, no prazo divulgado nas regras oficiais de cada edição.
-
-Art. 41º — O adquirente que não puder ser contactado terá o prazo de 15 (quinze) dias a contar do encerramento da edição para reclamar o produto.
-
-Art. 42º — Nota Técnica: o DesafioGUT emitirá a Nota Técnica referente à aquisição do produto pelo vencedor da Oferta Programada, sendo esta de repasse do Desafio ao vencedor do palpite, emitida pela Associação e enviada exclusivamente para o e-mail de cadastro do vencedor. A emissão da Nota Técnica ocorre no momento da confirmação do resultado da
-
-edição, antes do despacho do produto pelo patrocinador. O patrocinador é responsável pela emissão da nota fiscal relativa à remessa do produto, nos termos da legislação fiscal aplicável.
-
-Art. 43º — Rastreamento e Acompanhamento do Produto: o adquirente (vencedor das modalidades Relâmpago ou Programada) poderá acompanhar em tempo real todo o percurso do produto, desde o despacho pelo patrocinador até à entrega no endereço indicado. O acompanhamento é feito diretamente no aplicativo DesafioGUT, na área de Meus Pedidos, e inclui:
-
-- I — O código de rastreamento (tracking) fornecido pelo patrocinador ou pela transportadora;
-
-- II — A transportadora responsável pelo envio;
-
-- III — O estado atual da entrega (em preparação, despachado, em trânsito, em rota de entrega, entregue);
-
-- IV — O histórico cronológico dos eventos de movimentação;
-
-- V — A estimativa de prazo de entrega;
-
-- VI — O comprovativo de entrega (data, hora e assinatura de recebimento, quando disponibilizado pela transportadora).
-
-Art. 44º — O adquirente será notificado automaticamente pelo aplicativo a cada mudança de estado da sua entrega (despacho, trânsito, saída para entrega e entrega concluída).
-
-Art. 45º — Caso o adquirente identifique qualquer irregularidade no percurso do produto, poderá comunicar a situação pelo e-mail desafiogut01@gmail.com ou pelo canal de atendimento do próprio aplicativo, sendo a ocorrência tratada em conjunto com o patrocinador e a transportadora responsável.
-
-Art. 46º — Caso o adquirente resida fora de Manaus/AM, poderá optar por receber o valor correspondente em ECOQUILDO, para uso exclusivo na aquisição de produtos e serviços no site oficial.
-
-CAPÍTULO VII — DA MOEDA SOCIAL ECOQUILDO
-
-Art. 47º — O ECOQUILDO é uma moeda social interna do Grupo União e Trabalho, com lastro em reais à razão de 1 ECOQUILDO = R$ 1,00 (um real).
-
-Art. 48º — O ECOQUILDO é concedido ao utilizador como benefício da aquisição do Passe Desafio e é utilizado exclusivamente no site oficial do Grupo União e Trabalho (ecossistema GUT), não sendo aceite como forma de pagamento dentro do aplicativo DesafioGUT. Pode ser utilizado para:
-
-- I — Aquisição de produtos e serviços no site oficial www.grupouniaoetrabalho.com.br.
-
-Art. 49º — O ECOQUILDO não é convertível em dinheiro e não é transferível a terceiros. A sua circulação é restrita ao ecossistema do Grupo União e Trabalho.
-
-Art. 50º — A Associação mantém reserva em reais correspondente ao total de ECOQUILDO emitido, garantindo o lastro integral da moeda social.
-
-Art. 51º — O utilizador cadastrado recebe 1 (um) ECOQUILDO de boas-vindas. Cada indicação de novo cadastro, após confirmação, concede 2 (dois) ECOQUILDO ao indicante e 1 (um) ECOQUILDO ao indicado.
-
-CAPÍTULO VIII — DAS FORMAS DE PAGAMENTO
-
-Art. 52º — A aquisição do Passe Desafio (produto digital), em qualquer das suas modalidades, será realizada exclusivamente por meio do sistema de faturamento do Google Play (Google Play Billing), em conformidade com a política de pagamentos da Google Play.
-
-Art. 53º — A aquisição de produtos físicos (produto patrocinado do Relâmpago) poderá ser realizada via PIX para a conta institucional do Grupo União e Trabalho (CNPJ 23.040.066/0001-00), caracterizando uma compra de bem físico fora do âmbito do Google Play Billing. O cartão colecionável da Família Quildo não é adquirido por PIX: é resgatado gratuitamente com 50 (cinquenta) pontos de fidelidade, nos termos do Art. 9º.
-
-Art. 54º — É vedada a utilização de contas bancárias de pessoas físicas para recebimento de valores relativos ao DesafioGUT. Todos os pagamentos serão direcionados exclusivamente à conta institucional da Associação.
-
-CAPÍTULO IX — DA PROTEÇÃO DE DADOS (LGPD)
-
-Art. 55º — Os dados pessoais dos participantes serão coletados, tratados e armazenados em conformidade com a Lei Geral de Proteção de Dados (LGPD — Lei nº 13.709/2018) e com a Política de Privacidade do aplicativo DesafioGUT, disponível em /privacidade.
-
-Art. 56º — Os dados são utilizados exclusivamente para a execução do programa — contabilizar pontos, apurar o resultado, processar o pedido, emitir a nota técnica, gerir o rastreamento do produto e realizar a entrega. Os dados de entrega não são usados para marketing nem vendidos a terceiros.
-
-Art. 57º — O titular poderá exercer os seus direitos (acesso, correção, portabilidade, eliminação e revogação do consentimento) através do e-mail do Encarregado de Proteção de Dados (DPO) dpo@grupouniaoetrabalho.com.br, do e-mail desafiogut01@gmail.com ou pela função de eliminação de conta do próprio aplicativo.
-
-Art. 58º — Os registos fiscais (nota fiscal e respetivo pagamento) serão mantidos pelo prazo exigido pela legislação fiscal brasileira.
-
-CAPÍTULO X — DO DIREITO DE ARREPENDIMENTO
-
-Art. 59º — Nos termos do Art. 49 do Código de Defesa do Consumidor (CDC — Lei nº 8.078/1990), nas compras realizadas fora do estabelecimento comercial, o consumidor poderá desistir da compra no prazo de 7 (sete) dias corridos, contados da contratação ou do recebimento do produto, com devolução integral do valor pago.
-
-Art. 60º — O direito de arrependimento poderá ser exercido através do e-mail desafiogut01@gmail.com, indicando a compra e o pedido de desistência. A devolução do valor será feita pelo mesmo meio de pagamento utilizado.
-
-Art. 61º — O valor devolvido implica o estorno dos pontos de fidelidade correspondentes à compra desistida. Se o cartão colecionável já tiver sido resgatado e enviado, aplicam-se as regras de devolução de produto do CDC.
-
-Art. 62º — O lance já registado na Oferta Relâmpago não é objecto de reembolso, por se tratar de decisão estratégica voluntária e informada do participante, com base nos dados e métricas fornecidos pelo próprio Passe.
-
-CAPÍTULO XI — DAS RESPONSABILIDADES
-
-Art. 63º — O vendedor legal do DesafioGUT é a Associação Recreativa dos Nordestinos no Amazonas, nome fantasia Grupo União e Trabalho, CNPJ nº 23.040.066/0001-00, sendo esta a entidade responsável pela emissão das notas técnicas e pela prestação de contas do programa.
-
-Art. 64º — Os patrocinadores são pessoas jurídicas que fornecem produtos ao DesafioGUT em troca de visibilidade e leads, não sendo responsáveis pela operação do programa.
-
-Art. 65º — É vedada a participação de funcionários, colaboradores, prestadores de serviços e familiares de qualquer empresa envolvida na operação do DesafioGUT.
-
-Art. 66º — Os participantes cedem à coordenação do DesafioGUT, de forma gratuita, os direitos de utilização do seu nome, imagem e som de voz para divulgação em qualquer mídia, exclusivamente referente ao evento em epígrafe.
-
-CAPÍTULO XII — DAS DISPOSIÇÕES FINAIS
-
-Art. 67º — A participação no DesafioGUT pressupõe o conhecimento e a aceitação integral deste Regulamento.
-
-Art. 68º — Este Regulamento poderá ser alterado a qualquer tempo, desde que não afete direitos adquiridos dos participantes nem edições em curso.
-
-Art. 69º — Dúvidas, informações e sugestões deverão ser encaminhadas através do e-mail desafiogut01@gmail.com. As questões relativas à proteção de dados pessoais (LGPD) podem ser encaminhadas diretamente ao Encarregado de Proteção de Dados (DPO): Francisco Canindé Marinho — dpo@grupouniaoetrabalho.com.br.
-
-Art. 70º — Este Regulamento está registado no RTD — Cartório de Títulos e Documentos da Comarca de Manaus/AM, em 02 de novembro de 2026.
-
-Art. 71º — O foro para dirimir qualquer controvérsia relacionada com este Regulamento é a Comarca de Manaus/AM — Brasil.
-
-Art. 72º — Este Regulamento rege-se pela Lei nº 5.768/1971, pelo Decreto nº 70.951/1972, pelo Código de Defesa do Consumidor, pela LGPD e pelas políticas da Google Play Store.
-
-Documento oficial — Associação Recreativa dos Nordestinos no Amazonas (CNPJ 23.040.066/0001-00). Versão 5.1 — vigente a partir de 02 de novembro de 2026.
+# REGULAMENTO OFICIAL DO APLICATIVO DESAFIOGUT (VERSÃO 6.0) 
+
+## CAPÍTULO I — DISPOSIÇÕES PRELIMINARES 
+Art. 1º O presente Regulamento estabelece os termos e condições gerais de uso do aplicativo de e-commerce por dropshipping com programa de fidelidade denominado DesafioGUT, operado pela Associação Recreativa dos Nordestinos no Amazonas, nome fantasia Grupo União e Trabalho (GUT), inscrita no CNPJ sob o nº 23.040.066/0001-00, com sede na cidade de Manaus, Estado do Amazonas. 
+Art. 2º O uso do aplicativo é destinado exclusivamente a pessoas maiores de 18 (dezoito) anos, exigindo-se cadastro prévio com fornecimento de dados verídicos, em estrita conformidade com a Lei Geral de Proteção de Dados (LGPD). 
+Art. 3º A aquisição do Passe Desafio é estritamente opcional, não constituindo requisito obrigatório para a navegação básica, cadastro ou obtenção gratuita de pontos de engajamento na plataforma. 
+Art. 4º O ecossistema de aquisições do aplicativo divide-se em duas modalidades principais: a Oferta Relâmpago, baseada em habilidade e estratégia, e a Oferta Programada, baseada em prognóstico e previsão de eventos. 
+
+## CAPÍTULO II — DOS PASSES E DA FIDELIDADE 
+Art. 5º O Passe Desafio é um produto digital comercializado pelo valor fixo de R$ 2,00 (dois reais), concedendo acesso a recursos avançados de suporte e engajamento. 
+Art. 6º Em estrita conformidade com as diretrizes da Google Play para programas de fidelidade (Gamified Loyalty), o Passe não concede pontos de lance. Os pontos utilizados para realizar os lances são 100% gratuitos, obtidos exclusivamente por meio de engajamento diário, login contínuo e cumprimento de missões no aplicativo. 
+Art. 7º O Passe Desafio confere ao usuário o acesso ao assistente virtual de inteligência estratégica GUTO, dados analíticos de mercado e 1 (um) ponto de fidelidade ao sistema. 
+Art. 8º O Cartão Colecionável do ecossistema é estritamente digital. A proporção de conversão é fixa e inalterável: a cada 50 pontos de fidelidade acumulados, o sistema credita automaticamente 1 Cartão Digital ao perfil do usuário. 
+Art. 9º É expressamente proibida a conversão de pontos de fidelidade, cartões digitais ou saldos de bonificação em moeda corrente nacional (dinheiro espécie). 
+Art. 10. A Associação reserva-se o direito de alterar as regras de pontuação e fidelidade mediante aviso prévio de 30 (trinta) dias publicado na interface oficial do aplicativo. 
+
+## CAPÍTULO III — DA OFERTA RELÂMPAGO 
+Art. 11. A Oferta Relâmpago configura modalidade de e-commerce baseada em habilidade, estratégia e menor valor único de lance, não configurando sorte, loteria ou jogo de azar. 
+Art. 12. O participante vencedor da Oferta Relâmpago adquire o direito de adquirir o bem ofertado pagando o valor correspondente ao seu lance em reais (onde 1 ponto equivale a R$ 0,01), cuja transação financeira deverá ser liquidada via PIX, integralmente fora do sistema de faturamento da Google Play (Google Billing). 
+Art. 13. A entrega do produto físico adquirido na Oferta Relâmpago é de responsabilidade exclusiva do fornecedor ou patrocinador parceiro, por meio do modelo de dropshipping. 
+Art. 14. A Associação atuará unicamente como intermediária e emitirá o recibo aplicável e restrito exclusivamente aos vencedores desta modalidade de acordo com os valores efetivamente transacionados. 
+Art. 15. O lance é uma ação estratégica e voluntária. Os pontos de lance utilizados na ação são consumidos no momento do registro, não sendo devolvidos em caso de derrota. Contudo, o usuário mantém integralmente os benefícios adquiridos com o Passe, conforme o Art. 19. 
+
+## CAPÍTULO IV — DA OFERTA PROGRAMADA 
+Art. 16. A Oferta Programada consiste na modalidade em que o usuário utiliza sua capacidade analítica para prever o número total exato de lances realizados em um determinado ciclo. 
+Art. 17. Vence a Oferta Programada apenas 1 (um) palpite: aquele que registrar o número exato ou ficar mais próximo do número real apurado. Em caso de empate na proximidade, o critério de desempate será a ordem cronológica de registro do palpite no sistema. 
+Art. 18. O prêmio correspondente, consistente em produto fornecido pelo patrocinador, é concedido de forma totalmente gratuita ao vencedor da previsão. 
+Art. 19. O usuário participante que não obtiver êxito na previsão (perdedor) não perde os valores investidos em passes ou recursos, mantendo integralmente seus pontos de fidelidade, seus saldos de ECOQUILDO e o acesso ativo ao assistente GUTO. 
+Art. 20. A manutenção dos benefícios do usuário em caso de erro na previsão afasta qualquer caracterização da modalidade como aposta financeira, garantindo a natureza puramente de entretenimento e fidelidade. 
+
+## CAPÍTULO V — DO ECOQUILDO E INDICAÇÕES 
+Art. 21. O ECOQUILDO é a unidade de valor interno de bonificação da plataforma, possuindo o valor de paridade fixo de 1 ECOQUILDO equivalente a R$ 0,50 (cinquenta centavos), com lastro financeiro garantido pela Associação. 
+Art. 22. Os saldos em ECOQUILDO podem ser utilizados para abatimento de preços no site oficial de e-commerce e dentro do ambiente de transações do aplicativo DesafioGUT. 
+Art. 23. A cada 50 (cinquenta) ECOQUILDOs acumulados pelo usuário na plataforma, o sistema efetuará a conversão automática e imediata desse montante em 1 (um) Passe Desafio digital. 
+Art. 24. Por meio do programa "Indique e Ganhe", o usuário indicante recebe 2 ECOQUILDOs e o usuário indicado recebe 1 ECOQUILDO após a validação do cadastro, sendo expressamente vedada e anulada qualquer tentativa de autoindicação. 
+
+## CAPÍTULO VI — PAGAMENTOS, LGPD E DIREITOS 
+Art. 25. A aquisição do Passe Desafio (produto estritamente digital) será processada exclusivamente por meio do sistema oficial de pagamentos da Google Play (Google Billing). 
+Art. 26. A aquisição de produtos físicos decorrentes das ofertas e transações do e-commerce será realizada por meio de transferência instantânea via PIX, ocorrendo integralmente fora do ambiente do Google Billing. 
+Art. 27. Em cumprimento à Lei Geral de Proteção de Dados (LGPD), os canais oficiais para atendimento, exercício de direitos dos titulares e contato com o Encarregado de Proteção de Dados (DPO) encontram-se disponíveis no e-mail: dpo@grupouniaoetrabalho.com.br. 
+Art. 28. Fica garantido o Direito de Arrependimento no prazo impreterível de 7 (sete) dias corridos, previsto no Código de Defesa do Consumidor (CDC), aplicável exclusivamente à compra do Passe Desafio digital não utilizado, sendo vedado o reembolso de lances já registrados em ofertas em andamento. 
+Art. 29. A Associação atua estritamente como gestora tecnológica do programa de fidelidade e plataforma de e-commerce, não se confundindo com a fabricante ou vendedora direta dos produtos físicos disponibilizados pelos parceiros patrocinadores. 
+Art. 30. As partes elegem o Foro da Comarca de Manaus, Estado do Amazonas, para dirimir quaisquer controvérsias decorrentes deste Regulamento, cuja vigência inicia-se na data do seu respectivo registro no Cartório de Títulos e Documentos (RTD).

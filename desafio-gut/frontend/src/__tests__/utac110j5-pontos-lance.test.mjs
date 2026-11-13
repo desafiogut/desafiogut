@@ -79,8 +79,16 @@ test("P · cada proporção do frontend é IGUAL à constante do backend (lida d
   assert.equal(P.indicacoesPorMes, constante("fontes-lance.mjs", "LIMITE_INDICACOES_MES"));
   assert.equal(P.cicloPontos, constante("fontes-lance.mjs", "PONTOS_CICLO_MISSOES"));
   assert.equal(P.sequencia, constante("pontuacao-store.mjs", "PONTOS_LANCE_BONUS_SEQUENCIA"));
-  assert.equal(P.passeRelampago, constante("ledger-lance.mjs", "PONTOS_LANCE_POR_PASSE_RELAMPAGO"));
+  // UTAC137 (Regulamento v6.0) — era `P.passeRelampago === PONTOS_LANCE_POR_PASSE_RELAMPAGO` (200). O Passe deixou de
+  // dar pontos de lance (Art. 6º, UTAC136): o frontend diz 0 e a cadeia de compra do backend NÃO pode voltar a usar a constante.
+  assert.equal(P.pontosLancePorPasse, 0);
+  assert.doesNotMatch(fonte("comprar-passe-tipado.mjs").replace(/^\s*\/\/.*$/gm, ""), /PONTOS_LANCE_POR_PASSE_RELAMPAGO|creditarPontosLance\(/,
+    "a compra do Passe voltou a creditar pontos de lance — o frontend diria 0 e o servidor daria outra coisa");
   assert.equal(P.fidelidadePorPasse, constante("passe-pontos.mjs", "PONTOS_FIDELIDADE_POR_PASSE"));
+  assert.equal(P.ecoCentavos, constante("eco-quildo.mjs", "CENTAVOS_POR_ECOQUILDO"));
+  assert.equal(P.ecoPorConversao, constante("eco-quildo.mjs", "ECOQUILDO_POR_CONVERSAO"));
+  assert.equal(P.ecoPorPasse, constante("eco-quildo.mjs", "ECOQUILDO_POR_PASSE"));
+  assert.equal(P.pontosPorCartao, constante("passe-pontos.mjs", "PONTOS_POR_CARTAO"));
   const regras = fonte("pontuacao-utils.mjs").match(/ACERTOS_PARA_BONUS:\s*(\d+)/);
   assert.ok(regras); assert.equal(P.acertosSequencia, Number(regras[1]));
   // DIAS_CICLO_MISSOES é DERIVADO no backend (ceil(225 / (5 + 10))): reproduz-se a mesma conta.
@@ -94,8 +102,11 @@ test("P · cada proporção do frontend é IGUAL à constante do backend (lida d
 
 test("P · os valores da decisão do operador, em LITERAL (uma regra de negócio não se testa contra si própria)", () => {
   const P = pl.PROPORCOES;
-  assert.deepEqual([P.login, P.missao, P.indicacao, P.sequencia, P.passeRelampago, P.cicloPontos, P.cicloDias],
-    [5, 10, 50, 50, 200, 225, 15]);
+  // UTAC137 — o 5.º valor era o +200 do Passe (v5.1); no v6 é 0. Acrescentam-se os números do v6 (Arts. 7º, 8º, 21, 23).
+  assert.deepEqual([P.login, P.missao, P.indicacao, P.sequencia, P.pontosLancePorPasse, P.cicloPontos, P.cicloDias],
+    [5, 10, 50, 50, 0, 225, 15]);
+  assert.deepEqual([P.fidelidadePorPasse, P.pontosPorCartao, P.ecoCentavos, P.ecoPorConversao, P.ecoPorPasse], [1, 50, 50, 50, 1]);
+  assert.equal(pl.VALOR_ECOQUILDO_TEXTO, "R$ 0,50");
 });
 
 // ═══ A — estado do lance em pontos (CardLance) ══════════════════════════════════════
@@ -194,14 +205,21 @@ test("C · as Regras Oficiais publicam as proporções fixas NO APP, antes do 1.
     "Ciclo completo de missões: 225 pontos de lance em 15 dias (15 × 15 pontos por dia, já contando o login e a missão diária). Como a missão exige um lance e cada lance gasta o seu valor, com lances de 1 ponto ficam 210 pontos líquidos (com lances maiores, ficam menos).",
     "Como usar os pontos de lance",
     "Cada lance gasta o valor do lance em pontos de lance: um lance de 37 gasta 37 pontos.",
-    "1 ponto = R$ 0,01 (Art. 18º)",
-    "O que o Passe Relâmpago dá",
-    "+200 pontos de lance (bônus: não é condição para dar lances).",
-    "10 pontos de fidelidade",
+    // UTAC137 (Regulamento v6.0) — eram «1 ponto = R$ 0,01 (Art. 18º)», «O que o Passe Relâmpago dá», «+200 pontos de
+    // lance (bônus…)», «10 pontos de fidelidade», «Acesso às métricas…» e «…benefício suplementar…».
+    "1 ponto = R$ 0,01 (Art. 12)",
+    "O que o Passe Desafio dá",
+    "Não dá pontos de lance: os pontos de lance são 100% gratuitos, ganhos pelo engajamento no app (Art. 6º).",
+    "1 ponto de fidelidade; a cada 50 pontos de fidelidade, 1 cartão colecionável (Arts. 7º e 8º).",
     "1 ECOQUILDO.",
-    "Acesso às métricas da edição e ao GUTO.",
-    "O Passe Desafio é um produto; os pontos de lance são um benefício suplementar, não uma taxa para participar.",
+    "Acesso aos dados analíticos e ao GUTO (Art. 7º).",
+    "O Passe é opcional (Art. 3º): o lance gasta só pontos de lance e o palpite não exige Passe.",
+    "1 ECOQUILDO vale R$ 0,50 (Art. 21).",
+    "A cada 50 ECOQUILDOs, o sistema converte-os automaticamente em 1 Passe Desafio (Art. 23).",
   ]) assert.ok(t.includes(f), `as Regras não divulgam «${f}»`);
+  for (const velho of ["+200", "200 pontos de lance", "10 pontos de fidelidade", "R$ 1,00", "Art. 18º"]) {
+    assert.ok(!t.includes(velho), `UTAC137: sobrou «${velho}» (v5.1) nas proporções`);
+  }
   assert.ok(!t.includes("garantidos pelo menos"), "SEG5/V1: a promessa falsa de «pelo menos 210» voltou");
   // O texto que vincula continua lá e o resumo diz que é o Regulamento que vale.
   assert.ok(t.includes("O texto que vale é o Regulamento abaixo."));

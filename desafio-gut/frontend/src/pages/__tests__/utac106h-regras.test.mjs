@@ -33,10 +33,16 @@ const STUBS_106C = resolve(AQUI, "..", "..", "__tests__", "_stubs-106c");
 const ALIASES = [{ find: /^react-router-dom$/, replacement: `${STUBS_106C}/rr.jsx` }];
 
 const lerDoc = (nome) => readFileSync(resolve(REPO, "docs", nome), "utf8").replace(/\r\n/g, "\n");
+// ⚠️ UTAC137 — a página publica o Regulamento **v6.0** (`docs/REGULAMENTO-v6.md`, o texto registado no RTD). As guardas
+// abaixo mantêm a força das do v5 (fonte única com o GUTO, cobertura total, palavras exactas pela ordem, estrutura),
+// medidas contra o v6. O v5 continua lido para provar que o parser não o partiu (compatibilidade).
 const MD_V5 = lerDoc("REGULAMENTO-v5.md");
+const MD_V6 = lerDoc("REGULAMENTO-v6.md");
 const MD_GUTO = lerDoc("GUTO-REGULAMENTO.md");
-const CORPO_V5 = MD_V5.slice(MD_V5.indexOf("\n---\n\n") + 6);
-const CORPO_GUTO = MD_GUTO.slice(MD_GUTO.indexOf("\nREGULAMENTO OFICIAL DO DESAFIOGUT\n") + 1);
+const CORPO_GUTO = MD_GUTO.slice(MD_GUTO.indexOf("\n---\n\n") + 6);
+/** As linhas do v6 sem a marcação Markdown («# », «## ») — o que a página tem de mostrar. */
+const LINHAS_V6 = MD_V6.split("\n").map((l) => colapsarLinha(l.replace(/^#+\s*/, ""))).filter(Boolean);
+function colapsarLinha(s) { return s.replace(/\s+/g, " ").trim(); }
 const colapsar = (s) => s.replace(/\s+/g, " ").trim();
 
 let vite, React, renderToStaticMarkup, mod, html, texto;
@@ -55,43 +61,41 @@ before(async () => {
 after(async () => { if (vite) await vite.close(); });
 
 // ── 1. Fonte única: o documento do repo é o texto que o GUTO lê ─────────────────────────────────
-test("FONTE · o corpo de docs/REGULAMENTO-v5.md é IGUAL, byte a byte, ao de docs/GUTO-REGULAMENTO.md", () => {
-  assert.ok(MD_V5.includes("\n---\n\n"), "falta o separador cabeçalho/corpo");
-  assert.ok(CORPO_V5.startsWith("REGULAMENTO OFICIAL DO DESAFIOGUT\n"), "o corpo tem de começar no título do Regulamento");
-  assert.equal(CORPO_V5, CORPO_GUTO, "o Regulamento do repo divergiu do que o GUTO lê");
+test("FONTE · o corpo de docs/GUTO-REGULAMENTO.md é docs/REGULAMENTO-v6.md, byte a byte", () => {
+  assert.ok(MD_GUTO.includes("\n---\n\n"), "falta o separador cabeçalho/corpo no documento do GUTO");
+  assert.ok(MD_V6.startsWith("# REGULAMENTO OFICIAL DO APLICATIVO DESAFIOGUT (VERSÃO 6.0)"), "o v6 tem de começar no título");
+  assert.equal(CORPO_GUTO, MD_V6, "o Regulamento publicado divergiu do que o GUTO lê");
 });
 
-test("FONTE · o cabeçalho declara versão, vigência e a regra de alteração", () => {
-  const cab = MD_V5.slice(0, MD_V5.indexOf("\n---\n\n"));
-  assert.match(cab, /REGULAMENTO OFICIAL DO DESAFIOGUT/);
-  assert.match(cab, /Versão 5\.1 · Vigente a partir de 02 de novembro de 2026/);
-  assert.match(cab, /Fonte de verdade para o repo, o app e o GUTO\./);
-  assert.match(cab, /Não alterar sem aprovação do operador\./);
+test("FONTE · o cabeçalho do documento do GUTO declara a versão 6.0 e a regra de alteração", () => {
+  const cab = MD_GUTO.slice(0, MD_GUTO.indexOf("\n---\n\n"));
+  assert.match(cab, /Versão 6\.0/);
+  assert.match(cab, /Fonte de verdade para o GUTO\. Não alterar sem actualizar o regulamento oficial\./);
+  assert.match(cab, /cópia byte a byte/);
 });
 
-test("FONTE · a página não escreve texto jurídico à mão: importa o .md em bruto", () => {
+test("FONTE · a página não escreve texto jurídico à mão: importa o .md do v6 em bruto", () => {
   const jsx = readFileSync(resolve(FRONTEND, "src", "pages", "RegrasOficiais.jsx"), "utf8");
   const codigo = jsx.split("\n").filter((l) => !/^\s*\/\//.test(l)).join("\n");
-  assert.match(codigo, /from "\.\.\/\.\.\/\.\.\/\.\.\/docs\/REGULAMENTO-v5\.md\?raw"/);
+  assert.match(codigo, /from "\.\.\/\.\.\/\.\.\/\.\.\/docs\/REGULAMENTO-v6\.md\?raw"/);
+  assert.doesNotMatch(codigo, /REGULAMENTO-v5\.md/, "a página voltou a importar o v5");
   for (const juridico of ["R$ 2,00", "pontos de fidelidade", "ECOQUILDO", "23.040.066/0001-00", "Comarca de Manaus"]) {
     assert.ok(!codigo.includes(juridico), `texto jurídico escrito à mão na página: «${juridico}»`);
   }
 });
 
-// ── 2. Cobertura total: cada parágrafo do documento está na página ─────────────────────────────
-test("COBERTURA · TODOS os parágrafos do Regulamento aparecem na página (não é amostra)", () => {
-  const paragrafos = CORPO_V5.split(/\n\s*\n/).map((s) => colapsar(s.replace(/^- /, ""))).filter(Boolean);
-  assert.ok(paragrafos.length >= 130, `esperava >= 130 parágrafos (medido: 136), vi ${paragrafos.length}`);
-  const faltam = paragrafos.filter((p) => !texto.includes(p));
-  assert.deepEqual(faltam, [], `a página não publica ${faltam.length} parágrafo(s)`);
+// ── 2. Cobertura total: cada linha do documento está na página ─────────────────────────────────
+test("COBERTURA · TODAS as linhas do Regulamento v6 aparecem na página (título, 6 capítulos, 30 artigos)", () => {
+  assert.equal(LINHAS_V6.length, 37, `esperava 37 linhas (1 + 6 + 30), vi ${LINHAS_V6.length}`);
+  const faltam = LINHAS_V6.filter((l) => !texto.includes(l));
+  assert.deepEqual(faltam, [], `a página não publica ${faltam.length} linha(s)`);
 });
 
-// Achado do validador SEG5: `includes` mede PRESENÇA, não igualdade — texto duplicado ou uma
-// cláusula inventada passavam. Aqui a sequência de palavras da página (do 1.º capítulo ao fim do
-// rodapé) tem de ser IGUAL à do documento (do 1.º capítulo ao fim).
+// Achado do validador SEG5 (UTAC110h): `includes` mede PRESENÇA, não igualdade. A sequência de palavras da página
+// (do 1.º capítulo ao fim) tem de ser IGUAL à do documento (do 1.º capítulo ao fim, sem a marcação «##»).
 test("COBERTURA · a página publica EXACTAMENTE as palavras do documento, pela ordem (nada a mais, nada a menos)", () => {
   const palavras = (s) => colapsar(s).split(" ").filter(Boolean);
-  const doDoc = palavras(CORPO_V5.slice(CORPO_V5.indexOf("CAPÍTULO I —")).replace(/^- /gm, ""));
+  const doDoc = palavras(MD_V6.slice(MD_V6.indexOf("CAPÍTULO I —")).replace(/^#+\s*/gm, ""));
   const ini = html.indexOf("<section");
   const fim = html.indexOf("<p data-fim-regulamento");
   assert.ok(ini > 0 && fim > ini, "marcadores da página em falta");
@@ -99,60 +103,68 @@ test("COBERTURA · a página publica EXACTAMENTE as palavras do documento, pela 
   const daPagina = palavras(trecho);
   assert.equal(daPagina.length, doDoc.length, `contagem de palavras: página ${daPagina.length} vs documento ${doDoc.length}`);
   assert.deepEqual(daPagina, doDoc);
+  assert.ok(!daPagina.includes("—") || doDoc.includes("—"), "a página acrescentou travessões que o v6 não tem");
 });
 
 test("ACESSIBILIDADE · os alvos de toque da página (sumário e «Voltar») têm 48 px", () => {
   const jsx = readFileSync(resolve(FRONTEND, "src", "pages", "RegrasOficiais.jsx"), "utf8");
   assert.match(jsx, /const linkSumario = \{[^}]*minHeight: "48px"/);
   assert.match(jsx, /<Link to="\/" style=\{\{[^}]*minHeight: "48px"/);
-  assert.match(html, /data-rodape/);
-  assert.ok(html.indexOf("data-rodape") > html.lastIndexOf("gut-glass-standard"), "o rodapé tem de viver dentro do último vidro");
+  // UTAC137: o v6 não tem rodapé («Documento oficial…» era do v5); o fecho continua dentro do último vidro.
+  assert.doesNotMatch(html, /data-rodape/);
+  assert.ok(html.indexOf("data-fim-regulamento") > html.lastIndexOf("gut-glass-standard"), "o fecho tem de viver dentro do último vidro");
 });
 
-// ── 3. Estrutura: 12 capítulos, 72 artigos ──────────────────────────────────────────────────────
-test("ESTRUTURA · um <h1> com o título e a vigência do v5.1", () => {
+// ── 3. Estrutura: 6 capítulos, 30 artigos ───────────────────────────────────────────────────────
+test("ESTRUTURA · um <h1> com o título e a versão do v6.0", () => {
   assert.equal((html.match(/<h1[\s>]/g) || []).length, 1);
-  assert.match(html, /<h1[^>]*>REGULAMENTO OFICIAL DO DESAFIOGUT<\/h1>/);
-  assert.ok(texto.includes("Versão 5.1 · Vigente a partir de 02 de novembro de 2026"));
-  assert.equal(mod.VERSAO_REGULAMENTO, "5.1");
+  assert.match(html, /<h1[^>]*>REGULAMENTO OFICIAL DO APLICATIVO DESAFIOGUT \(VERSÃO 6\.0\)<\/h1>/);
+  assert.equal(mod.VERSAO_REGULAMENTO, "6.0");
 });
 
-test("ESTRUTURA · os 12 capítulos em <h2>, pela ordem do documento", () => {
-  const doMd = [...CORPO_V5.matchAll(/^CAPÍTULO ([IVXL]+) — (.+)$/gm)].map((m) => `CAPÍTULO ${m[1]} — ${m[2]}`);
-  assert.equal(doMd.length, 12);
+test("ESTRUTURA · os 6 capítulos em <h2>, pela ordem do documento", () => {
+  const doMd = [...MD_V6.matchAll(/^## CAPÍTULO ([IVXL]+) — (.+?)\s*$/gm)].map((m) => `CAPÍTULO ${m[1]} — ${m[2]}`);
+  assert.equal(doMd.length, 6);
   const h2 = [...html.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/g)].map((m) => colapsar(m[1].replace(/<!-- -->/g, "")));
   const capsPagina = h2.filter((t) => t.startsWith("CAPÍTULO "));
   assert.deepEqual(capsPagina, doMd);
 });
 
-test("ESTRUTURA · os 72 artigos, de 1º a 72º, sem lacunas e pela ordem", () => {
-  const nums = [...html.matchAll(/<strong[^>]*>Art\. (\d+)º<\/strong>/g)].map((m) => Number(m[1]));
-  assert.deepEqual(nums, Array.from({ length: 72 }, (_, i) => i + 1));
+test("ESTRUTURA · os 30 artigos, de 1 a 30, sem lacunas e pela ordem, com o rótulo do documento", () => {
+  const rot = [...html.matchAll(/<strong[^>]*>(Art\. \d+(?:º|\.))<\/strong>/g)].map((m) => m[1]);
+  assert.deepEqual(rot.map((r) => Number(r.match(/\d+/)[0])), Array.from({ length: 30 }, (_, i) => i + 1));
+  assert.deepEqual([rot[0], rot[8], rot[9], rot[29]], ["Art. 1º", "Art. 9º", "Art. 10.", "Art. 30."]);
 });
 
-test("ESTRUTURA · sumário com 12 âncoras que existem na página", () => {
+test("ESTRUTURA · sumário com 6 âncoras que existem na página", () => {
   const hrefs = [...html.matchAll(/href="#(cap-[ivxl]+)"/g)].map((m) => m[1]);
-  assert.equal(hrefs.length, 12);
+  assert.equal(hrefs.length, 6);
   for (const h of hrefs) assert.ok(html.includes(`id="${h}"`), `âncora sem destino: ${h}`);
 });
 
-test("PARSER · as frases partidas pelo PDF são unidas e os itens ficam no artigo certo", () => {
-  const arts = Object.fromEntries(mod.REGULAMENTO.capitulos.flatMap((c) => c.blocos).filter((b) => b.tipo === "artigo").map((b) => [b.rotulo, b]));
-  assert.equal(Object.keys(arts).length, 72);
-  assert.ok(arts["Art. 20º"].texto.endsWith("nos termos do Capítulo VI deste Regulamento."));
-  assert.ok(arts["Art. 42º"].texto.includes("confirmação do resultado da edição, antes do despacho"));
-  assert.ok(arts["Art. 53º"].texto.includes("produto patrocinado do Relâmpago) poderá ser realizada via PIX"));
-  // ⚠️ UTAC110m.2 (2026-10-18): o Art. 48º tinha 2 alíneas; a alínea II («Aquisição de novos Passes
-  // Desafio no aplicativo») saiu e o seu conteúdo passou a «Parágrafo único» — o ECOQUILDO é só do
-  // site (R18-110e-2, frente C do 110m.2). O valor anterior desta posição era **2**.
-  assert.deepEqual([13, 22, 25, 43, 48].map((n) => arts[`Art. ${n}º`].itens.length), [5, 6, 5, 6, 1]);
-  assert.match(mod.REGULAMENTO.rodape, /\(CNPJ 23\.040\.066\/0001-00\)\. Versão 5\.1 — vigente a partir de 02 de novembro de 2026\.$/);
-  assert.equal(mod.REGULAMENTO.capitulos.flatMap((c) => c.blocos).filter((b) => b.tipo === "paragrafo").length, 0);
+test("PARSER · lê o v6 (uma linha por artigo, títulos «#») e continua a ler o v5 como antes", () => {
+  const blocos = mod.REGULAMENTO.capitulos.flatMap((c) => c.blocos);
+  const arts = Object.fromEntries(blocos.filter((b) => b.tipo === "artigo").map((b) => [b.rotulo, b]));
+  assert.equal(Object.keys(arts).length, 30);
+  assert.equal(arts["Art. 1º"].separador, " ", "o v6 não tem travessão depois do rótulo");
+  assert.ok(arts["Art. 10."].texto.startsWith("A Associação reserva-se o direito"));
+  assert.ok(arts["Art. 15."].texto.endsWith("conforme o Art. 19."), "a referência a outro artigo dentro do texto não pode abrir artigo novo");
+  assert.equal(blocos.filter((b) => b.tipo === "paragrafo").length, 0);
+  assert.equal(mod.REGULAMENTO.rodape, null);
+  // compatibilidade: o mesmo parser sobre o v5 dá o que dava (12 capítulos, 72 artigos, rodapé, alíneas)
+  const v5 = mod.lerRegulamento(MD_V5);
+  const arts5 = Object.fromEntries(v5.capitulos.flatMap((c) => c.blocos).filter((b) => b.tipo === "artigo").map((b) => [b.rotulo, b]));
+  assert.equal(v5.capitulos.length, 12);
+  assert.equal(Object.keys(arts5).length, 72);
+  assert.equal(arts5["Art. 1º"].separador, " — ");
+  assert.deepEqual([13, 22, 25, 43, 48].map((n) => arts5[`Art. ${n}º`].itens.length), [5, 6, 5, 6, 1]);
+  assert.match(v5.rodape, /Versão 5\.1 — vigente a partir de 02 de novembro de 2026\.$/);
 });
 
 // ── 4. Termos: proibidos / obrigatórios — BIDIRECCIONAL ────────────────────────────────────────
 const PROIBIDOS = [/\bsenhas?\b/i, /torneio de habilidade/i, /Portaria SPA\/MF/i, /1\.207\/2024/];
-const OBRIGATORIOS = ["Passe", "pontos de fidelidade", "ECOQUILDO", "cartão colecionável", "competição de habilidade"];
+// UTAC137: o v6 escreve «Cartão Colecionável» e «menor valor único de lance» (o v5: «cartão colecionável» / «competição de habilidade»).
+const OBRIGATORIOS = ["Passe", "pontos de fidelidade", "ECOQUILDO", "Cartão Colecionável", "menor valor único de lance"];
 function violacoes(t) {
   return [
     ...PROIBIDOS.filter((re) => re.test(t)).map((re) => `proibido: ${re}`),
@@ -160,7 +172,7 @@ function violacoes(t) {
   ];
 }
 
-test("TERMOS · a página v5.0 passa: zero proibidos, todos os obrigatórios", () => {
+test("TERMOS · a página v6.0 passa: zero proibidos, todos os obrigatórios", () => {
   assert.deepEqual(violacoes(texto), []);
 });
 
@@ -176,25 +188,28 @@ test("TERMOS · BIDIRECCIONAL — o mesmo verificador REPROVA as Regras Oficiais
   assert.ok(v.includes("em falta: pontos de fidelidade"));
 });
 
-test("TERMOS · R18-110h-B — «Cotas» é do v5 aprovado e NÃO é violação", () => {
-  assert.ok(texto.includes("Cotas Bronze e Cotas Prata"));
-  assert.deepEqual(violacoes("Cotas Ouro e Cotas Diamante · " + OBRIGATORIOS.join(" ")), []);
+test("TERMOS · BIDIRECCIONAL — o mesmo verificador REPROVA o v5.1 como texto do v6 (não diz «menor valor único de lance»)", () => {
+  assert.ok(violacoes(MD_V5).includes("em falta: menor valor único de lance"));
 });
 
-// ── 5. Factos que a Google Play exige divulgados (todos vindos do texto do v5) ─────────────────
-test("PLAY · proporções fixas, palpite subordinado, habilidade e elementos obrigatórios", () => {
+// ── 5. Factos que a Google Play exige divulgados (todos vindos do texto do v6) ─────────────────
+test("PLAY · preço, Passe sem pontos de lance, proporções fixas, habilidade e elementos obrigatórios", () => {
   for (const f of [
-    "preço fixo de R$ 2,00 (dois reais)",
-    "1 (um) Passe Desafio = 10 (dez) pontos de fidelidade",
-    "50 (cinquenta) pontos de fidelidade = 1 (um) cartão colecionável físico",
-    "Os pontos de bónus do palpite não contam para o resgate do cartão colecionável",
-    "não de mecanismos de aleatoriedade",
+    "valor fixo de R$ 2,00 (dois reais)",
+    "o Passe não concede pontos de lance",
+    "1 (um) ponto de fidelidade",
+    "a cada 50 pontos de fidelidade acumulados, o sistema credita automaticamente 1 Cartão Digital",
+    "1 ECOQUILDO equivalente a R$ 0,50 (cinquenta centavos)",
+    "não configurando sorte, loteria ou jogo de azar",
     "7 (sete) dias corridos",
     "Lei Geral de Proteção de Dados",
-    "desafiogut01@gmail.com",
+    "dpo@grupouniaoetrabalho.com.br",
     "23.040.066/0001-00",
-    "Comarca de Manaus/AM",
+    "Foro da Comarca de Manaus",
   ]) assert.ok(texto.includes(f), `a página não divulga «${f}»`);
+  for (const velho of ["10 (dez) pontos de fidelidade", "1 ECOQUILDO = R$ 1,00", "200 pontos de lance", "Versão 5.1"]) {
+    assert.ok(!texto.includes(velho), `a página ainda mostra «${velho}» (v5.1)`);
+  }
 });
 
 test("RENDER · tem link de volta ao app", () => {

@@ -118,7 +118,8 @@ describe("MC94 · MeusAtivos — HARD GATE 5: nada regride", () => {
     assert.match(t, /Histórico de lances/i);
     // UTAC110j (R18-110j-4) — o rodapé passou ao v5: «Art. 7» → «Art. 14º»; a nota do «Art. 25»
     // (apuração automática) saiu, por não haver artigo correspondente no v5.
-    assert.match(t, /Art\. 14º: Menor lance único ganha/, "perdeu a nota do Art. 14º (v5)");
+    // UTAC137 — o rodapé passou ao v6: «Art. 14º: Menor lance único ganha» → «Art. 11.: vence o menor valor único de lance».
+    assert.match(t, /Art\. 11\.: vence o menor valor único de lance/, "perdeu a nota do Art. 11. (v6)");
     assert.doesNotMatch(t, /Art\. 25|Art\. 7\b/, "voltou uma citação do v4 no rodapé");
   });
 

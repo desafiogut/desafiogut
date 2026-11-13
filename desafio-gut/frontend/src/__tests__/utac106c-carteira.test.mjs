@@ -213,8 +213,9 @@ test("UTAC106c/SEG3 · a frase de efeito diz «oferta» (fecha a divergência co
   assert.match(frase, /ninguém repetir/i, "a frase perdeu a condição de unicidade");
   // âncora no gate legal + trava de álea/aposta (mesmo padrão ALARGADO do glossário)
   // UTAC110h.1 — âncora do v5 (Art. 14º) em vez do v4 (Art. 7).
-  assert.match(ler("components/TermosConsentimento.jsx"), /vence o menor lance único \(Art\. 14º\)/i,
-    "o gate legal deixou de fixar «vence o menor lance único» (v5 Art. 14º)");
+  // UTAC137 — âncora do v6 (Art. 11.) em vez do v5 (Art. 14º).
+  assert.match(ler("components/TermosConsentimento.jsx"), /vence o menor valor único de lance \(Art\. 11\.\)/i,
+    "o gate legal deixou de fixar «vence o menor valor único de lance» (v6 Art. 11.)");
   assert.doesNotMatch(frase, /\bapost\w*|\bsort\w*|\bazar\b|loterias?|aleat[óo]ri/i,
     `a frase usa termo de álea/aposta: «${frase}»`);
 });

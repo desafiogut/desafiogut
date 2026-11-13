@@ -29,96 +29,101 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const ler = (p) => readFileSync(resolve(process.cwd(), p), "utf8");
-const V5 = ler("../../docs/REGULAMENTO-v5.md");
+// ⚠️ UTAC137 — o gate passou ao Regulamento **v6.0** (`docs/REGULAMENTO-v6.md`, o texto registado no RTD). Esta
+// guarda passou a verificar contra o v6, com a mesma força: cada bloco do gate tem de ser TEXTO LITERAL do artigo que
+// cita. O v6 escreve «Art. 1º O presente…» e «Art. 10. A…» (uma linha por artigo, sem travessão).
+const V6 = ler("../../docs/REGULAMENTO-v6.md");
 const TERMOS = ler("src/components/TermosConsentimento.jsx");
 
 const norm = (s) => s.replace(/\s+/g, " ").trim();
 
-/** Texto do artigo N do v5: da linha «Art. Nº —» até ao próximo artigo/capítulo, sem os «- » das alíneas. */
-function artigoV5(n) {
-  const linhas = V5.split(/\r?\n/);
-  const i = linhas.findIndex((l) => l.startsWith(`Art. ${n}º — `));
-  assert.ok(i >= 0, `o v5 não tem o Art. ${n}º`);
-  const out = [linhas[i].slice(`Art. ${n}º — `.length)];
-  for (const l of linhas.slice(i + 1)) {
-    if (/^Art\. \d+º — /.test(l) || /^CAPÍTULO /.test(l)) break;
-    out.push(l.replace(/^- /, ""));
-  }
-  return norm(out.join(" "));
+/** Texto do artigo N do v6 (uma linha por artigo). */
+function artigoV6(n) {
+  const re = new RegExp(`^Art\\. ${n}(?:º|\\.) (.*)$`);
+  const linha = V6.split(/\r?\n/).map((l) => l.trim()).find((l) => re.test(l));
+  assert.ok(linha, `o v6 não tem o Art. ${n}`);
+  return norm(linha.match(re)[1]);
 }
 
 /** Texto do bloco do artigo N no gate (tags e expressões JSX fora). */
 function bloco(n) {
-  const m = TERMOS.match(new RegExp(`artLabel\\}>Art\\. ${n}º</strong> — ([\\s\\S]*?)</p>`));
-  assert.ok(m, `o gate não tem o bloco do Art. ${n}º`);
+  const m = TERMOS.match(new RegExp(`artLabel\\}>Art\\. ${n}(?:º|\\.)</strong> — ([\\s\\S]*?)</p>`));
+  assert.ok(m, `o gate não tem o bloco do Art. ${n}`);
   return norm(m[1].replace(/<[^>]+>/g, " ").replace(/\{[^}]*\}/g, " ").replace(/\s+([.,;:)])/g, "$1"));
 }
 
-/** O bloco é um trecho LITERAL do artigo? (o ponto final do bloco pode ser o fim de uma frase que continua no artigo) */
+/** O bloco é um trecho LITERAL do artigo? */
 const trechoDoArtigo = (txtBloco, txtArtigo) => {
   const b = txtBloco.replace(/\.$/, "");
   return b.length > 20 && txtArtigo.includes(b);
 };
 
-const citados = () => [...TERMOS.matchAll(/artLabel\}>Art\. (\d+)º</g)].map((m) => Number(m[1]));
+const citados = () => [...TERMOS.matchAll(/artLabel\}>Art\. (\d+)(?:º|\.)</g)].map((m) => Number(m[1]));
 
-test("controlo positivo: o v5 é legível e o leitor de artigos encontra o que deve", () => {
-  assert.ok(V5.length > 15000, "o Regulamento v5 não foi lido — medição inválida");
-  assert.match(artigoV5(14), /competição de habilidade/);
-  assert.match(artigoV5(2), /Oferta Programada: modalidade de palpite/, "alíneas do Art. 2º não foram juntas");
+test("controlo positivo: o v6 é legível e o leitor de artigos encontra o que deve", () => {
+  assert.ok(V6.length > 6000, "o Regulamento v6 não foi lido — medição inválida");
+  assert.match(artigoV6(11), /habilidade, estratégia e menor valor único de lance/);
+  assert.match(artigoV6(6), /o Passe não concede pontos de lance/);
+  assert.match(artigoV6(30), /Cartório de Títulos e Documentos/);
   assert.ok(citados().length >= 10, `poucos blocos citados no gate: ${citados().length}`);
 });
 
-test("cada bloco do gate é TEXTO LITERAL do artigo do v5 que cita (nada de redacção nova)", () => {
+test("cada bloco do gate é TEXTO LITERAL do artigo do v6 que cita (nada de redacção nova)", () => {
   const maus = [];
   for (const n of citados()) {
     const b = bloco(n);
-    if (!trechoDoArtigo(b, artigoV5(n))) maus.push(`Art. ${n}º: «${b.slice(0, 90)}…» não está no artigo`);
+    if (!trechoDoArtigo(b, artigoV6(n))) maus.push(`Art. ${n}: «${b.slice(0, 90)}…» não está no artigo`);
   }
-  assert.deepEqual(maus, [], "blocos do gate que não são texto do v5:\n" + maus.join("\n"));
+  assert.deepEqual(maus, [], "blocos do gate que não são texto do v6:\n" + maus.join("\n"));
 });
 
-test("BIDIRECCIONAL: o mesmo verificador REPROVA blocos do gate antigo (v4)", () => {
-  // Trechos LITERAIS do gate até ao UTAC110h (Art. 8 e Art. 20 do v4), com o número que citavam.
+test("BIDIRECCIONAL: o mesmo verificador REPROVA os blocos do gate do v5.0 (até ao UTAC136)", () => {
+  // Trechos LITERAIS do gate do v5.0, com o número que citavam.
   const antigos = [
-    [8,  "O participante poderá ofertar lances por meio de saldo em dinheiro, na modalidade Relâmpago (Flash), ou de senhas, na modalidade Programado (adquiridas pela conversão de saldo)"],
-    [6,  "As senhas, quando utilizadas na modalidade Programado, têm custo unitário de R$ 2,00 (dois reais), adquiridas exclusivamente pela conversão de saldo em dinheiro"],
-    [1,  "O DesafioGUT é uma atividade comercial em formato de E-commerce através de Dropshipping, operada pelo Grupo União e Trabalho (GUT)"],
+    [8,  "Cada Passe Desafio adquirido concede ao utilizador 10 (dez) pontos de fidelidade"],
+    [6,  "O Passe Desafio é o produto digital adquirido pelo utilizador, com preço fixo de R$ 2,00 (dois reais), nas modalidades Passe Relâmpago e Passe Programado"],
+    [1,  "O DesafioGUT é um programa de fidelidade gamificado operado pela Associação Recreativa dos Nordestinos no Amazonas"],
+    [21, "O ECOQUILDO é uma moeda social interna do Grupo União e Trabalho, com lastro em reais à razão de 1 ECOQUILDO = R$ 1,00 (um real)"],
   ];
   for (const [n, txt] of antigos) {
-    assert.equal(trechoDoArtigo(norm(txt), artigoV5(n)), false, `o verificador aceitou texto do gate antigo como Art. ${n}º do v5`);
+    assert.equal(trechoDoArtigo(norm(txt), artigoV6(n)), false, `o verificador aceitou texto do gate v5 como Art. ${n} do v6`);
   }
 });
 
-test("o gate só cita artigos que existem no v5 (1..72) e cita os que o resumo exige", () => {
+test("o gate só cita artigos que existem no v6 (1..30) e cita os que o resumo exige", () => {
   const c = citados();
-  for (const n of c) assert.ok(n >= 1 && n <= 72, `Art. ${n}º não existe no v5`);
-  // Passe (6º), pontos (8º/9º), competição de habilidade (14º), ECOQUILDO (47º), imagem (66º).
-  for (const n of [1, 6, 8, 9, 14, 47, 66]) assert.ok(c.includes(n), `o resumo perdeu o Art. ${n}º`);
+  for (const n of c) assert.ok(n >= 1 && n <= 30, `Art. ${n} não existe no v6`);
+  // identificação (1º), 18+ (2º), Passe opcional/preço/sem pontos de lance/1 ponto (3º/5º/6º/7º), cartão (8º),
+  // habilidade (11.), ECOQUILDO R$ 0,50 e conversão (21./23.).
+  for (const n of [1, 2, 3, 5, 6, 7, 8, 11, 21, 23]) assert.ok(c.includes(n), `o resumo perdeu o Art. ${n}`);
 });
 
-test("vocabulário do gate: v5 presente, modelo antigo ausente (texto inteiro, sem comentários)", () => {
+test("vocabulário do gate: v6 presente, modelo antigo ausente (texto inteiro, sem comentários)", () => {
   const visivel = TERMOS.replace(/\{\/\*[\s\S]*?\*\/\}/g, " ").replace(/\/\*[\s\S]*?\*\//g, " ")
     .split(/\r?\n/).map((l) => l.replace(/(^|[^:"'`])\/\/.*$/, "$1")).join("\n");
-  for (const re of [/\bsenhas?\b/i, /torneio/i, /Portaria SPA/i, /1\.207\/2024/, /Agência\s+\d/i, /\bTED\b/])
+  for (const re of [/\bsenhas?\b/i, /torneio/i, /Portaria SPA/i, /1\.207\/2024/, /Agência\s+\d/i, /\bTED\b/,
+                    /10 \(dez\) pontos/, /10 pontos de fidelidade/, /R\$ 1,00/, /200 pontos/, /v5\.0/])
     assert.doesNotMatch(visivel, re, `o gate voltou a dizer ${re}`);
-  for (const re of [/Passe Desafio/, /R\$ 2,00/, /pontos de fidelidade/, /ECOQUILDO/, /competição de\s+habilidade/])
+  for (const re of [/Passe Desafio/, /R\$ 2,00/, /pontos de fidelidade/, /ECOQUILDO/, /menor valor único de lance/,
+                    /o Passe não concede pontos de lance/, /R\$ 0,50/, /Regulamento Oficial v6\.0/])
     assert.match(visivel, re, `o gate perdeu ${re}`);
 });
 
-test("a caixa «termos» repete os números do v5 (Art. 6º R$ 2,00 · Art. 8º 10 pontos) — achado X1 do SEG4", () => {
+test("a caixa «termos» repete os números do v6 (Art. 5º R$ 2,00 · Art. 7º 1 ponto) — achado X1 do SEG4", () => {
   const m = TERMOS.match(/Aceito os Termos de Participação:([^<]*)<\/span>/);
   assert.ok(m, "não encontrei a caixa «termos»");
-  const preco = m[1].match(/R\$ ([\d,]+)/), pontos = m[1].match(/concede (\d+) pontos de fidelidade/);
+  const preco = m[1].match(/R\$ ([\d,]+)/), pontos = m[1].match(/concede (\d+) ponto/);
   assert.ok(preco && pontos, `a caixa perdeu preço ou pontos: «${m[1]}»`);
-  assert.ok(artigoV5(6).includes(`R$ ${preco[1]} (dois reais)`), `R$ ${preco[1]} não é o preço do Art. 6º`);
-  assert.ok(artigoV5(8).includes(`${pontos[1]} (dez) pontos de fidelidade`), `${pontos[1]} pontos não é o Art. 8º`);
+  assert.ok(artigoV6(5).includes(`R$ ${preco[1]} (dois reais)`), `R$ ${preco[1]} não é o preço do Art. 5º`);
+  assert.ok(artigoV6(7).includes(`${pontos[1]} (um) ponto de fidelidade`), `${pontos[1]} ponto não é o Art. 7º`);
+  assert.match(m[1], /sem pontos de lance/, "a caixa tem de dizer que o Passe não dá pontos de lance (Art. 6º)");
 });
 
-test("o gate não apresenta datas que o v5 não regista", () => {
-  assert.doesNotMatch(TERMOS, /junho|5 de outubro de 2026/i, "o gate voltou a uma data do v4");
-  assert.match(TERMOS, /2 de novembro de 2026/, "o gate perdeu a vigência do v5 (Art. 4º: 02 de novembro de 2026)");
-  assert.match(V5, /Vigente a partir de 02 de novembro de 2026/, "o v5 mudou a vigência — actualizar o gate");
+test("o gate não apresenta datas que o v6 não regista", () => {
+  assert.doesNotMatch(TERMOS, /junho|5 de outubro de 2026|2 de novembro de 2026/i, "o gate voltou a uma data do v4/v5");
+  assert.match(TERMOS, /registo no Cartório de Títulos e Documentos/, "o gate perdeu a vigência do v6 (Art. 30)");
+  assert.match(V6, /vigência inicia-se na data do seu respectivo registro no Cartório de Títulos e Documentos/,
+    "o v6 mudou a vigência — actualizar o gate");
 });
 
 test("o gate liga para o v5 integral em /regras-oficiais, e a rota é pública (lê-se ANTES de aceitar)", () => {
@@ -137,21 +142,23 @@ test("o gate liga para o v5 integral em /regras-oficiais, e a rota é pública (
 // existem no v5 → a citação saiu (e o texto que só dependia dela). A guarda continua OCORRÊNCIA A
 // OCORRÊNCIA (a lição do mutante que sobrevivia quando se verificava só a presença) e ganha a outra
 // direcção: nenhuma citação v4 órfã pode voltar.
-test("os outros ficheiros que citam o Regulamento estão no v5, ocorrência a ocorrência", () => {
+// UTAC137 — a mesma guarda, agora no v6: Art. 6º → 5º (preço do Passe), Art. 14º → 11. (menor valor único de lance).
+test("os outros ficheiros que citam o Regulamento estão no v6, ocorrência a ocorrência (era v5)", () => {
   const ORFAOS_V4 = /Art\.\s*(?:7|8|20|25|26)\b(?!º)/;
   const casos = [
     ["src/components/CardLance.jsx",          [/Mín R\$ 0,01 · Máx 5 lances\/min/]],
-    ["src/components/glass/ComingSoonHero.jsx", [/Menor lance único vence · Art\. 14º/]],
-    ["src/pages/Configuracoes.jsx",           [/\["Art\. 6º",\s+"Passe Desafio: R\$ 2,00\."\]/]],
-    ["src/pages/MeusAtivos.jsx",              [/Art\. 14º: Menor lance único ganha/]],
-    ["src/pages/MinhaCarteira.jsx",           [/Passe Desafio: R\$ \{VALOR_POR_SENHA_BRL\.toFixed\(2\)\} \(Art\. 6º\)/]],
+    ["src/components/glass/ComingSoonHero.jsx", [/Menor valor único de lance vence · Art\. 11\./]],
+    ["src/pages/Configuracoes.jsx",           [/\["Art\. 5º",\s+"Passe Desafio: R\$ 2,00\."\]/]],
+    ["src/pages/MeusAtivos.jsx",              [/Art\. 11\.: vence o menor valor único de lance/]],
+    ["src/pages/MinhaCarteira.jsx",           [/Passe Desafio: R\$ \{VALOR_POR_SENHA_BRL\.toFixed\(2\)\} \(Art\. 5º\)/]],
     // UTAC107d — o rodapé da TabelaLances já tinha saído; fica a guarda contra o regresso.
     ["src/components/TabelaLances.jsx",       []],
   ];
   for (const [f, devem] of casos) {
     // Comentários fora (os comentários de UTAC citam os números antigos de propósito).
     const t = ler(f).replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|\s)\/\/[^\n]*/g, " ");
-    for (const re of devem) assert.match(t, re, `${f}: perdeu a citação v5 ${re}`);
+    for (const re of devem) assert.match(t, re, `${f}: perdeu a citação v6 ${re}`);
+    assert.doesNotMatch(t, /Art\. 14º|\["Art\. 6º"|\(Art\. 6º\)/, `${f}: voltou a citar o v5 (Art. 14º / Art. 6º do preço)`);
     assert.doesNotMatch(t, ORFAOS_V4, `${f}: voltou a citar um artigo do v4 (7/8/20/25/26)`);
   }
 });

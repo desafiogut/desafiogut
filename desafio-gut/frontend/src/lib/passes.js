@@ -38,16 +38,19 @@ export const TIPOS_PASSE = Object.freeze({
     // UTAC110j.5 — o backend (UTAC110n) deixou de dar 1 CRÉDITO e passou a dar +200 PONTOS de lance
     // (`ledger-lance.mjs` PONTOS_LANCE_POR_PASSE_RELAMPAGO) + 1 ECOQUILDO. Texto antigo, por histórico:
     //   beneficio: "10 pontos + 1 lance no Menor Lance Único" · sucesso: "Passe Relâmpago comprado: +10 pontos e 1 lance"
-    beneficio: "10 pontos de fidelidade + 200 pontos de lance + 1 ECOQUILDO",
-    sucesso: "Passe Relâmpago comprado: +10 pontos de fidelidade e +200 pontos de lance",
+    // UTAC137 (Regulamento v6.0, Arts. 6º/7º): o Passe dá 1 ponto de fidelidade e NÃO dá pontos de lance.
+    //   antes: beneficio "10 pontos de fidelidade + 200 pontos de lance + 1 ECOQUILDO" · sucesso "…+10 pontos de fidelidade e +200 pontos de lance"
+    beneficio: "1 ponto de fidelidade + 1 ECOQUILDO + GUTO e dados analíticos",
+    sucesso: "Passe Relâmpago comprado: +1 ponto de fidelidade e +1 ECOQUILDO",
   }),
   programado: Object.freeze({
     tipo: "programado",
     endpoint: "comprar-passe-programado",
     nome: "Passe Programado",
     icone: "🎫",
-    beneficio: "10 pontos + 1 palpite nas Ofertas Programadas",
-    sucesso: "Passe Programado comprado: +10 pontos e 1 palpite",
+    // UTAC137 — o palpite deixou de exigir Passe. Antes: "10 pontos + 1 palpite nas Ofertas Programadas" · "+10 pontos e 1 palpite"
+    beneficio: "1 ponto de fidelidade + 1 ECOQUILDO + GUTO e dados analíticos",
+    sucesso: "Passe Programado comprado: +1 ponto de fidelidade e +1 ECOQUILDO",
   }),
 });
 

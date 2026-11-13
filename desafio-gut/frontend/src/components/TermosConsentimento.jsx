@@ -15,6 +15,7 @@ export const TAMANHO_GUTO_GATE = 96;
  *
  * Exibe o resumo do Regulamento Oficial e bloqueia participação até aceitação total.
  * MC23.3 — overlay migrado para <Modal> (spring entry + backdrop bg-black/60).
+ * UTAC137 — o resumo passou ao **Regulamento v6.0** (`docs/REGULAMENTO-v6.md`); versão do aceite 3.4.
  * UTAC110h.1 — o resumo passou do Regulamento v4 para o **Regulamento Oficial v5.0**
  * (`docs/REGULAMENTO-v5.md`): só frases e números do v5, com o artigo citado. O texto integral
  * vive em /regras-oficiais (rota pública, Boot.jsx), ligada daqui.
@@ -24,7 +25,7 @@ export const TAMANHO_GUTO_GATE = 96;
 // UTAC110h.1 (R18-110h.1-B) — "2.0" (v4) -> "3.0" (v5): quem aceitou o v4 volta a ver o gate.
 // Tem de ser igual a VERSAO_GATE de netlify/functions/_lib/consentimento.mjs (há teste).
 export const CHAVE_CONSENTIMENTO  = "gut_consentimento";
-export const VERSAO_CONSENTIMENTO = "3.3"; // 2026-10-18 (UTAC110m.2): acompanha o VERSAO_GATE do backend — o Regulamento mudou de texto e a frente C reduziu uma promessa (ECOQUILDO fora do app); Art. 39º exige aviso prévio (DEBT-066).
+export const VERSAO_CONSENTIMENTO = "3.4"; // 2026-11-13 (UTAC137, R18-137-1): gate no Regulamento v6.0, igual ao VERSAO_GATE do backend — todos reaceitam. Anterior, «3.3»: 2026-10-18 (UTAC110m.2): acompanha o VERSAO_GATE do backend — o Regulamento mudou de texto e a frente C reduziu uma promessa (ECOQUILDO fora do app); Art. 39º exige aviso prévio (DEBT-066).
 
 export default function TermosConsentimento({ onAceitar }) {
   const [lido,       setLido]       = useState(false);
@@ -72,8 +73,8 @@ export default function TermosConsentimento({ onAceitar }) {
             </div>
           </div>
           <p style={estilos.subtitulo}>
-            Leia e aceite o regulamento antes de participar. Vigência: a partir de{" "}
-            <strong style={{ color: "#f5a623" }}>2 de novembro de 2026</strong>.
+            Leia e aceite o regulamento antes de participar. Vigência: a partir do{" "}
+            <strong style={{ color: "#f5a623" }}>registo no Cartório de Títulos e Documentos</strong> (Art. 30).
           </p>
         </div>
 
@@ -85,84 +86,62 @@ export default function TermosConsentimento({ onAceitar }) {
         <details style={estilos.regulamento}>
           <summary style={estilos.botaoExpandir}>📖 Ler o resumo do regulamento</summary>
           <div style={estilos.scrollBox}>
-          <h3 style={estilos.secaoTitulo}>Regulamento Oficial v5.0 — Resumo</h3>
+          <h3 style={estilos.secaoTitulo}>Regulamento Oficial v6.0 — Resumo</h3>
 
-          {/* UTAC110h.1 — cada parágrafo é TEXTO do Regulamento Oficial v5.0 (docs/REGULAMENTO-v5.md),
-              com o artigo citado. Nada aqui é redacção nova: o teste citacoesRegulamento compara
-              cada bloco com o artigo do v5, palavra a palavra. */}
+          {/* UTAC137 — cada parágrafo é TEXTO LITERAL do Regulamento v6.0 (docs/REGULAMENTO-v6.md, o texto registado
+              no RTD), com o rótulo do documento («Art. 1º» … «Art. 10.» em diante). Gerado a partir do ficheiro;
+              o teste citacoesRegulamento compara cada bloco com o artigo do v6. O resumo do v5.0 (Arts. 1/2/5/6/8/9/
+              14/27/47/49/65/66) fica no git (`b740046`). */}
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 1º</strong> — O DesafioGUT é um programa de fidelidade
-            gamificado operado pela Associação Recreativa dos Nordestinos no Amazonas, nome fantasia Grupo
-            União e Trabalho (GUT), CNPJ nº 23.040.066/0001-00, com sede em Manaus/AM.
+            <strong style={estilos.artLabel}>Art. 1º</strong> — O presente Regulamento estabelece os termos e condições gerais de uso do aplicativo de e-commerce por dropshipping com programa de fidelidade denominado DesafioGUT, operado pela Associação Recreativa dos Nordestinos no Amazonas, nome fantasia Grupo União e Trabalho (GUT), inscrita no CNPJ sob o nº 23.040.066/0001-00, com sede na cidade de Manaus, Estado do Amazonas.
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 2º</strong> — O DesafioGUT funciona como plataforma de comércio
-            eletrónico por dropshipping, com duas modalidades distintas: I — Oferta Relâmpago: modalidade de
-            menor lance único, com duração entre minutos e horas; II — Oferta Programada: modalidade de
-            palpite, com duração entre dias e semanas.
+            <strong style={estilos.artLabel}>Art. 2º</strong> — O uso do aplicativo é destinado exclusivamente a pessoas maiores de 18 (dezoito) anos, exigindo-se cadastro prévio com fornecimento de dados verídicos, em estrita conformidade com a Lei Geral de Proteção de Dados (LGPD).
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 5º</strong> — Poderão participar do DesafioGUT pessoas
-            físicas e jurídicas, maiores de 18 (dezoito) anos, regularmente cadastradas no aplicativo.
+            <strong style={estilos.artLabel}>Art. 3º</strong> — A aquisição do Passe Desafio é estritamente opcional, não constituindo requisito obrigatório para a navegação básica, cadastro ou obtenção gratuita de pontos de engajamento na plataforma.
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 6º</strong> — O Passe Desafio é o produto digital adquirido
-            pelo utilizador, com preço fixo de{" "}
-            <strong style={{ color: "#f5a623" }}>R$ 2,00 (dois reais)</strong>, nas modalidades Passe
-            Relâmpago e Passe Programado.
+            <strong style={estilos.artLabel}>Art. 5º</strong> — O Passe Desafio é um produto digital comercializado pelo valor fixo de R$ 2,00 (dois reais), concedendo acesso a recursos avançados de suporte e engajamento.
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 8º</strong> — Cada Passe Desafio adquirido concede ao
-            utilizador 10 (dez) pontos de fidelidade.
+            <strong style={estilos.artLabel}>Art. 6º</strong> — Em estrita conformidade com as diretrizes da Google Play para programas de fidelidade (Gamified Loyalty), o Passe não concede pontos de lance. Os pontos utilizados para realizar os lances são 100% gratuitos, obtidos exclusivamente por meio de engajamento diário, login contínuo e cumprimento de missões no aplicativo.
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 9º</strong> — A cada 50 (cinquenta) pontos de fidelidade
-            acumulados, o utilizador poderá resgatar gratuitamente 1 (um) cartão colecionável físico
-            da Família Quildo, sem qualquer pagamento adicional.
+            <strong style={estilos.artLabel}>Art. 7º</strong> — O Passe Desafio confere ao usuário o acesso ao assistente virtual de inteligência estratégica GUTO, dados analíticos de mercado e 1 (um) ponto de fidelidade ao sistema.
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 14º</strong> — A Oferta Relâmpago é uma competição de
-            habilidade: vence o participante que apresentar o menor valor em pontos de lance que ninguém
-            mais escolheu{" "}
-            <strong style={{ color: "#f5a623" }}>(menor lance único)</strong>.
+            <strong style={estilos.artLabel}>Art. 8º</strong> — O Cartão Colecionável do ecossistema é estritamente digital. A proporção de conversão é fixa e inalterável: a cada 50 pontos de fidelidade acumulados, o sistema credita automaticamente 1 Cartão Digital ao perfil do usuário.
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 27º</strong> — O participante regista o seu palpite (ex: "a
-            edição terá 148 lances"). Vence o palpite que ficar mais próximo do número real de lances apurado
-            pela Associação.
+            <strong style={estilos.artLabel}>Art. 11.</strong> — A Oferta Relâmpago configura modalidade de e-commerce baseada em habilidade, estratégia e menor valor único de lance, não configurando sorte, loteria ou jogo de azar.
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 47º</strong> — O ECOQUILDO é uma moeda social interna do
-            Grupo União e Trabalho, com lastro em reais à razão de 1 ECOQUILDO = R$ 1,00 (um real).
+            <strong style={estilos.artLabel}>Art. 17.</strong> — Vence a Oferta Programada apenas 1 (um) palpite: aquele que registrar o número exato ou ficar mais próximo do número real apurado. Em caso de empate na proximidade, o critério de desempate será a ordem cronológica de registro do palpite no sistema.
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 49º</strong> — O ECOQUILDO não é convertível em dinheiro e
-            não é transferível a terceiros.
+            <strong style={estilos.artLabel}>Art. 21.</strong> — O ECOQUILDO é a unidade de valor interno de bonificação da plataforma, possuindo o valor de paridade fixo de 1 ECOQUILDO equivalente a R$ 0,50 (cinquenta centavos), com lastro financeiro garantido pela Associação.
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 65º</strong> — É vedada a participação de funcionários,
-            colaboradores, prestadores de serviços e familiares de qualquer empresa envolvida na operação do
-            DesafioGUT.
+            <strong style={estilos.artLabel}>Art. 23.</strong> — A cada 50 (cinquenta) ECOQUILDOs acumulados pelo usuário na plataforma, o sistema efetuará a conversão automática e imediata desse montante em 1 (um) Passe Desafio digital.
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 66º</strong> — Os participantes cedem à coordenação do
-            DesafioGUT, de forma gratuita, os direitos de utilização do seu nome, imagem e som de voz para
-            divulgação em qualquer mídia, exclusivamente referente ao evento em epígrafe.
+            <strong style={estilos.artLabel}>Art. 25.</strong> — A aquisição do Passe Desafio (produto estritamente digital) será processada exclusivamente por meio do sistema oficial de pagamentos da Google Play (Google Billing).
           </p>
 
           <p style={estilos.artigo}>
-            Regras completas (12 capítulos, 72 artigos) em{" "}
+            Regras completas (6 capítulos, 30 artigos) em{" "}
             <a href="/regras-oficiais" style={estilos.link}>Regras Oficiais</a>.
           </p>
 
@@ -183,19 +162,20 @@ export default function TermosConsentimento({ onAceitar }) {
           <label style={estilos.label}>
             <input type="checkbox" checked={lido} onChange={(e) => setLido(e.target.checked)} style={estilos.checkbox} />
             <span>
-              Li e compreendi o regulamento completo do DesafioGUT (Regulamento Oficial v5.0), disponível em{" "}
+              Li e compreendi o regulamento completo do DesafioGUT (Regulamento Oficial v6.0), disponível em{" "}
               <a href="/regras-oficiais" style={estilos.link}>Regras Oficiais</a>.
             </span>
           </label>
 
           <label style={estilos.label}>
             <input type="checkbox" checked={maiores} onChange={(e) => setMaiores(e.target.checked)} style={estilos.checkbox} />
-            <span>Declaro ter 18 anos ou mais (Art. 5º), capacidade civil plena e não ser funcionário, colaborador, prestador de serviços nem familiar de empresa envolvida na operação do DesafioGUT (Art. 65º).</span>
+            {/* UTAC137 — o v6 não tem o artigo dos funcionários (era o Art. 65º do v5): a declaração cita só o que existe. */}
+            <span>Declaro ter 18 anos ou mais (Art. 2º) e capacidade civil plena.</span>
           </label>
 
           <label style={estilos.label}>
             <input type="checkbox" checked={termos} onChange={(e) => setTermos(e.target.checked)} style={estilos.checkbox} />
-            <span>Aceito os Termos de Participação: cada Passe Desafio de R$ 2,00 concede 10 pontos de fidelidade (Art. 8º) e a Oferta Relâmpago é uma competição de habilidade — vence o menor lance único (Art. 14º).</span>
+            <span>Aceito os Termos de Participação: o Passe Desafio de R$ 2,00 é opcional e concede 1 ponto de fidelidade, sem pontos de lance (Arts. 3º, 5º, 6º e 7º), e a Oferta Relâmpago é baseada em habilidade — vence o menor valor único de lance (Art. 11.).</span>
           </label>
 
           <label style={estilos.label}>
@@ -206,7 +186,7 @@ export default function TermosConsentimento({ onAceitar }) {
               <a href="/privacidade" style={estilos.link}>
                 Política de Privacidade
               </a>{" "}
-              (LGPD/GDPR) e cedo minha imagem conforme Art. 66º.
+              (LGPD/GDPR — Art. 27.).
             </span>
           </label>
         </div>

@@ -448,36 +448,40 @@ const raiz = new URL("../../../../../", import.meta.url); // …/DESAFIOGUT/
 const ler = async (rel) => (await import("node:fs")).readFileSync(new URL(rel, raiz), "utf8");
 const corpo = (txt) => txt.slice(txt.indexOf("CAPÍTULO I"));
 
-test("G1 · Art. 17º diz «200 pontos de lance» e já não promete «1 crédito de lance»", async () => {
-  for (const f of ["docs/REGULAMENTO-v5.md", "docs/GUTO-REGULAMENTO.md"]) {
+// ⚠️ UTAC137 — o G1-G4 fixavam o Art. 17º do v5.1 («200 pontos de lance») e a invariante corpo(v5) == corpo(GUTO).
+// O Regulamento passou ao v6.0, que diz o CONTRÁRIO (Art. 6º: o Passe não concede pontos de lance). Invertidos:
+test("G1 · (v6) o Art. 6º diz que o Passe NÃO concede pontos de lance (era: Art. 17º v5.1 «200 pontos de lance»)", async () => {
+  for (const f of ["docs/REGULAMENTO-v6.md", "docs/GUTO-REGULAMENTO.md"]) {
     const doc = await ler(f);
-    const art = /Art\. 17º — ([^\n]+)/.exec(doc)?.[1] ?? "";
-    assert.match(art, /200 pontos de lance/, `${f}: Art. 17º sem «200 pontos de lance»`);
-    assert.equal(art.includes("1 crédito de lance"), false, `${f}: Art. 17º ainda promete o crédito`);
-    assert.match(art, /não são condição para participar/, `${f}: falta a não-subordinação`);
+    const art = /Art\. 6º ([^\n]+)/.exec(doc)?.[1] ?? "";
+    assert.match(art, /o Passe não concede pontos de lance/, `${f}: Art. 6º sem a regra`);
+    assert.match(art, /100% gratuitos/, `${f}: Art. 6º sem a gratuidade dos pontos de lance`);
+    assert.doesNotMatch(doc, /200 pontos de lance/, `${f}: sobrou o +200 do v5.1`);
   }
 });
 
-test("G2 · a invariante corpo(v5) == corpo(GUTO) mantém-se byte a byte", async () => {
-  const v5 = corpo(await ler("docs/REGULAMENTO-v5.md"));
-  const guto = corpo(await ler("docs/GUTO-REGULAMENTO.md"));
-  assert.ok(v5.length > 15_000, `medição inválida: ${v5.length}`);
-  assert.equal(v5, guto, "os dois documentos divergiram");
+test("G2 · a invariante corpo(v6) == corpo(GUTO) mantém-se byte a byte", async () => {
+  const v6 = await ler("docs/REGULAMENTO-v6.md");
+  const guto = await ler("docs/GUTO-REGULAMENTO.md");
+  assert.ok(v6.length > 6_000, `medição inválida: ${v6.length}`);
+  assert.ok(guto.endsWith(v6), "os dois documentos divergiram");
+  assert.equal(guto.slice(guto.indexOf("\n---\n\n") + 6), v6, "o corpo do GUTO tem de ser o v6 inteiro, sem acrescentos");
 });
 
 test("G3 · o módulo do runtime espelha o documento (3.º sítio da invariante)", async () => {
   const guto = await ler("docs/GUTO-REGULAMENTO.md");
   const { REGULAMENTO_TEXTO, REGULAMENTO_VERSAO } = await import("../_lib/guto-regulamento.mjs");
-  assert.equal(REGULAMENTO_VERSAO, "5.1");
+  assert.equal(REGULAMENTO_VERSAO, "6.0");
   assert.equal(REGULAMENTO_TEXTO, guto, "o módulo que o runtime importa divergiu do documento — regenerar");
-  assert.match(REGULAMENTO_TEXTO, /200 pontos de lance/);
+  assert.doesNotMatch(REGULAMENTO_TEXTO, /200 pontos de lance/);
 });
 
-test("G4 · a âncora do Art. 17º no GUTO é um excerto VERBATIM do artigo", async () => {
+test("G4 · a âncora do Art. 6º no GUTO é um excerto VERBATIM do artigo (era o Art. 17º do v5.1)", async () => {
   const doc = await ler("docs/GUTO-REGULAMENTO.md");
-  const art = /Art\. 17º — ([^\n]+)/.exec(doc)?.[1] ?? "";
+  const art = /Art\. 6º ([^\n]+)/.exec(doc)?.[1] ?? "";
   const { ARTIGOS_V4 } = await import("../_lib/guto-perfis.mjs");
-  assert.ok(art.includes(ARTIGOS_V4["17"]), "a âncora do Art. 17º deixou de ser verbatim");
+  assert.ok(art.includes(ARTIGOS_V4["6"]), "a âncora do Art. 6º deixou de ser verbatim");
+  assert.equal(ARTIGOS_V4["17"].includes("200"), false, "a âncora 17 voltou a falar do +200");
 });
 
 // ═══ FRENTE H — DEBT-076 (UTAC110n.1): as SENHAS antigas convertem-se em pontos ══════════════════

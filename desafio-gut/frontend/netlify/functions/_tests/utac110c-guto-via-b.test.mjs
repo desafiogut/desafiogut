@@ -127,14 +127,16 @@ test("(2) o system prompt usa o vocabulário Via B", () => {
 
 // ── (3) o Regulamento inteiro é injectado ────────────────────────────────────
 
-test("(3) o Regulamento INTEIRO é injectado no prompt (12 capítulos, 72 artigos)", () => {
-  assert.ok(REGULAMENTO_TEXTO.length > 17_000,
+// UTAC137 — o Regulamento passou ao v6.0 (6 capítulos, 30 artigos, ~7,5 mil caracteres). Os limiares do v5.1
+// (> 17 000 / CAPÍTULO XII / Art. 72º / prompt > 20 000) acompanham o documento novo.
+test("(3) o Regulamento INTEIRO é injectado no prompt (v6.0: 6 capítulos, 30 artigos)", () => {
+  assert.ok(REGULAMENTO_TEXTO.length > 7_000,
     `o texto do Regulamento tem ${REGULAMENTO_TEXTO.length} chars — medição inválida`);
-  assert.match(REGULAMENTO_TEXTO, /CAPÍTULO XII/);
-  assert.match(REGULAMENTO_TEXTO, /Art\. 72º/);
+  assert.match(REGULAMENTO_TEXTO, /CAPÍTULO VI — PAGAMENTOS, LGPD E DIREITOS/);
+  assert.match(REGULAMENTO_TEXTO, /Art\. 30\. As partes elegem/);
   for (const [nome, prompt] of PROMPTS) {
     assert.ok(prompt.includes(REGULAMENTO_TEXTO), `${nome}: o prompt não leva o Regulamento inteiro`);
-    assert.ok(prompt.length > 20_000, `${nome}: prompt de ${prompt.length} chars — curto demais`);
+    assert.ok(prompt.length > 9_000, `${nome}: prompt de ${prompt.length} chars — curto demais`);
   }
 });
 

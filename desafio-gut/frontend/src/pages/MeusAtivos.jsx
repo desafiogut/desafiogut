@@ -398,7 +398,8 @@ export default function MeusAtivos() {
       }}>
         {/* UTAC110j (R18-110j-4) — «Art. 25: Apuração automática» saiu (o Art. 25 do v4 não tem
             correspondente no v5); Art. 7 (v4) → Art. 14º (v5). */}
-        Art. 14º: Menor lance único ganha
+        {/* UTAC137 — Art. 14º (v5) → Art. 11. (v6), com as palavras do v6. */}
+        Art. 11.: vence o menor valor único de lance
       </p>
     </div>
   );

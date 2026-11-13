@@ -31,7 +31,7 @@ import { usePontos } from "../hooks/usePontos.js";
 import { usePalpite, usePalpitesDaEdicao } from "../hooks/usePalpite.js";
 // UTAC120 (Frente B) — o palpite consome 1 PASSE PROGRAMADO (backend UTAC120): sem ele, não se envia.
 import { useInventarioPasses, semPasses } from "../hooks/useInventarioPasses.js";
-import BalaoComprarPasse, { AvisoSemPasse } from "../components/BalaoComprarPasse.jsx";
+import BalaoComprarPasse from "../components/BalaoComprarPasse.jsx";
 // UTAC108h.3 — as regras do palpite mudaram de casa (vivem em `lib/palpite.js`), porque o Início
 // passou a mostrar o vidro «🎫 Programada» com a zona de palpite dentro. Uma só verdade para as
 // duas telas: `estaAberta` / `edicoesProgramadasDe` / `estadoPalpite` / `PILULA`.
@@ -91,7 +91,7 @@ export default function OfertasProgramadas() {
   const [toast, setToast] = useState(null);
   // UTAC120 — só bloqueia com um 0 LIDO do servidor; a carregar/em erro fica como antes (o servidor recusa).
   const inventario = useInventarioPasses();
-  const semPasseProgramado = isConnected && semPasses(inventario, "passesProgramado");
+  // UTAC137 — o palpite deixou de depender do inventário (era `semPasseProgramado = isConnected && semPasses(…)`).
   const [balaoPasseAberto, setBalaoPasseAberto] = useState(false);
 
   const progresso = Math.min(100, Math.round((pontosCartao / Math.max(1, pontosParaCartao)) * 100));
@@ -145,19 +145,14 @@ export default function OfertasProgramadas() {
                 {/* UTAC120 — sem Passe Programado o envio fica desligado, com o MESMO cinzento do estado
                     «Enviando…» deste botão (o desligado do app); o motivo e a compra ficam logo abaixo. */}
                 <button
-                  type="button" onClick={() => palpitar(ed.id)} disabled={aPalpitar || semPasseProgramado}
-                  style={{ minHeight: "48px", padding: "0.6rem 1.1rem", borderRadius: "10px", cursor: aPalpitar ? "wait" : semPasseProgramado ? "not-allowed" : "pointer", border: "none", background: aPalpitar || semPasseProgramado ? "rgba(107,125,184,0.35)" : COR.gold, color: "#12161f", fontWeight: 800, fontSize: "0.86rem" }}
+                  type="button" onClick={() => palpitar(ed.id)} disabled={aPalpitar}
+                  style={{ minHeight: "48px", padding: "0.6rem 1.1rem", borderRadius: "10px", cursor: aPalpitar ? "wait" : "pointer", border: "none", background: aPalpitar ? "rgba(107,125,184,0.35)" : COR.gold, color: "#12161f", fontWeight: 800, fontSize: "0.86rem" }}
                 >
                   {aPalpitar ? "Enviando…" : ACOES.palpite.botao}
                 </button>
               </div>
-              {semPasseProgramado && (
-                <AvisoSemPasse
-                  mensagem="Precisa de 1 Passe Programado para palpitar."
-                  rotuloCta="Comprar Passe Programado"
-                  onComprar={() => setBalaoPasseAberto(true)}
-                />
-              )}
+              {/* UTAC137 (Regulamento v6.0): o palpite é gratuito. Aqui havia o aviso «Precisa de 1 Passe Programado
+                  para palpitar.» com o atalho de compra, mostrado quando o inventário de Passes Programados era 0. */}
             </div>
           )}
           {estado === "com_palpite" && (

@@ -23,7 +23,9 @@ const GUTO = ler("../../../../../docs/GUTO-REGULAMENTO.md");
 const MJS = ler("../../../netlify/functions/_lib/guto-regulamento.mjs");
 const TERMOS = ler("../../components/TermosConsentimento.jsx");
 
-const FONTES = [["REGULAMENTO-v5.md", V5], ["GUTO-REGULAMENTO.md", GUTO], ["guto-regulamento.mjs", MJS]];
+// ⚠️ UTAC137: o GUTO (documento + .mjs) passou ao Regulamento v6.0. As frentes B/C/D do 110m.2 ficam verificadas na
+// transcrição histórica do v5; o GUTO é verificado contra o v6 na INVARIANTE abaixo. Antes: [v5, GUTO, .mjs].
+const FONTES = [["REGULAMENTO-v5.md", V5]];
 const norm = (s) => s.replace(/\s+/g, " ").trim();
 
 /** Texto do artigo N do v5 (mesma leitura do teste `citacoesRegulamento`). */
@@ -99,19 +101,17 @@ test("D: Arts. 57º e 69º dão o DPO como canal de LGPD, e o Gmail fica como su
 });
 
 // ─────────────────────────── A INVARIANTE (corpo(v5) == corpo(GUTO)) ───────────────────────────
-test("INVARIANTE: corpo(v5) e corpo(GUTO) continuam byte a byte iguais (e o .mjs diz o mesmo)", () => {
-  const corpo = (md, modo) => (modo === "v5"
-    ? md.slice(md.indexOf("\n---\n\n") + 6)
-    : md.slice(md.indexOf("\nREGULAMENTO OFICIAL DO DESAFIOGUT\n") + 1));
-  const a = corpo(V5, "v5");
-  const b = corpo(GUTO, "guto");
-  assert.equal(a, b, "os corpos do v5 e do GUTO têm de ser iguais — é a invariante do UTAC110k.1");
-  // O .mjs é o runtime do GUTO: tem de conter cada frase nova, senão o assistente responde o antigo.
+// UTAC137 — a invariante passou a ser corpo(GUTO) == docs/REGULAMENTO-v6.md (era corpo(v5) == corpo(GUTO), UTAC110k.1).
+test("INVARIANTE: corpo(GUTO) é o v6 byte a byte (e o .mjs diz o mesmo)", () => {
+  const V6 = ler("../../../../../docs/REGULAMENTO-v6.md");
+  assert.equal(GUTO.slice(GUTO.indexOf("\n---\n\n") + 6), V6, "o corpo do GUTO tem de ser o v6 — invariante do UTAC137");
+  // O .mjs é o runtime do GUTO: tem de conter as frases do v6, senão o assistente responde o antigo.
   for (const frase of [
-    "mantém integralmente os pontos de fidelidade e o ECOQUILDO adquiridos com o Passe",
-    "não sendo aceite como forma de pagamento dentro do aplicativo DesafioGUT",
-    "Encarregado de Proteção de Dados (DPO) dpo@grupouniaoetrabalho.com.br",
+    "o Passe não concede pontos de lance",
+    "1 ECOQUILDO equivalente a R$ 0,50 (cinquenta centavos)",
+    "Encarregado de Proteção de Dados (DPO) encontram-se disponíveis no e-mail: dpo@grupouniaoetrabalho.com.br",
   ]) assert.ok(MJS.includes(frase), `guto-regulamento.mjs: falta «${frase.slice(0, 50)}…»`);
+  assert.ok(!MJS.includes("Versão 5.1 · Vigente"), "o .mjs ainda tem o corpo do v5.1");
 });
 
 // ─────────────── FRENTE A — o cartão é RESGATADO (não «adquirido» nem pago por PIX) ─────────────
@@ -134,12 +134,15 @@ test("A: Art. 9º resgata gratuitamente (50 pontos) e o Art. 53º tira o cartão
   assert.match(a53, /cartão colecionável da Família Quildo não é adquirido por PIX: é resgatado gratuitamente com 50 \(cinquenta\) pontos de fidelidade, nos termos do Art\. 9º/,
     "Art. 53º: tem de remeter ao Art. 9º — é o que fecha a contradição");
 
-  // o acoplamento que fez esta frente parar: gate e GUTO têm de acompanhar o artigo
-  const m = GATE.match(/artLabel\}>Art\. 9º<\/strong> — ([\s\S]*?)<\/p>/);
+  // o acoplamento que fez esta frente parar: gate e GUTO têm de acompanhar o artigo do cartão.
+  // ⚠️ UTAC137: no v6 o cartão está no Art. 8º («a cada 50 pontos… credita automaticamente 1 Cartão Digital»). O gate e
+  // a âncora do GUTO acompanham o v6; a verificação do v5 (Arts. 9º/53º) acima fica como histórico.
+  const a8v6 = norm((ler("../../../../../docs/REGULAMENTO-v6.md").match(/^Art\. 8º (.*)$/m) || [])[1] || "");
+  assert.match(a8v6, /a cada 50 pontos de fidelidade acumulados, o sistema credita automaticamente 1 Cartão Digital/);
+  const m = GATE.match(/artLabel\}>Art\. 8º<\/strong> — ([\s\S]*?)<\/p>/);
   const blocoGate = norm(m[1].replace(/<[^>]+>/g, " ").replace(/\{[^}]*\}/g, " ").replace(/\s+([.,;:)])/g, "$1")).replace(/\.$/, "");
-  assert.ok(a9.includes(blocoGate), "o bloco do Art. 9º no gate deixou de ser TRECHO LITERAL do artigo");
-  assert.match(blocoGate, /resgatar gratuitamente/, "o gate tem de dizer o mesmo que o artigo");
-  const ancoraGuto = PERFIS.match(/"9":\s+"([^"]+)"/)?.[1];
-  assert.ok(ancoraGuto && a9.includes(ancoraGuto.replace(/\.$/, "")), "a âncora do Art. 9º no GUTO deixou de ser excerto VERBATIM");
-  assert.match(ancoraGuto, /resgatar gratuitamente/, "o GUTO tem de responder o mesmo que o artigo");
+  assert.ok(a8v6.includes(blocoGate), "o bloco do Art. 8º no gate deixou de ser TRECHO LITERAL do artigo do v6");
+  assert.doesNotMatch(GATE, /artLabel\}>Art\. 9º<\/strong> — A cada 50/, "o gate voltou ao Art. 9º do v5");
+  const ancoraGuto = PERFIS.match(/"8":\s+"([^"]+)"/)?.[1];
+  assert.ok(ancoraGuto && a8v6.includes(ancoraGuto.replace(/\.$/, "")), "a âncora do Art. 8º no GUTO deixou de ser excerto VERBATIM do v6");
 });

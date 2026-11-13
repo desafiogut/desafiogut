@@ -20,7 +20,9 @@
 import { Link } from "react-router-dom";
 import { GlassCard } from "@/components/ui";
 import { useIsMobile } from "../hooks/useIsMobile.js";
-import REGULAMENTO_MD from "../../../../docs/REGULAMENTO-v5.md?raw";
+// UTAC137 — o Regulamento publicado passou ao **v6.0** (o texto registado no RTD, UTAC135). Era o v5.1:
+//   import REGULAMENTO_MD from "../../../../docs/REGULAMENTO-v5.md?raw";
+import REGULAMENTO_MD from "../../../../docs/REGULAMENTO-v6.md?raw";
 // UTAC110j.5 (Frente C) — as PROPORÇÕES FIXAS de pontos de lance (Google Play, Política de Programas de
 // Fidelidade Gamificados: «visíveis no app e nos termos oficiais»). O Regulamento v5.1 fixa 200 (Art. 17º)
 // e 1 ponto = R$ 0,01 (Art. 18º), mas NÃO os valores de cada fonte (Art. 16º só as enumera). O resumo vem
@@ -33,7 +35,9 @@ const COR = { text: "#e8f0fe", corpo: "#c9d3ee", muted: "#8f9cc8", gold: "#f5a62
 
 const RE_CAPITULO = /^CAPÍTULO ([IVXL]+) — (.+)$/;
 const RE_SECCAO = /^Secção ([IVXL]+) — (.+)$/;
-const RE_ARTIGO = /^(Art\. \d+º) — ([\s\S]*)$/;
+// UTAC137 — o v6 escreve «Art. 1º O presente…» e «Art. 10. A Associação…» (sem travessão); o v5 escrevia
+// «Art. 1º — …». Os dois formatos são aceites; o separador do documento é guardado e desenhado tal qual.
+const RE_ARTIGO = /^(Art\. \d+(?:º|\.))( — | )([\s\S]*)$/;
 const RE_ITEM = /^- ([\s\S]*)$/;
 const RE_RODAPE = /^Documento oficial/;
 
@@ -45,7 +49,14 @@ export function lerRegulamento(md) {
   const texto = String(md).replace(/\r\n/g, "\n");
   const corte = texto.indexOf("\n---\n");
   const corpo = corte >= 0 ? texto.slice(corte + 5) : texto;
-  const paragrafos = corpo.split(/\n\s*\n/).map((s) => s.replace(/\s+/g, " ").trim()).filter(Boolean);
+  // UTAC137 — o v6 tem um artigo por LINHA (sem linha em branco) e títulos Markdown («# », «## »). Cada linha
+  // que abre um título, um capítulo ou um artigo passa a começar um parágrafo; o «#» sai (é marcação do
+  // ficheiro, não texto jurídico). No v5 essas linhas já estavam separadas, logo nada muda para ele.
+  const paragrafos = corpo
+    .replace(/\n(?=#|CAPÍTULO |Art\. \d)/g, "\n\n")
+    .split(/\n\s*\n/)
+    .map((s) => s.replace(/^#+\s*/, "").replace(/\s+/g, " ").trim())
+    .filter(Boolean);
 
   const abertura = [];
   const capitulos = [];
@@ -68,7 +79,7 @@ export function lerRegulamento(md) {
       art = null;
       ultimo = null;
     } else if ((m = par.match(RE_ARTIGO))) {
-      art = { tipo: "artigo", rotulo: m[1], texto: m[2], itens: [] };
+      art = { tipo: "artigo", rotulo: m[1], separador: m[2], texto: m[3], itens: [] };
       cap.blocos.push(art);
       ultimo = { alvo: art, campo: "texto" };
     } else if ((m = par.match(RE_ITEM)) && art) {
@@ -88,7 +99,8 @@ export function lerRegulamento(md) {
 }
 
 export const REGULAMENTO = lerRegulamento(REGULAMENTO_MD);
-export const VERSAO_REGULAMENTO = (REGULAMENTO.abertura.join(" ").match(/Versão (\d+\.\d+)/) || [])[1] ?? null;
+// UTAC137: o v6 escreve «(VERSÃO 6.0)» — a procura deixou de distinguir maiúsculas.
+export const VERSAO_REGULAMENTO = (REGULAMENTO.abertura.join(" ").match(/vers[ãa]o (\d+\.\d+)/i) || [])[1] ?? null;
 
 const ancora = (numero) => `cap-${numero.toLowerCase()}`;
 
@@ -159,7 +171,7 @@ export default function RegrasOficiais() {
               return (
                 <div key={i}>
                   <p style={pArt}>
-                    <strong style={rotulo}>{b.rotulo}</strong> — {b.texto}
+                    <strong style={rotulo}>{b.rotulo}</strong>{b.separador ?? " — "}{b.texto}
                   </p>
                   {b.itens.length > 0 && (
                     <ul style={ul}>

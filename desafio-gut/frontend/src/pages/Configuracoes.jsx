@@ -234,7 +234,8 @@ export default function Configuracoes() {
             // UTAC110j (R18-110j-4) — Art. 20 (v4) → Art. 6º (v5). As linhas «Art. 26» (lance
             // mínimo) e «Art. 25» (apuração automática) saíram: esses artigos do v4 não existem no v5
             // e o texto da linha dependia só da citação.
-            ["Art. 6º",     "Passe Desafio: R$ 2,00."],
+            // UTAC137 — Art. 6º (v5) → Art. 5º (v6): o preço do Passe está no Art. 5º do Regulamento v6.0.
+            ["Art. 5º",     "Passe Desafio: R$ 2,00."],
           ].map(([nome, desc]) => (
             <div key={nome} style={{ display: "flex", gap: "0.6rem", alignItems: "flex-start" }}>
               <span style={{

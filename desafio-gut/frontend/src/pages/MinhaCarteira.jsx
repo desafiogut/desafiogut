@@ -9,7 +9,7 @@ import { usePontos } from "../hooks/usePontos.js";
 import { useEcoQuildo } from "../hooks/useEcoQuildo.js";
 import { useInventarioPasses } from "../hooks/useInventarioPasses.js"; // UTAC120 — inventário de Passes
 import { passeDoTipo, precoTotal } from "../lib/passes.js";
-import { conversoesFeitas } from "../lib/pontosLance.js"; // UTAC110j.5 — pontos de lance
+import { conversoesFeitas, PROPORCOES, VALOR_ECOQUILDO_TEXTO } from "../lib/pontosLance.js"; // UTAC110j.5 — pontos de lance · UTAC137 — valor e conversão do ECOQUILDO
 import ComprarPasseModal from "../components/ComprarPasseModal.jsx";
 import Toast from "../widgets/toast/Toast.jsx";
 import ComprarFichasModal from "../components/ComprarFichasModal.jsx";
@@ -569,8 +569,9 @@ export default function MinhaCarteira() {
                   <div style={{ fontSize: "1.25rem", fontWeight: 900, color: COR.gold, lineHeight: 1.2 }}>
                     {textoSaldo(saldoEco, ecoCarregando, ecoErro)}
                   </div>
-                  <div style={{ fontSize: "0.68rem", color: COR.text, opacity: 0.85, marginTop: "0.25rem" }}>
-                    Usável no site oficial
+                  {/* UTAC137 (v6, Arts. 21/23): era «Usável no site oficial». */}
+                  <div data-eco-regra="" style={{ fontSize: "0.68rem", color: COR.text, opacity: 0.85, marginTop: "0.25rem" }}>
+                    1 = {VALOR_ECOQUILDO_TEXTO} · {PROPORCOES.ecoPorConversao} = 1 Passe
                   </div>
                 </div>
               </div>
@@ -675,7 +676,7 @@ export default function MinhaCarteira() {
                 margin: "0.75rem 0 0", fontSize: "0.68rem", color: COR.muted, lineHeight: 1.45,
               }}>
                 Depósito por PIX via Mercado Pago — <strong style={{ color: COR.blue300 }}>desafiogut@gmail.com</strong>{" "}
-                (crédito automático após a aprovação). Passe Desafio: R$ {VALOR_POR_SENHA_BRL.toFixed(2)} (Art. 6º).
+                (crédito automático após a aprovação). Passe Desafio: R$ {VALOR_POR_SENHA_BRL.toFixed(2)} (Art. 5º).
               </p>}
 
               {/* UTAC132.2 (DEBT-088) — o saldo R$ só existe com depositoPix; o erro da sua leitura também. */}

@@ -54,7 +54,12 @@ test("C4 (Frente A na UI) o CardLance já não exige nem vende Passe para licita
   assert.match(c, /semPontosFlash && pontosL\.mensagem/);
 });
 
-test("C5 (R18-129-3) o PALPITE continua a pedir Passe Programado no Início", () => {
-  const c = codigo(ler("pages/Dashboard.jsx"));
-  assert.match(c, /Precisa de 1 Passe Programado para palpitar\./);
+// UTAC137 — a R18-129-3 («o palpite continua a pedir Passe») foi substituída pelo Regulamento v6.0 (palpite gratuito).
+test("C5 (UTAC137, substitui R18-129-3) o PALPITE já NÃO pede Passe no Início nem nas Ofertas Programadas", () => {
+  for (const f of ["pages/Dashboard.jsx", "pages/OfertasProgramadas.jsx"]) {
+    const c = codigo(ler(f));
+    assert.doesNotMatch(c, /Precisa de 1 Passe Programado para palpitar/, `${f}: voltou o aviso`);
+    assert.doesNotMatch(c, /semPasseProgramado/, `${f}: o botão do palpite voltou a depender do inventário`);
+    assert.match(c, /disabled=\{aPalpitar\}/, `${f}: o botão do palpite só fecha enquanto envia`);
+  }
 });

@@ -70,7 +70,7 @@ test("controlo positivo: o gate renderiza com 4 caixas, desmarcadas, e o botão 
   assert.equal(g.caixas().length, 4, "esperava 4 caixas de aceite");
   assert.ok(g.caixas().every((c) => c.props.checked === false), "uma caixa nasceu marcada");
   assert.equal(g.botao().props.disabled, true, "o botão nasceu ligado");
-  assert.match(g.html(), /Regulamento Oficial v5\.0/);
+  assert.match(g.html(), /Regulamento Oficial v6\.0/); // UTAC137: era v5.0
 });
 
 test("as 4 caixas marcadas ligam o botão; aceitar grava a versão do termo com as 4 declarações", async () => {
@@ -86,7 +86,8 @@ test("as 4 caixas marcadas ligam o botão; aceitar grava a versão do termo com 
   // ⚠️ UTAC110m.2 (2026-10-18): a versão subiu para **3.3** (o Regulamento mudou de texto em 5
   // artigos e a frente C reduziu uma promessa — o ECOQUILDO deixou de valer no aplicativo).
   // Valor anterior desta asserção: "3.2" (E-3, Política revista).
-  assert.equal(salvo.versao, "3.3", "controlo: a versão vigente hoje é a do Regulamento corrigido (UTAC110m.2)");
+  // UTAC137 (R18-137-1): 3.3 → 3.4 com o Regulamento v6.0.
+  assert.equal(salvo.versao, "3.4", "controlo: a versão vigente hoje é a do Regulamento v6.0 (UTAC137)");
   assert.deepEqual(salvo.aceitos, { lido: true, maiores: true, termos: true, privacidade: true });
 });
 
@@ -106,8 +107,11 @@ test("o texto renderizado do gate: v5 dentro, modelo antigo fora; links para as 
   const h = g.html();
   for (const re of [/\bsenhas?\b/i, /torneio/i, /O MENOR LANCE ÚNICO GANHA/i, /Agência/i])
     assert.doesNotMatch(h, re, `o gate renderizado mostra ${re}`);
-  for (const re of [/Passe Desafio/, /pontos de fidelidade/, /ECOQUILDO/, /competição de\s+habilidade/, /2 de novembro de 2026/])
+  // UTAC137 (v6): «competição de habilidade» e «2 de novembro de 2026» (v5) → «menor valor único de lance» e a vigência do RTD.
+  for (const re of [/Passe Desafio/, /pontos de fidelidade/, /ECOQUILDO/, /menor valor único de lance/, /Cartório de Títulos e Documentos/])
     assert.match(h, re, `o gate renderizado perdeu ${re}`);
+  for (const re of [/10 \(dez\) pontos/, /10 pontos de fidelidade/, /R\$ 1,00/, /2 de novembro de 2026/])
+    assert.doesNotMatch(h, re, `o gate renderizado ainda mostra ${re} (v5)`);
   assert.ok((h.match(/href="\/regras-oficiais"/g) || []).length >= 1, "falta o link para /regras-oficiais");
   assert.match(h, /href="\/privacidade"/, "falta o link para /privacidade");
 });

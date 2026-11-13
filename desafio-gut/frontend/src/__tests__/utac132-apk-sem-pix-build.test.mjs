@@ -162,6 +162,6 @@ test("UTAC132 · Android 12+: ícone do splash do sistema transparente", () => {
   assert.match(s, /<item name="android:windowSplashScreenBackground">#050818<\/item>/);
 });
 
-test("UTAC132 · versionCode 9", () => {
-  assert.match(ler("android/app/build.gradle"), /^\s*versionCode 9\s*$/m);
+test("UTAC132 · versionCode 10 (UTAC137; era 9)", () => {
+  assert.match(ler("android/app/build.gradle"), /^\s*versionCode 10\s*$/m);
 });

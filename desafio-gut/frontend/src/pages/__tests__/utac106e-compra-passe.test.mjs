@@ -269,9 +269,11 @@ test("RENDER · CLICAR abre o balão: «Escolha o seu Passe Desafio» + os DOIS 
   assert.match(h, /Escolha o seu Passe Desafio/, "o balão não abriu");
   // ⚠️ UTAC110j.5 — ALTERADO (declarado): o Passe Relâmpago dá +200 PONTOS de lance (UTAC110n), não «1 lance».
   // Antes: /⚡ Passe Relâmpago R\$ 2,00 10 pontos \+ 1 lance no Menor Lance Único Comprar Passe Relâmpago/
-  assert.match(h, /⚡ Passe Relâmpago R\$ 2,00 10 pontos de fidelidade \+ 200 pontos de lance \+ 1 ECOQUILDO Comprar Passe Relâmpago/,
+  // UTAC137 (v6) — era «10 pontos de fidelidade + 200 pontos de lance + 1 ECOQUILDO».
+  assert.match(h, /⚡ Passe Relâmpago R\$ 2,00 1 ponto de fidelidade \+ 1 ECOQUILDO \+ GUTO e dados analíticos Comprar Passe Relâmpago/,
     `cartão Relâmpago errado: «${h}»`);
-  assert.match(h, /🎫 Passe Programado R\$ 2,00 10 pontos \+ 1 palpite nas Ofertas Programadas Comprar Passe Programado/,
+  // UTAC137 — era «10 pontos + 1 palpite nas Ofertas Programadas».
+  assert.match(h, /🎫 Passe Programado R\$ 2,00 1 ponto de fidelidade \+ 1 ECOQUILDO \+ GUTO e dados analíticos Comprar Passe Programado/,
     `cartão Programado errado: «${h}»`);
   assert.match(html(), /aria-modal="true"/, "o balão não é um diálogo modal acessível");
 });
@@ -287,8 +289,9 @@ test("RENDER · «Cancelar» FECHA o balão", async () => {
 for (const [rotulo, url, toast] of [
   // ⚠️ UTAC110j.5 — ALTERADO (declarado): o Passe Relâmpago dá +200 PONTOS de lance (UTAC110n), não «1 lance».
   // Antes: "Passe Relâmpago comprado: +10 pontos e 1 lance"
-  ["Comprar Passe Relâmpago", URL_RELAMPAGO, "Passe Relâmpago comprado: +10 pontos de fidelidade e +200 pontos de lance"],
-  ["Comprar Passe Programado", URL_PROGRAMADO, "Passe Programado comprado: +10 pontos e 1 palpite"],
+  // UTAC137 (v6) — eram «…+10 pontos de fidelidade e +200 pontos de lance» e «…+10 pontos e 1 palpite».
+  ["Comprar Passe Relâmpago", URL_RELAMPAGO, "Passe Relâmpago comprado: +1 ponto de fidelidade e +1 ECOQUILDO"],
+  ["Comprar Passe Programado", URL_PROGRAMADO, "Passe Programado comprado: +1 ponto de fidelidade e +1 ECOQUILDO"],
 ]) {
   test(`RENDER · «${rotulo}» chama o SEU endpoint, fecha o balão, mostra o toast e RELÊ os saldos`, async () => {
     const { html, clicar } = await montarCarteira();

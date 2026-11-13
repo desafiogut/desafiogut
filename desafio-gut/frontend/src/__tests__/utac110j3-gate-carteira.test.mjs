@@ -200,7 +200,7 @@ test("O2 · tudo continua DENTRO do 1.º vidro (Regra 1) e os cards mantêm o co
   assert.match(t, /Pontos de fidelidade 30 \/ 50/);
   // Antes: assert.match(t, /Créditos de lance 3 disponíveis/);
   assert.match(t, /Pontos de lance 3 Cada lance gasta o seu valor/);
-  assert.match(t, /ECOQUILDO 5 Usável no site oficial/);
+  assert.match(t, /ECOQUILDO 5 1 = R\$ 0,50 · 50 = 1 Passe/); // UTAC137: era «ECOQUILDO 5 Usável no site oficial»
   assert.match(t, /Missões de hoje/);
 });
 

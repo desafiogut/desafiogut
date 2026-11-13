@@ -15,7 +15,7 @@ export const STORE_CONSENTIMENTO = "consent-log";
 export const CONTEXTO_GATE = "gate-legal";
 
 // Tem de ser igual a VERSAO_CONSENTIMENTO de src/components/TermosConsentimento.jsx (há teste que o exige).
-export const VERSAO_GATE = "3.3"; // 2026-10-18 (UTAC110m.2): o Regulamento mudou de TEXTO em 5 artigos e a frente C REDUZIU uma promessa (o ECOQUILDO deixou de valer no aplicativo — Art. 48º). O Art. 39º exige aviso prévio para reduções de direitos, logo este bump tem de acontecer ANTES da vigência (02/11/2026) e antes do AAB (DEBT-066). Invalida os aceites de 3.0/3.1/3.2 de propósito.
+export const VERSAO_GATE = "3.4"; // 2026-11-13 (UTAC137, R18-137-1): o gate passou ao Regulamento v6.0 (1 ponto por Passe, Passe sem pontos de lance, ECOQUILDO R$ 0,50) — todos reaceitam. Anterior, «3.3»: 2026-10-18 (UTAC110m.2): o Regulamento mudou de TEXTO em 5 artigos e a frente C REDUZIU uma promessa (o ECOQUILDO deixou de valer no aplicativo — Art. 48º). O Art. 39º exige aviso prévio para reduções de direitos, logo este bump tem de acontecer ANTES da vigência (02/11/2026) e antes do AAB (DEBT-066). Invalida os aceites de 3.0/3.1/3.2 de propósito.
 
 // As 4 declarações do gate, pela ordem do ecrã.
 export const DECLARACOES_GATE = Object.freeze(["lido", "maiores", "termos", "privacidade"]);

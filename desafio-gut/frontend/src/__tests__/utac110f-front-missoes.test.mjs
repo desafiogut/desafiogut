@@ -215,7 +215,7 @@ test("S · os 3 saldos existentes continuam com o mesmo texto (não foram tocado
   // ⚠️ UTAC110j.5 — ALTERADO (declarado): o card «⚡ Créditos de lance» passou a «⭐ Pontos de lance» (backend UTAC110n).
   // Antes: assert.equal(txt("creditos"), "⚡ Créditos de lance 3 disponíveis");
   assert.equal(txt("pontos-lance"), "⭐ Pontos de lance 3 Cada lance gasta o seu valor");
-  assert.equal(txt("eco-quildo"), "🪙 ECOQUILDO 5 Usável no site oficial");
+  assert.equal(txt("eco-quildo"), "🪙 ECOQUILDO 5 1 = R$ 0,50 · 50 = 1 Passe"); // UTAC137: era «Usável no site oficial»
 });
 
 // ═══ C — cor e contraste ═══════════════════════════════════════════════════════════
