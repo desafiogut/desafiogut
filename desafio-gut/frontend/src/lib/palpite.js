@@ -42,3 +42,22 @@ export const PILULA = {
   encerrada:     { texto: "ENCERRADA",         cor: "#6b7db8" },
   abre_em_breve: { texto: "ABRE EM BREVE",     cor: "#f5a623" },
 };
+
+// UTAC137-SEG3 (validador) — mensagem do erro do `registar-palpite`, por CÓDIGO do servidor.
+// O `usePalpite` traduzia TODO o 409 por «Você precisa ter comprado um Passe para palpitar», mas no
+// Regulamento v6.0 o palpite é gratuito (Arts. 3º/19) e o servidor (UTAC136) devolve 409 sobretudo por
+// edição não aberta / já apurada / não Programada. `sem_passe` (FK para public.pontos) já não é um Passe
+// por comprar: é uma conta sem linha de pontos, que qualquer login cria.
+const MENSAGEM_409 = Object.freeze({
+  edicao_apurada: "Esta edição já foi apurada e não aceita palpites novos",
+  edicao_nao_aberta: "O palpite desta edição não está aberto",
+  edicao_nao_programada: "Só se palpita em edições Programadas",
+  sem_passe: "Sua conta ainda não está pronta. Entre de novo e tente outra vez",
+});
+export function mensagemErroPalpite(status, codigo) {
+  if (status === 401) return "Sessão expirada";
+  if (status === 409) return MENSAGEM_409[codigo] ?? "Esta edição não aceita palpites agora";
+  if (status === 404) return "Essa edição não existe";
+  if (status === 400) return "Palpite inválido";
+  return "Erro do servidor";
+}

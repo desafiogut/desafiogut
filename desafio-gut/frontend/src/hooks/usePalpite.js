@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiGet, apiPost } from "../lib/api.js";
 import { useAppContext } from "../context/AppContext.jsx";
+import { mensagemErroPalpite } from "../lib/palpite.js";
 
 export function usePalpite(edicaoId, palpiteInicial = null) {
   const { address, authToken } = useAppContext();
@@ -45,11 +46,9 @@ export function usePalpite(edicaoId, palpiteInicial = null) {
         setPalpite(p);
         return { ok: true, palpite: p, idempotent: data?.idempotent === true };
       }
-      const message = status === 401 ? "Sessão expirada"
-        : status === 409 ? "Você precisa ter comprado um Passe para palpitar"
-        : status === 404 ? "Essa edição não existe"
-        : status === 400 ? "Palpite inválido"
-        : "Erro do servidor";
+      // UTAC137-SEG3 — era «409 ⇒ "Você precisa ter comprado um Passe para palpitar"»: no v6 o palpite é
+      // gratuito e o 409 do servidor quer dizer edição fechada/apurada/não Programada (lib/palpite.js).
+      const message = mensagemErroPalpite(status, data?.error?.code);
       setErro(message);
       return { ok: false, status, message };
     } catch {

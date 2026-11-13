@@ -132,5 +132,7 @@ test("UTAC107g.2 · as frases corrigidas estão em pt-BR nos ficheiros", () => {
   assert.match(ler("components/ComprarPasseModal.jsx"), /Escolha o seu Passe Desafio/);
   assert.match(ler("components/ComprarPasseModal.jsx"), /Seus pontos de cartão:/);
   assert.match(ler("components/ResgatarCartaoModal.jsx"), /Confirme os dados de entrega\./);
-  assert.match(ler("hooks/usePalpite.js"), /Você precisa ter comprado um Passe para palpitar/);
+  // UTAC137-SEG3 — a frase do 409 («Você precisa ter comprado um Passe para palpitar») saiu: no v6 o palpite é
+  // gratuito. As mensagens do palpite vivem agora em lib/palpite.js (`mensagemErroPalpite`), em pt-BR.
+  assert.match(ler("lib/palpite.js"), /Sua conta ainda não está pronta\. Entre de novo e tente outra vez/);
 });
