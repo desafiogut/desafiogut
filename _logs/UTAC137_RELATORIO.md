@@ -34,3 +34,6 @@
 - **DEBT-091:** o v6 promete cartão **digital** automático (Art. 8º), **produto** ao vencedor do palpite (Art. 18) e ECOQUILDO **dentro do app** (Art. 22); o servidor faz resgate físico, +2 pontos e só site.
 - O AAB v10 tem de ser enviado à Play pelo operador; até lá a v9 instalada mostra os textos antigos.
 - PDF do Regulamento no Desktop não foi tocado (proibido).
+
+## Entrega ao Ruan
+Link Litterbox (válido 72 h a partir de 2026-11-13): https://litter.catbox.moe/1j4qvj.aab — 32 434 729 B, SHA-256 `A0459AEEB7C08846A983344E186E68EE25A2E0F4F3F306BAA308163BA3D9A5E1` (confirmado ao descarregar de volta).
