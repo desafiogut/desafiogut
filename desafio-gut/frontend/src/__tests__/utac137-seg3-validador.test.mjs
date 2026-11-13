@@ -64,3 +64,14 @@ test("SEG3 · o usePalpite usa mensagemErroPalpite com o código do servidor (n�
   const codigo = hook.split("\n").filter((l) => !/^\s*\/\//.test(l)).join("\n");
   assert.doesNotMatch(codigo, /comprado um Passe/);
 });
+
+// 3. A Carteira, sem Passes, dizia «compre abaixo para dar lances e palpites» — no v6 o Passe é opcional
+//    (Art. 3º), os pontos de lance são gratuitos (Art. 6º) e o palpite não exige Passe.
+test("SEG3 · a Carteira sem Passes não diz que o Passe é preciso para lances ou palpites", () => {
+  const cart = readFileSync(resolve(SRC, "pages", "MinhaCarteira.jsx"), "utf8");
+  const codigo = cart.split("\n").filter((l) => !/^\s*(\/\/|\{\/\*|\*)/.test(l)).join("\n");
+  const bloco = codigo.slice(codigo.indexOf("data-sem-passes"), codigo.indexOf("data-sem-passes") + 400);
+  assert.ok(bloco.length > 100, "o aviso data-sem-passes desapareceu");
+  assert.doesNotMatch(bloco, /compre[^<]{0,40}para dar (lances|palpites)/i);
+  assert.match(bloco, /O Passe é opcional \(Art\. 3º\)/);
+});

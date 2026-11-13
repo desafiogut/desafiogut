@@ -387,7 +387,8 @@ export default function MinhaCarteira() {
                 ))}
                 {semNenhumPasse && (
                   <p data-sem-passes="" style={{ margin: "0.35rem 0 0", fontSize: "0.75rem", color: COR.muted, lineHeight: 1.4 }}>
-                    Ainda não tem Passes — compre abaixo para dar lances e palpites.
+                    {/* UTAC137-SEG3 (v6, Arts. 3º/6º): era «Ainda não tem Passes — compre abaixo para dar lances e palpites.» */}
+                    Ainda não tem Passes. O Passe é opcional (Art. 3º): lances e palpites não precisam dele.
                   </p>
                 )}
                 {passesErro && (
