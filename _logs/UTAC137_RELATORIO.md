@@ -62,3 +62,6 @@ validado `6af6b397…` pronto. As correcções 2 e 3 só chegam ao APK num **AAB
   extraído · contém «O Passe é opcional (Art. 3º)» e o v6; sem «precisa ter comprado um Passe», «compre abaixo para dar lances e palpites»,
   «+200», «Versão 5.1». Guardas de versão (`utac123`, `utac132`) passam a 11.
 - **DEBT-091** fica aberta para um UTAC futuro (decisão do operador: não mexer no backend agora).
+
+## Entrega ao Ruan (v11)
+Link Litterbox (válido 72 h a partir de 2026-11-13): https://litter.catbox.moe/vik7zc.aab — 32 434 939 B, SHA-256 `DF715E874BCA67C2B55B67A718E2367848AFC4BAC91A0840EB5A088FBFED03E0` (confirmado ao descarregar de volta). Substitui o v10.
