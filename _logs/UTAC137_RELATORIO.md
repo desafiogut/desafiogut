@@ -30,10 +30,26 @@
 - `mc9952` (DNS de `exemplo.com`) falhou numa corrida e passou na seguinte — depende de DNS externo; código não tocado.
 
 ## Pendências (não executadas)
-- **Validador adversarial (SEG3) NÃO corrido** — a ordem pedida terminava no deploy. Fica por correr sobre `7640ff8`.
+- ~~Validador adversarial (SEG3) NÃO corrido~~ → corrido a pedido do operador (ver secção SEG3 abaixo).
 - **DEBT-091:** o v6 promete cartão **digital** automático (Art. 8º), **produto** ao vencedor do palpite (Art. 18) e ECOQUILDO **dentro do app** (Art. 22); o servidor faz resgate físico, +2 pontos e só site.
 - O AAB v10 tem de ser enviado à Play pelo operador; até lá a v9 instalada mostra os textos antigos.
 - PDF do Regulamento no Desktop não foi tocado (proibido).
 
 ## Entrega ao Ruan
 Link Litterbox (válido 72 h a partir de 2026-11-13): https://litter.catbox.moe/1j4qvj.aab — 32 434 729 B, SHA-256 `A0459AEEB7C08846A983344E186E68EE25A2E0F4F3F306BAA308163BA3D9A5E1` (confirmado ao descarregar de volta).
+
+## SEG3 — Validador adversarial (corrido depois, a pedido do operador) — **REFUTADO na entrega; conteúdo v6 aprovado**
+Veredicto integral: `_logs/UTAC137_SEG3_VALIDADOR.md`. O conteúdo aguentou: Regras Oficiais = v6 palavra a palavra (o «conforme o Art. 19.» fica no
+Art. 15), parser do v5 intacto, gate literal (12 blocos) e 3.4 igual nos dois lados, GUTO = v6 com 14 âncoras literais, palpite desbloqueado,
+nenhum teste enfraquecido. **4 defeitos graves, corrigidos PELO VALIDADOR** (o executor só integrou — cherry-pick `c4b71fb`, `06fd32b`, `d0cb27f`, `f3c20d7`):
+1. ⚠️ **`docs/REGULAMENTO-v6.md` nunca entrou no git** (era `??` desde o UTAC135) ⇒ o `build` do CI de `7640ff8`/`cce5e75`/`2dff292` falhou com
+   `UNRESOLVED_IMPORT`. A produção e o AAB v10 **não** foram afectados (compilados da árvore local, que tinha o ficheiro). Versionado byte a byte
+   (md5 `4f72defc…`) + guarda para todo o `docs/*?raw`. **Erro meu**: o `git add` foi por lista de modificados (`^ M`) e o ficheiro era não-versionado.
+2. ⚠️ Qualquer 409 do palpite mostrava «precisa ter comprado um Passe» (`usePalpite.js`) → mensagem por código (`lib/palpite.js`).
+3. ⚠️ Carteira sem Passes: «compre abaixo para dar lances e palpites» → «O Passe é opcional (Art. 3º)…».
+4. ⚠️ A prosa «MODELO DE HOJE» do prompt do GUTO não tinha guarda (R$ 1,00 passava verde) e citava o Art. 6º com «indicações» → frase com as
+   palavras do Art. 6º + teste que amarra cada número da prosa ao artigo citado.
+Suítes no worktree do validador: frontend 1327/1329 (2 = `mc9952`, DNS) · backend 1467/1474 (7 skipped, ambiente). Testes tocados re-corridos
+na árvore principal: 51/51 + 21/21. Push `2dff292..f3c20d7`; CI: `build` volta a passar; `lint`/`test-onchain`/`test-functions` já falhavam em `b740046`.
+**Deploy de produção das correcções BLOQUEADO pela permissão** (o pedido era só o validador): produção continua em `6af6ac1a…`; rascunho
+validado `6af6b397…` pronto. As correcções 2 e 3 só chegam ao APK num **AAB v11** (o v10 foi compilado sobre `7640ff8`).
