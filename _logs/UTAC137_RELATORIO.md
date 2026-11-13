@@ -53,3 +53,12 @@ Suítes no worktree do validador: frontend 1327/1329 (2 = `mc9952`, DNS) · back
 na árvore principal: 51/51 + 21/21. Push `2dff292..f3c20d7`; CI: `build` volta a passar; `lint`/`test-onchain`/`test-functions` já falhavam em `b740046`.
 **Deploy de produção das correcções BLOQUEADO pela permissão** (o pedido era só o validador): produção continua em `6af6ac1a…`; rascunho
 validado `6af6b397…` pronto. As correcções 2 e 3 só chegam ao APK num **AAB v11** (o v10 foi compilado sobre `7640ff8`).
+
+## Fecho das correcções do SEG3 (autorizado pelo operador)
+- **Deploy de produção `6af6b8ce5da303d98cdc3ddc`** (a partir de `ec64968` = código do rascunho `6af6b397` + docs): mainnet, PIX no site, v6, sem o 409 antigo.
+  GUTO em produção cita o Art. 6º com as palavras do v6 («engajamento diário, login contínuo e missões») e diz que o palpite não exige Passe (Art. 3º).
+- **AAB v11** `Desktop/DesafioGUT-v11/DesafioGUT-v11.aab` (substitui o v10) · versionCode **11** · versionName **1.1.1** · 32 434 939 B ·
+  SHA-256 `DF715E874BCA67C2B55B67A718E2367848AFC4BAC91A0840EB5A088FBFED03E0` · `jar verified` · certificado = v10/v9 · guarda OK sobre o `.aab`
+  extraído · contém «O Passe é opcional (Art. 3º)» e o v6; sem «precisa ter comprado um Passe», «compre abaixo para dar lances e palpites»,
+  «+200», «Versão 5.1». Guardas de versão (`utac123`, `utac132`) passam a 11.
+- **DEBT-091** fica aberta para um UTAC futuro (decisão do operador: não mexer no backend agora).
