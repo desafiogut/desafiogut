@@ -38,8 +38,20 @@ const MAX_VOLTAS = MAX_CONVERSOES_POR_CHAMADA * 3; // voltas extra = CAS perdido
 
 const alertar = (evento, extra) => { captureSecurityAlert(evento, extra, "error").catch(() => {}); };
 
-/** Próximo `k`: nº de conversões já no histórico + 1. */
-const proximoK = (historico) => historico.filter((h) => h?.motivo === MOTIVO_CONVERSAO).length + 1;
+/** Próximo `k`: MAIOR `k` de conversão já no histórico + 1.
+ *  SEG2 (validador UTAC136): era «nº de conversões + 1». Uma conversão desfeita (passo 2/3/4 falhou) ao lado
+ *  de outra concorrente que já usara o `k` seguinte deixa um BURACO ([k=2] sem k=1) ⇒ a contagem dava 2 =
+ *  ref que JÁ existe ⇒ `criado:false` em todas as voltas e o endereço nunca mais convertia (em silêncio,
+ *  300 releituras por chamada). O máximo + 1 nunca colide com uma `ref` presente. */
+const proximoK = (historico) => {
+  let max = 0;
+  for (const h of historico) {
+    if (h?.motivo !== MOTIVO_CONVERSAO || typeof h.ref !== "string") continue;
+    const k = Number(h.ref.slice(refConversao("").length));
+    if (Number.isInteger(k) && k > max) max = k;
+  }
+  return max + 1;
+};
 
 /**
  * Converte em Passes Programados TODOS os blocos de 50 ECOQUILDOs do saldo actual do endereço.

@@ -51,6 +51,7 @@ const alertas = [];
 const ADM = "0xdddddddddddddddddddddddddddddddddddddddd";
 let B = criarBlobs(), S = criarSupabase();
 let rpcFalha = false;
+let rpcGancho = null; // SEG2 — controla a ordem do passo 4 entre conversões concorrentes
 function novoCliente() {
   B = criarBlobs(); S = criarSupabase();
   S.g.passesIniciais = { relampago: 0, programado: 0 };
@@ -59,7 +60,8 @@ function novoCliente() {
   const baseFrom = S.cliente.from;
   return {
     from: (t) => (t === "pontos" ? fromPontos(t) : baseFrom(t)),
-    rpc: (n, p) => (rpcFalha && n === "passes_creditar" ? Promise.resolve({ data: null, error: { code: "XX000" } }) : S.cliente.rpc(n, p)),
+    rpc: (n, p) => (rpcGancho && n === "passes_creditar" ? rpcGancho(() => S.cliente.rpc(n, p))
+      : rpcFalha && n === "passes_creditar" ? Promise.resolve({ data: null, error: { code: "XX000" } }) : S.cliente.rpc(n, p)),
   };
 }
 let cliente = novoCliente();
@@ -99,6 +101,7 @@ async function emitir(n, ref) {
 beforeEach(() => {
   cliente = novoCliente();
   rpcFalha = false;
+  rpcGancho = null;
   alertas.length = 0;
   S.tabelas.saldo_rs.push({ cliente_id: A, payload: { centavos: 500 }, atualizado_em: "x" });
   S.tabelas.eco_quildo_lastro.push({ id: 1, total_emitido: 0, total_usado: 0, reserva_rs_centavos: 0, atualizado_em: "x" });
@@ -243,4 +246,37 @@ test("USO · comprar o Passe Relâmpago com 49 ECOQUILDO no saldo ⇒ o 50.º co
   assert.equal(Number(pts().pontos_lance ?? 0), 0, "Art. 6º: o Passe não dá pontos de lance");
   assert.equal((await L.lerLedgerLance(A)).pontos, 0);
   assert.equal(programados(), 1);
+});
+
+// ── SEG2 (validador) — `k` contado com buracos ───────────────────────────────────────────────────
+// A conversão A (k=1) fica presa no passo 4; B lê o histórico com k=1 lá dentro e usa k=2; A falha e
+// desfaz k=1. O histórico fica [k=2] ⇒ «nº de conversões + 1» = 2 = ref que JÁ existe. Com o `k` por
+// contagem, todas as conversões seguintes deste endereço colidem com k=2 e nunca convertem.
+test("SEG2 · conversão desfeita ao lado de outra concorrente não bloqueia as conversões seguintes", async () => {
+  await emitir(100, "e1");
+  let soltarA; const portaA = new Promise((r) => { soltarA = r; });
+  let chamadas = 0;
+  rpcGancho = async (real) => {
+    chamadas += 1;
+    if (chamadas === 1) { await portaA; return { data: null, error: { code: "XX000" } }; } // A: falha depois de B
+    return real();
+  };
+  const pA = C.converterEcoEmPasses(A);
+  while (chamadas === 0) await new Promise((r) => setImmediate(r)); // A chegou ao passo 4
+  const rB = await C.converterEcoEmPasses(A);
+  assert.equal(rB.convertidos, 1, "B converteu com k=2");
+  soltarA();
+  const rA = await pA;
+  assert.equal(rA.ok, false, "A falhou no inventário e desfez k=1");
+  assert.deepEqual(eco().historico.filter((h) => h.motivo === "conversao-passe").map((h) => h.ref), ["eco-conversao:2"]);
+  assert.equal(eco().saldo, 50);
+  rpcGancho = null;
+  // os 50 que sobraram têm de converter (Art. 23º: «conversão automática e imediata»)
+  const r = await C.converterEcoEmPasses(A);
+  assert.deepEqual([r.ok, r.convertidos, r.saldo], [true, 1, 0], JSON.stringify(r));
+  assert.equal(programados(), 2);
+  assert.equal(pts().pontos, 2);
+  assert.deepEqual([lastro().total_emitido, lastro().total_usado, lastro().reserva_rs_centavos], [100, 100, 0]);
+  const refs = eco().historico.filter((h) => h.motivo === "conversao-passe").map((h) => h.ref);
+  assert.equal(new Set(refs).size, refs.length, "refs de conversão únicas");
 });
