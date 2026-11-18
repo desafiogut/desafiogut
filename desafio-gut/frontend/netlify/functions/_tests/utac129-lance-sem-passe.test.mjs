@@ -58,6 +58,7 @@ mock.module("../_lib/ledger-lance.mjs", { namedExports: {
     return { ok: true, criado, pontos: mockPontos };
   },
   lerLedgerLance: async () => ({ creditos: 0, pontos: mockPontos, historico: [] }),
+  PONTOS_LANCE_BONUS_PASSE_RELAMPAGO: 100, // UTAC138-SEG4 — a mensagem do 400 lê-o (Art. 7º v6.1)
 } });
 mock.module("../_lib/cors.mjs", { namedExports: {
   respostaPreflight: () => null, CABECALHOS_CORS: { "access-control-allow-origin": "*" } } });
@@ -107,6 +108,10 @@ test("A3 (negativo) pontos insuficientes → 400 saldo_pontos_insuficiente, sem 
   const r = await lance(10);
   assert.equal(r.status, 400);
   assert.equal(r.corpo.error?.code ?? r.corpo.code, "saldo_pontos_insuficiente");
+  // UTAC138-SEG4 — o texto visível dizia «o Passe Relâmpago dá +200» (UTAC110n); no v6.1 (Art. 7º) é +100.
+  const msg = r.corpo.error?.message ?? r.corpo.message ?? "";
+  assert.match(msg, /o Passe Relâmpago dá \+100\./, msg);
+  assert.doesNotMatch(msg, /\+200/, msg);
   assert.equal(creditos.length, 0);
   assert.deepEqual(chamadasInventario, []);
 });

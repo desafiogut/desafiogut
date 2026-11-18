@@ -32,6 +32,9 @@ import { verificarJanelaLance, EDICAO_ESPECIAL_RE } from "./_lib/edicao-janela.m
 import { registrarConsumoSenha, BLOB_SENHAS_CONSUMO } from "./_lib/senhas-programado.mjs"; // MC91.11 — ledger
 import { keccak256, AbiCoder } from "ethers";
 import { consumirPontosLance, reverterMovimentoLance } from "./_lib/ledger-lance.mjs"; // UTAC110n (era UTAC110d)
+// UTAC138-SEG4 — o valor do bónus do Passe Relâmpago na mensagem do 400. Import de NAMESPACE de propósito: 5 suítes
+// fazem mock.module do ledger-lance só com as funções, e um import nomeado de uma constante partia-as no link.
+import * as LEDGER_LANCE from "./_lib/ledger-lance.mjs";
 import { creditarMissaoLance, PONTOS_MISSAO_LANCE } from "./_lib/fontes-lance.mjs"; // UTAC110f — missão «1 lance do dia»
 import { respostaPreflight } from "./_lib/cors.mjs";
 import { mascararEndereco } from "./_lib/validate.mjs"; // UTAC110h.4 (DEBT-031)
@@ -255,7 +258,8 @@ export default async (req) => {
       if (consumo.code === "PONTOS_LANCE_INSUFICIENTES") {
         return jsonError(400, "saldo_pontos_insuficiente",
           `Saldo de pontos de lance insuficiente: o lance de ${valorCentavos} pontos precisa de ${valorCentavos} pontos e você tem ${consumo.pontos ?? 0}. `
-          + "Os pontos de lance são gratuitos (login diário, missão do dia, indicação e sequência de 5 acertos) e o Passe Relâmpago dá +200.",
+          // UTAC138-SEG4 — dizia «… e o Passe Relâmpago dá +200.» (valor do UTAC110n; 0 no UTAC136; +100 no v6.1).
+          + `Os pontos de lance são gratuitos (login diário, missão do dia, indicação e sequência de 5 acertos) e o Passe Relâmpago dá +${LEDGER_LANCE.PONTOS_LANCE_BONUS_PASSE_RELAMPAGO}.`,
           { pontosLance: consumo.pontos ?? 0, pontosNecessarios: valorCentavos });
       }
       return jsonError(502, "consumo_pontos_falhou", "não foi possível gastar os pontos de lance", { motivo: consumo.code });
