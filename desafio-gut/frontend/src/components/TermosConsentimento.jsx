@@ -25,7 +25,7 @@ export const TAMANHO_GUTO_GATE = 96;
 // UTAC110h.1 (R18-110h.1-B) — "2.0" (v4) -> "3.0" (v5): quem aceitou o v4 volta a ver o gate.
 // Tem de ser igual a VERSAO_GATE de netlify/functions/_lib/consentimento.mjs (há teste).
 export const CHAVE_CONSENTIMENTO  = "gut_consentimento";
-export const VERSAO_CONSENTIMENTO = "3.4"; // 2026-11-13 (UTAC137, R18-137-1): gate no Regulamento v6.0, igual ao VERSAO_GATE do backend — todos reaceitam. Anterior, «3.3»: 2026-10-18 (UTAC110m.2): acompanha o VERSAO_GATE do backend — o Regulamento mudou de texto e a frente C reduziu uma promessa (ECOQUILDO fora do app); Art. 39º exige aviso prévio (DEBT-066).
+export const VERSAO_CONSENTIMENTO = "3.5"; // 2026-11-17 (UTAC138): gate no Regulamento v6.1 (bônus de 100 pontos de lance do Passe Relâmpago, Arts. 6º/7º), igual ao VERSAO_GATE do backend — todos reaceitam. Anterior, «3.4»: 2026-11-13 (UTAC137, R18-137-1): gate no Regulamento v6.0, igual ao VERSAO_GATE do backend — todos reaceitam. Anterior, «3.3»: 2026-10-18 (UTAC110m.2): acompanha o VERSAO_GATE do backend — o Regulamento mudou de texto e a frente C reduziu uma promessa (ECOQUILDO fora do app); Art. 39º exige aviso prévio (DEBT-066).
 
 export default function TermosConsentimento({ onAceitar }) {
   const [lido,       setLido]       = useState(false);
@@ -86,9 +86,11 @@ export default function TermosConsentimento({ onAceitar }) {
         <details style={estilos.regulamento}>
           <summary style={estilos.botaoExpandir}>📖 Ler o resumo do regulamento</summary>
           <div style={estilos.scrollBox}>
-          <h3 style={estilos.secaoTitulo}>Regulamento Oficial v6.0 — Resumo</h3>
+          <h3 style={estilos.secaoTitulo}>Regulamento Oficial v6.1 — Resumo</h3>
 
-          {/* UTAC137 — cada parágrafo é TEXTO LITERAL do Regulamento v6.0 (docs/REGULAMENTO-v6.md, o texto registado
+          {/* UTAC138 — v6.1 (docs/REGULAMENTO-v6.1.md): mudaram os artigos seis e sete (bônus de 100 pontos de lance do Passe
+              Relâmpago; apuração instantânea das Edições Especiais). Os restantes parágrafos são iguais no v6.0 e no v6.1.
+              UTAC137 — cada parágrafo é TEXTO LITERAL do Regulamento v6.0 (docs/REGULAMENTO-v6.md, o texto registado
               no RTD), com o rótulo do documento («Art. 1º» … «Art. 10.» em diante). Gerado a partir do ficheiro;
               o teste citacoesRegulamento compara cada bloco com o artigo do v6. O resumo do v5.0 (Arts. 1/2/5/6/8/9/
               14/27/47/49/65/66) fica no git (`b740046`). */}
@@ -109,11 +111,11 @@ export default function TermosConsentimento({ onAceitar }) {
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 6º</strong> — Em estrita conformidade com as diretrizes da Google Play para programas de fidelidade (Gamified Loyalty), o Passe não concede pontos de lance. Os pontos utilizados para realizar os lances são 100% gratuitos, obtidos exclusivamente por meio de engajamento diário, login contínuo e cumprimento de missões no aplicativo.
+            <strong style={estilos.artLabel}>Art. 6º</strong> — Em estrita conformidade com as diretrizes da Google Play para programas de fidelidade (Gamified Loyalty), o Passe Programado não concede pontos de lance. Os pontos utilizados para realizar os lances são gratuitos, obtidos por meio de engajamento diário, login contínuo, cumprimento de missões no aplicativo e do bônus do Passe Relâmpago previsto no Art. 7º.
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 7º</strong> — O Passe Desafio confere ao usuário o acesso ao assistente virtual de inteligência estratégica GUTO, dados analíticos de mercado e 1 (um) ponto de fidelidade ao sistema.
+            <strong style={estilos.artLabel}>Art. 7º</strong> — O Passe Desafio confere ao usuário o acesso ao assistente virtual de inteligência estratégica GUTO, dados analíticos de mercado e 1 (um) ponto de fidelidade ao sistema. O Passe Relâmpago concede, adicionalmente, um bônus de 100 (cem) pontos de lance por unidade adquirida, creditado no momento da compra. Nas Edições Especiais da Oferta Relâmpago, a apuração é instantânea: no horário de encerramento da edição o sistema apura automaticamente o menor lance único e publica no aplicativo, durante 24 (vinte e quatro) horas, o vencedor e os 10 (dez) menores lances únicos.
           </p>
 
           <p style={estilos.artigo}>
@@ -175,7 +177,8 @@ export default function TermosConsentimento({ onAceitar }) {
 
           <label style={estilos.label}>
             <input type="checkbox" checked={termos} onChange={(e) => setTermos(e.target.checked)} style={estilos.checkbox} />
-            <span>Aceito os Termos de Participação: o Passe Desafio de R$ 2,00 é opcional e concede 1 ponto de fidelidade, sem pontos de lance (Arts. 3º, 5º, 6º e 7º), e a Oferta Relâmpago é baseada em habilidade — vence o menor valor único de lance (Art. 11.).</span>
+            {/* UTAC138 — era «… concede 1 ponto de fidelidade, sem pontos de lance (Arts. 3º, 5º, 6º e 7º) …» (v6.0). */}
+            <span>Aceito os Termos de Participação: o Passe Desafio de R$ 2,00 é opcional e concede 1 ponto de fidelidade; o Passe Relâmpago concede ainda um bônus de 100 pontos de lance (Arts. 3º, 5º, 6º e 7º), e a Oferta Relâmpago é baseada em habilidade — vence o menor valor único de lance (Art. 11.).</span>
           </label>
 
           <label style={estilos.label}>

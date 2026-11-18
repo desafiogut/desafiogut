@@ -236,6 +236,10 @@ export default async function handler(req) {
     ok: true, idempotent: creditado.idempotent === true, tipo, quantidade: v.quantity,
     pontosFidelidade: creditado.pontos,
     ...(tipo === "relampago" ? { creditosLance: creditado.creditosLance ?? 0 } : {}),
+    // UTAC138 — bónus de +100 pontos de lance × N (só na 1.ª creditação do Relâmpago).
+    ...(Number.isInteger(creditado.bonusPontosLance)
+      ? { bonusPontosLance: creditado.bonusPontosLance, pontosLance: creditado.pontosLance }
+      : {}),
     ecoQuildo: creditado.ecoQuildo,
     // UTAC120 — inventário actualizado (null quando a escrita falhou ou quando é idempotente)
     ...(inventario?.ok

@@ -67,7 +67,8 @@ export default function PainelPontosLance({ temSessao = false, carregando = fals
         {/* UTAC110j.5 — antes: «Ganhos de graça pelo seu engajamento no app (Art. 16º).» O Passe Relâmpago
             também dá pontos (Art. 16º VI) e o lance passou a gastá-los. */}
         {/* UTAC137 (v6, Art. 6º) — o Passe deixou de dar pontos de lance. Antes: «… e pelo Passe Relâmpago (Art. 16º).» */}
-        Gratuitos, ganhos pelo engajamento no app (Art. 6º). Cada lance gasta o seu valor em pontos.
+        {/* UTAC138 (v6.1, Arts. 6º/7º) — antes: «Gratuitos, ganhos pelo engajamento no app (Art. 6º). …» */}
+        Ganhos pelo engajamento no app (Art. 6º) e pelo bônus de 100 pontos de lance do Passe Relâmpago (Art. 7º). Cada lance gasta o seu valor em pontos.
       </p>
 
       {linhas.length === 0 ? (

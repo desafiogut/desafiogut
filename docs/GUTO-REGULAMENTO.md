@@ -1,16 +1,15 @@
 # Regulamento Oficial do DesafioGUT — fonte do GUTO
 
-> **Versão 6.0** · aprovada pelo jurídico · vigência a partir do registo no RTD (Art. 30)
+> **Versão 6.1** · altera os Arts. 6º e 7º da versão 6.0 (UTAC138: bônus de 100 pontos de lance no Passe Relâmpago e apuração instantânea das Edições Especiais) · vigência a partir do registo no RTD (Art. 30)
 >
 > **Fonte de verdade para o GUTO. Não alterar sem actualizar o regulamento oficial.**
 >
-> UTAC137: o corpo abaixo do separador é **cópia byte a byte** de `docs/REGULAMENTO-v6.md` (o texto
-> registado em cartório no UTAC135; 6 capítulos, 30 artigos). Nenhuma normalização.
+> UTAC138: o corpo abaixo do separador é **cópia byte a byte** de `docs/REGULAMENTO-v6.1.md` (6 capítulos, 30 artigos).
+> Nenhuma normalização. O v6.0 (registado em cartório no UTAC135) continua em `docs/REGULAMENTO-v6.md`.
 > A transcrição do v5.1 (com a ERRATA DA FONTE do PDF) fica no histórico do git — commit `b740046`.
-
 ---
 
-# REGULAMENTO OFICIAL DO APLICATIVO DESAFIOGUT (VERSÃO 6.0) 
+# REGULAMENTO OFICIAL DO APLICATIVO DESAFIOGUT (VERSÃO 6.1) 
 
 ## CAPÍTULO I — DISPOSIÇÕES PRELIMINARES 
 Art. 1º O presente Regulamento estabelece os termos e condições gerais de uso do aplicativo de e-commerce por dropshipping com programa de fidelidade denominado DesafioGUT, operado pela Associação Recreativa dos Nordestinos no Amazonas, nome fantasia Grupo União e Trabalho (GUT), inscrita no CNPJ sob o nº 23.040.066/0001-00, com sede na cidade de Manaus, Estado do Amazonas. 
@@ -20,8 +19,8 @@ Art. 4º O ecossistema de aquisições do aplicativo divide-se em duas modalidad
 
 ## CAPÍTULO II — DOS PASSES E DA FIDELIDADE 
 Art. 5º O Passe Desafio é um produto digital comercializado pelo valor fixo de R$ 2,00 (dois reais), concedendo acesso a recursos avançados de suporte e engajamento. 
-Art. 6º Em estrita conformidade com as diretrizes da Google Play para programas de fidelidade (Gamified Loyalty), o Passe não concede pontos de lance. Os pontos utilizados para realizar os lances são 100% gratuitos, obtidos exclusivamente por meio de engajamento diário, login contínuo e cumprimento de missões no aplicativo. 
-Art. 7º O Passe Desafio confere ao usuário o acesso ao assistente virtual de inteligência estratégica GUTO, dados analíticos de mercado e 1 (um) ponto de fidelidade ao sistema. 
+Art. 6º Em estrita conformidade com as diretrizes da Google Play para programas de fidelidade (Gamified Loyalty), o Passe Programado não concede pontos de lance. Os pontos utilizados para realizar os lances são gratuitos, obtidos por meio de engajamento diário, login contínuo, cumprimento de missões no aplicativo e do bônus do Passe Relâmpago previsto no Art. 7º. 
+Art. 7º O Passe Desafio confere ao usuário o acesso ao assistente virtual de inteligência estratégica GUTO, dados analíticos de mercado e 1 (um) ponto de fidelidade ao sistema. O Passe Relâmpago concede, adicionalmente, um bônus de 100 (cem) pontos de lance por unidade adquirida, creditado no momento da compra. Nas Edições Especiais da Oferta Relâmpago, a apuração é instantânea: no horário de encerramento da edição o sistema apura automaticamente o menor lance único e publica no aplicativo, durante 24 (vinte e quatro) horas, o vencedor e os 10 (dez) menores lances únicos. 
 Art. 8º O Cartão Colecionável do ecossistema é estritamente digital. A proporção de conversão é fixa e inalterável: a cada 50 pontos de fidelidade acumulados, o sistema credita automaticamente 1 Cartão Digital ao perfil do usuário. 
 Art. 9º É expressamente proibida a conversão de pontos de fidelidade, cartões digitais ou saldos de bonificação em moeda corrente nacional (dinheiro espécie). 
 Art. 10. A Associação reserva-se o direito de alterar as regras de pontuação e fidelidade mediante aviso prévio de 30 (trinta) dias publicado na interface oficial do aplicativo. 

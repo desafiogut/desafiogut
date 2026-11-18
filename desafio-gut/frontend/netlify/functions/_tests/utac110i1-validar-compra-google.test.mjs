@@ -262,7 +262,8 @@ const historicoPasse = (e = A) => (pontos(e)?.historico ?? []).filter((h) => h?.
 
 // ═══ (a) POSITIVO ════════════════════════════════════════════════════════════════════════════════
 // ⚠️ UTAC136 (Regulamento v6.0, Arts. 6º/7º): +1 ponto de fidelidade e NENHUM ponto de lance (eram +10 e +200).
-test("(a) Relâmpago: 201 · +1 ponto · SEM pontos de lance · +1 ECOQUILDO · saldo R$ INTACTO (UTAC136)", async () => {
+// ⚠️ UTAC138 (R18-138-D, Art. 7º v6.1): o Relâmpago volta a dar +100 pontos de lance.
+test("(a) Relâmpago: 201 · +1 ponto · +100 pontos de lance (UTAC138) · +1 ECOQUILDO · saldo R$ INTACTO", async () => {
   const r = await pedirGoogle();
   assert.equal(r.status, 201, JSON.stringify(r.json));
   assert.equal(r.json.ok, true);
@@ -272,9 +273,10 @@ test("(a) Relâmpago: 201 · +1 ponto · SEM pontos de lance · +1 ECOQUILDO · 
   // ⚠️ UTAC110n: era `creditosLance: 1`. O Passe passou a dar +200 pontos de lance (Art. 16º VI).
   assert.equal(r.json.creditosLance, 0);
   assert.equal(r.json.ecoQuildo, 1);
-  assert.equal(r.json.pontosLance, undefined, "a resposta já não anuncia pontos de lance");
+  assert.equal(r.json.bonusPontosLance, 100, "UTAC138: a resposta anuncia o bónus");
+  assert.equal(r.json.pontosLance, 100);
   assert.equal(pontos().pontos, 1);
-  assert.equal(lance() ?? 0, 0, "Art. 6º v6: o Passe NÃO dá pontos de lance");
+  assert.equal(lance(), 100, "Art. 7º v6.1: o Passe Relâmpago dá +100 pontos de lance");
   assert.equal(eco().saldo, 1);
   // ⚠️ O PONTO CENTRAL DESTE UTAC (R18-110i.1-1): o pagamento foi da GOOGLE — não se debita saldo R$.
   assert.equal(saldoRs(), 500, "o Billing debitou saldo R$ (só o PIX pode debitar)");
@@ -309,8 +311,11 @@ test("o MESMO recibo 2× ⇒ 200 idempotente, mesmos números, SEM repetir créd
   assert.equal(r2.status, 200, JSON.stringify(r2.json));
   assert.equal(r2.json.idempotent, true);
   assert.equal(r2.json.pontosFidelidade, 1);
-  assert.equal(lance() ?? 0, 0, "UTAC136: nem a 1.ª nem a 2.ª entrega dão pontos de lance");
-  assert.deepEqual(JSON.parse(JSON.stringify(r2.json)), JSON.parse(JSON.stringify({ ...r1.json, idempotent: true })));
+  assert.equal(lance(), 100, "UTAC138: o bónus entra só na 1.ª entrega");
+  // UTAC138: a 1.ª resposta anuncia o bónus; a repetição não (não credita nada de novo).
+  const { bonusPontosLance: _b, pontosLance: _p, ...r1SemBonus } = r1.json;
+  assert.equal(_b, 100);
+  assert.deepEqual(JSON.parse(JSON.stringify(r2.json)), JSON.parse(JSON.stringify({ ...r1SemBonus, idempotent: true })));
   assert.equal(pontos().pontos, 1, "os pontos foram creditados 2×");
   assert.equal(eco().saldo, 1, "o ECOQUILDO foi creditado 2×");
   assert.equal(historicoPasse().length, 1, "o histórico tem 2 entradas da mesma compra");
@@ -481,7 +486,7 @@ test("A/B: o PIX DEBITA R$ 2,00; o Google Play NÃO debita — mesmos benefício
   assert.equal(rGoogle.status, 201, JSON.stringify(rGoogle.json));
   assert.equal(saldoRs(), 500, "o Google Play debitou saldo R$");
   assert.equal(pontos().pontos, 1, "os benefícios deviam ser os MESMOS do PIX");
-  assert.equal(lance() ?? 0, 0, "UTAC136: nenhum dos dois dá pontos de lance");
+  assert.equal(lance(), 100, "UTAC138: os dois pagamentos dão o mesmo bónus de +100");
   assert.equal(eco().saldo, 1);
 });
 
@@ -627,13 +632,13 @@ test("o ECOQUILDO é o ÚLTIMO passo: se o crédito do PONTO DE FIDELIDADE falha
 // ── UTAC112 — compra múltipla pela Google Play («Multi-quantity»: a quantidade vem do RECIBO) ────
 const lastro = () => S.tabelas.eco_quildo_lastro.find((l) => l.id === 1);
 
-test("UTAC112 G1: recibo com quantity 5 (Relâmpago) ⇒ +5 fidelidade · 0 pontos de lance · +5 ECOQUILDO · lastro 5 (UTAC136)", async () => {
+test("UTAC112 G1: recibo com quantity 5 (Relâmpago) ⇒ +5 fidelidade · +500 pontos de lance (UTAC138) · +5 ECOQUILDO · lastro 5", async () => {
   HTTP.quantidade = 5;
   const r = await pedirGoogle();
   assert.equal(r.status, 201, JSON.stringify(r.json));
   assert.equal(r.json.quantidade, 5);
   assert.equal(pontos().pontos, 5);
-  assert.equal(lance() ?? 0, 0);
+  assert.equal(lance(), 500, "UTAC138: +100 × 5");
   assert.equal(eco().saldo, 5);
   assert.equal(lastro().total_emitido, 5);
   assert.equal(historicoPasse().length, 1, "um só movimento de 5× na mesma ref");

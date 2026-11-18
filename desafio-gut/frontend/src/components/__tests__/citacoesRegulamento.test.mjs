@@ -29,10 +29,10 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const ler = (p) => readFileSync(resolve(process.cwd(), p), "utf8");
-// ⚠️ UTAC137 — o gate passou ao Regulamento **v6.0** (`docs/REGULAMENTO-v6.md`, o texto registado no RTD). Esta
+// ⚠️ UTAC137 — o gate passou ao Regulamento **v6.0** (`docs/REGULAMENTO-v6.1.md`, o texto registado no RTD). Esta
 // guarda passou a verificar contra o v6, com a mesma força: cada bloco do gate tem de ser TEXTO LITERAL do artigo que
 // cita. O v6 escreve «Art. 1º O presente…» e «Art. 10. A…» (uma linha por artigo, sem travessão).
-const V6 = ler("../../docs/REGULAMENTO-v6.md");
+const V6 = ler("../../docs/REGULAMENTO-v6.1.md");
 const TERMOS = ler("src/components/TermosConsentimento.jsx");
 
 const norm = (s) => s.replace(/\s+/g, " ").trim();
@@ -63,7 +63,8 @@ const citados = () => [...TERMOS.matchAll(/artLabel\}>Art\. (\d+)(?:º|\.)</g)].
 test("controlo positivo: o v6 é legível e o leitor de artigos encontra o que deve", () => {
   assert.ok(V6.length > 6000, "o Regulamento v6 não foi lido — medição inválida");
   assert.match(artigoV6(11), /habilidade, estratégia e menor valor único de lance/);
-  assert.match(artigoV6(6), /o Passe não concede pontos de lance/);
+  // UTAC138 (v6.1): o Art. 6º passou a «o Passe Programado não concede pontos de lance» (era «o Passe não concede…»).
+  assert.match(artigoV6(6), /o Passe Programado não concede pontos de lance/);
   assert.match(artigoV6(30), /Cartório de Títulos e Documentos/);
   assert.ok(citados().length >= 10, `poucos blocos citados no gate: ${citados().length}`);
 });
@@ -105,7 +106,8 @@ test("vocabulário do gate: v6 presente, modelo antigo ausente (texto inteiro, s
                     /10 \(dez\) pontos/, /10 pontos de fidelidade/, /R\$ 1,00/, /200 pontos/, /v5\.0/])
     assert.doesNotMatch(visivel, re, `o gate voltou a dizer ${re}`);
   for (const re of [/Passe Desafio/, /R\$ 2,00/, /pontos de fidelidade/, /ECOQUILDO/, /menor valor único de lance/,
-                    /o Passe não concede pontos de lance/, /R\$ 0,50/, /Regulamento Oficial v6\.0/])
+                    /o Passe Programado não concede pontos de lance/, /bônus de 100 \(cem\) pontos de lance/,
+                    /R\$ 0,50/, /Regulamento Oficial v6\.1/])
     assert.match(visivel, re, `o gate perdeu ${re}`);
 });
 
@@ -116,7 +118,10 @@ test("a caixa «termos» repete os números do v6 (Art. 5º R$ 2,00 · Art. 7º 
   assert.ok(preco && pontos, `a caixa perdeu preço ou pontos: «${m[1]}»`);
   assert.ok(artigoV6(5).includes(`R$ ${preco[1]} (dois reais)`), `R$ ${preco[1]} não é o preço do Art. 5º`);
   assert.ok(artigoV6(7).includes(`${pontos[1]} (um) ponto de fidelidade`), `${pontos[1]} ponto não é o Art. 7º`);
-  assert.match(m[1], /sem pontos de lance/, "a caixa tem de dizer que o Passe não dá pontos de lance (Art. 6º)");
+  // UTAC138 (v6.1): era «sem pontos de lance»; agora a caixa diz o bónus do Relâmpago, com o número do Art. 7º.
+  const bonus = m[1].match(/bônus de (\d+) pontos de lance/);
+  assert.ok(bonus, "a caixa tem de dizer o bónus de pontos de lance do Passe Relâmpago (Art. 7º)");
+  assert.ok(artigoV6(7).includes(`bônus de ${bonus[1]} (cem) pontos de lance`), `${bonus[1]} não é o bónus do Art. 7º`);
 });
 
 test("o gate não apresenta datas que o v6 não regista", () => {

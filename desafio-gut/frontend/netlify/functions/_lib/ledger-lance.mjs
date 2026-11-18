@@ -48,7 +48,12 @@ export const MOTIVOS_CREDITO = Object.freeze(["passe-relampago", "lance"]);
  */
 export const MOTIVOS_PONTOS_LANCE = Object.freeze([
   "boas-vindas", "login", "missao", "indicacao", "sequencia", "passe-relampago",
+  // UTAC138 (R18-138-D, Art. 7º v6.1) — bónus de +100 do Passe Relâmpago; recompensa única aos testadores.
+  "bonus-passe-relampago", "recompensa-teste",
 ]);
+/** UTAC138 (R18-138-D) — o Passe Relâmpago volta a dar pontos de lance: +100 por Passe (Art. 7º v6.1). */
+export const PONTOS_LANCE_BONUS_PASSE_RELAMPAGO = 100;
+export const MOTIVO_BONUS_PASSE_RELAMPAGO = "bonus-passe-relampago";
 /** Motivo do DÉBITO de pontos que o próprio lance faz (110n, Frente A). */
 export const MOTIVO_PONTOS_GASTOS_NO_LANCE = "lance";
 

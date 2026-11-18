@@ -1,4 +1,5 @@
 import { COR, T_PADRAO, ENDERECO_ZERO, encurtar, reais, inteiroSeguro } from "./_estilo-especial.js";
+import ResultadosEdicao from "./ResultadosEdicao.jsx";
 
 /**
  * Resultado da edição especial depois de encerrada (decisão D4 do operador):
@@ -19,13 +20,19 @@ import { COR, T_PADRAO, ENDERECO_ZERO, encurtar, reais, inteiroSeguro } from "./
  *   leitura on-chain de `resultados(idEdicao)`
  * @param {{totalLances:number, participantes:number}|null} [props.metricas]
  * @param {string|null} [props.nomeVencedor] nome de exibição do lance vencedor
+ * @param {{pronto:boolean, vencedor:object|null, top10:object[], totalLances:number, participantes:number}|null} [props.apuracao]
+ *   UTAC138 — apuração INSTANTÂNEA do backend (`GET resultado-edicao`), feita no encerramento. Enquanto a
+ *   consolidação on-chain não chega, é ELA que mostra o vencedor; o Top 10 vem sempre dela. Com resultado
+ *   on-chain consolidado, o vencedor mostrado é o on-chain (autoritativo) — os dois saem da mesma regra.
  * @param {boolean} [props.isMobile]
  * @param {(chave:string, fallback:string)=>string} [props.t]
  */
 export default function PainelVencedorEspecial({
   carregando = false, erro = null, resultado = null, metricas = null, nomeVencedor = null,
-  isMobile = false, t = T_PADRAO,
+  apuracao = null, isMobile = false, t = T_PADRAO,
 }) {
+  const apurada = apuracao?.pronto === true && Array.isArray(apuracao.top10);
+  const top10 = apurada ? <ResultadosEdicao top10={apuracao.top10} isMobile={isMobile} t={t} /> : null;
   const moldura = (estado, corpo) => (
     <div data-painel="vencedor-especial" data-estado={estado} style={{ textAlign: "center" }}>
       <div style={{ fontSize: "0.72rem", color: COR.danger, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 800, marginBottom: "0.5rem" }}>
@@ -39,10 +46,12 @@ export default function PainelVencedorEspecial({
   );
 
   if (carregando) return moldura("carregando", nota(t("edicao.especial.carregandoResultado", "Carregando o resultado…")));
-  if (erro) return moldura("erro", nota(t("edicao.especial.erroResultado", "Não foi possível ler o resultado agora. Tente de novo em instantes.")));
+  // UTAC138 — com a apuração instantânea já lida, um erro da leitura on-chain não esconde o resultado.
+  if (erro && !apurada) return moldura("erro", nota(t("edicao.especial.erroResultado", "Não foi possível ler o resultado agora. Tente de novo em instantes.")));
 
-  const total = inteiroSeguro(metricas?.totalLances);
-  const participantes = inteiroSeguro(metricas?.participantes);
+  // UTAC138 — as métricas da apuração (todos os lances, com valores) mandam sobre as do `lances-flash`.
+  const total = inteiroSeguro(apurada ? apuracao.totalLances : metricas?.totalLances);
+  const participantes = inteiroSeguro(apurada ? apuracao.participantes : metricas?.participantes);
   const linhaMetricas = total !== null && participantes !== null && (
     <div data-bloco="metricas" style={{ display: "flex", justifyContent: "center", gap: "1rem", marginTop: "0.6rem", fontSize: "0.78rem", color: COR.text }}>
       <span>{total} {t("edicao.especial.lances", "lances")}</span>
@@ -55,6 +64,27 @@ export default function PainelVencedorEspecial({
   // vencedor consolidado seria uma mentira. Achado da validação independente.
   if (total === 0 && !resultado?.consolidado) {
     return moldura("sem-lances", nota(t("edicao.especial.semLances", "Nenhum lance foi dado nesta edição.")));
+  }
+
+  // UTAC138 — sem consolidação on-chain, mas com a apuração instantânea: vencedor + Top 10 já.
+  if (!resultado?.consolidado && apurada) {
+    const v = apuracao.vencedor;
+    if (!v || inteiroSeguro(v.valorCentavos) === null) {
+      return moldura("sem-vencedor", <>
+        {nota(t("edicao.especial.semVencedor", "Não houve lance único nesta edição."))}
+        {linhaMetricas}
+      </>);
+    }
+    return moldura("vencedor", <>
+      <div style={{ fontSize: isMobile ? "1.05rem" : "1.15rem", fontWeight: 900, color: COR.gold }}>
+        🏆 {t("edicao.especial.vencedor", "Vencedor")}: {v.nome || v.endereco || "—"}
+      </div>
+      <div style={{ marginTop: "0.35rem", fontSize: "0.8rem", color: COR.muted }}>
+        {t("edicao.especial.menorUnico", "Menor lance único")}: <strong style={{ color: COR.text }}>{reais(v.valorCentavos)}</strong>
+      </div>
+      {linhaMetricas}
+      {top10}
+    </>);
   }
 
   if (!resultado?.consolidado) {
@@ -82,5 +112,6 @@ export default function PainelVencedorEspecial({
       {t("edicao.especial.menorUnico", "Menor lance único")}: <strong style={{ color: COR.text }}>{reais(resultado.menorUnicoCentavos)}</strong>
     </div>
     {linhaMetricas}
+    {top10}
   </>);
 }

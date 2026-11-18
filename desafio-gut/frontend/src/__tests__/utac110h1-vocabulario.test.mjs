@@ -78,6 +78,7 @@ test("versão do aceite: gate e servidor em \"3.1\" (R18-110k.1 — o Regulament
   // ⚠️ UTAC110m.2 (2026-10-18): subiu de **3.2** para **3.3** (texto do Regulamento + redução da
   // promessa do ECOQUILDO; Art. 39º exige aviso prévio). O valor antigo fica declarado aqui.
   // UTAC137 (R18-137-1): 3.3 → 3.4 com o Regulamento v6.0 (front e back juntos).
-  assert.equal(front[1], "3.4", "o gate tem de subir com o Regulamento v6.0 (UTAC137: 3.4)");
-  assert.equal(back[1], "3.4", "o servidor recusaria o aceite do gate novo (versao_invalida)");
+  // UTAC138: 3.4 → 3.5 com o Regulamento v6.1 (front e back juntos).
+  assert.equal(front[1], "3.5", "o gate tem de subir com o Regulamento v6.1 (UTAC138: 3.5)");
+  assert.equal(back[1], "3.5", "o servidor recusaria o aceite do gate novo (versao_invalida)");
 });

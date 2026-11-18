@@ -159,12 +159,15 @@ REGRA DE LINGUAGEM (obrigatória):
 // (`semEscapesDaFonte`, abaixo).
 // ⭐ UTAC137 — as âncoras passaram ao Regulamento **v6.0** (`docs/REGULAMENTO-v6.md`, 30 artigos). Cada uma é
 // um excerto VERBATIM do artigo (o mc963 confere-o). As âncoras do v5.1 (Arts. 6/8/17/37/47…) ficam no git (`b740046`).
+// ⭐ UTAC138 — v6.1 (`docs/REGULAMENTO-v6.1.md`): mudam só as âncoras dos Arts. 6º e 7º (bônus de 100 pontos de lance
+// do Passe Relâmpago; apuração instantânea das Edições Especiais). v6.0: «o Passe não concede pontos de lance. Os pontos
+// utilizados para realizar os lances são 100% gratuitos».
 export const ARTIGOS_V4 = {
   "1":  "operado pela Associação Recreativa dos Nordestinos no Amazonas, nome fantasia Grupo União e Trabalho (GUT)",
   "3":  "A aquisição do Passe Desafio é estritamente opcional",
   "5":  "O Passe Desafio é um produto digital comercializado pelo valor fixo de R$ 2,00 (dois reais)",
-  "6":  "o Passe não concede pontos de lance. Os pontos utilizados para realizar os lances são 100% gratuitos",
-  "7":  "O Passe Desafio confere ao usuário o acesso ao assistente virtual de inteligência estratégica GUTO, dados analíticos de mercado e 1 (um) ponto de fidelidade ao sistema.",
+  "6":  "o Passe Programado não concede pontos de lance. Os pontos utilizados para realizar os lances são gratuitos",
+  "7":  "O Passe Relâmpago concede, adicionalmente, um bônus de 100 (cem) pontos de lance por unidade adquirida, creditado no momento da compra.",
   "8":  "a cada 50 pontos de fidelidade acumulados, o sistema credita automaticamente 1 Cartão Digital ao perfil do usuário.",
   "11": "A Oferta Relâmpago configura modalidade de e-commerce baseada em habilidade, estratégia e menor valor único de lance",
   "12": "(onde 1 ponto equivale a R$ 0,01)",
@@ -215,7 +218,7 @@ export const semEscapesDaFonte = (t) =>
 // `_tests/utac137-seg3-guto-modelo.test.mjs`.
 export const REGRA_REGULAMENTO = `
 
-REGULAMENTO OFICIAL (versão 6.0) — COMO USAR:
+REGULAMENTO OFICIAL (versão 6.1) — COMO USAR:
 O texto INTEGRAL do Regulamento Oficial do DesafioGUT segue no fim deste prompt. É a TUA ÚNICA
 FONTE sobre regras, produtos e mecânica — não tens outra e não precisas de outra.
 - Quando responderes sobre regras, CITA o artigo que fundamenta a resposta, com o rótulo do documento:
@@ -225,9 +228,11 @@ FONTE sobre regras, produtos e mecânica — não tens outra e não precisas de 
   (${EMAIL_SUPORTE}) — não inventes regras, valores nem prazos.
 - Responde CURTO: a regra que interessa, o artigo, e a saída. Não despejes capítulos.
 
-MODELO DE HOJE (Regulamento v6.0): o Passe Desafio custa R$ 2,00, é opcional e dá acesso ao GUTO, a dados
-analíticos e 1 ponto de fidelidade (Art. 7º). O Passe NÃO dá pontos de lance: os pontos de lance são 100% gratuitos,
-obtidos por engajamento diário, login contínuo e cumprimento de missões (Art. 6º). 50 pontos de fidelidade = 1 cartão (Art. 8º). O palpite não
+MODELO DE HOJE (Regulamento v6.1): o Passe Desafio custa R$ 2,00, é opcional e dá acesso ao GUTO, a dados
+analíticos e 1 ponto de fidelidade (Art. 7º). O Passe Relâmpago dá ainda um bônus de 100 pontos de lance por Passe (Art. 7º);
+o Passe Programado não dá pontos de lance, e os outros pontos de lance são gratuitos, obtidos por engajamento diário,
+login contínuo e cumprimento de missões (Art. 6º). Nas Edições Especiais o vencedor e os 10 menores lances únicos
+são publicados no app logo no encerramento, durante 24 horas (Art. 7º). 50 pontos de fidelidade = 1 cartão (Art. 8º). O palpite não
 exige Passe. 1 ECOQUILDO = R$ 0,50 e cada 50 ECOQUILDOs convertem-se sozinhos em 1 Passe (Arts. 21. e 23.).
 Descreve SÓ o que o Regulamento diz: não acrescentes produtos, créditos ou preços que ele não tenha.
 

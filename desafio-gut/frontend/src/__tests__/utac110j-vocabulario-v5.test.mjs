@@ -174,7 +174,7 @@ test("4 · Art. 20 → 6º, Art. 7/8 → 14º, Arts. 25/26 (sem correspondente n
   assert.doesNotMatch(conf, /Apuração automática|Lance mínimo: R\$ 0,01/, "voltou o texto que só dependia de um artigo órfão");
   assert.match(codigo(ler("src/components/glass/ComingSoonHero.jsx")), /Menor valor único de lance vence · Art\. 11\./);
   assert.match(codigo(ler("src/pages/MeusAtivos.jsx")), /Art\. 11\.: vence o menor valor único de lance/);
-  const v6 = readFileSync(resolve(FRONT, "..", "..", "docs", "REGULAMENTO-v6.md"), "utf8");
+  const v6 = readFileSync(resolve(FRONT, "..", "..", "docs", "REGULAMENTO-v6.1.md"), "utf8");
   assert.match(v6, /^Art\. 5º O Passe Desafio .*R\$ 2,00/m);
   assert.match(v6, /^Art\. 11\. .*menor valor único de lance/m);
   // O v5 tem mesmo esses dois artigos com esse assunto (não se inventa a correspondência).
@@ -208,7 +208,8 @@ test("3 (B1 do validador) · a regra da edição especial diz «crédito de lanc
   // conservado aqui à vista) descrevia um crédito que já não existe. Passou a dizer o modelo em vigor: o
   // lance gasta o SEU VALOR em pontos de lance e o Passe é que dá +200. O título do teste fica histórico.
   // UTAC137 (v6, Art. 6º): a frase do 110j.5 terminava em «o Passe dá +200 pontos de lance». Passou a «os pontos de lance são gratuitos».
-  const frase = "Lance relâmpago · vence o menor lance único · cada lance gasta o seu valor em pontos de lance · os pontos de lance são gratuitos";
+  // UTAC138 (v6.1): a frase do UTAC137 terminava em «os pontos de lance são gratuitos»; passou ao bónus +100 e ao Top 10.
+  const frase = "Lance relâmpago · vence o menor lance único · cada lance gasta o seu valor em pontos de lance · o Passe Relâmpago dá +100 pontos de lance · resultado e Top 10 logo no encerramento";
   assert.ok(card.includes(`t("edicao.especial.regra", "${frase}")`), "o fallback da regra da especial mudou");
   // ⚠️ comparação por TEXTO, não por RegExp: a frase tem «+200» e o `+` é quantificador em regex
   // (a 1.ª versão deste teste deu falso vermelho por isso).

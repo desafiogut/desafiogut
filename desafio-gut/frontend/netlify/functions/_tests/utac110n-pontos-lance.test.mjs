@@ -141,24 +141,27 @@ async function comprar({ key = "idem-110n-1", token } = {}) {
 
 // UTAC136 — Regulamento v6.0, Art. 6º: o Passe NÃO concede pontos de lance. Os B1/B2 abaixo afirmavam
 // o contrário (+200, UTAC110n); foram invertidos, com o texto antigo no nome entre parênteses.
-test("B1 · (era: credita 200 pontos de lance) comprar o Passe Relâmpago NÃO credita pontos de lance (UTAC136)", async () => {
+// UTAC138 (R18-138-D, Art. 7º v6.1): o UTAC136 tirou os 200; o UTAC138 repôs +100 com motivo próprio.
+test("B1 · (era 200 no 110n, 0 no UTAC136) comprar o Passe Relâmpago credita +100 pontos de lance (UTAC138)", async () => {
   const { status, corpo } = await comprar({ key: "idem-110n-passe-1" });
   assert.equal(status, 201, JSON.stringify(corpo));
-  assert.equal(corpo.pontosLance, undefined, "a resposta não anuncia pontos de lance");
+  assert.equal(corpo.pontosLance, 100, "a resposta anuncia o saldo de pontos de lance");
+  assert.equal(corpo.bonusPontosLance, 100);
   assert.equal(corpo.pontosFidelidade, 1, "Art. 7º v6: 1 ponto de fidelidade");
   assert.equal(corpo.creditosLance, 0, "o crédito legado já não é creditado");
 
-  assert.equal(pontosLance(), 0);
+  assert.equal(pontosLance(), 100);
   assert.equal(Number(linha().creditos_lance ?? 0), 0);
-  assert.equal(movimentos().some((h) => h.motivo === "passe-relampago"), false, "nenhum movimento de pontos de lance");
+  assert.equal(movimentos().some((h) => h.motivo === "passe-relampago"), false, "o motivo antigo (200) não volta");
+  assert.equal(movimentos().filter((h) => h.motivo === "bonus-passe-relampago").length, 1, "um movimento com o motivo novo");
 });
 
-test("B2 · idempotência do Passe: repetir a chave continua sem pontos de lance (UTAC136)", async () => {
+test("B2 · idempotência do Passe: repetir a chave não repete o bónus (UTAC138)", async () => {
   await comprar({ key: "idem-110n-passe-2" });
   const { status, corpo } = await comprar({ key: "idem-110n-passe-2" });
   assert.equal(status, 200);
   assert.equal(corpo.idempotent, true);
-  assert.equal(pontosLance(), 0, "o retry também não credita");
+  assert.equal(pontosLance(), 100, "o retry não credita outra vez");
 });
 
 test("B3 · rollback: falha do ECOQUILDO desfaz a compra e o R$ volta (UTAC136: sem pontos de lance a desfazer)", async () => {
@@ -450,28 +453,33 @@ const corpo = (txt) => txt.slice(txt.indexOf("CAPÍTULO I"));
 
 // ⚠️ UTAC137 — o G1-G4 fixavam o Art. 17º do v5.1 («200 pontos de lance») e a invariante corpo(v5) == corpo(GUTO).
 // O Regulamento passou ao v6.0, que diz o CONTRÁRIO (Art. 6º: o Passe não concede pontos de lance). Invertidos:
-test("G1 · (v6) o Art. 6º diz que o Passe NÃO concede pontos de lance (era: Art. 17º v5.1 «200 pontos de lance»)", async () => {
-  for (const f of ["docs/REGULAMENTO-v6.md", "docs/GUTO-REGULAMENTO.md"]) {
+// ⚠️ UTAC138 — v6.1: o Art. 6º passou a «o Passe Programado não concede pontos de lance» e o Art. 7º dá ao Passe
+// Relâmpago +100 pontos de lance (R18-138-D). O G1 fixa o v6.1 e amarra o número à constante do backend.
+test("G1 · (v6.1) Art. 6º: o Passe Programado não concede pontos de lance; Art. 7º: o Relâmpago dá +100 (= constante)", async () => {
+  const { PONTOS_LANCE_BONUS_PASSE_RELAMPAGO } = await import("../_lib/ledger-lance.mjs");
+  assert.equal(PONTOS_LANCE_BONUS_PASSE_RELAMPAGO, 100);
+  for (const f of ["docs/REGULAMENTO-v6.1.md", "docs/GUTO-REGULAMENTO.md"]) {
     const doc = await ler(f);
-    const art = /Art\. 6º ([^\n]+)/.exec(doc)?.[1] ?? "";
-    assert.match(art, /o Passe não concede pontos de lance/, `${f}: Art. 6º sem a regra`);
-    assert.match(art, /100% gratuitos/, `${f}: Art. 6º sem a gratuidade dos pontos de lance`);
+    const art6 = /Art\. 6º ([^\n]+)/.exec(doc)?.[1] ?? "";
+    const art7 = /Art\. 7º ([^\n]+)/.exec(doc)?.[1] ?? "";
+    assert.match(art6, /o Passe Programado não concede pontos de lance/, `${f}: Art. 6º sem a regra`);
+    assert.match(art7, /bônus de 100 \(cem\) pontos de lance por unidade adquirida/, `${f}: Art. 7º sem o bónus`);
     assert.doesNotMatch(doc, /200 pontos de lance/, `${f}: sobrou o +200 do v5.1`);
   }
 });
 
-test("G2 · a invariante corpo(v6) == corpo(GUTO) mantém-se byte a byte", async () => {
-  const v6 = await ler("docs/REGULAMENTO-v6.md");
+test("G2 · a invariante corpo(v6.1) == corpo(GUTO) mantém-se byte a byte (UTAC138; era v6)", async () => {
+  const v6 = await ler("docs/REGULAMENTO-v6.1.md");
   const guto = await ler("docs/GUTO-REGULAMENTO.md");
   assert.ok(v6.length > 6_000, `medição inválida: ${v6.length}`);
   assert.ok(guto.endsWith(v6), "os dois documentos divergiram");
-  assert.equal(guto.slice(guto.indexOf("\n---\n\n") + 6), v6, "o corpo do GUTO tem de ser o v6 inteiro, sem acrescentos");
+  assert.equal(guto.slice(guto.indexOf("\n---\n\n") + 6), v6, "o corpo do GUTO tem de ser o v6.1 inteiro, sem acrescentos");
 });
 
 test("G3 · o módulo do runtime espelha o documento (3.º sítio da invariante)", async () => {
   const guto = await ler("docs/GUTO-REGULAMENTO.md");
   const { REGULAMENTO_TEXTO, REGULAMENTO_VERSAO } = await import("../_lib/guto-regulamento.mjs");
-  assert.equal(REGULAMENTO_VERSAO, "6.0");
+  assert.equal(REGULAMENTO_VERSAO, "6.1");
   assert.equal(REGULAMENTO_TEXTO, guto, "o módulo que o runtime importa divergiu do documento — regenerar");
   assert.doesNotMatch(REGULAMENTO_TEXTO, /200 pontos de lance/);
 });

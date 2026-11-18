@@ -270,7 +270,8 @@ test("RENDER · CLICAR abre o balão: «Escolha o seu Passe Desafio» + os DOIS 
   // ⚠️ UTAC110j.5 — ALTERADO (declarado): o Passe Relâmpago dá +200 PONTOS de lance (UTAC110n), não «1 lance».
   // Antes: /⚡ Passe Relâmpago R\$ 2,00 10 pontos \+ 1 lance no Menor Lance Único Comprar Passe Relâmpago/
   // UTAC137 (v6) — era «10 pontos de fidelidade + 200 pontos de lance + 1 ECOQUILDO».
-  assert.match(h, /⚡ Passe Relâmpago R\$ 2,00 1 ponto de fidelidade \+ 1 ECOQUILDO \+ GUTO e dados analíticos Comprar Passe Relâmpago/,
+  // UTAC138 (v6.1, Art. 7º) — era «1 ponto de fidelidade + 1 ECOQUILDO + GUTO e dados analíticos».
+  assert.match(h, /⚡ Passe Relâmpago R\$ 2,00 Bônus de 100 pontos de lance \+ 1 ponto de fidelidade \+ 1 ECOQUILDO \+ GUTO e dados analíticos Comprar Passe Relâmpago/,
     `cartão Relâmpago errado: «${h}»`);
   // UTAC137 — era «10 pontos + 1 palpite nas Ofertas Programadas».
   assert.match(h, /🎫 Passe Programado R\$ 2,00 1 ponto de fidelidade \+ 1 ECOQUILDO \+ GUTO e dados analíticos Comprar Passe Programado/,
@@ -290,7 +291,8 @@ for (const [rotulo, url, toast] of [
   // ⚠️ UTAC110j.5 — ALTERADO (declarado): o Passe Relâmpago dá +200 PONTOS de lance (UTAC110n), não «1 lance».
   // Antes: "Passe Relâmpago comprado: +10 pontos e 1 lance"
   // UTAC137 (v6) — eram «…+10 pontos de fidelidade e +200 pontos de lance» e «…+10 pontos e 1 palpite».
-  ["Comprar Passe Relâmpago", URL_RELAMPAGO, "Passe Relâmpago comprado: +1 ponto de fidelidade e +1 ECOQUILDO"],
+  // UTAC138 — era "Passe Relâmpago comprado: +1 ponto de fidelidade e +1 ECOQUILDO".
+  ["Comprar Passe Relâmpago", URL_RELAMPAGO, "Passe Relâmpago comprado: +100 pontos de lance (bônus), +1 ponto de fidelidade e +1 ECOQUILDO"],
   ["Comprar Passe Programado", URL_PROGRAMADO, "Passe Programado comprado: +1 ponto de fidelidade e +1 ECOQUILDO"],
 ]) {
   test(`RENDER · «${rotulo}» chama o SEU endpoint, fecha o balão, mostra o toast e RELÊ os saldos`, async () => {

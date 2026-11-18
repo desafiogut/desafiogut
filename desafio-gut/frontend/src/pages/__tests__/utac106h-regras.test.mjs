@@ -33,11 +33,11 @@ const STUBS_106C = resolve(AQUI, "..", "..", "__tests__", "_stubs-106c");
 const ALIASES = [{ find: /^react-router-dom$/, replacement: `${STUBS_106C}/rr.jsx` }];
 
 const lerDoc = (nome) => readFileSync(resolve(REPO, "docs", nome), "utf8").replace(/\r\n/g, "\n");
-// ⚠️ UTAC137 — a página publica o Regulamento **v6.0** (`docs/REGULAMENTO-v6.md`, o texto registado no RTD). As guardas
+// ⚠️ UTAC137 — a página publica o Regulamento **v6.0** (`docs/REGULAMENTO-v6.1.md`, o texto registado no RTD). As guardas
 // abaixo mantêm a força das do v5 (fonte única com o GUTO, cobertura total, palavras exactas pela ordem, estrutura),
 // medidas contra o v6. O v5 continua lido para provar que o parser não o partiu (compatibilidade).
 const MD_V5 = lerDoc("REGULAMENTO-v5.md");
-const MD_V6 = lerDoc("REGULAMENTO-v6.md");
+const MD_V6 = lerDoc("REGULAMENTO-v6.1.md");
 const MD_GUTO = lerDoc("GUTO-REGULAMENTO.md");
 const CORPO_GUTO = MD_GUTO.slice(MD_GUTO.indexOf("\n---\n\n") + 6);
 /** As linhas do v6 sem a marcação Markdown («# », «## ») — o que a página tem de mostrar. */
@@ -61,15 +61,15 @@ before(async () => {
 after(async () => { if (vite) await vite.close(); });
 
 // ── 1. Fonte única: o documento do repo é o texto que o GUTO lê ─────────────────────────────────
-test("FONTE · o corpo de docs/GUTO-REGULAMENTO.md é docs/REGULAMENTO-v6.md, byte a byte", () => {
+test("FONTE · o corpo de docs/GUTO-REGULAMENTO.md é docs/REGULAMENTO-v6.1.md, byte a byte", () => {
   assert.ok(MD_GUTO.includes("\n---\n\n"), "falta o separador cabeçalho/corpo no documento do GUTO");
-  assert.ok(MD_V6.startsWith("# REGULAMENTO OFICIAL DO APLICATIVO DESAFIOGUT (VERSÃO 6.0)"), "o v6 tem de começar no título");
+  assert.ok(MD_V6.startsWith("# REGULAMENTO OFICIAL DO APLICATIVO DESAFIOGUT (VERSÃO 6.1)"), "o v6.1 tem de começar no título");
   assert.equal(CORPO_GUTO, MD_V6, "o Regulamento publicado divergiu do que o GUTO lê");
 });
 
 test("FONTE · o cabeçalho do documento do GUTO declara a versão 6.0 e a regra de alteração", () => {
   const cab = MD_GUTO.slice(0, MD_GUTO.indexOf("\n---\n\n"));
-  assert.match(cab, /Versão 6\.0/);
+  assert.match(cab, /Versão 6\.1/); // UTAC138 (v6.1): era 6.0
   assert.match(cab, /Fonte de verdade para o GUTO\. Não alterar sem actualizar o regulamento oficial\./);
   assert.match(cab, /cópia byte a byte/);
 });
@@ -77,7 +77,7 @@ test("FONTE · o cabeçalho do documento do GUTO declara a versão 6.0 e a regra
 test("FONTE · a página não escreve texto jurídico à mão: importa o .md do v6 em bruto", () => {
   const jsx = readFileSync(resolve(FRONTEND, "src", "pages", "RegrasOficiais.jsx"), "utf8");
   const codigo = jsx.split("\n").filter((l) => !/^\s*\/\//.test(l)).join("\n");
-  assert.match(codigo, /from "\.\.\/\.\.\/\.\.\/\.\.\/docs\/REGULAMENTO-v6\.md\?raw"/);
+  assert.match(codigo, /from "\.\.\/\.\.\/\.\.\/\.\.\/docs\/REGULAMENTO-v6.1.md\?raw"/);
   assert.doesNotMatch(codigo, /REGULAMENTO-v5\.md/, "a página voltou a importar o v5");
   for (const juridico of ["R$ 2,00", "pontos de fidelidade", "ECOQUILDO", "23.040.066/0001-00", "Comarca de Manaus"]) {
     assert.ok(!codigo.includes(juridico), `texto jurídico escrito à mão na página: «${juridico}»`);
@@ -118,8 +118,8 @@ test("ACESSIBILIDADE · os alvos de toque da página (sumário e «Voltar») tê
 // ── 3. Estrutura: 6 capítulos, 30 artigos ───────────────────────────────────────────────────────
 test("ESTRUTURA · um <h1> com o título e a versão do v6.0", () => {
   assert.equal((html.match(/<h1[\s>]/g) || []).length, 1);
-  assert.match(html, /<h1[^>]*>REGULAMENTO OFICIAL DO APLICATIVO DESAFIOGUT \(VERSÃO 6\.0\)<\/h1>/);
-  assert.equal(mod.VERSAO_REGULAMENTO, "6.0");
+  assert.match(html, /<h1[^>]*>REGULAMENTO OFICIAL DO APLICATIVO DESAFIOGUT \(VERSÃO 6\.1\)<\/h1>/);
+  assert.equal(mod.VERSAO_REGULAMENTO, "6.1"); // UTAC138 (v6.1): era 6.0
 });
 
 test("ESTRUTURA · os 6 capítulos em <h2>, pela ordem do documento", () => {
@@ -196,7 +196,8 @@ test("TERMOS · BIDIRECCIONAL — o mesmo verificador REPROVA o v5.1 como texto 
 test("PLAY · preço, Passe sem pontos de lance, proporções fixas, habilidade e elementos obrigatórios", () => {
   for (const f of [
     "valor fixo de R$ 2,00 (dois reais)",
-    "o Passe não concede pontos de lance",
+    "o Passe Programado não concede pontos de lance", // UTAC138 (v6.1): era «o Passe não concede…»
+    "bônus de 100 (cem) pontos de lance por unidade adquirida",
     "1 (um) ponto de fidelidade",
     "a cada 50 pontos de fidelidade acumulados, o sistema credita automaticamente 1 Cartão Digital",
     "1 ECOQUILDO equivalente a R$ 0,50 (cinquenta centavos)",

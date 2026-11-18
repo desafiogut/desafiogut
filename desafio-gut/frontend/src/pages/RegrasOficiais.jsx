@@ -22,7 +22,8 @@ import { GlassCard } from "@/components/ui";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 // UTAC137 — o Regulamento publicado passou ao **v6.0** (o texto registado no RTD, UTAC135). Era o v5.1:
 //   import REGULAMENTO_MD from "../../../../docs/REGULAMENTO-v5.md?raw";
-import REGULAMENTO_MD from "../../../../docs/REGULAMENTO-v6.md?raw";
+// UTAC138 — v6.1 (era o v6.0 do UTAC137, `docs/REGULAMENTO-v6.md`, que continua no repo como o texto registado no RTD).
+import REGULAMENTO_MD from "../../../../docs/REGULAMENTO-v6.1.md?raw";
 // UTAC110j.5 (Frente C) — as PROPORÇÕES FIXAS de pontos de lance (Google Play, Política de Programas de
 // Fidelidade Gamificados: «visíveis no app e nos termos oficiais»). O Regulamento v5.1 fixa 200 (Art. 17º)
 // e 1 ponto = R$ 0,01 (Art. 18º), mas NÃO os valores de cada fonte (Art. 16º só as enumera). O resumo vem

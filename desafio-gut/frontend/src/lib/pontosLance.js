@@ -18,6 +18,9 @@ export const FONTES = Object.freeze([
   Object.freeze({ motivo: "boas-vindas", rotulo: "Boas-vindas" }),
   // UTAC110j.5 — o bónus de +200 do Passe Relâmpago (Art. 16º VI, UTAC110n). Sem ele caía em «Outros».
   Object.freeze({ motivo: "passe-relampago", rotulo: "Passe Relâmpago" }),
+  // UTAC138 — o bónus de +100 do Passe Relâmpago (Art. 7º v6.1) e a recompensa única dos testadores.
+  Object.freeze({ motivo: "bonus-passe-relampago", rotulo: "Bônus do Passe Relâmpago" }),
+  Object.freeze({ motivo: "recompensa-teste", rotulo: "Recompensa de testador" }),
 ]);
 
 /**
@@ -54,7 +57,8 @@ export const PROPORCOES = Object.freeze({
   cicloDias: 15, //          fontes-lance.mjs DIAS_CICLO_MISSOES (ceil(225 / 15))
   // UTAC137 (Regulamento v6.0, Art. 6º): o Passe NÃO dá pontos de lance. Era `passeRelampago: 200`
   // (ledger-lance.mjs PONTOS_LANCE_POR_PASSE_RELAMPAGO, que deixou de ser usado na compra no UTAC136).
-  pontosLancePorPasse: 0, // comprar-passe-tipado.mjs não credita pontos de lance (UTAC136)
+  // UTAC138 (v6.1, Art. 7º): o Passe RELÂMPAGO volta a dar +100 (ledger-lance.mjs PONTOS_LANCE_BONUS_PASSE_RELAMPAGO).
+  pontosLancePorPasse: 100, // comprar-passe-tipado.mjs credita o bónus só no Relâmpago (UTAC138; era 0 no UTAC136)
   fidelidadePorPasse: 1, //  passe-pontos.mjs PONTOS_FIDELIDADE_POR_PASSE (Art. 7º v6; era 10)
   ecoPorPasse: 1, //         R18-110e-1 (comprar-passe-tipado.mjs ECOQUILDO_POR_PASSE)
   ecoCentavos: 50, //        eco-quildo.mjs CENTAVOS_POR_ECOQUILDO (Art. 21º v6: R$ 0,50; era R$ 1,00)
@@ -98,7 +102,8 @@ export const PROPORCOES_TEXTO = Object.freeze([
     id: "passe",
     titulo: "O que o Passe Desafio dá",
     linhas: Object.freeze([
-      "Não dá pontos de lance: os pontos de lance são 100% gratuitos, ganhos pelo engajamento no app (Art. 6º).",
+      // UTAC138 — era «Não dá pontos de lance: os pontos de lance são 100% gratuitos, ganhos pelo engajamento no app (Art. 6º).»
+      `O Passe Relâmpago dá um bônus de ${PROPORCOES.pontosLancePorPasse} pontos de lance por Passe (Art. 7º); o Passe Programado não dá pontos de lance (Art. 6º).`,
       `${PROPORCOES.fidelidadePorPasse} ponto de fidelidade; a cada ${PROPORCOES.pontosPorCartao} pontos de fidelidade, 1 cartão colecionável (Arts. 7º e 8º).`,
       `${PROPORCOES.ecoPorPasse} ECOQUILDO.`,
       "Acesso aos dados analíticos e ao GUTO (Art. 7º).",

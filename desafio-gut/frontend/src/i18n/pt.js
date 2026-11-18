@@ -132,7 +132,8 @@ export default {
   // UTAC110j.5 / DEBT-075 (2026-10-18) — resíduo: o crédito JÁ NÃO EXISTE; o lance gasta o seu valor em PONTOS
   // de lance e o Passe é que dá +200. O texto antigo fica à vista na linha acima, como manda o protocolo.
   // UTAC137 (v6, Art. 6º) — o Passe já não dá pontos de lance. Antes: «… · o Passe dá +200 pontos de lance».
-  "edicao.especial.regra": "Lance relâmpago · vence o menor lance único · cada lance gasta o seu valor em pontos de lance · os pontos de lance são gratuitos",
+  // UTAC138 (v6.1, Art. 7º) — o Passe Relâmpago volta a dar +100 e a especial tem apuração instantânea. Antes: «… · os pontos de lance são gratuitos».
+  "edicao.especial.regra": "Lance relâmpago · vence o menor lance único · cada lance gasta o seu valor em pontos de lance · o Passe Relâmpago dá +100 pontos de lance · resultado e Top 10 logo no encerramento",
   "edicao.especial.badgeEmBreve": "🕒 Em breve",
   "edicao.especial.badgeAbrindo": "⏳ Abrindo",
   "edicao.especial.badgeAberta": "🟢 Aberta",

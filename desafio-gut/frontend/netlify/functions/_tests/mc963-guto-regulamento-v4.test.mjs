@@ -100,7 +100,9 @@ test("(b) cada âncora de ARTIGOS_V4 é um excerto VERBATIM do artigo correspond
 test("(b2) os valores críticos estão ancorados nos artigos certos", () => {
   // UTAC137 (v6) — eram Arts. 6/8/9/18/33/47 do v5 (R$ 2,00 · 10 pontos · 50 pontos · R$ 0,01 · +2 · R$ 1,00).
   for (const [n, frag] of [
-    ["5", "R$ 2,00"], ["6", "o Passe não concede pontos de lance"], ["7", "1 (um) ponto de fidelidade"],
+    // UTAC138 (v6.1): Art. 6º «o Passe Programado não concede…» (era «o Passe não concede…»); Art. 7º ganhou o bônus.
+    ["5", "R$ 2,00"], ["6", "o Passe Programado não concede pontos de lance"], ["7", "1 (um) ponto de fidelidade"],
+    ["7", "bônus de 100 (cem) pontos de lance"],
     ["8", "a cada 50 pontos de fidelidade"], ["12", "R$ 0,01"], ["21", "R$ 0,50"], ["23", "50 (cinquenta) ECOQUILDOs"],
   ]) {
     assert.ok(artigo(n), `Art. ${n}º ausente`);
@@ -116,10 +118,10 @@ test("(c) `_lib/guto-regulamento.mjs` é o documento tal e qual (controlo de vit
   assert.equal(REGULAMENTO_TEXTO, DOC,
     "o módulo que o runtime importa DIVERGIU de " + REGULAMENTO_FONTE +
     " — regenerar (ver cabeçalho do módulo)");
-  assert.equal(REGULAMENTO_VERSAO, "6.0", "UTAC137: o Regulamento passou a v6.0 — o módulo do GUTO acompanha");
+  assert.equal(REGULAMENTO_VERSAO, "6.1", "UTAC138: o Regulamento passou a v6.1 (era 6.0, UTAC137) — o módulo do GUTO acompanha");
   // e o corpo do documento do GUTO é o texto registado, byte a byte (3.º sítio da invariante)
-  const V6 = readFileSync(resolve(RAIZ, "docs", "REGULAMENTO-v6.md"), "utf8");
-  assert.ok(DOC.endsWith(V6), "docs/GUTO-REGULAMENTO.md deixou de terminar no texto de docs/REGULAMENTO-v6.md");
+  const V6 = readFileSync(resolve(RAIZ, "docs", "REGULAMENTO-v6.1.md"), "utf8");
+  assert.ok(DOC.endsWith(V6), "docs/GUTO-REGULAMENTO.md deixou de terminar no texto de docs/REGULAMENTO-v6.1.md");
 });
 
 test("(c2) o texto que vai no prompt está LIMPO das marcas de formatação (UTAC110c-1b)", () => {

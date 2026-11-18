@@ -41,7 +41,7 @@ export async function lerResultadoOnchain(edicaoId) {
  * @returns {{carregando:boolean, erro:string|null, resultado:object|null, metricas:object|null, nomeVencedor:string|null}}
  */
 export function useResultadoEspecial(edicaoId, ativo, { lerResultado = lerResultadoOnchain } = {}) {
-  const [estado, setEstado] = useState({ carregando: ativo, erro: null, resultado: null, metricas: null, nomeVencedor: null });
+  const [estado, setEstado] = useState({ carregando: ativo, erro: null, resultado: null, metricas: null, nomeVencedor: null, apuracao: null });
 
   useEffect(() => {
     if (!ativo || !edicaoId) return undefined;
@@ -53,13 +53,24 @@ export function useResultadoEspecial(edicaoId, ativo, { lerResultado = lerResult
     // "apuração em curso" vê o vencedor aparecer sem recarregar a página.
     const ler = async () => {
       try {
-        const [resultado, resp] = await Promise.all([
-          lerResultado(edicaoId),
+        // UTAC138 — a apuração instantânea do backend corre ao lado (e falha sozinha: nunca derruba a leitura).
+        // O on-chain também falha sozinho quando há apuração: o vencedor e o Top 10 dela bastam.
+        const [resultado, resp, respApuracao] = await Promise.all([
+          lerResultado(edicaoId).catch((err) => ({ __erro: err })),
           apiGet(`lances-flash?edicaoId=${encodeURIComponent(edicaoId)}`),
+          apiGet(`resultado-edicao?edicaoId=${encodeURIComponent(edicaoId)}`).catch(() => null),
         ]);
         const corpoOk = resp?.ok && resp.data !== null && typeof resp.data === "object" && Array.isArray(resp.data.lances);
         const lista = corpoOk ? resp.data.lances : null;
+        // Corpo validado como objecto com `pronto` booleano: o index.html do SPA fallback (200) não é resultado.
+        const ap = respApuracao?.ok && respApuracao.data && typeof respApuracao.data === "object"
+          && typeof respApuracao.data.pronto === "boolean" ? respApuracao.data : null;
         if (cancelado) return;
+        if (resultado?.__erro) {
+          if (!ap?.pronto) throw resultado.__erro;
+          setEstado({ carregando: false, erro: null, resultado: null, metricas: metricasDeLances(lista), nomeVencedor: null, apuracao: ap });
+          return;
+        }
         setEstado({
           carregando: false,
           // Sem métricas legíveis não se inventa um "0 lances": o painel mostra só
@@ -68,10 +79,12 @@ export function useResultadoEspecial(edicaoId, ativo, { lerResultado = lerResult
           resultado,
           metricas: metricasDeLances(lista),
           nomeVencedor: resultado?.consolidado ? nomeDoVencedor(lista, resultado.vencedor) : null,
+          apuracao: ap,
         });
-        if (resultado?.consolidado && intervalo) { clearInterval(intervalo); intervalo = null; }
+        // UTAC138 — pára quando há as DUAS coisas: o vencedor on-chain e a apuração com o Top 10.
+        if (resultado?.consolidado && ap?.pronto && intervalo) { clearInterval(intervalo); intervalo = null; }
       } catch (err) {
-        if (!cancelado) setEstado({ carregando: false, erro: err?.message || "falha", resultado: null, metricas: null, nomeVencedor: null });
+        if (!cancelado) setEstado({ carregando: false, erro: err?.message || "falha", resultado: null, metricas: null, nomeVencedor: null, apuracao: null });
       }
     };
     ler();

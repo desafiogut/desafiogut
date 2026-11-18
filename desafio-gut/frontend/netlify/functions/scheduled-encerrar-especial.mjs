@@ -82,6 +82,33 @@ async function consolidarUmaVez(marcas, id, agoraMs) {
 }
 
 /**
+ * UTAC138 — apura a especial (uma vez; o resultado gravado é servido tal qual depois). Se o tick cair
+ * dentro da margem de fecho, espera por ela (≤ MARGEM_FECHO_MS, cabe nos ~30 s de uma scheduled).
+ * Nunca lança.
+ * @returns {Promise<string>} "apurada" | "ja_apurada" | motivo/código, para o log
+ */
+async function apurarNoTick(e, agoraMs, { importar = () => import("./_lib/apuracao-especial.mjs"), dormir = (ms) => new Promise((r) => setTimeout(r, ms)) } = {}) {
+  try {
+    const { apurarEspecial, MARGEM_FECHO_MS } = await importar();
+    let agora = agoraMs;
+    const fim = msDe(e?.termino_em);
+    if (fim != null && agora <= fim + MARGEM_FECHO_MS) {
+      const espera = fim + MARGEM_FECHO_MS + 1 - agora;
+      await dormir(espera);
+      agora += espera;
+    }
+    const r = await apurarEspecial(e.id, { agoraMs: agora });
+    if (!r.ok) return r.code;
+    if (!r.pronto) return r.motivo;
+    return r.criado ? "apurada" : "ja_apurada";
+  } catch (err) {
+    console.error("[scheduled-encerrar-especial] apuração falhou (o endpoint apura no 1.º acesso)", e?.id, err?.message);
+    return "excepcao";
+  }
+}
+export { apurarNoTick as _apurarNoTick };
+
+/**
  * Um tick do cron. Exportado para os testes (relógio injectável).
  * @param {number} [agoraMs]
  * @returns {Promise<object[]>} relatório por edição
@@ -106,6 +133,10 @@ export async function tick(agoraMs = Date.now()) {
   const marcas = abrirMarcas();
   for (const e of vencidas) {
     const linha = { id: e.id };
+    // UTAC138 (Frente G) — APURAÇÃO INSTANTÂNEA, antes de tudo o resto: vencedor + Top 10 off-chain,
+    // gravados no Blob `edicoes-resultados` para o painel do frontend. Rápida e sem gas. Fail-soft e com
+    // import preguiçoso (lição do UTAC136: um import estático novo parte os mocks dos testes deste cron).
+    linha.apuracao = await apurarNoTick(e, agoraMs);
     if (e.status === "aberto") {
       try {
         const r = await encerrarEdicao({ edicaoId: e.id, origem: "scheduled" });

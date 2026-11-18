@@ -386,7 +386,7 @@ test("B5 lastro-eco-quildo (admin): 401 sem ser admin; 200 com os três números
 // ═══════════════════════════ FRENTE C — integração com a compra ═══════════════════════════════════
 // ⚠️ UTAC110n (R18-110j.4b-3): o título e a última asserção fixavam «+1 crédito» (modelo do 110d).
 // O Passe passou a dar +200 PONTOS de lance; o objecto deste teste (ECOQUILDO + lastro) não mudou.
-test("C1 Passe Relâmpago: 201 com (UTAC136) +1 ponto, SEM pontos de lance, +1 ECOQUILDO, e o lastro leva +R$ 0,50", async () => {
+test("C1 Passe Relâmpago: 201 com +1 ponto, +100 pontos de lance (UTAC138), +1 ECOQUILDO, e o lastro leva +R$ 0,50", async () => {
   const r = await comprar(hRelampago);
   assert.equal(r.status, 201, JSON.stringify(r.corpo));
   assert.equal(r.corpo.ecoQuildo, 1);
@@ -396,7 +396,8 @@ test("C1 Passe Relâmpago: 201 com (UTAC136) +1 ponto, SEM pontos de lance, +1 E
   assert.deepEqual([lastro().total_emitido, lastro().total_usado, lastro().reserva_rs_centavos], [1, 0, 50]);
   assert.equal(pLinha().pontos, 1);
   assert.equal(pLinha().creditos_lance, 0, "o crédito legado já não é creditado");
-  assert.equal(Number(pLinha().pontos_lance ?? 0), 0, "Art. 6º v6: o Passe NÃO dá pontos de lance (era 200, UTAC110n)");
+  // UTAC136 tirou os pontos de lance (era 200); o UTAC138 (R18-138-D, Art. 7º v6.1) repôs +100.
+  assert.equal(Number(pLinha().pontos_lance ?? 0), 100, "Art. 7º v6.1: o Passe Relâmpago dá +100 pontos de lance");
 });
 
 test("C2 Passe Programado: 201 com +1 ponto (UTAC136) +1 ECOQUILDO (motivo próprio) e SEM crédito de lance", async () => {
@@ -430,6 +431,9 @@ test("C4 se o ECOQUILDO falhar, a compra é DESFEITA por inteiro (pontos, crédi
   assert.deepEqual(pLinha().historico, []);
   assert.equal(pLinha().creditos_lance, 0, "o crédito de lance foi desfeito");
   assert.deepEqual(pLinha().historico_lance, []);
+  // UTAC138 — o bónus de +100 pontos de lance do Relâmpago também é desfeito (e a resposta di-lo).
+  assert.equal(Number(pLinha().pontos_lance ?? 0), 0, "o bónus de pontos de lance foi desfeito");
+  assert.equal(r.corpo.error.lanceDesfeito, true);
   assert.equal(ecoLinha(), undefined, "nenhum ECOQUILDO ficou");
   assert.deepEqual([lastro().total_emitido, lastro().reserva_rs_centavos], [0, 0], "o lastro não foi tocado");
   // e o retry (já sem falha) compra normalmente — nada ficou a meio

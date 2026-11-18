@@ -82,8 +82,10 @@ test("A · os dois Passes: endpoint, nome e benefício certos; tipo só por chav
   // ⚠️ UTAC110j.5 — ALTERADO (declarado): o lance gasta PONTOS de lance pelo seu valor (backend UTAC110n).
   // Antes: assert.match(passeDoTipo("relampago").beneficio, /10 pontos \+ 1 lance/);
   // UTAC137 (v6, Arts. 6º/7º) — era /10 pontos de fidelidade \+ 200 pontos de lance/.
-  assert.match(passeDoTipo("relampago").beneficio, /^1 ponto de fidelidade \+ 1 ECOQUILDO/);
-  assert.doesNotMatch(passeDoTipo("relampago").beneficio, /pontos de lance|10 pontos/);
+  // UTAC138 (v6.1, Art. 7º) — era /^1 ponto de fidelidade \+ 1 ECOQUILDO/ e proibia «pontos de lance». O Relâmpago dá +100.
+  assert.match(passeDoTipo("relampago").beneficio, /^Bônus de 100 pontos de lance \+ 1 ponto de fidelidade \+ 1 ECOQUILDO/);
+  assert.doesNotMatch(passeDoTipo("relampago").beneficio, /200 pontos de lance|10 pontos/);
+  assert.doesNotMatch(passeDoTipo("programado").beneficio, /pontos de lance/, "o Programado não dá pontos de lance (Art. 6º v6.1)");
   assert.doesNotMatch(passeDoTipo("relampago").beneficio, /1 lance/);
   // UTAC137 — era /10 pontos \+ 1 palpite/ (o palpite deixou de exigir Passe).
   assert.match(passeDoTipo("programado").beneficio, /^1 ponto de fidelidade \+ 1 ECOQUILDO/);

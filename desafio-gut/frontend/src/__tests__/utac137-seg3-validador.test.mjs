@@ -1,6 +1,6 @@
 // UTAC137-SEG3 (validador adversarial) — duas guardas que o UTAC137 não tinha.
 //
-// 1. O 7640ff8 passou o app ao Regulamento v6.0 importando `docs/REGULAMENTO-v6.md?raw`, mas o ficheiro
+// 1. O 7640ff8 passou o app ao Regulamento v6.0 importando `docs/REGULAMENTO-v6.1.md?raw`, mas o ficheiro
 //    ficou POR VERSIONAR: num clone limpo (CI: `npm run build` e os testes) dava ENOENT. Guarda: todo o
 //    `docs/*.md?raw` importado por `src/` está no índice do git.
 // 2. O `usePalpite` traduzia QUALQUER 409 do `registar-palpite` por «Você precisa ter comprado um Passe
@@ -36,7 +36,7 @@ test("SEG3 · todo o docs/*?raw importado por src/ está versionado no git", () 
       importados.add(relative(RAIZ, resolve(dirname(f), m[1])).split("\\").join("/"));
     }
   }
-  assert.ok(importados.has("docs/REGULAMENTO-v6.md"), `RegrasOficiais deixou de importar o v6: ${[...importados]}`);
+  assert.ok(importados.has("docs/REGULAMENTO-v6.1.md"), `RegrasOficiais deixou de importar o v6: ${[...importados]}`);
   const versionados = new Set(
     execFileSync("git", ["ls-files", "--", ...importados], { cwd: RAIZ, encoding: "utf8" }).split(/\r?\n/).filter(Boolean),
   );

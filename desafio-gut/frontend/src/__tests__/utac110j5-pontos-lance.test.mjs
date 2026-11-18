@@ -81,9 +81,13 @@ test("P · cada proporção do frontend é IGUAL à constante do backend (lida d
   assert.equal(P.sequencia, constante("pontuacao-store.mjs", "PONTOS_LANCE_BONUS_SEQUENCIA"));
   // UTAC137 (Regulamento v6.0) — era `P.passeRelampago === PONTOS_LANCE_POR_PASSE_RELAMPAGO` (200). O Passe deixou de
   // dar pontos de lance (Art. 6º, UTAC136): o frontend diz 0 e a cadeia de compra do backend NÃO pode voltar a usar a constante.
-  assert.equal(P.pontosLancePorPasse, 0);
-  assert.doesNotMatch(fonte("comprar-passe-tipado.mjs").replace(/^\s*\/\/.*$/gm, ""), /PONTOS_LANCE_POR_PASSE_RELAMPAGO|creditarPontosLance\(/,
-    "a compra do Passe voltou a creditar pontos de lance — o frontend diria 0 e o servidor daria outra coisa");
+  // UTAC138 (v6.1, Art. 7º; R18-138-D): o Passe Relâmpago volta a dar pontos de lance — +100, com constante própria.
+  // O +200 antigo (PONTOS_LANCE_POR_PASSE_RELAMPAGO) continua proibido na cadeia de compra.
+  assert.equal(P.pontosLancePorPasse, constante("ledger-lance.mjs", "PONTOS_LANCE_BONUS_PASSE_RELAMPAGO"));
+  assert.doesNotMatch(fonte("comprar-passe-tipado.mjs").replace(/^\s*\/\/.*$/gm, ""), /PONTOS_LANCE_POR_PASSE_RELAMPAGO/,
+    "a compra do Passe voltou a usar o +200 do v5.1");
+  assert.match(fonte("comprar-passe-tipado.mjs"), /PONTOS_LANCE_BONUS_PASSE_RELAMPAGO \* quantidade/,
+    "a compra do Passe deixou de creditar o bónus com a constante que o frontend mostra");
   assert.equal(P.fidelidadePorPasse, constante("passe-pontos.mjs", "PONTOS_FIDELIDADE_POR_PASSE"));
   assert.equal(P.ecoCentavos, constante("eco-quildo.mjs", "CENTAVOS_POR_ECOQUILDO"));
   assert.equal(P.ecoPorConversao, constante("eco-quildo.mjs", "ECOQUILDO_POR_CONVERSAO"));
@@ -104,7 +108,7 @@ test("P · os valores da decisão do operador, em LITERAL (uma regra de negócio
   const P = pl.PROPORCOES;
   // UTAC137 — o 5.º valor era o +200 do Passe (v5.1); no v6 é 0. Acrescentam-se os números do v6 (Arts. 7º, 8º, 21, 23).
   assert.deepEqual([P.login, P.missao, P.indicacao, P.sequencia, P.pontosLancePorPasse, P.cicloPontos, P.cicloDias],
-    [5, 10, 50, 50, 0, 225, 15]);
+    [5, 10, 50, 50, 100, 225, 15]); // UTAC138 (v6.1): o 5.º valor era 0 (UTAC137)
   assert.deepEqual([P.fidelidadePorPasse, P.pontosPorCartao, P.ecoCentavos, P.ecoPorConversao, P.ecoPorPasse], [1, 50, 50, 50, 1]);
   assert.equal(pl.VALOR_ECOQUILDO_TEXTO, "R$ 0,50");
 });
@@ -209,7 +213,7 @@ test("C · as Regras Oficiais publicam as proporções fixas NO APP, antes do 1.
     // lance (bônus…)», «10 pontos de fidelidade», «Acesso às métricas…» e «…benefício suplementar…».
     "1 ponto = R$ 0,01 (Art. 12)",
     "O que o Passe Desafio dá",
-    "Não dá pontos de lance: os pontos de lance são 100% gratuitos, ganhos pelo engajamento no app (Art. 6º).",
+    "O Passe Relâmpago dá um bônus de 100 pontos de lance por Passe (Art. 7º); o Passe Programado não dá pontos de lance (Art. 6º).", // UTAC138 (v6.1): era «Não dá pontos de lance: … 100% gratuitos …»
     "1 ponto de fidelidade; a cada 50 pontos de fidelidade, 1 cartão colecionável (Arts. 7º e 8º).",
     "1 ECOQUILDO.",
     "Acesso aos dados analíticos e ao GUTO (Art. 7º).",

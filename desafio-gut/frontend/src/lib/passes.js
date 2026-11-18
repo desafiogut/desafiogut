@@ -40,8 +40,10 @@ export const TIPOS_PASSE = Object.freeze({
     //   beneficio: "10 pontos + 1 lance no Menor Lance Único" · sucesso: "Passe Relâmpago comprado: +10 pontos e 1 lance"
     // UTAC137 (Regulamento v6.0, Arts. 6º/7º): o Passe dá 1 ponto de fidelidade e NÃO dá pontos de lance.
     //   antes: beneficio "10 pontos de fidelidade + 200 pontos de lance + 1 ECOQUILDO" · sucesso "…+10 pontos de fidelidade e +200 pontos de lance"
-    beneficio: "1 ponto de fidelidade + 1 ECOQUILDO + GUTO e dados analíticos",
-    sucesso: "Passe Relâmpago comprado: +1 ponto de fidelidade e +1 ECOQUILDO",
+    // UTAC138 (Regulamento v6.1, Art. 7º; R18-138-D): o Relâmpago volta a dar pontos de lance — +100 por Passe.
+    //   antes (UTAC137): beneficio "1 ponto de fidelidade + 1 ECOQUILDO + GUTO e dados analíticos" · sucesso "…+1 ponto de fidelidade e +1 ECOQUILDO"
+    beneficio: "Bônus de 100 pontos de lance + 1 ponto de fidelidade + 1 ECOQUILDO + GUTO e dados analíticos",
+    sucesso: "Passe Relâmpago comprado: +100 pontos de lance (bônus), +1 ponto de fidelidade e +1 ECOQUILDO",
   }),
   programado: Object.freeze({
     tipo: "programado",

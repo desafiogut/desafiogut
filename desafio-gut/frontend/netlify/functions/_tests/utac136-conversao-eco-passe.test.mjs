@@ -230,7 +230,8 @@ test("USO · crédito de administrador de 55 ⇒ 201 com passesConvertidos 1 e s
   assert.deepEqual([lastro().total_emitido, lastro().total_usado, lastro().reserva_rs_centavos], [55, 50, 250]);
 });
 
-test("USO · comprar o Passe Relâmpago com 49 ECOQUILDO no saldo ⇒ o 50.º converte; sem pontos de lance", async () => {
+// UTAC138 (R18-138-D, Art. 7º v6.1): o Passe Relâmpago voltou a dar +100 pontos de lance (era «sem pontos de lance»).
+test("USO · comprar o Passe Relâmpago com 49 ECOQUILDO no saldo ⇒ o 50.º converte; +100 pontos de lance (UTAC138)", async () => {
   await emitir(49, "e1");
   const req = new Request("https://x/.netlify/functions/comprar-passe-relampago", {
     method: "POST", body: JSON.stringify({ idempotencyKey: "idem-key-136-relampago" }),
@@ -242,9 +243,9 @@ test("USO · comprar o Passe Relâmpago com 49 ECOQUILDO no saldo ⇒ o 50.º co
   assert.equal(c.pontosFidelidade, 1, "a resposta traz os pontos da COMPRA (lidos antes da conversão)");
   assert.equal(pts().pontos, 2, "no ledger: 1 da compra + 1 do Passe convertido");
   assert.equal(c.ecoQuildo, 0, "o saldo devolvido é o de depois da conversão");
-  assert.equal("pontosLance" in c, false);
-  assert.equal(Number(pts().pontos_lance ?? 0), 0, "Art. 6º: o Passe não dá pontos de lance");
-  assert.equal((await L.lerLedgerLance(A)).pontos, 0);
+  assert.equal(c.bonusPontosLance, 100);
+  assert.equal(Number(pts().pontos_lance ?? 0), 100, "Art. 7º v6.1: o Passe Relâmpago dá +100 pontos de lance");
+  assert.equal((await L.lerLedgerLance(A)).pontos, 100, "o Passe CONVERTIDO (Programado) não dá pontos de lance");
   assert.equal(programados(), 1);
 });
 

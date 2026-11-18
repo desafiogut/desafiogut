@@ -98,7 +98,7 @@ function citacoes(src) {
 const V4 = ler("../../docs/REGULAMENTO-v4.md");
 const V5 = ler("../../docs/REGULAMENTO-v5.md");
 // UTAC137 — a UI e o gate passaram a citar o Regulamento **v6.0** (o v5 fica lido só como histórico).
-const V6 = ler("../../docs/REGULAMENTO-v6.md");
+const V6 = ler("../../docs/REGULAMENTO-v6.1.md");
 /** Linha do artigo N do v6 («Art. 1º …» / «Art. 10. …»), ou null. */
 const artigoV6 = (n) => V6.match(new RegExp("^Art\\. " + n + "(?:º|\\.) .*", "m"));
 /** UTAC137 — palavras-chave por artigo do v6 (cada uma consta do PRÓPRIO artigo — verificado no teste). */
@@ -108,7 +108,8 @@ const EXIGIDO_V6 = {
   "3":  ["opcional"],
   "5":  ["Passe Desafio", "R$ 2,00"],
   "6":  ["pontos de lance", "gratuitos"],
-  "7":  ["ponto de fidelidade", "GUTO", "dados analíticos"],
+  // UTAC138 (v6.1): o Art. 6º remete para o bônus do Passe Relâmpago do Art. 7º — «Passe Relâmpago» é assunto do 7º.
+  "7":  ["ponto de fidelidade", "GUTO", "dados analíticos", "Passe Relâmpago"],
   "8":  ["50", "cartão"],
   "11": ["habilidade", "menor valor único de lance"],
   "12": ["1 ponto", "R$ 0,01"],

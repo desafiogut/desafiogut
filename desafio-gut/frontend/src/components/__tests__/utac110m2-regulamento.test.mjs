@@ -101,13 +101,14 @@ test("D: Arts. 57º e 69º dão o DPO como canal de LGPD, e o Gmail fica como su
 });
 
 // ─────────────────────────── A INVARIANTE (corpo(v5) == corpo(GUTO)) ───────────────────────────
-// UTAC137 — a invariante passou a ser corpo(GUTO) == docs/REGULAMENTO-v6.md (era corpo(v5) == corpo(GUTO), UTAC110k.1).
+// UTAC137 — a invariante passou a ser corpo(GUTO) == docs/REGULAMENTO-v6.1.md (era corpo(v5) == corpo(GUTO), UTAC110k.1).
 test("INVARIANTE: corpo(GUTO) é o v6 byte a byte (e o .mjs diz o mesmo)", () => {
-  const V6 = ler("../../../../../docs/REGULAMENTO-v6.md");
+  const V6 = ler("../../../../../docs/REGULAMENTO-v6.1.md");
   assert.equal(GUTO.slice(GUTO.indexOf("\n---\n\n") + 6), V6, "o corpo do GUTO tem de ser o v6 — invariante do UTAC137");
   // O .mjs é o runtime do GUTO: tem de conter as frases do v6, senão o assistente responde o antigo.
   for (const frase of [
-    "o Passe não concede pontos de lance",
+    "o Passe Programado não concede pontos de lance", // UTAC138 (v6.1): era «o Passe não concede…»
+    "bônus de 100 (cem) pontos de lance por unidade adquirida",
     "1 ECOQUILDO equivalente a R$ 0,50 (cinquenta centavos)",
     "Encarregado de Proteção de Dados (DPO) encontram-se disponíveis no e-mail: dpo@grupouniaoetrabalho.com.br",
   ]) assert.ok(MJS.includes(frase), `guto-regulamento.mjs: falta «${frase.slice(0, 50)}…»`);
@@ -137,7 +138,7 @@ test("A: Art. 9º resgata gratuitamente (50 pontos) e o Art. 53º tira o cartão
   // o acoplamento que fez esta frente parar: gate e GUTO têm de acompanhar o artigo do cartão.
   // ⚠️ UTAC137: no v6 o cartão está no Art. 8º («a cada 50 pontos… credita automaticamente 1 Cartão Digital»). O gate e
   // a âncora do GUTO acompanham o v6; a verificação do v5 (Arts. 9º/53º) acima fica como histórico.
-  const a8v6 = norm((ler("../../../../../docs/REGULAMENTO-v6.md").match(/^Art\. 8º (.*)$/m) || [])[1] || "");
+  const a8v6 = norm((ler("../../../../../docs/REGULAMENTO-v6.1.md").match(/^Art\. 8º (.*)$/m) || [])[1] || "");
   assert.match(a8v6, /a cada 50 pontos de fidelidade acumulados, o sistema credita automaticamente 1 Cartão Digital/);
   const m = GATE.match(/artLabel\}>Art\. 8º<\/strong> — ([\s\S]*?)<\/p>/);
   const blocoGate = norm(m[1].replace(/<[^>]+>/g, " ").replace(/\{[^}]*\}/g, " ").replace(/\s+([.,;:)])/g, "$1")).replace(/\.$/, "");

@@ -191,7 +191,8 @@ export default function CardEdicaoEspecial({
           )}
           <div style={{ fontSize: "0.66rem", color: COR.muted, lineHeight: 1.3 }}>
             {/* UTAC137 (v6, Art. 6º): o fallback dizia «o Passe dá +200 pontos de lance». */}
-            {t("edicao.especial.regra", "Lance relâmpago · vence o menor lance único · cada lance gasta o seu valor em pontos de lance · os pontos de lance são gratuitos")}
+            {/* UTAC138 (v6.1, Art. 7º) — antes: «… · os pontos de lance são gratuitos». */}
+            {t("edicao.especial.regra", "Lance relâmpago · vence o menor lance único · cada lance gasta o seu valor em pontos de lance · o Passe Relâmpago dá +100 pontos de lance · resultado e Top 10 logo no encerramento")}
           </div>
         </div>
       </div>
