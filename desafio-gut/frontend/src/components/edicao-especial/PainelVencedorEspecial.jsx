@@ -32,7 +32,12 @@ export default function PainelVencedorEspecial({
   apuracao = null, isMobile = false, t = T_PADRAO,
 }) {
   const apurada = apuracao?.pronto === true && Array.isArray(apuracao.top10);
-  const top10 = apurada ? <ResultadosEdicao top10={apuracao.top10} isMobile={isMobile} t={t} /> : null;
+  // UTAC138-SEG4 — com o vencedor ON-CHAIN consolidado, o Top 10 só se mostra se o seu 1.º lugar for o MESMO
+  // menor lance único: a consolidação do cron corre no 1.º tick depois do fim e pode ter deixado de fora um
+  // lance mainnet ainda no tx.wait(1); a apuração espera pela margem. Dois 🏆 diferentes no mesmo painel não.
+  const top10Coerente = !resultado?.consolidado
+    || inteiroSeguro(apuracao?.top10?.[0]?.valorCentavos) === inteiroSeguro(resultado?.menorUnicoCentavos);
+  const top10 = apurada && top10Coerente ? <ResultadosEdicao top10={apuracao.top10} isMobile={isMobile} t={t} /> : null;
   const moldura = (estado, corpo) => (
     <div data-painel="vencedor-especial" data-estado={estado} style={{ textAlign: "center" }}>
       <div style={{ fontSize: "0.72rem", color: COR.danger, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 800, marginBottom: "0.5rem" }}>

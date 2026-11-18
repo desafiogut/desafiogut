@@ -67,6 +67,14 @@ describe("UTAC138 · PainelVencedorEspecial com a apuração instantânea", () =
     assert.match(texto(html), /Vencedor: Ana/);
     assert.equal(posicoes(html).length, 10);
   });
+  // UTAC138-SEG4 — on-chain e apuração divergentes (consolidação no 1.º tick deixou de fora um lance em voo):
+  // o vencedor é o on-chain e o Top 10 (cujo 🏆 seria outro) não se mostra.
+  test("COM consolidação on-chain DIVERGENTE da apuração ⇒ vencedor on-chain, sem o Top 10 contraditório", () => {
+    const html = render(Painel, { resultado: { consolidado: true, vencedor: A, menorUnicoCentavos: 9 }, apuracao: APURACAO, nomeVencedor: "Ana" });
+    assert.match(html, /data-estado="vencedor"/);
+    assert.match(texto(html), /R\$ 0,09/);
+    assert.equal(posicoes(html).length, 0, "um Top 10 com outro 🏆 não pode aparecer");
+  });
   test("apuração sem lance único ⇒ «Não houve lance único», sem Top 10", () => {
     const html = render(Painel, { resultado: { consolidado: false }, apuracao: { pronto: true, vencedor: null, top10: [], totalLances: 4, participantes: 2 } });
     assert.match(html, /data-estado="sem-vencedor"/);
