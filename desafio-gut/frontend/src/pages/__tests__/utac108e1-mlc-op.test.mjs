@@ -262,3 +262,53 @@ describe("UTAC108e.1 · coerência MLC ↔ OP (a mesma família)", () => {
     assert.match(op, /\{!loading && !erro && \(\s*<TabelaPalpites edicao=\{edicaoTabela\}/, "a tabela da OP voltou a depender de haver edição");
   });
 });
+
+// ═══ UTAC138 — a edição ESPECIAL na aba Menor Lance Único, no lugar do cartão Relâmpago e no MESMO padrão ═════
+// Operador (2026-11-18): «a edição deve aparecer em menor lance unico, e em inicio, ocupando o espaço da edição
+// relampago … todas as edições entram nesse padrão que já temos no layout de edições» · «não ter um próprio».
+describe("UTAC138 · a especial no Menor Lance Único (cartão padrão)", () => {
+  const ESP = (inicioMs, extra = {}) => ({
+    id: "ESPECIAL-RELAMPAGO1", tipo: "relampago", status: "aberto", produto: "Fritadeira Quad Fry",
+    imagem_url: "https://exemplo.supabase.co/arte.jpg",
+    inicio_em: new Date(inicioMs).toISOString(), termino_em: new Date(inicioMs + 3_600_000).toISOString(), ...extra,
+  });
+
+  test("agendada (em `agendadas`), mesmo com EM BREVE: o cartão é o da especial, não o «SEM EDIÇÃO»", () => {
+    const html = renderizar({ emBreve: true, agendadas: { "ESPECIAL-RELAMPAGO1": ESP(Date.now() + 5 * 3_600_000) }, offsetRelogioMs: 0 });
+    const c = cartao(html);
+    assert.match(c, />ESPECIAL-RELAMPAGO1</);
+    assert.match(c, /data-testid="cartao-arte"[^>]*src="https:\/\/exemplo\.supabase\.co\/arte\.jpg"/);
+    assert.match(c, /data-testid="cartao-nome"[^>]*>Fritadeira Quad Fry</);
+    assert.match(c, /data-testid="cartao-tempo"/);
+    assert.doesNotMatch(html, /SEM EDIÇÃO/, "o cartão vazio ficou ao lado da especial");
+    assert.doesNotMatch(html, /data-stub="card-lance"/, "formulário antes da hora");
+    assert.equal((html.match(/data-testid="cartao-edicao"/g) || []).length, 1, "um só cartão de edição no ecrã");
+  });
+
+  test("aberta (em `edicoes`): o formulário é o da ESPECIAL (flash), dentro do cartão padrão", () => {
+    const html = renderizar({
+      emBreve: true, offsetRelogioMs: 0,
+      edicoes: { "ESPECIAL-RELAMPAGO1": ESP(Date.now() - 60_000) },
+    });
+    const c = cartao(html);
+    assert.match(c, /data-stub="card-lance"/);
+    assert.match(c, /data-id-edicao="ESPECIAL-RELAMPAGO1"/, "licitaria noutra edição (R-1)");
+    assert.match(c, /data-tipo="flash"/);
+    assert.match(c, /data-encerrado="false"/);
+  });
+
+  // O feedback do lance e a etiqueta do próprio lance não se vêem no SSR (só depois do fecho / de um lance): prova-se
+  // na FONTE que seguem a edição DO ECRÃ (a especial quando existe), não a R-1 fixa (mutante M23 do UTAC138).
+  test("fonte · o feedback do lance e a etiqueta usam a edição do ecrã (a especial quando existe)", () => {
+    const mlc = codigo(ler("pages/MercadoLances.jsx"));
+    assert.match(mlc, /const edicaoDoEcra = edicaoEspecial\?\.id \?\? EDICAO_ATIVA;/);
+    assert.match(mlc, /setMeuUltimoLance\(\{ valor: info\.valorCentavos, edicao: edicaoDoEcra \}\)/);
+    assert.match(mlc, /<EtiquetaMeuLance edicaoId=\{edicaoDoEcra\}/);
+  });
+
+  test("sem especial: a aba continua como antes (cartão vazio com EM BREVE)", () => {
+    const html = renderizar({ emBreve: true });
+    assert.match(html, /SEM EDIÇÃO/);
+    assert.doesNotMatch(html, /ESPECIAL-/);
+  });
+});

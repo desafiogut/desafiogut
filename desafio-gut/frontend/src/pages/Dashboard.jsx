@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, lazy, Suspense } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAppContext, useAppTimer } from "../context/AppContext.jsx";
@@ -33,10 +33,35 @@ import CardEdicaoEspecial from "../components/edicao-especial/CardEdicaoEspecial
 import { escolherEspecial, ehEspecial } from "../components/edicao-especial/_estilo-especial.js";
 import { useT } from "../context/IdiomaContext.jsx";
 
-// MC94.2 — o CardLance só é preciso das 20:00 às 20:30 da especial. O /mercado,
-// que o usa hoje, é lazy (App.jsx:44); importá-lo aqui de forma eager metê-lo-ia
-// no chunk do primeiro ecrã de todos os utilizadores, todos os dias.
-const CardLance = lazy(() => import("../components/CardLance.jsx"));
+// UTAC138 — o CardLance lazy da especial saiu: o vidro usa o botão padrão e o lance faz-se na aba Menor Lance Único.
+
+/**
+ * UTAC138 — o botão «⚡ Dar lance» do vidro Relâmpago do Início, extraído SEM mudança para que a edição ESPECIAL use
+ * o MESMO (operador: «a edição precisa entrar no padrão que já temos, não ter um próprio»). Leva à aba Menor Lance
+ * Único, que monta o formulário da edição (a especial incluída).
+ */
+function BotaoDarLance({ encerrada, onClick }) {
+  return (
+      <button
+        onClick={onClick}
+        style={{
+          padding: "0.7rem 1rem",
+          background: encerrada
+            ? "rgba(245,166,35,0.18)"
+            : "linear-gradient(135deg,#f5a623,#e89400)",
+          border: "none", borderRadius: "10px",
+          color: encerrada ? COR.gold : "#0a0f1a",
+          fontWeight: "800", cursor: "pointer",
+          fontSize: "0.88rem", width: "100%",
+          fontFamily: "'Orbitron', sans-serif",
+          letterSpacing: "0.04em",
+          boxShadow: encerrada ? "none" : "0 4px 18px rgba(245,166,35,0.40)",
+        }}
+      >
+        ⚡ Dar lance
+      </button>
+  );
+}
 
 const COR = {
   primary: "#f5a623", primaryDim: "rgba(245,166,35,0.15)",
@@ -397,20 +422,8 @@ export default function Dashboard() {
             offsetMs={offsetRelogioMs}
             isMobile={isMobile}
             t={t}
-            renderLance={({ idEdicao, modalidade, encerrado: fechada }) => (
-              <Suspense fallback={<div aria-busy="true" style={{ minHeight: "12rem" }} />}>
-                <CardLance
-                  idEdicao={idEdicao}
-                  modalidade={modalidade}
-                  encerrado={fechada}
-                  address={address}
-                  isConnected={isConnected}
-                  onConnect={abrirModal}
-                  onDisconnect={desconectar}
-                  ready={ready}
-                />
-              </Suspense>
-            )}
+            titulo="⚡ Relâmpago"
+            renderLance={() => <BotaoDarLance encerrada={false} onClick={() => navigate("/mercado")} />}
           />
         ) : estAtiva.emBreve ? (
           // UTAC109f (R18-A) — sem edição o vidro Relâmpago é o MESMO cartão vazio da aba MLC
@@ -441,24 +454,7 @@ export default function Dashboard() {
                 <EtiquetaMeuLance edicaoId={EDICAO_ATIVA} encerrado authToken={authToken} />
               </div>
             )}
-            <button
-              onClick={() => navigate("/mercado")}
-              style={{
-                padding: "0.7rem 1rem",
-                background: estAtiva.encerrada
-                  ? "rgba(245,166,35,0.18)"
-                  : "linear-gradient(135deg,#f5a623,#e89400)",
-                border: "none", borderRadius: "10px",
-                color: estAtiva.encerrada ? COR.gold : "#0a0f1a",
-                fontWeight: "800", cursor: "pointer",
-                fontSize: "0.88rem", width: "100%",
-                fontFamily: "'Orbitron', sans-serif",
-                letterSpacing: "0.04em",
-                boxShadow: estAtiva.encerrada ? "none" : "0 4px 18px rgba(245,166,35,0.40)",
-              }}
-            >
-              ⚡ Dar lance
-            </button>
+            <BotaoDarLance encerrada={estAtiva.encerrada} onClick={() => navigate("/mercado")} />
           </CartaoEdicao>
         )}
 

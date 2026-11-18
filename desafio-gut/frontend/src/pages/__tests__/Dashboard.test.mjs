@@ -181,7 +181,10 @@ describe("MC94.2/MC94.3.1 · Dashboard — a edição especial NO SLOT", () => {
     assert.ok(dentroDoSlot(html), "a especial não apareceu no slot");
     assert.match(html, /data-estado="agendada"/);
     assert.match(html, /src="\/artes\/edicao-especial-airfryer\.jpg"/);
-    assert.match(html, /role="timer"/);
+    // UTAC138 (operador: «a edição precisa entrar no padrão que já temos, não ter um próprio»): o tempo vive na faixa do cartão
+    // padrão (`cartao-tempo`), não no cronómetro grande (`role="timer"`) do layout próprio.
+    assert.match(html, /data-testid="cartao-tempo"/);
+    assert.doesNotMatch(html, /role="timer"/);
   });
 
   test("⛔ a secção própria do MC94.2 DESAPARECEU (o teste que o MC94.2 tinha exigia o contrário)", () => {
@@ -191,7 +194,9 @@ describe("MC94.2/MC94.3.1 · Dashboard — a edição especial NO SLOT", () => {
     // O resto da página continua (os tiles e os atalhos ficam — UTAC107c: o card
     // «Menor Lance Único» saiu), mas o CABEÇALHO do slot deixa de dizer "🎯 Edição
     // Ativa": quem o preenche é a especial, e o cabeçalho tem de dizê-lo.
-    assert.match(t, /Edição especial/, "o cabeçalho da especial");
+    // UTAC138 — o vidro diz a FAMÍLIA («⚡ Relâmpago»), como qualquer edição; era «🎁 Edição especial» (layout próprio).
+    assert.match(t, /⚡ Relâmpago/, "o título do vidro da família");
+    assert.match(t, /ESPECIAL-AIRFRYER/, "o id da edição na pílula do topo");
     assert.doesNotMatch(t, /🎯 Edição Ativa/, "o slot continuava a dizer 'Edição Ativa' com a especial lá dentro");
     assert.match(t, /Passe Desafio/, "os tiles desapareceram da página");
     assert.match(t, /Acesso Rápido/, "os atalhos desapareceram da página");
@@ -207,19 +212,18 @@ describe("MC94.2/MC94.3.1 · Dashboard — a edição especial NO SLOT", () => {
     assert.ok(iRapido > iEsp, "a especial ficou depois do Acesso Rápido");
   });
 
-  test("MC94.3.2 — o ícone da especial é IGUAL ao padrão das outras edições (não maior)", () => {
-    // Medido no SEG-1: o padrão é 52 px (default do EdicaoBanner e o que a R-1 usa).
-    // O MC94.3.1 tinha-o subido a 96 px SÓ na especial; o operador corrigiu: a
-    // especial tem de ficar IGUAL, não maior. Este teste exige a IGUALDADE — não
-    // um literal — para que uma futura alteração do padrão não volte a divergir.
-    const comEspecial = renderizar({ agendadas: { "ESPECIAL-AIRFRYER": especial(Date.now() + 5 * H) } });
-    const ladoEspecial = ladoDoBanner(comEspecial);
-    assert.ok(ladoEspecial, "não medi o ícone da especial");
-    // UTAC108h.3 — a comparação era com o banner da R-1, que entretanto passou a ser um
-    // `CartaoEdicao` (arte com `aspect-ratio`, sem aquele padrão de width/height inline), pelo que
-    // a igualdade deixaria de medir o que media. O que este teste protege — «a especial NÃO é maior
-    // do que o padrão» — passa a medir-se contra o padrão declarado no SEG-1.
-    assert.equal(ladoEspecial, "52", "a especial deixou de usar o tamanho padrão (52 px)");
+  // UTAC138 (operador: «a edição precisa entrar no padrão que já temos, não ter um próprio») — o MC94.3.2 media o
+  // ícone de 52 px do layout próprio. A especial deixou de ter ícone: usa o MESMO `CartaoEdicao` das outras edições.
+  test("UTAC138 · a especial usa o MESMO cartão das edições (CartaoEdicao), sem ícone pequeno nem GUTO próprio", () => {
+    const html = renderizar({ agendadas: { "ESPECIAL-AIRFRYER": especial(Date.now() + 5 * H) } });
+    const ini = html.indexOf('data-slot="edicao-especial"');
+    assert.ok(ini >= 0, "controlo: a especial não renderizou");
+    const fim = html.indexOf("🎫 Programada", ini);
+    assert.ok(fim > ini, "controlo: o vidro da Programada vem depois da especial");
+    const slot = html.slice(ini, fim);
+    assert.match(slot, /data-testid="cartao-edicao"/, "a especial não está num CartaoEdicao");
+    assert.match(slot, /data-testid="cartao-arte"/, "a arte não ocupa a vitrine do cartão");
+    assert.equal(ladoDoBanner(html), null, "voltou o ícone pequeno (EdicaoBanner) do layout próprio");
   });
 
   test("sem especial: nenhuma marca de slot, e a página é a de sempre", () => {
@@ -240,32 +244,20 @@ describe("MC94.2/MC94.3.1 · Dashboard — a edição especial NO SLOT", () => {
       offsetRelogioMs: offset,
     });
     assert.match(html, /data-estado="agendada"/, "o offset não chegou ao card");
-    assert.match(texto(html), /0[12] horas/);
+    assert.match(html, /data-testid="cartao-tempo"[^>]*>0[12]:\d\d:\d\d</); // UTAC138 — era /0[12] horas/
   });
 
   // MC94.4.1 — era "pago em senha" (R18 antiga do MC94.1). O operador reverteu: a
   // especial é RELÂMPAGO e o lance debita SALDO R$ a partir de R$ 0,01.
-  test("na hora (já em `edicoes`): o formulário é o da ESPECIAL, pago em SALDO (flash)", async () => {
-    const ctx = { edicoes: { "R-1": R1, "ESPECIAL-AIRFRYER": especial(Date.now() - 60_000, { status: "aberto" }) } };
-    // O CardLance é lazy: o 1.º render em SSR dá o espaço reservado e dispara o
-    // import. ⚠️ Uma 1.ª versão deste teste aceitava "duplo OU espaço reservado"
-    // e, medido, corria SEMPRE o ramo do espaço reservado — a asserção do id
-    // nunca executava. O lazy fica em cache depois de resolvido, por isso
-    // re-renderiza-se e EXIGE-SE o formulário, sem alternativa.
-    const primeiro = renderizar(ctx);
-    assert.match(primeiro, /data-estado="activa"/);
-    assert.match(primeiro, /aria-busy="true"/, "espaço reservado enquanto carrega");
-    let html = "";
-    for (let i = 0; i < 50 && !/data-stub="card-lance"/.test(html); i++) {
-      await new Promise((r) => setTimeout(r, 20));
-      html = renderizar(ctx);
-    }
-    assert.match(html, /data-stub="card-lance"/, "o formulário nunca chegou");
-    assert.match(html, /data-id-edicao="ESPECIAL-AIRFRYER"/, "licitaria noutra edição");
-    assert.match(html, /data-tipo="flash"/, "a especial debita SALDO R$ (MC94.4.1), não senha");
-    assert.match(html, /data-encerrado="false"/);
-    // O botão do slot da R-1 desapareceu com a especial lá dentro.
-    assert.doesNotMatch(texto(html), /Ir para o Mercado de Lances/, "o botão da R-1 ficou no slot da especial");
+  // UTAC138 (operador: «a edição precisa entrar no padrão que já temos, não ter um próprio») — no Início a especial
+  // aberta mostra o MESMO botão «⚡ Dar lance» da edição activa (leva à aba Menor Lance Único, que monta o
+  // formulário da especial). Antes: o Início montava um `CardLance` lazy da especial dentro do slot.
+  test("UTAC138 · na hora (já em `edicoes`): o vidro mostra o botão padrão «⚡ Dar lance», sem formulário próprio", () => {
+    const html = renderizar({ edicoes: { "R-1": R1, "ESPECIAL-AIRFRYER": especial(Date.now() - 60_000, { status: "aberto" }) } });
+    assert.match(html, /data-estado="activa"/);
+    assert.match(texto(html), /⚡ Dar lance/);
+    assert.doesNotMatch(html, /data-stub="card-lance"/, "o Início voltou a montar um formulário próprio da especial");
+    assert.doesNotMatch(html, /aria-busy="true"/, "voltou o espaço reservado do CardLance lazy");
   });
 
   test("na hora, a especial NÃO é desenhada TAMBÉM nas prateleiras (UTAC108h.2)", () => {
@@ -287,7 +279,9 @@ describe("MC94.2/MC94.3.1 · Dashboard — a edição especial NO SLOT", () => {
     // A especial ocupa o lugar do vidro «⚡ Relâmpago»: NÃO pode ao mesmo tempo criar um vidro de
     // família. Neste cenário só o vidro da Programada é um `CartaoEdicao` — e é isso que se mede
     // (a versão anterior deste assert fatiar até ao FIM apanhava esse vidro e dava um falso alarme).
-    assert.equal((html.match(/data-testid="cartao-edicao"/g) || []).length, 1,
+    // UTAC138 — a especial É agora um `CartaoEdicao` (o padrão): 2 cartões no ecrã = a especial (no lugar do vidro
+    // «⚡ Relâmpago») + o vidro da Programada. Era 1 (a especial tinha layout próprio). Um 3.º = duplicado.
+    assert.equal((html.match(/data-testid="cartao-edicao"/g) || []).length, 2,
       "a especial criou também um vidro de família (ficaria duas vezes no ecrã)");
     // Contagem directa: a especial tem de aparecer UMA vez em todo o ecrã.
     const vezes = (texto(html).match(/Air Fryer/g) || []).length;

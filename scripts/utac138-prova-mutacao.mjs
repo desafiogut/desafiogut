@@ -66,6 +66,15 @@ const MUTANTES = [
     t: back("utac110d-dois-passes.test.mjs"), desc: "o retry dá o bónus a compras antigas (I, retroactivo)" },
   { id: "M21", f: join(FN, "_lib/consentimento.mjs"), de: " && !VERSOES_GATE_LEGADO.includes(c.versao)", para: "",
     t: back("mc104-consentimento.test.mjs"), desc: "o APK v11 (3.4) volta a ser recusado (G)" },
+  // ── UTAC138 — a especial no padrão das edições, no Início e no Menor Lance Único (operador, 2026-11-18) ──
+  { id: "M22", f: join(FE, "src/pages/MercadoLances.jsx"), de: "            {edicaoEspecial ? (", para: "            {false ? (",
+    t: front("src/pages/__tests__/utac108e1-mlc-op.test.mjs"), desc: "a aba MLC ignora a especial" },
+  { id: "M23", f: join(FE, "src/pages/MercadoLances.jsx"), de: "  const edicaoDoEcra = edicaoEspecial?.id ?? EDICAO_ATIVA;", para: "  const edicaoDoEcra = EDICAO_ATIVA;",
+    t: front("src/pages/__tests__/utac108e1-mlc-op.test.mjs"), desc: "o lance da especial iria para a R-1" },
+  { id: "M24", f: join(FE, "src/components/edicao-especial/CardEdicaoEspecial.jsx"), de: "        tempo={tempo}", para: "        tempo={null}",
+    t: front("src/components/edicao-especial/__tests__/especial.test.mjs"), desc: "a especial perde o tempo na faixa do cartão" },
+  { id: "M25", f: join(FE, "src/pages/Dashboard.jsx"), de: '            renderLance={() => <BotaoDarLance encerrada={false} onClick={() => navigate("/mercado")} />}', para: "            renderLance={() => null}",
+    t: front("src/pages/__tests__/Dashboard.test.mjs"), desc: "o Início perde o botão padrão «Dar lance» da especial" },
 ];
 
 let mortos = 0, vivos = [];

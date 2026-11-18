@@ -195,10 +195,12 @@ test("5a · a edição especial fala de «Produto», e o dicionário bate com o 
   // UTAC111 (Frente C, «prêmio» → «produto»): as CHAVES passaram de `…premio…` a `…produto…`; a invariante
   // (o texto visível diz «Produto» e o dicionário bate com o fallback) fica igual. Antes:
   //   t("edicao.especial.premioEmDisputa", …) · t("edicao.especial.premio", …)
-  assert.match(card, /t\("edicao\.especial\.produtoEmDisputa", "Produto em disputa"\)/);
+  // UTAC138 — a especial passou ao cartão padrão: a linha «Produto em disputa» saiu (o cartão mostra só o nome do
+  // produto na faixa). Fica a chave do nome por omissão, «Produto especial».
+  assert.doesNotMatch(card, /produtoEmDisputa/);
   assert.match(card, /t\("edicao\.especial\.produto", "Produto especial"\)/);
   const pt = ler("src/i18n/pt.js");
-  assert.match(pt, /"edicao\.especial\.produtoEmDisputa": "Produto em disputa",/);
+  assert.match(pt, /"edicao\.especial\.produto": "Produto especial",/);
   assert.doesNotMatch(card + pt, /premio/i);
 });
 
@@ -209,12 +211,12 @@ test("3 (B1 do validador) · a regra da edição especial diz «crédito de lanc
   // lance gasta o SEU VALOR em pontos de lance e o Passe é que dá +200. O título do teste fica histórico.
   // UTAC137 (v6, Art. 6º): a frase do 110j.5 terminava em «o Passe dá +200 pontos de lance». Passou a «os pontos de lance são gratuitos».
   // UTAC138 (v6.1): a frase do UTAC137 terminava em «os pontos de lance são gratuitos»; passou ao bónus +100 e ao Top 10.
-  const frase = "Lance relâmpago · vence o menor lance único · cada lance gasta o seu valor em pontos de lance · o Passe Relâmpago dá +100 pontos de lance · resultado e Top 10 logo no encerramento";
-  assert.ok(card.includes(`t("edicao.especial.regra", "${frase}")`), "o fallback da regra da especial mudou");
+  // UTAC138 (operador: «não ter um próprio») — a linha de regra saiu com o layout próprio: o cartão padrão não a tem.
+  // A guarda que fica: a chave não volta a aparecer e o «crédito de lance» continua proibido (abaixo).
+  assert.ok(!card.includes('t("edicao.especial.regra"'), "a especial voltou a ter uma linha de regra própria");
   // ⚠️ comparação por TEXTO, não por RegExp: a frase tem «+200» e o `+` é quantificador em regex
   // (a 1.ª versão deste teste deu falso vermelho por isso).
-  assert.ok(ler("src/i18n/pt.js").includes(`"edicao.especial.regra": "${frase}",`),
-    "o i18n não tem a frase nova");
+  assert.ok(!ler("src/i18n/pt.js").includes(`"edicao.especial.regra":`), "a chave órfã da regra voltou ao i18n");
   // O crédito não pode reaparecer no texto visível da especial nem no i18n.
   for (const f of ["src/components/edicao-especial/CardEdicaoEspecial.jsx", "src/i18n/pt.js"]) {
     assert.doesNotMatch(codigo(ler(f)).replace(/^\s*\/\/.*$/gm, ""), /1 crédito de lance/,

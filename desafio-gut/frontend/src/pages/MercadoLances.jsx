@@ -19,6 +19,9 @@ import SemSaldoBanner, { mostrarAvisoSemSaldo } from "../components/SemSaldoBann
 // UTAC108e.1 — o aviso solto `SemEdicaoAviso` SAIU (o operador classificou-o como erro): sem edição
 // mostra-se o CARTÃO da edição em estado vazio (mockup v2, variante B «Produto em destaque»).
 import CartaoEdicao from "../components/CartaoEdicao.jsx";
+// UTAC138 — a edição ESPECIAL também entra aqui, no lugar do cartão Relâmpago e com o mesmo padrão (operador, 2026-11-18).
+import CardEdicaoEspecial from "../components/edicao-especial/CardEdicaoEspecial.jsx";
+import { escolherEspecial } from "../components/edicao-especial/_estilo-especial.js";
 import { EM_BREVE_MODE } from "../lib/leilaoLock.js";
 import { getEstadoEdicao } from "../utils/edicao.js";
 import { ORIGEM_PRODUCAO } from "../lib/apiOrigin.js"; // UTAC129
@@ -272,7 +275,15 @@ export default function MercadoLances() {
     handleLanceSucesso, handleNovaRodada,
     authToken, fecharOverlay, // UTAC000.17bc (17c) — token das participações e saída explícita do overlay
     saldoRsCentavos, saldoRsStatus, tipoProvavel, // UTAC108c — só para o aviso «Sem saldo»
+    agendadas, offsetRelogioMs, // UTAC138 — a especial (antes da hora vem em `agendadas`) e a hora do servidor
   } = useAppContext();
+  // UTAC138 — a especial a mostrar (ou nenhuma), escolhida na hora do SERVIDOR — a MESMA regra do Início
+  // (`escolherEspecial`: a que ainda não acabou; senão a última, até 24 h depois do fim).
+  const edicaoEspecial = escolherEspecial(
+    edicoes, agendadas, Date.now() + (Number.isFinite(offsetRelogioMs) ? offsetRelogioMs : 0),
+  );
+  // A edição em que este ecrã licita: a especial quando existe; senão a edição activa de sempre.
+  const edicaoDoEcra = edicaoEspecial?.id ?? EDICAO_ATIVA;
   // UTAC000.17bc (17c/GATE 21) — em que EDIÇÕES o titular deu lance (filtrado pelo token, no servidor).
   const { participacoes } = useMinhasParticipacoes(authToken);
   // MC66 (Direção C) — o cronômetro vivo foi removido da aba Lances ("EM BREVE"
@@ -292,9 +303,9 @@ export default function MercadoLances() {
   );
 
   const onLanceSucessoWrapper = useCallback((info) => {
-    setMeuUltimoLance({ valor: info.valorCentavos, edicao: EDICAO_ATIVA });
+    setMeuUltimoLance({ valor: info.valorCentavos, edicao: edicaoDoEcra }); // UTAC138 — a especial quando existe
     handleLanceSucesso?.(info);
-  }, [handleLanceSucesso, EDICAO_ATIVA]);
+  }, [handleLanceSucesso, edicaoDoEcra]);
 
   // MC29.1 — gate de plataforma. Skeleton enquanto a config carrega (CLS=0);
   // vista de conformidade quando o leilão não está ativo nesta plataforma.
@@ -367,7 +378,28 @@ export default function MercadoLances() {
             {/* UTAC108e.1 — CARTÃO DA EDIÇÃO (mockup v2, variante B «Produto em destaque»): a arte manda
                 (1:1 no telemóvel, 16:9 no desktop), nome e tempo na faixa, o lance por baixo. Sem edição
                 o cartão FICA, vazio (GUTO + «Nenhuma edição em andamento» + formulário desligado). */}
-            {EM_BREVE_MODE ? (
+            {/* UTAC138 — a especial ocupa o lugar do cartão Relâmpago (também com EM_BREVE_MODE: é a excepção
+                declarada do MC94.2 — a especial tem os SEUS estados, pela hora do servidor). */}
+            {edicaoEspecial ? (
+              <CardEdicaoEspecial
+                edicao={edicaoEspecial}
+                offsetMs={offsetRelogioMs}
+                isMobile={isMobile}
+                renderLance={({ idEdicao, modalidade: mod, encerrado: fechada }) => (
+                  <CardLance
+                    idEdicao={idEdicao}
+                    onLanceSucesso={onLanceSucessoWrapper}
+                    address={address}
+                    isConnected={isConnected}
+                    onConnect={abrirModal}
+                    onDisconnect={desconectar}
+                    encerrado={fechada}
+                    modalidade={mod}
+                    ready={ready}
+                  />
+                )}
+              />
+            ) : EM_BREVE_MODE ? (
               <CartaoEdicao vazio acao="lance" isMobile={isMobile} id="⚡ Relâmpago" estado={{ texto: "SEM EDIÇÃO", cor: COR.muted }} />
             ) : (() => {
               const edicao = edicoes?.[EDICAO_ATIVA] ?? null;
@@ -401,7 +433,7 @@ export default function MercadoLances() {
             />
             {/* UTAC107e.2 (Frente B) — etiqueta do PRÓPRIO lance, só depois do fecho (o servidor só
                 responde depois da consolidação; durante a edição não desenha nada — anti-bot MC28.1). */}
-            <EtiquetaMeuLance edicaoId={EDICAO_ATIVA} encerrado={encerrado} authToken={authToken} />
+            <EtiquetaMeuLance edicaoId={edicaoDoEcra} encerrado={encerrado} authToken={authToken} />
             {/* MC67 (item 8) — card "Segurança e Transparência" movido para Configurações. */}
           </section>
           <section data-testid="tabela-fim">

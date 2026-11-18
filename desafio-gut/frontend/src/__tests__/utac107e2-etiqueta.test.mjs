@@ -171,7 +171,9 @@ const fonte = (rel) => semComentarios(readFileSync(resolve(SRC, rel), "utf8"));
 
 test("B10 — MLC: a etiqueta está no cartão do lance, com a edição activa, o `encerrado` e o authToken", () => {
   const s = fonte("pages/MercadoLances.jsx");
-  assert.match(s, /<EtiquetaMeuLance edicaoId=\{EDICAO_ATIVA\} encerrado=\{encerrado\} authToken=\{authToken\} \/>/);
+  // UTAC138 — a edição do ecrã é a ESPECIAL quando existe (`edicaoDoEcra`), senão a activa. Era `edicaoId={EDICAO_ATIVA}`.
+  assert.match(s, /const edicaoDoEcra = edicaoEspecial\?\.id \?\? EDICAO_ATIVA;/);
+  assert.match(s, /<EtiquetaMeuLance edicaoId=\{edicaoDoEcra\} encerrado=\{encerrado\} authToken=\{authToken\} \/>/);
 });
 
 test("B11 — Início: a etiqueta só monta DENTRO de `estAtiva.encerrada &&`", () => {

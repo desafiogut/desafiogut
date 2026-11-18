@@ -239,19 +239,29 @@ describe("MC94.2 · CardEdicaoEspecial — os quatro estados no ecrã", () => {
     assert.match(html, /data-estado="agendada"/);
     assert.match(html, /src="\/artes\/edicao-especial-airfryer\.jpg"/);
     assert.match(html, /alt="[^"]*Air Fryer[^"]*"/);
-    assert.match(texto(html), /01 dias.*00 horas.*00 min.*01 seg/);
-    assert.match(texto(html), /20:00/, "a hora de Brasília aparece");
+    // UTAC138 (operador: «a edição precisa entrar no padrão que já temos, não ter um próprio»): a contagem vive na FAIXA da arte do
+    // `CartaoEdicao` (formato «1d 00:00:01»), não no cronómetro grande do layout próprio («01 dias 00 horas …»).
+    assert.match(html, /data-testid="cartao-tempo"[^>]*>1d 00:00:01</);
     assert.equal(lanceChamado.length, 0);
     assert.doesNotMatch(html, /FORMULARIO-DE-LANCE/);
   });
-  test("a hora mostrada é a de Brasília, qualquer que seja o fuso do aparelho", () => {
-    assert.match(texto(render(Card, props(INICIO - 3_600_000))), /04\/10.*20:00.*20:30/);
+  // UTAC138 (operador: «a edição precisa entrar no padrão que já temos, não ter um próprio») — era «a hora mostrada é a de Brasília» (linha
+  // da janela do layout próprio, que saiu). Agora prova-se que a especial É o cartão padrão das edições.
+  test("UTAC138 · a especial é o cartão PADRÃO (CartaoEdicao): topo id + estado, arte larga, faixa nome + tempo; sem layout próprio", () => {
+    const html = render(Card, props(INICIO - 3_600_000));
+    assert.match(html, /data-testid="cartao-edicao"/);
+    assert.match(html, /data-testid="cartao-arte"/);
+    assert.match(html, /data-testid="cartao-nome"[^>]*>Air Fryer</);
+    assert.match(html, /data-testid="cartao-tempo"[^>]*>01:00:00</);
+    assert.match(html, />ESPECIAL-AIRFRYER</, "o id da edição na pílula do topo, como nas outras");
+    assert.doesNotMatch(html, /role="timer"/, "sem o cronómetro grande do layout próprio");
+    assert.doesNotMatch(html, /Produto em disputa|horário de Brasília/, "sem a caixa amarela do layout próprio");
   });
   test("a_abrir: aviso de abertura + contagem, ainda sem formulário", () => {
     const html = render(Card, props(INICIO - 30_000));
     assert.match(html, /data-estado="a_abrir"/);
-    assert.match(texto(html), /Abrindo/);
-    assert.match(texto(html), /30 seg/);
+    assert.match(texto(html), /Abrindo/, "a pílula de estado diz «Abrindo»");
+    assert.match(html, /data-testid="cartao-tempo"[^>]*>00:00:30</); // UTAC138 — era /30 seg/
     assert.doesNotMatch(html, /FORMULARIO-DE-LANCE/);
   });
   // MC94.4.1 — era "pago em senha" (R18 antiga). O operador reverteu: o lance da
@@ -263,7 +273,7 @@ describe("MC94.2 · CardEdicaoEspecial — os quatro estados no ecrã", () => {
     assert.match(html, /data-estado="activa"/);
     assert.match(html, /FORMULARIO-DE-LANCE/);
     assert.deepEqual(lanceChamado.at(-1), { idEdicao: "ESPECIAL-AIRFRYER", modalidade: "flash", encerrado: false });
-    assert.match(texto(html), /29 min/, "conta até às 20:30");
+    assert.match(html, /data-testid="cartao-tempo"[^>]*>00:29:00</, "conta até às 20:30"); // UTAC138 — era /29 min/
   });
   test("encerrada: painel do vencedor, sem formulário nem cronómetro", () => {
     const html = render(Card, props(TERMINO + 1, {
@@ -280,7 +290,7 @@ describe("MC94.2 · CardEdicaoEspecial — os quatro estados no ecrã", () => {
     const aparelho = INICIO + 3_600_000;
     const html = render(Card, props(aparelho, { offsetMs: -2 * 3_600_000 }));
     assert.match(html, /data-estado="agendada"/);
-    assert.match(texto(html), /01 horas/);
+    assert.match(html, /data-testid="cartao-tempo"[^>]*>01:00:00</); // UTAC138 — era /01 horas/
   });
   test("sem offset: o formulário NÃO abre por um relógio de aparelho adiantado", () => {
     lanceChamado.length = 0;

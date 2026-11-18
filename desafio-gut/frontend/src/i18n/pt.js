@@ -118,13 +118,9 @@ export default {
   // MC94.2 — edição especial (Dashboard). pt = fallbacks dos componentes.
   // UTAC110j (R18-110j-5a) — «Prêmio especial/em disputa» → «Produto» (produto físico patrocinado, v5).
   "edicao.especial.produto": "Produto especial",
-  "edicao.especial.abreEm": "Abre em",
-  "edicao.especial.abrindo": "Abrindo em instantes…",
-  "edicao.especial.fechaEm": "Fecha em",
-  "edicao.especial.titulo": "🎁 Edição especial",
-  "edicao.especial.altArte": "Arte da edição especial",
-  "edicao.especial.produtoEmDisputa": "Produto em disputa",
-  "edicao.especial.brasilia": "(horário de Brasília)",
+  // UTAC138 — a especial passou ao cartão PADRÃO das edições (`CartaoEdicao`): saíram as chaves do layout próprio
+  // (abreEm «Abre em», abrindo «Abrindo em instantes…», fechaEm «Fecha em», titulo «🎁 Edição especial»,
+  // altArte «Arte da edição especial», produtoEmDisputa «Produto em disputa», brasilia «(horário de Brasília)»).
   // MC94.4.1 — R18: a especial é RELÂMPAGO e debita SALDO (a partir de R$ 0,01). O texto
   // anterior ("Rodada programada · ... cada lance usa 1 senha (R$ 2,00)") descrevia o
   // comportamento ANTIGO e era a causa visível do desvio reportado pelo operador.
@@ -133,7 +129,9 @@ export default {
   // de lance e o Passe é que dá +200. O texto antigo fica à vista na linha acima, como manda o protocolo.
   // UTAC137 (v6, Art. 6º) — o Passe já não dá pontos de lance. Antes: «… · o Passe dá +200 pontos de lance».
   // UTAC138 (v6.1, Art. 7º) — o Passe Relâmpago volta a dar +100 e a especial tem apuração instantânea. Antes: «… · os pontos de lance são gratuitos».
-  "edicao.especial.regra": "Lance relâmpago · vence o menor lance único · cada lance gasta o seu valor em pontos de lance · o Passe Relâmpago dá +100 pontos de lance · resultado e Top 10 logo no encerramento",
+  // UTAC138 — a chave "edicao.especial.regra" saiu com o layout próprio (o cartão padrão não tem linha de regra);
+  // o último texto era «Lance relâmpago · vence o menor lance único · cada lance gasta o seu valor em pontos de lance ·
+  // o Passe Relâmpago dá +100 pontos de lance · resultado e Top 10 logo no encerramento».
   "edicao.especial.badgeEmBreve": "🕒 Em breve",
   "edicao.especial.badgeAbrindo": "⏳ Abrindo",
   "edicao.especial.badgeAberta": "🟢 Aberta",

@@ -19,5 +19,9 @@ M18 RED  (morto) fail=1 — consolidação on-chain sem margem (H)
 M19 RED  (morto) fail=2 — o retry não completa o bónus (I)
 M20 RED  (morto) fail=2 — o retry dá o bónus a compras antigas (I, retroactivo)
 M21 RED  (morto) fail=1 — o APK v11 (3.4) volta a ser recusado (G)
+M22 RED  (morto) fail=2 — a aba MLC ignora a especial
+M23 RED  (morto) fail=1 — o lance da especial iria para a R-1
+M24 RED  (morto) fail=5 — a especial perde o tempo na faixa do cartão
+M25 RED  (morto) fail=1 — o Início perde o botão padrão «Dar lance» da especial
 
-mortos 21/21 · md5 restaurado em todos
+mortos 25/25 · md5 restaurado em todos
