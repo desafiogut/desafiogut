@@ -33,6 +33,14 @@ import { EDICAO_ESPECIAL_RE, msDe } from "./_lib/edicao-janela.mjs";
 export const CRON = "* * * * *";
 export const STORE_MARCAS = "consolidacao-automatica";
 export const MAX_TENTATIVAS_ANTES_DO_ENVIO = 5;
+/**
+ * UTAC138 (R18-138-H, achado E2 do validador) — a consolidação ON-CHAIN (irreversível, com gas) só corre depois desta
+ * margem: em mainnet um lance aceite no último ms ainda faz `comprometerLanceOnchain` + `tx.wait(1)` (~12 s) antes do
+ * `addLance`; consolidar no 1.º tick gravava on-chain um vencedor sem esse lance. É a MESMA margem da apuração
+ * instantânea (`_lib/apuracao-especial.mjs` MARGEM_FECHO_MS — há teste que exige a igualdade), para o vencedor on-chain
+ * e o Top 10 saírem dos mesmos lances. O encerramento (status) continua no 1.º tick: a guarda de lances já recusa.
+ */
+export const MARGEM_CONSOLIDACAO_MS = 65_000;
 /** Espera pela mineração: tem de caber no limite de ~30 s de uma scheduled. */
 export const TIMEOUT_MINER_SCHEDULED_MS = 20_000;
 
@@ -142,7 +150,9 @@ export async function tick(agoraMs = Date.now()) {
         linha.encerrada = false;
       }
     }
-    if (marcas) {
+    if (marcas && agoraMs <= msDe(e.termino_em) + MARGEM_CONSOLIDACAO_MS) {
+      linha.consolidacao = "aguarda_margem"; // UTAC138 (R18-138-H): um tick seguinte consolida
+    } else if (marcas) {
       try {
         Object.assign(linha, await consolidarUmaVez(marcas, e.id, agoraMs));
       } catch (err) {

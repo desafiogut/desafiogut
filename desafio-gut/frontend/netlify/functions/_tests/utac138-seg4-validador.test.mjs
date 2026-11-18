@@ -112,8 +112,12 @@ test("V-C1 tick() dentro da margem: «a_apurar», sem gravar; tick() depois da m
   assert.equal(l3.apuracao, "ja_apurada");
 });
 
-test("V-C2 a consolidação on-chain do cron continua a correr no 1.º tick depois do fim (comportamento anterior)", async () => {
+// UTAC138 (R18-138-H, achado E2 deste validador, decidido pelo operador): a consolidação on-chain passou a esperar a
+// MESMA margem de fecho da apuração. Era: «continua a correr no 1.º tick depois do fim (comportamento anterior)».
+test("V-C2 (R18-138-H) a consolidação on-chain espera a margem de fecho; depois dela corre 1×", async () => {
   estado.lances[ID] = [lance(1, 2)];
   await CRON.tick(FIM + 10_000);
-  assert.equal(estado.consolidacoes, 1, "a apuração dentro da margem não atrasa nem impede a consolidação");
+  assert.equal(estado.consolidacoes, 0, "dentro da margem não consolida on-chain");
+  await CRON.tick(FIM + 65_001);
+  assert.equal(estado.consolidacoes, 1, "depois da margem consolida");
 });

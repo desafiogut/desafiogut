@@ -100,6 +100,7 @@ const { default: hLerPontos } = await import("../ler-pontos.mjs");
 const { assinarUserSession, assinarLanceAuth } = await import("../_lib/jwt.mjs");
 
 const A = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const B2 = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"; // UTAC138 — 2.ª conta do B9b
 const K = (n) => `idem-key-110d-${n}`;
 
 beforeEach(() => {
@@ -337,12 +338,38 @@ test("B8 (UTAC138) falha no bónus de pontos de lance ⇒ 502, ponto desfeito, R
 // uma compra feita entre o UTAC136 e o UTAC138 não ganha +100 por ser repetida).
 test("B9 (UTAC136/138) compra Relâmpago com o ponto já creditado → o retry completa só o ECOQUILDO, sem bónus nem cobrança", async () => {
   await P.creditarPontos(A, 1, "compra", `passe-relampago:${K(1)}`);
+  // UTAC138 (R18-138-I): data LITERAL anterior ao corte (compra do período UTAC136-UTAC138) — nunca o relógio real.
+  linha().historico[0].data = "2026-11-15T12:00:00.000Z";
   const r = await comprar(hRelampago);
   assert.equal(r.status, 200, JSON.stringify(r.corpo));
   assert.equal("pontosLance" in r.corpo, false);
   assert.equal(saldo(), 500, "não cobrou de novo");
   assert.equal(linha().pontos_lance ?? 0, 0);
   assert.equal(r.corpo.ecoQuildo, 1);
+});
+
+// UTAC138 (R18-138-I, achado E4 do validador): compra A MEIO feita DEPOIS do corte ⇒ o retry credita o bónus em falta.
+test("B9b (UTAC138) compra Relâmpago a meio DEPOIS do corte → o retry credita os +100 em falta (1×), sem cobrar", async () => {
+  const { CORTE_BONUS_RETRY_ISO } = await import("../_lib/comprar-passe-tipado.mjs");
+  assert.equal(CORTE_BONUS_RETRY_ISO, "2026-11-18T04:00:00.000Z");
+  await P.creditarPontos(A, 1, "compra", `passe-relampago:${K(1)}`);
+  linha().historico[0].data = CORTE_BONUS_RETRY_ISO; // a fronteira conta como «depois»
+  const r = await comprar(hRelampago);
+  assert.equal(r.status, 200, JSON.stringify(r.corpo));
+  assert.equal(saldo(), 500, "não cobrou de novo");
+  assert.equal(linha().pontos_lance, 100, "o bónus em falta entrou");
+  assert.equal(linha().historico_lance[0].motivo, "bonus-passe-relampago");
+  const r2 = await comprar(hRelampago);
+  assert.equal(r2.status, 200);
+  assert.equal(linha().pontos_lance, 100, "o 2.º retry não repete o bónus");
+  // 1 ms antes do corte ⇒ sem bónus (outra conta)
+  await P.creditarPontos(B2, 1, "compra", `passe-relampago:${K(2)}`);
+  const lb = S.tabelas.pontos.find((l) => l.endereco === B2);
+  lb.historico[0].data = "2026-11-18T03:59:59.999Z";
+  const { creditarPasseGoogle } = await import("../_lib/comprar-passe-tipado.mjs");
+  const g = await creditarPasseGoogle({ endereco: B2, tipoPasse: "relampago", ref: `passe-relampago:${K(2)}` });
+  assert.equal(g.ok, true, JSON.stringify(g));
+  assert.equal(Number(lb.pontos_lance ?? 0), 0, "compra anterior ao corte não ganha o bónus no retry");
 });
 
 test("B10 o ponto de um Passe novo CONTA para o cartão (tipo compra); UTAC136: 1 por Passe", async () => {
@@ -462,11 +489,13 @@ test("UTAC112 P7 (achado 1 do validador): compra de 5 A MEIO completada por um r
   // Estado a meio: os 5 pontos de fidelidade (5× no v6) já entraram com esta ref; o ECOQUILDO não.
   const c = await P.creditarPontos(A, 5, P.TIPO_COMPRA, ref);
   assert.equal(c.ok, true);
+  // UTAC138 (R18-138-I): data LITERAL depois do corte ⇒ o retry também completa o bónus, na quantidade JÁ creditada.
+  linha().historico.find((h) => h.ref === ref).data = "2026-11-20T12:00:00.000Z";
   const r = await comprarN(hRelampago, 1, key);
   assert.equal(r.status, 200, JSON.stringify(r.corpo));
   assert.equal(r.corpo.quantidade, 5, "a resposta diz a quantidade JÁ creditada, não a do retry");
   assert.equal(linha().pontos, 5);
-  assert.equal(linha().pontos_lance ?? 0, 0, "UTAC136: o retry não completa pontos de lance");
+  assert.equal(linha().pontos_lance, 500, "UTAC138: o retry completa o bónus × 5 (a quantidade já creditada), não × 1");
   assert.equal(ecoA().saldo, 5);
   assert.equal(S.tabelas.eco_quildo_lastro[0].total_emitido, 5);
   assert.equal(saldo(), 500, "completar não cobra");

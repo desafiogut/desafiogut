@@ -17,6 +17,12 @@ export const CONTEXTO_GATE = "gate-legal";
 // Tem de ser igual a VERSAO_CONSENTIMENTO de src/components/TermosConsentimento.jsx (há teste que o exige).
 export const VERSAO_GATE = "3.5"; // 2026-11-17 (UTAC138): o gate passou ao Regulamento v6.1 (Arts. 6º/7º: bônus de 100 pontos de lance do Passe Relâmpago; apuração instantânea das Edições Especiais) — todos reaceitam. Anterior, «3.4»: 2026-11-13 (UTAC137, R18-137-1): o gate passou ao Regulamento v6.0 (1 ponto por Passe, Passe sem pontos de lance, ECOQUILDO R$ 0,50) — todos reaceitam. Anterior, «3.3»: 2026-10-18 (UTAC110m.2): o Regulamento mudou de TEXTO em 5 artigos e a frente C REDUZIU uma promessa (o ECOQUILDO deixou de valer no aplicativo — Art. 48º). O Art. 39º exige aviso prévio para reduções de direitos, logo este bump tem de acontecer ANTES da vigência (02/11/2026) e antes do AAB (DEBT-066). Invalida os aceites de 3.0/3.1/3.2 de propósito.
 
+// UTAC138 (R18-138-G, decisão do operador) — versões ANTERIORES que o registo ainda aceita: o APK v11 instalado
+// envia "3.4" (gate do Regulamento v6.0) até o AAB v12 sair. O registo guarda a versão que o cliente DECLAROU
+// (o texto que a pessoa viu), não a vigente. O site e o v12 exigem sempre VERSAO_GATE (o cliente compara a sua
+// própria constante). ⛔ Retirar o "3.4" quando o v12 estiver publicado (DEBT-092).
+export const VERSOES_GATE_LEGADO = Object.freeze(["3.4"]);
+
 // As 4 declarações do gate, pela ordem do ecrã.
 export const DECLARACOES_GATE = Object.freeze(["lido", "maiores", "termos", "privacidade"]);
 
@@ -29,7 +35,7 @@ const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
  */
 export function validarAceite(corpo, agora = Date.now()) {
   const c = corpo && typeof corpo === "object" ? corpo : {};
-  if (c.versao !== VERSAO_GATE) {
+  if (c.versao !== VERSAO_GATE && !VERSOES_GATE_LEGADO.includes(c.versao)) {
     return { ok: false, code: "versao_invalida", message: `versão do termo tem de ser "${VERSAO_GATE}"` };
   }
   const a = c.aceitos;

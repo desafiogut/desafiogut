@@ -80,6 +80,8 @@ test("não aceitar (declaração em falta, false, string, extra, versão errada,
     corpo({ aceitos: [true, true, true, true] }),
     corpo({ versao: "1.0" }),
     corpo({ versao: 2 }),
+    corpo({ versao: "3.3" }), // UTAC138: o legado aceite é SÓ o "3.4" (APK v11) — o 3.3 continua recusado
+    corpo({ versao: " 3.4" }),
     corpo({ aceiteDeclaradoEm: "ontem" }),
     corpo({ aceiteDeclaradoEm: "2026-02-31T10:00:00Z" }),
     corpo({ aceiteDeclaradoEm: "9999-12-31T00:00:00.000Z" }),
@@ -90,6 +92,16 @@ test("não aceitar (declaração em falta, false, string, extra, versão errada,
     assert.equal(res.status, 400, JSON.stringify(b));
   }
   assert.equal(registos().length, 0);
+});
+
+// UTAC138 (R18-138-G) — o APK v11 envia "3.4" até o AAB v12 sair; o registo aceita-o e guarda a versão DECLARADA.
+test("UTAC138 · aceite \"3.4\" do APK v11 é registado (legado até ao v12) e fica com termoVersao 3.4", async () => {
+  assert.equal(lib.VERSAO_GATE, "3.5");
+  assert.deepEqual([...lib.VERSOES_GATE_LEGADO], ["3.4"]);
+  const res = await post(corpo({ versao: "3.4" }));
+  assert.equal(res.status, 201, await res.clone().text());
+  assert.equal(registos().length, 1);
+  assert.equal(registos()[0].termoVersao, "3.4", "o registo guarda o texto que a pessoa viu, não o vigente");
 });
 
 test("aceitar 2× o MESMO aceite → 1 registo (idempotente); um aceite NOVO → 2 registos (histórico)", async () => {

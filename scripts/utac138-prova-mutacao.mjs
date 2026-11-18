@@ -57,6 +57,15 @@ const MUTANTES = [
     t: front("src/__tests__/utac110h1-vocabulario.test.mjs"), desc: "gate fica em 3.4" },
   { id: "M17", f: join(RAIZ, "docs/GUTO-REGULAMENTO.md"), de: "O Passe Relâmpago concede, adicionalmente, um bônus de 100 (cem)", para: "O Passe Relâmpago concede, adicionalmente, um bônus de 200 (duzentos)",
     t: back("utac110n-pontos-lance.test.mjs"), desc: "o GUTO lê um bónus diferente do Regulamento" },
+  // ── R18-138-G/H/I (decisões do operador depois do validador) ──
+  { id: "M18", f: join(FN, "scheduled-encerrar-especial.mjs"), de: "    if (marcas && agoraMs <= msDe(e.termino_em) + MARGEM_CONSOLIDACAO_MS) {", para: "    if (false) {",
+    t: back("mc943-scheduled-encerrar.test.mjs"), desc: "consolidação on-chain sem margem (H)" },
+  { id: "M19", f: join(FN, "_lib/comprar-passe-tipado.mjs"), de: "  if (ctx.ehRelampago && bonusDevidoNoRetry(st.reg, ref)) {", para: "  if (false) {",
+    t: back("utac110d-dois-passes.test.mjs"), desc: "o retry não completa o bónus (I)" },
+  { id: "M20", f: join(FN, "_lib/comprar-passe-tipado.mjs"), de: "  return Number.isFinite(ms) && ms >= Date.parse(CORTE_BONUS_RETRY_ISO);", para: "  return true;",
+    t: back("utac110d-dois-passes.test.mjs"), desc: "o retry dá o bónus a compras antigas (I, retroactivo)" },
+  { id: "M21", f: join(FN, "_lib/consentimento.mjs"), de: " && !VERSOES_GATE_LEGADO.includes(c.versao)", para: "",
+    t: back("mc104-consentimento.test.mjs"), desc: "o APK v11 (3.4) volta a ser recusado (G)" },
 ];
 
 let mortos = 0, vivos = [];

@@ -19,9 +19,9 @@
 //      +200 PONTOS DE LANCE (UTAC110n, R18-110j.4b-3). Saiu da cadeia; a constante
 //      `PONTOS_LANCE_POR_PASSE_RELAMPAGO` fica em `ledger-lance.mjs` como registo, sem chamadores aqui.
 //   ✅ UTAC138 (R18-138-D, Art. 7º v6.1): o Relâmpago VOLTA a dar +100 PONTOS DE LANCE × N, motivo
-//      `bonus-passe-relampago`, na mesma `ref` (coluna `historico_lance`). Só na 1.ª creditação: o
-//      `completarPendentes` NÃO o credita, para que um retry/restauro de uma compra feita entre o UTAC136 e
-//      o UTAC138 não ganhe o bónus retroactivamente (mesma regra «não retroactivo» do UTAC136).
+//      `bonus-passe-relampago`, na mesma `ref` (coluna `historico_lance`). R18-138-I: o `completarPendentes`
+//      credita o bónus em falta SÓ a compras com o ponto registado depois de CORTE_BONUS_RETRY_ISO, para que um
+//      retry/restauro de uma compra feita entre o UTAC136 e o UTAC138 não o ganhe retroactivamente.
 //      Se o bónus falhar, os pontos de fidelidade são desfeitos e a compra falha inteira (padrão do 110n).
 //
 // Idempotência: por `ref` em CADA ledger. No PIX a `ref` vem da `idempotencyKey` do cliente; no
@@ -50,9 +50,21 @@ import {
 } from "./eco-quildo.mjs";
 import { converterEcoEmPassesSeguro } from "./conversao-eco-passe.mjs";
 import {
-  creditarPontosLance, reverterMovimentoLance,
+  creditarPontosLance, reverterMovimentoLance, lerLedgerLance,
   PONTOS_LANCE_BONUS_PASSE_RELAMPAGO, MOTIVO_BONUS_PASSE_RELAMPAGO,
 } from "./ledger-lance.mjs";
+
+/**
+ * UTAC138 (R18-138-I, achado E4 do validador) — o retry de uma compra Relâmpago A MEIO credita o bónus em falta, mas
+ * SÓ para compras com o ponto de fidelidade registado a partir deste instante (deploy do UTAC138). As compras entre o
+ * UTAC136 (sem bónus) e o UTAC138 não ganham +100 por serem repetidas/restauradas (não retroactivo).
+ */
+export const CORTE_BONUS_RETRY_ISO = "2026-11-18T04:00:00.000Z";
+const bonusDevidoNoRetry = (reg, ref) => {
+  const e = Array.isArray(reg?.historico) ? reg.historico.find((h) => h?.ref === ref) : null;
+  const ms = Date.parse(e?.data ?? "");
+  return Number.isFinite(ms) && ms >= Date.parse(CORTE_BONUS_RETRY_ISO);
+};
 
 /** UTAC138 — +100 pontos de lance por Passe Relâmpago, × N (Art. 7º v6.1). Idempotente pela `ref` da compra. */
 const creditarBonusLanceDoPasse = (endereco, ref, quantidade) =>
@@ -151,6 +163,15 @@ async function completarPendentes(ctxPedido, endereco, ref, st) {
   // A quantidade de uma compra A MEIO é a que JÁ foi creditada nos pontos (com esta `ref`) —
   // nunca a do retry: o que falta completa-se na mesma proporção.
   const ctx = { ...ctxPedido, quantidade: quantidadeJaCreditada(st.reg, ref) };
+  // UTAC138 (R18-138-I) — bónus em falta de uma compra Relâmpago feita depois do corte. Idempotente pela `ref`.
+  if (ctx.ehRelampago && bonusDevidoNoRetry(st.reg, ref)) {
+    let led;
+    try { led = await lerLedgerLance(endereco); } catch { return { ok: false, etapa: "lance", code: "ERRO_DB" }; }
+    if (!temRef(led.historico, ref)) {
+      const c = await creditarBonusLanceDoPasse(endereco, ref, ctx.quantidade).catch(() => ({ ok: false, code: "ERRO_DB" }));
+      if (!c.ok) return { ok: false, etapa: "lance", code: c.code ?? "ERRO_DB" };
+    }
+  }
   const g = await garantirEcoDoPasse(ctx, endereco, ref);
   if (!g.ok) return { ok: false, etapa: "eco", code: g.code };
   return { ok: true, pontos: Number(st.reg?.pontos ?? 0), ecoQuildo: g.saldo };
@@ -233,7 +254,11 @@ const camposBonusRelampago = (ctx, cred) => (ctx.ehRelampago
 /** A compra já existe: completa o que falta (sem cobrar) e responde 200. */
 async function respostaIdempotente(ctx, endereco, ref, st) {
   const c = await completarPendentes(ctx, endereco, ref, st);
-  if (!c.ok) return jsonError(502, "creditar_eco_quildo_falhou", "não foi possível creditar o ECOQUILDO", { motivo: c.code });
+  if (!c.ok) {
+    return c.etapa === "lance" // UTAC138 (R18-138-I)
+      ? jsonError(502, "creditar_pontos_lance_falhou", "não foi possível creditar os pontos de lance", { motivo: c.code })
+      : jsonError(502, "creditar_eco_quildo_falhou", "não foi possível creditar o ECOQUILDO", { motivo: c.code });
+  }
   return jsonResponse({
     ok: true, idempotent: true, tipo: ctx.tipoPasse, quantidade: quantidadeJaCreditada(st.reg, ref), pontosFidelidade: c.pontos,
     ...camposLegadoRelampago(ctx),

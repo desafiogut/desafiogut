@@ -58,7 +58,10 @@ mock.module("../_lib/consolidacao.mjs", {
 });
 
 const mod = await import("../scheduled-encerrar-especial.mjs");
-const { tick, MAX_TENTATIVAS_ANTES_DO_ENVIO, STORE_MARCAS } = mod;
+const { tick, MAX_TENTATIVAS_ANTES_DO_ENVIO, STORE_MARCAS, MARGEM_CONSOLIDACAO_MS } = mod;
+// UTAC138 (R18-138-H): a consolidação on-chain só corre depois da margem de fecho. Os ticks «depois do fim» que
+// esperavam consolidar passaram de TERMINO + x para TERMINO + M + x (M = margem); o encerramento não mudou.
+const M = MARGEM_CONSOLIDACAO_MS;
 
 const TERMINO = Date.parse("2026-10-04T23:30:00.000Z");
 const especial = (extra = {}) => ({
@@ -89,54 +92,71 @@ test("às 20:30 em ponto ainda NÃO (a janela de lances inclui o último instant
 });
 
 test("depois do fim: encerra (origem scheduled) e consolida uma vez", async () => {
-  await tick(TERMINO + 1_000);
+  await tick(TERMINO + M + 1_000);
   assert.deepEqual(estado.encerradas, [{ edicaoId: "ESPECIAL-AIRFRYER", origem: "scheduled" }]);
   assert.deepEqual(estado.consolidadas, ["ESPECIAL-AIRFRYER"]);
 });
 
+test("UTAC138 · dentro da margem: ENCERRA logo mas NÃO consolida on-chain; depois da margem consolida 1×", async () => {
+  assert.equal(M, 65_000);
+  // Lido da FONTE (importar o módulo choca com os mocks de edicoes-core deste ficheiro).
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync(new URL("../_lib/apuracao-especial.mjs", import.meta.url), "utf8");
+  const MARGEM_FECHO_MS = Number(src.match(/export const MARGEM_FECHO_MS = ([\d_]+);/)?.[1].replace(/_/g, ""));
+  assert.equal(M, MARGEM_FECHO_MS, "a consolidação on-chain e o Top 10 têm de usar a MESMA margem");
+  const r1 = await tick(TERMINO + 1_000);
+  assert.deepEqual(estado.encerradas, [{ edicaoId: "ESPECIAL-AIRFRYER", origem: "scheduled" }]);
+  assert.deepEqual(estado.consolidadas, [], "consolidou on-chain dentro da margem (lance em voo ficava de fora)");
+  assert.equal(r1[0].consolidacao, "aguarda_margem");
+  await tick(TERMINO + M);
+  assert.deepEqual(estado.consolidadas, [], "no último ms da margem ainda não");
+  await tick(TERMINO + M + 1);
+  assert.deepEqual(estado.consolidadas, ["ESPECIAL-AIRFRYER"]);
+});
+
 test("a janela de mineração cabe no limite da scheduled (< 30 s)", async () => {
-  await tick(TERMINO + 1_000);
+  await tick(TERMINO + M + 1_000);
   const t = estado.opcoesConsolidar[0]?.timeoutMinerMs;
   assert.ok(Number.isFinite(t) && t > 0 && t <= 20_000, `timeoutMinerMs=${t}`);
 });
 
 test("não encerra nem consolida DUAS vezes", async () => {
-  await tick(TERMINO + 1_000);
-  await tick(TERMINO + 61_000);
-  await tick(TERMINO + 121_000);
+  await tick(TERMINO + M + 1_000);
+  await tick(TERMINO + M + 61_000);
+  await tick(TERMINO + M + 121_000);
   assert.equal(estado.encerradas.length, 1);
   assert.equal(estado.consolidadas.length, 1);
 });
 
 test("já encerrada à mão: não re-encerra, mas consolida (uma vez)", async () => {
   estado.edicoes["ESPECIAL-AIRFRYER"] = especial({ status: "encerrado" });
-  await tick(TERMINO + 1_000);
-  await tick(TERMINO + 61_000);
+  await tick(TERMINO + M + 1_000);
+  await tick(TERMINO + M + 61_000);
   assert.deepEqual(estado.encerradas, []);
   assert.equal(estado.consolidadas.length, 1);
 });
 
 test("202 pendente: NUNCA reenvia (a tx pode estar no ar)", async () => {
   estado.resultado = { status: 202, corpo: { ok: false, status: "pendente", txHash: "0xtx" } };
-  for (let i = 0; i < 5; i++) await tick(TERMINO + 1_000 + i * 60_000);
+  for (let i = 0; i < 5; i++) await tick(TERMINO + M + 1_000 + i * 60_000);
   assert.equal(estado.consolidadas.length, 1);
 });
 
 test("502 envio_falhou: também não reenvia", async () => {
   estado.resultado = { status: 502, erro: { code: "envio_falhou", message: "x" } };
-  for (let i = 0; i < 3; i++) await tick(TERMINO + 1_000 + i * 60_000);
+  for (let i = 0; i < 3; i++) await tick(TERMINO + M + 1_000 + i * 60_000);
   assert.equal(estado.consolidadas.length, 1);
 });
 
 test("excepção a meio: não reenvia (não se sabe se a tx saiu) e o tick não rebenta", async () => {
   estado.lancarConsolidar = true;
-  await tick(TERMINO + 1_000);
-  await tick(TERMINO + 61_000);
+  await tick(TERMINO + M + 1_000);
+  await tick(TERMINO + M + 61_000);
   assert.equal(estado.consolidadas.length, 1);
 });
 
 test("o marcador é gravado ANTES de chamar (uma morte a meio não causa reenvio)", async () => {
-  await tick(TERMINO + 1_000);
+  await tick(TERMINO + M + 1_000);
   assert.ok(estado.marcaNaChamada, "no instante da chamada ainda não havia marcador");
   assert.equal(estado.marcaNaChamada.tentativas, 1);
   assert.equal(STORE_MARCAS, "consolidacao-automatica");
@@ -144,14 +164,14 @@ test("o marcador é gravado ANTES de chamar (uma morte a meio não causa reenvio
 
 test("422 sem_vencedor (antes do envio): tenta de novo, mas no máximo N vezes", async () => {
   estado.resultado = { status: 422, erro: { code: "sem_vencedor", message: "x" } };
-  for (let i = 0; i < 12; i++) await tick(TERMINO + 1_000 + i * 60_000);
+  for (let i = 0; i < 12; i++) await tick(TERMINO + M + 1_000 + i * 60_000);
   assert.equal(estado.consolidadas.length, MAX_TENTATIVAS_ANTES_DO_ENVIO);
   assert.equal(MAX_TENTATIVAS_ANTES_DO_ENVIO, 5);
 });
 
 test("encerrar falha: fail-soft — consolida na mesma (a janela de lances já fechou)", async () => {
   estado.lancarEncerrar = true;
-  await tick(TERMINO + 1_000);
+  await tick(TERMINO + M + 1_000);
   assert.equal(estado.consolidadas.length, 1);
 });
 
@@ -162,7 +182,7 @@ test("ignora PROG/RELAMP/R-1 e as especiais ainda agendadas", async () => {
     "PROG-ESPECIAL-1": { id: "PROG-ESPECIAL-1", status: "aberto", termino_em: "2026-01-01T00:00:00Z" },
   };
   estado.agendadas = { "ESPECIAL-X": especial({ id: "ESPECIAL-X" }) };
-  await tick(TERMINO + 1_000);
+  await tick(TERMINO + M + 1_000);
   assert.deepEqual(estado.encerradas, []);
   assert.deepEqual(estado.consolidadas, []);
 });
