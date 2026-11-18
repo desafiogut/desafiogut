@@ -1,0 +1,12 @@
+fase: correccoes (8 mutantes)
+
+W1 RED  (morto) fail=4 — margem volta aos 3 s (lance mainnet ainda no tx.wait(1) fica de fora)
+W2 RED  (morto) fail=1 — o cron salta a margem (apura antes de o lance em voo ser gravado)
+W3 RED  (morto) fail=1 — o e-mail volta a sair no Top 10 público
+W4 RED  (morto) fail=1 — o tick deixa de apurar
+W5 RED  (morto) fail=1 — a mensagem visível volta a dizer +200
+W6 RED  (morto) fail=1 — Top 10 com um 🏆 diferente do vencedor on-chain
+W7 RED  (morto) fail=1 — margem abaixo do limite de uma função síncrona (30 s)
+W8 RED  (morto) fail=1 — nomePublico deixa de filtrar o «@»
+
+mortos 8/8 · md5 restaurado em todos

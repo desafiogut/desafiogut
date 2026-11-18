@@ -1,0 +1,21 @@
+fase: original (17 mutantes)
+
+V1 RED  (morto) fail=5 — o Passe PROGRAMADO também recebe o bónus
+V2 RED  (morto) fail=2 — bónus não multiplica por N
+V3 RED  (morto) fail=1 — a resposta anuncia 100 em vez de 100 × N
+V4 RED  (morto) fail=2 — Google: a 1.ª creditação não anuncia o bónus
+V5 RED  (morto) fail=2 — validar-compra-google deixa cair os campos do bónus
+V6 RED  (morto) fail=3 — completarPendentes credita o bónus (retroactivo)
+V7 RED  (morto) fail=1 — falha do bónus não devolve os R$
+V8 RED  (morto) fail=2 — bónus gravado com o motivo antigo (200)
+V9 RED  (morto) fail=1 — lances com valor inválido entram na apuração
+V10 VERDE (VIVO) fail=0 — participantes = nº de lances (não de endereços distintos)
+V11 VERDE (VIVO) fail=0 — falha da gravação do Blob engolida (serve um resultado não gravado)
+V12 VERDE (VIVO) fail=0 — o cron deixa de apurar (o tick nunca chama a apuração)
+V13 RED  (morto) fail=1 — erro on-chain esconde a apuração pronta
+V14 VERDE (VIVO) fail=0 — hook aceita qualquer objecto como apuração
+V15 VERDE (VIVO) fail=0 — o polling pára sem esperar pela apuração
+V16 VERDE (VIVO) fail=0 — texto visível do 400 saldo_pontos_insuficiente com o número errado
+V17 VERDE (VIVO) fail=0 — margem de fecho de 1 ms
+
+mortos 10/17 · vivos: V10, V11, V12, V14, V15, V16, V17 · md5 restaurado em todos
