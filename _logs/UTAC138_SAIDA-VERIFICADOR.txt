@@ -1,0 +1,16 @@
+páginas: 4 | bytes: 79334 | sha256: fcd26c4ed825e8197ea6bc11dad5c99f4ed3f397b46f9f5e2ce92e790e34983b
+metadata título: DesafioGUT — Regulamento Oficial v6.1
+p1 cabeçalho=['DesafioGUT — Regulamento Oficial', 'Versão 6.1'] rodapé=['Página 1 de 4']
+  última linha do corpo = 'horas, o vencedor e os 10 (dez) menores lances únicos.' | margem esq ≈ 2.49 cm | dir ≈ 2.45 cm | topo corpo ≈ 2.60 cm | base ≈ 3.42 cm | tamanhos [12.0, 15.0]
+p2 cabeçalho=['DesafioGUT — Regulamento Oficial', 'Versão 6.1'] rodapé=['Página 2 de 4']
+  última linha do corpo = 'seus saldos de ECOQUILDO e o acesso ativo ao assistente GUTO.' | margem esq ≈ 2.49 cm | dir ≈ 2.45 cm | topo corpo ≈ 2.56 cm | base ≈ 2.79 cm | tamanhos [12.0]
+p3 cabeçalho=['DesafioGUT — Regulamento Oficial', 'Versão 6.1'] rodapé=['Página 3 de 4']
+  última linha do corpo = 'produtos físicos disponibilizados pelos parceiros patrocinadores.' | margem esq ≈ 2.49 cm | dir ≈ 2.45 cm | topo corpo ≈ 2.56 cm | base ≈ 4.48 cm | tamanhos [12.0]
+p4 cabeçalho=['DesafioGUT — Regulamento Oficial', 'Versão 6.1'] rodapé=['Página 4 de 4']
+  última linha do corpo = 'respectivo registro no Cartório de Títulos e Documentos (RTD).' | margem esq ≈ 2.49 cm | dir ≈ 2.45 cm | topo corpo ≈ 2.56 cm | base ≈ 25.44 cm | tamanhos [12.0]
+fontes: {'AAAAAA+TimesNewRomanPS-BoldMT', 'BAAAAA+TimesNewRomanPSMT'}
+palavras md: 1135 | palavras pdf: 1135 | idênticas: True
+controlo positivo (jogo→iogo no PDF simulado) detetado: True
+'iogo' no PDF: False | 'jogo de azar' no PDF: True | artigos no PDF: 31 | 'R$ 0,50': True
+QR: (1200, 1200, 3) | descodificado: https://silly-stardust-ca71bc.netlify.app/regras-oficiais | == URL: True
+problemas: nenhum

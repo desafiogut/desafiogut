@@ -1,0 +1,19 @@
+M1 RED  (morto) fail=9 — bónus 100 → 0
+M2 RED  (morto) fail=4 — a cadeia deixa de creditar o bónus (Google Play)
+M3 RED  (morto) fail=1 — falha do ECOQUILDO não desfaz o bónus
+M4 RED  (morto) fail=1 — falha do bónus não desfaz o ponto de fidelidade
+M5 RED  (morto) fail=5 — lance repetido ganha
+M6 RED  (morto) fail=4 — Top 10 dos MAIORES
+M7 RED  (morto) fail=1 — apura no último ms (ainda aceita lances)
+M8 RED  (morto) fail=1 — sem margem de fecho
+M9 RED  (morto) fail=2 — não idempotente (reapura sempre)
+M10 RED  (morto) fail=2 — endereço inteiro sai (R4)
+M11 RED  (morto) fail=1 — Top 11
+M12 RED  (morto) fail=1 — o cron não espera pela margem
+M13 RED  (morto) fail=4 — o painel ignora a apuração
+M14 RED  (morto) fail=1 — o painel mostra mais de 10
+M15 RED  (morto) fail=3 — o frontend anuncia um bónus diferente do backend
+M16 RED  (morto) fail=1 — gate fica em 3.4
+M17 RED  (morto) fail=3 — o GUTO lê um bónus diferente do Regulamento
+
+mortos 17/17 · md5 restaurado em todos

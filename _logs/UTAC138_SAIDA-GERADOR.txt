@@ -1,0 +1,3 @@
+título: "REGULAMENTO OFICIAL DO APLICATIVO DESAFIOGUT (VERSÃO 6.1)" | caps: 6 | arts: 30
+site HTTP: 200 | URL final: https://silly-stardust-ca71bc.netlify.app/regras-oficiais | tem 'Versão 5.1': false | tem 'VERSÃO 6.1': false | tem 'Art. 72º': false
+OK C:/Users/Moltbot/Desktop/REGULAMENTO-DesafioGUT-v6.1.pdf C:/Users/Moltbot/Desktop/QRCODE-Regulamento-v6.1.png
