@@ -82,22 +82,16 @@ async function consolidarUmaVez(marcas, id, agoraMs) {
 }
 
 /**
- * UTAC138 — apura a especial (uma vez; o resultado gravado é servido tal qual depois). Se o tick cair
- * dentro da margem de fecho, espera por ela (≤ MARGEM_FECHO_MS, cabe nos ~30 s de uma scheduled).
- * Nunca lança.
+ * UTAC138 — apura a especial (uma vez; o resultado gravado é servido tal qual depois). Nunca lança.
+ * UTAC138-SEG4: já NÃO dorme até ao fim da margem. A margem passou a 65 s (um lance mainnet aceite no
+ * último ms ainda está no `tx.wait(1)` on-chain antes de ser gravado) e não cabe nos ~30 s de uma
+ * scheduled; dentro da margem o tick devolve «a_apurar» e um tick seguinte (1 min depois) apura.
  * @returns {Promise<string>} "apurada" | "ja_apurada" | motivo/código, para o log
  */
-async function apurarNoTick(e, agoraMs, { importar = () => import("./_lib/apuracao-especial.mjs"), dormir = (ms) => new Promise((r) => setTimeout(r, ms)) } = {}) {
+async function apurarNoTick(e, agoraMs, { importar = () => import("./_lib/apuracao-especial.mjs") } = {}) {
   try {
-    const { apurarEspecial, MARGEM_FECHO_MS } = await importar();
-    let agora = agoraMs;
-    const fim = msDe(e?.termino_em);
-    if (fim != null && agora <= fim + MARGEM_FECHO_MS) {
-      const espera = fim + MARGEM_FECHO_MS + 1 - agora;
-      await dormir(espera);
-      agora += espera;
-    }
-    const r = await apurarEspecial(e.id, { agoraMs: agora });
+    const { apurarEspecial } = await importar();
+    const r = await apurarEspecial(e.id, { agoraMs });
     if (!r.ok) return r.code;
     if (!r.pronto) return r.motivo;
     return r.criado ? "apurada" : "ja_apurada";

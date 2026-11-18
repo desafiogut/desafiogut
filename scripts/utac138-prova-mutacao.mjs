@@ -44,8 +44,9 @@ const MUTANTES = [
     t: back("utac138-apuracao-especial.test.mjs"), desc: "endereço inteiro sai (R4)" },
   { id: "M11", f: join(FN, "_lib/apuracao-especial.mjs"), de: "  const top10 = unicos.slice(0, topN).map", para: "  const top10 = unicos.slice(0, topN + 1).map",
     t: back("utac138-apuracao-especial.test.mjs"), desc: "Top 11" },
-  { id: "M12", f: join(FN, "scheduled-encerrar-especial.mjs"), de: "      await dormir(espera);", para: "      void espera;",
-    t: back("utac138-apuracao-especial.test.mjs"), desc: "o cron não espera pela margem" },
+  // UTAC138-SEG4: o cron já não dorme (margem de 65 s); o M12 passa a ser «o cron apura dentro da margem».
+  { id: "M12", f: join(FN, "scheduled-encerrar-especial.mjs"), de: "    const r = await apurarEspecial(e.id, { agoraMs });", para: "    const r = await apurarEspecial(e.id, { agoraMs: agoraMs + 120_000 });",
+    t: back("utac138-apuracao-especial.test.mjs"), desc: "o cron apura dentro da margem de fecho" },
   { id: "M13", f: join(FE, "src/components/edicao-especial/PainelVencedorEspecial.jsx"), de: "  const apurada = apuracao?.pronto === true && Array.isArray(apuracao.top10);", para: "  const apurada = false;",
     t: front("src/components/edicao-especial/__tests__/utac138-top10.test.mjs"), desc: "o painel ignora a apuração" },
   { id: "M14", f: join(FE, "src/components/edicao-especial/ResultadosEdicao.jsx"), de: "    .slice(0, 10);", para: "    .slice(0, 11);",

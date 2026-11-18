@@ -150,9 +150,9 @@ test("A3 depois da margem ⇒ apura, grava no Blob e devolve criado:true", async
 
 test("A4 idempotente: a 2.ª chamada serve o gravado SEM reler os lances (mesmo que tenham mudado)", async () => {
   estado.lances[ID] = [lance(1, 4)];
-  await M.apurarEspecial(ID, { agoraMs: FIM + 10_000 });
+  await M.apurarEspecial(ID, { agoraMs: FIM + M.MARGEM_FECHO_MS + 10_000 });
   estado.lances[ID] = [lance(9, 1)];
-  const r = await M.apurarEspecial(ID, { agoraMs: FIM + 20_000 });
+  const r = await M.apurarEspecial(ID, { agoraMs: FIM + M.MARGEM_FECHO_MS + 20_000 });
   assert.equal(r.criado, false);
   assert.equal(r.resultado.vencedor.valorCentavos, 4);
   assert.equal(estado.leiturasLances, 1);
@@ -160,16 +160,16 @@ test("A4 idempotente: a 2.ª chamada serve o gravado SEM reler os lances (mesmo 
 
 test("A5 concorrência: 10 pedidos simultâneos ⇒ todos o MESMO vencedor", async () => {
   estado.lances[ID] = [lance(1, 2), lance(2, 9)];
-  const rs = await Promise.all(Array.from({ length: 10 }, () => M.apurarEspecial(ID, { agoraMs: FIM + 10_000 })));
+  const rs = await Promise.all(Array.from({ length: 10 }, () => M.apurarEspecial(ID, { agoraMs: FIM + M.MARGEM_FECHO_MS + 10_000 })));
   assert.ok(rs.every((r) => r.ok && r.pronto && r.resultado.vencedor.valorCentavos === 2));
 });
 
 test("A6 id inválido / não-especial / inexistente / lances em baixo ⇒ erro, nada gravado", async () => {
   assert.equal((await M.apurarEspecial("ESPECIAL-RELAMPAGO-1")).code, "edicao_id_invalido", "o 2.º hífen não passa o regex");
   assert.equal((await M.apurarEspecial("R-1")).code, "edicao_id_invalido");
-  assert.equal((await M.apurarEspecial("ESPECIAL-NADA", { agoraMs: FIM + 10_000 })).code, "edicao_inexistente");
+  assert.equal((await M.apurarEspecial("ESPECIAL-NADA", { agoraMs: FIM + M.MARGEM_FECHO_MS + 10_000 })).code, "edicao_inexistente");
   estado.lancarLances = true;
-  assert.equal((await M.apurarEspecial(ID, { agoraMs: FIM + 10_000 })).code, "lances_indisponiveis");
+  assert.equal((await M.apurarEspecial(ID, { agoraMs: FIM + M.MARGEM_FECHO_MS + 10_000 })).code, "lances_indisponiveis");
   assert.equal(storeDe(M.STORE_RESULTADOS).mem.size, 0);
 });
 
@@ -180,7 +180,7 @@ const pedir = (q, method = "GET") => handler(new Request(`https://x/.netlify/fun
 }));
 
 test("E1 GET depois do fim ⇒ 200 pronto com vencedor + top10, endereços encurtados (1.º acesso apura)", async () => {
-  estado.edicoes[ID] = { ...estado.edicoes[ID], termino_em: new Date(Date.now() - 60_000).toISOString(), inicio_em: new Date(Date.now() - 3_660_000).toISOString() };
+  estado.edicoes[ID] = { ...estado.edicoes[ID], termino_em: new Date(Date.now() - 120_000).toISOString(), inicio_em: new Date(Date.now() - 3_720_000).toISOString() };
   estado.lances[ID] = [lance(1, 3), lance(2, 3), lance(3, 8, "Caio"), lance(4, 11)];
   const r = await pedir(`?edicaoId=${ID}`);
   assert.equal(r.status, 200);
@@ -205,13 +205,15 @@ test("E2 GET durante ⇒ 200 pronto:false em_curso; id inválido 400; inexistent
   assert.equal((await pedir(`?edicaoId=${ID}`, "POST")).status, 405);
 });
 
-test("C1 o cron apura no tick (antes de encerrar/consolidar) e espera pela margem quando o tick cai nela", async () => {
+// UTAC138-SEG4 — o C1 original provava que o cron DORMIA até ao fim da margem (3 s). Com a margem a 65 s
+// (lance mainnet ainda no tx.wait(1) on-chain) dormir não cabe nos ~30 s de uma scheduled: dentro da margem
+// o tick devolve «a_apurar» sem ler lances, e o tick seguinte apura.
+test("C1 o cron apura no tick (antes de encerrar/consolidar); dentro da margem não apura nem dorme", async () => {
   const { _apurarNoTick } = await import("../scheduled-encerrar-especial.mjs");
   estado.lances[ID] = [lance(1, 6)];
-  let dormiu = 0;
-  const r = await _apurarNoTick(estado.edicoes[ID], FIM + 1, { dormir: async (ms) => { dormiu = ms; } });
-  assert.equal(r, "apurada");
-  assert.equal(dormiu, M.MARGEM_FECHO_MS, "esperou até passar a margem");
-  assert.equal((await _apurarNoTick(estado.edicoes[ID], FIM + 60_000)), "ja_apurada");
+  assert.equal(await _apurarNoTick(estado.edicoes[ID], FIM + 1), "a_apurar");
+  assert.equal(estado.leiturasLances, 0, "dentro da margem não lê lances");
+  assert.equal(await _apurarNoTick(estado.edicoes[ID], FIM + M.MARGEM_FECHO_MS + 1), "apurada");
+  assert.equal((await _apurarNoTick(estado.edicoes[ID], FIM + M.MARGEM_FECHO_MS + 60_000)), "ja_apurada");
   assert.equal(estado.leiturasLances, 1);
 });

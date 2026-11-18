@@ -15,10 +15,15 @@
 // ⚠️ O vencedor AUTORITATIVO continua a ser o que a coordenação publica on-chain (`resultados(id)`,
 //    escrito pelo `consolidarEdicao`). Os dois saem da MESMA função sobre os MESMOS lances; se a
 //    leitura on-chain já tiver resultado, o frontend usa-a para o vencedor (ver useResultadoEspecial).
-// ⚠️ Privacidade (R4/L): o resultado guarda e serve o endereço ENCURTADO (0x1234…abcd), nunca inteiro,
-//    e o nome de exibição que o próprio participante escreveu no lance.
+// ⚠️ Privacidade (R4/L): o resultado guarda e serve o endereço ENCURTADO (0x1234…abcd), nunca inteiro.
+//    UTAC138-SEG4: o «nome de exibição» NÃO é escrito pelo participante — o CardLance envia o `userLabel`
+//    do AppContext (google.name || google.email || email.address || …), logo para quem entra por e-mail é
+//    o E-MAIL. Um nome com «@» não é publicado (cai para o endereço encurtado) — ver `nomePublico`.
 // ⚠️ Margem de fecho: um lance aceite no último milissegundo pode ainda estar a ser escrito. O cron só
 //    grava depois de MARGEM_FECHO_MS passados do fim; o endpoint também (antes disso responde «a apurar»).
+//    UTAC138-SEG4: em mainnet o `lance-relampago` passa a guarda da janela e SÓ DEPOIS faz
+//    `comprometerLanceOnchain` (`tx.wait(1)`, ~12 s, até ao limite da função) antes do `addLance`.
+//    Os 3 s originais deixavam de fora um lance pago e aceite — e o resultado gravado é definitivo.
 
 import { getStore } from "@netlify/blobs";
 import { getLances } from "./data-store.mjs";
@@ -27,8 +32,11 @@ import { EDICAO_ESPECIAL_RE, msDe } from "./edicao-janela.mjs";
 
 export const STORE_RESULTADOS = "edicoes-resultados";
 export const TOP_N = 10;
-/** Folga depois do fim antes de gravar o resultado (um lance do último ms pode estar a meio). */
-export const MARGEM_FECHO_MS = 3_000;
+/** Folga depois do fim antes de gravar o resultado (um lance do último ms pode estar a meio).
+ *  UTAC138-SEG4: era 3 s. Tem de ser ≥ à duração MÁXIMA de um pedido ao `lance-relampago` (a guarda da
+ *  janela corre no início; a escrita do Key-Per-Bid vem depois do `tx.wait(1)` on-chain): o limite de
+ *  execução de uma função síncrona da Netlify (≤ 60 s) + 5 s de folga para desvio de relógio. */
+export const MARGEM_FECHO_MS = 65_000;
 /** Quanto tempo o painel de resultados se mostra depois do fim (o frontend usa a mesma regra). */
 export const JANELA_RESULTADO_MS = 24 * 60 * 60 * 1000;
 
@@ -40,6 +48,14 @@ export function encurtarEndereco(e) {
 }
 
 const valorValido = (v) => Number.isSafeInteger(v) && v >= 1;
+
+/** UTAC138-SEG4 — nome publicável no Top 10 público: texto aparado (≤ 80) e SEM «@» (um e-mail é dado
+ *  pessoal — LGPD — e é o que o frontend envia como nomeExibicao a quem entra por e-mail). */
+const nomePublico = (n) => {
+  if (typeof n !== "string") return null;
+  const t = n.trim().slice(0, 80);
+  return t && !t.includes("@") ? t : null;
+};
 
 /**
  * PURO. Vencedor + Top N dos menores lances ÚNICOS + métricas, a partir da lista de lances.
@@ -59,7 +75,7 @@ export function calcularResultado(lances, topN = TOP_N) {
   const top10 = unicos.slice(0, topN).map((l, i) => ({
     posicao: i + 1,
     endereco: encurtarEndereco(l.endereco),
-    nome: typeof l.nomeExibicao === "string" && l.nomeExibicao.trim() ? l.nomeExibicao.trim().slice(0, 80) : null,
+    nome: nomePublico(l.nomeExibicao),
     valorCentavos: l.valorCentavos,
   }));
   return {
