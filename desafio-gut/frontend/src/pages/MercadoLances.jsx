@@ -437,7 +437,10 @@ export default function MercadoLances() {
             {/* MC67 (item 8) — card "Segurança e Transparência" movido para Configurações. */}
           </section>
           <section data-testid="tabela-fim">
-            <TabelaLances lances={lances} idEdicao={EDICAO_ATIVA} prazoTimestamp={prazoTimestamp} encerrado={encerrado} />
+            {/* UTAC138 — com a especial no ecrã a tabela é a DELA (dizia «Edição R-1» por baixo da especial). Os
+                `lances` do contexto são os da R-1, por isso não se mostram aqui; em mainnet os valores ficam blindados
+                durante a edição (anti-bot MC28.1) e o resultado + Top 10 da especial vivem no cartão dela. */}
+            <TabelaLances lances={edicaoEspecial ? [] : lances} idEdicao={edicaoDoEcra} prazoTimestamp={prazoTimestamp} encerrado={encerrado} />
           </section>
         </main>
 

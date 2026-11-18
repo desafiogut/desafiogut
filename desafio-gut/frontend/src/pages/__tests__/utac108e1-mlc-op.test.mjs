@@ -283,6 +283,9 @@ describe("UTAC138 · a especial no Menor Lance Único (cartão padrão)", () => 
     assert.doesNotMatch(html, /SEM EDIÇÃO/, "o cartão vazio ficou ao lado da especial");
     assert.doesNotMatch(html, /data-stub="card-lance"/, "formulário antes da hora");
     assert.equal((html.match(/data-testid="cartao-edicao"/g) || []).length, 1, "um só cartão de edição no ecrã");
+    // a tabela no fim é a da especial (dizia «Edição R-1» por baixo dela) e não lista os lances da R-1
+    assert.match(texto(html), /Lances — Edição ESPECIAL-RELAMPAGO1/);
+    assert.doesNotMatch(texto(html), /Edição R-1/);
   });
 
   test("aberta (em `edicoes`): o formulário é o da ESPECIAL (flash), dentro do cartão padrão", () => {
