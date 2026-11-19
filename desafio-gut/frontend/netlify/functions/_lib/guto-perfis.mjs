@@ -263,7 +263,8 @@ export const BOAS_VINDAS_PADRAO =
 
 /** UTAC140b — preenche {produto}/{apuracao}; aspas duplas viram simples (o texto vai entre aspas no prompt). */
 export function fraseBoasVindas(modelo, produto, quando) {
-  const base = typeof modelo === "string" && modelo.trim() ? modelo.trim().slice(0, 600) : BOAS_VINDAS_PADRAO;
+  // UTAC140-SEG4 — quebras de linha/espaços colapsados: o texto vem do Blob e não pode abrir linhas novas no prompt.
+  const base = typeof modelo === "string" && modelo.trim() ? modelo.replace(/\s+/g, " ").trim().slice(0, 600) : BOAS_VINDAS_PADRAO;
   return base.replaceAll("{produto}", () => produto).replaceAll("{apuracao}", () => quando).replaceAll('"', "'");
 }
 
@@ -271,10 +272,25 @@ export function fraseBoasVindas(modelo, produto, quando) {
  * Bloco do system prompt com a edição especial ABERTA. "" quando não há especial a anunciar.
  * @param {{id:string, produto?:string|null, termino_em:string}|null} especial
  */
-export function blocoEdicaoEspecial(especial) {
+export function blocoEdicaoEspecial(especial, agoraMs = Date.now()) {
   if (!especial || typeof especial.id !== "string") return "";
   const quando = quandoApuracao(especial.termino_em);
   if (!quando) return "";
+  // UTAC140-SEG4 — `especialParaGuto` também devolve a especial POR ABRIR (agendada). Sem isto o GUTO dizia
+  // «Estamos na Edição Especial… Dê o seu menor lance» com os lances ainda fechados (o lance dava 409).
+  const inicioMs = Date.parse(especial.inicio_em ?? "");
+  if (Number.isFinite(inicioMs) && agoraMs < inicioMs) {
+    const abre = quandoApuracao(especial.inicio_em);
+    const produtoA = typeof especial.produto === "string" && especial.produto.trim()
+      ? especial.produto.trim() : PRODUTO_ESPECIAL_PADRAO;
+    return `
+
+EDIÇÃO ESPECIAL ANUNCIADA — OFERTA RELÂMPAGO (dados da edição ${especial.id}; não inventes outros):
+- Produto em disputa: ${produtoA}.
+- Abertura dos lances: ${abre} (horário de Brasília). ANTES disso os lances estão FECHADOS: não digas que a edição já está aberta nem convides a dar lance agora.
+- Apuração do vencedor: ${quando} (horário de Brasília).
+SIGILO (obrigatório): nunca reveles, adivinhes nem confirmes valores de lances antes da apuração.`;
+  }
   const produto = typeof especial.produto === "string" && especial.produto.trim()
     ? especial.produto.trim() : PRODUTO_ESPECIAL_PADRAO;
   return `

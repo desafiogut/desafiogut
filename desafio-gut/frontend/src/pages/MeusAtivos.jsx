@@ -21,7 +21,7 @@ import FeedbackLance from "../components/meus-ativos/FeedbackLance.jsx";
 import RankingCiclo from "../components/meus-ativos/RankingCiclo.jsx";
 import MeusPedidos from "../components/meus-ativos/MeusPedidos.jsx"; // MC-ECOMMERCE-01a
 import Top10EspecialPasse from "../components/meus-ativos/Top10EspecialPasse.jsx"; // UTAC140 (Frente D)
-import { escolherEspecial } from "../components/edicao-especial/_estilo-especial.js"; // UTAC140b
+import { escolherEspecialTop10 } from "../components/meus-ativos/_top10-passe.js"; // UTAC140b · UTAC140-SEG4: a última ENCERRADA (era escolherEspecial)
 import { caixa, tituloSecao, legenda, COR as COR_SECAO } from "../components/meus-ativos/_estilo.js"; // UTAC105c · UTAC107g (COR.senhas)
 
 // ⚠️ Espelha `REGRAS.ACERTOS_PARA_BONUS` de
@@ -111,9 +111,11 @@ export default function MeusAtivos() {
     saldoSenhas, saldoSenhasStatus, // UTAC107g (Frente B) — a casa das senhas antigas (Via A)
     edicoes, agendadas, offsetRelogioMs, // UTAC140b — a especial sai das edições gravadas (sem id fixo)
   } = useAppContext();
+  // UTAC140-SEG4 — a última especial ENCERRADA (era a regra do Início, que prefere a que ainda não acabou: com a
+  // seguinte já agendada, a tabela da que acabou sumia dentro das 24 h). Texto anterior do UTAC140b:
   // UTAC140b — a MESMA regra do Início e do Menor Lance Único: a especial que ainda não acabou; senão a última, até
   // 24 h depois do fim. É a janela em que a tabela completa existe; o servidor decide o resto (Passe/janela da edição).
-  const especialTop10 = escolherEspecial(
+  const especialTop10 = escolherEspecialTop10(
     edicoes, agendadas, Date.now() + (Number.isFinite(offsetRelogioMs) ? offsetRelogioMs : 0),
   );
   const [filtro, setFiltro] = useState("todos");

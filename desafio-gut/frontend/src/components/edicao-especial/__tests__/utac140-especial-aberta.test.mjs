@@ -118,3 +118,33 @@ describe("UTAC140 · guarda de vocabulário", () => {
     }
   });
 });
+
+// UTAC140-SEG4 (validador) — Meus Ativos pede o Top 10 da ÚLTIMA especial ENCERRADA, mesmo com a seguinte já agendada.
+describe("UTAC140-SEG4 · escolherEspecialTop10", () => {
+  test("a seguinte agendada não esconde a tabela da que acabou; em curso/fora da retenção ⇒ null", async () => {
+    const { escolherEspecialTop10 } = await import("../../meus-ativos/_top10-passe.js");
+    const H = 3_600_000;
+    const agora = Date.parse("2026-12-01T00:00:00.000Z");
+    const iso = (ms) => new Date(ms).toISOString();
+    const acabou = { id: "ESPECIAL-RELAMPAGO1", inicio_em: iso(agora - 3 * H), termino_em: iso(agora - 1 * H), status: "aberto" };
+    const seguinte = { id: "ESPECIAL-RELAMPAGO2", inicio_em: iso(agora + 48 * H), termino_em: iso(agora + 49 * H), status: "agendado" };
+    assert.equal(escolherEspecialTop10({ [acabou.id]: acabou }, { [seguinte.id]: seguinte }, agora)?.id, "ESPECIAL-RELAMPAGO1");
+    // A regra do Início (escolherEspecial) escolhe a seguinte — é por isso que Meus Ativos não a pode usar.
+    const { escolherEspecial } = await import("../_estilo-especial.js");
+    assert.equal(escolherEspecial({ [acabou.id]: acabou }, { [seguinte.id]: seguinte }, agora)?.id, "ESPECIAL-RELAMPAGO2");
+    // Duas encerradas ⇒ a mais recente.
+    const antiga = { ...acabou, id: "ESPECIAL-ANTIGA", inicio_em: iso(agora - 10 * H), termino_em: iso(agora - 9 * H) };
+    assert.equal(escolherEspecialTop10({ [antiga.id]: antiga, [acabou.id]: acabou }, {}, agora)?.id, "ESPECIAL-RELAMPAGO1");
+    // Em curso ⇒ nada (ainda não há Top 10); passada a retenção de 24 h ⇒ nada; não-especial ⇒ nada.
+    const emCurso = { ...acabou, termino_em: iso(agora + H) };
+    assert.equal(escolherEspecialTop10({ [emCurso.id]: emCurso }, {}, agora), null);
+    assert.equal(escolherEspecialTop10({ [acabou.id]: acabou }, {}, agora + 24 * H), null);
+    assert.equal(escolherEspecialTop10({ "R-1": { ...acabou, id: "R-1" } }, {}, agora), null);
+    assert.equal(escolherEspecialTop10(null, undefined, agora), null);
+  });
+  test("Meus Ativos usa escolherEspecialTop10 (não a regra do Início)", () => {
+    const s = readFileSync(new URL("../../../../src/pages/MeusAtivos.jsx", import.meta.url), "utf8").replace(/\/\/.*$/gm, "");
+    assert.match(s, /escolherEspecialTop10\(/);
+    assert.equal(/\bescolherEspecial\(/.test(s), false);
+  });
+});

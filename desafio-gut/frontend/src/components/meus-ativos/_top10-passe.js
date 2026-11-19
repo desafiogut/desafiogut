@@ -12,3 +12,21 @@ export function decidirTop10Passe(resp) {
   return { top10: d.top10, vencedor: d.vencedor ?? null, produto: typeof d.produto === "string" ? d.produto : null };
 }
 
+
+// UTAC140-SEG4 (validador) — a especial cujo Top 10 completo Meus Ativos pede. NÃO é a do `escolherEspecial`
+// (essa prefere a que ainda não acabou): com a seguinte já gravada (agendada), a regra do Início trocava para ela
+// e a tabela da que acabou desaparecia dentro da janela de 24 h. Aqui: a ENCERRADA mais recente ainda retida.
+import { ehEspecial, estadoEspecial, dentroDaRetencao, ESTADO_ESPECIAL } from "../edicao-especial/_estilo-especial.js";
+
+/** PURO — a última especial encerrada dentro da retenção, ou null. */
+export function escolherEspecialTop10(edicoes, agendadas, agoraMs) {
+  const porId = new Map();
+  for (const mapa of [edicoes, agendadas]) {
+    for (const e of Object.values(mapa || {})) {
+      if (e && ehEspecial(e.id) && estadoEspecial(e, agoraMs) === ESTADO_ESPECIAL.ENCERRADA
+          && dentroDaRetencao(e, agoraMs)) porId.set(e.id, e);
+    }
+  }
+  const fim = (e) => { const ms = Date.parse(e.termino_em); return Number.isFinite(ms) ? ms : -Infinity; };
+  return [...porId.values()].sort((a, b) => fim(b) - fim(a))[0] ?? null;
+}

@@ -73,7 +73,7 @@ export async function especialParaGuto({ listar = listarEdicoes, ler = buscarEdi
   if (!escolherEspecialAtual([meta], agoraMs)) return null; // a crua pode dizer «encerrado»
   const produto = typeof meta.produto === "string" && meta.produto.trim() ? meta.produto.trim() : null;
   if (!produto) console.warn("[chatbot] UTAC140: edição especial sem nome de produto — a usar o padrão");
-  return { id: meta.id, produto, termino_em: meta.termino_em, boasVindas: configDaEspecial(meta).guto.boasVindas };
+  return { id: meta.id, produto, inicio_em: meta.inicio_em ?? null, termino_em: meta.termino_em, boasVindas: configDaEspecial(meta).guto.boasVindas }; // inicio_em: UTAC140-SEG4
 }
 
 /**
