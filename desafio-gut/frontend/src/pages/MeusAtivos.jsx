@@ -20,6 +20,8 @@ import { PROPORCOES } from "../lib/pontosLance.js";
 import FeedbackLance from "../components/meus-ativos/FeedbackLance.jsx";
 import RankingCiclo from "../components/meus-ativos/RankingCiclo.jsx";
 import MeusPedidos from "../components/meus-ativos/MeusPedidos.jsx"; // MC-ECOMMERCE-01a
+import Top10EspecialPasse from "../components/meus-ativos/Top10EspecialPasse.jsx"; // UTAC140 (Frente D)
+import { escolherEspecial } from "../components/edicao-especial/_estilo-especial.js"; // UTAC140b
 import { caixa, tituloSecao, legenda, COR as COR_SECAO } from "../components/meus-ativos/_estilo.js"; // UTAC105c · UTAC107g (COR.senhas)
 
 // ⚠️ Espelha `REGRAS.ACERTOS_PARA_BONUS` de
@@ -107,7 +109,13 @@ export default function MeusAtivos() {
   const {
     lances, address, isConnected, abrirModal, EDICAO_ATIVA, authToken,
     saldoSenhas, saldoSenhasStatus, // UTAC107g (Frente B) — a casa das senhas antigas (Via A)
+    edicoes, agendadas, offsetRelogioMs, // UTAC140b — a especial sai das edições gravadas (sem id fixo)
   } = useAppContext();
+  // UTAC140b — a MESMA regra do Início e do Menor Lance Único: a especial que ainda não acabou; senão a última, até
+  // 24 h depois do fim. É a janela em que a tabela completa existe; o servidor decide o resto (Passe/janela da edição).
+  const especialTop10 = escolherEspecial(
+    edicoes, agendadas, Date.now() + (Number.isFinite(offsetRelogioMs) ? offsetRelogioMs : 0),
+  );
   const [filtro, setFiltro] = useState("todos");
   const t = useT();
 
@@ -281,6 +289,12 @@ export default function MeusAtivos() {
           t={t}
         />
       </div>
+
+      {/* UTAC140 (Frente D) — Top 10 completo da especial: só com Passe e até 24 h depois da apuração (o
+          servidor decide; sem acesso o componente não desenha nada). */}
+      {especialTop10 && (
+        <Top10EspecialPasse edicaoId={especialTop10.id} temSessao={temSessao} authToken={authToken} isMobile={isMobile} t={t} estilo={{ marginBottom: sectionGap }} />
+      )}
 
       {/* MC-ECOMMERCE-01a — pedidos de entrega (endereço, envio, nota fiscal). */}
       <div style={{ marginBottom: sectionGap }}>

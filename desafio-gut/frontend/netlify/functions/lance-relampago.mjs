@@ -38,6 +38,8 @@ import * as LEDGER_LANCE from "./_lib/ledger-lance.mjs";
 import { creditarMissaoLance, PONTOS_MISSAO_LANCE } from "./_lib/fontes-lance.mjs"; // UTAC110f — missão «1 lance do dia»
 import { respostaPreflight } from "./_lib/cors.mjs";
 import { mascararEndereco } from "./_lib/validate.mjs"; // UTAC110h.4 (DEBT-031)
+import { registarNoRankingEspecial } from "./_lib/ranking-especial.mjs"; // UTAC140 — ranking ao vivo da especial
+import { configDaEspecial } from "./_lib/especial-config.mjs"; // UTAC140b — `rankingAoVivo` vem da edição
 
 const LANCE_MIN_CENTAVOS = 1;
 const LANCE_MAX_CENTAVOS = 999999;
@@ -365,6 +367,18 @@ export default async (req) => {
     }
   }
 
+  // ── 7a'. UTAC140 (Frente B) — ranking AO VIVO da especial (Supabase Realtime) ─────────────────
+  // Depois de o lance existir (os dois ramos acima já devolveram em caso de falha). Vai a POSIÇÃO de
+  // chegada e o endereço encurtado — NUNCA o valor (R18-140-B/C). FAIL-SOFT: o ranking é uma vista; uma
+  // falha aqui não desfaz nem recusa um lance pago (a fonte é o Key-Per-Bid).
+  let posicaoRanking = null;
+  // UTAC140b — ligável por edição (`rankingAoVivo` no Blob `edicoes-metadata`; omissão: ligado).
+  if (EDICAO_ESPECIAL_RE.test(edicaoId) && configDaEspecial(meta).rankingAoVivo) {
+    const r = await registarNoRankingEspecial({ lanceId, edicaoId, endereco }).catch(() => ({ ok: false }));
+    if (r.ok) posicaoRanking = r.posicao;
+    else console.warn("[lance-relampago] ranking especial falhou (não-fatal):", r.code);
+  }
+
   // ── 7b. UTAC110f — missão «Completar 1 lance» (+10 pontos de lance, 1× por dia de Manaus) ─────
   // Creditada AQUI, pelo servidor, depois de o lance existir — não há endpoint público que a reclame
   // (decisão do operador no SEG-1). Só o MLC (relâmpago): o programado não conta. FAIL-SOFT: uma falha
@@ -409,6 +423,7 @@ export default async (req) => {
   return jsonResponse({
     ok: true,
     lanceId, edicaoId, endereco, valorCentavos, nomeExibicao,
+    posicaoRanking, // UTAC140 — ordem de chegada na especial (null fora dela ou se o ranking falhou)
     modo: registro.modo,
     senhaConsumida: !!registro.senhaConsumida,
     saldoRsAntesCentavos:  debito.resultado.saldoAntesCentavos ?? null,

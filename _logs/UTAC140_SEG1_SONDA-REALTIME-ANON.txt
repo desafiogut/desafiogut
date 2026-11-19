@@ -1,0 +1,10 @@
+ESTADO SUBSCRIBED
+EVENTO INSERT {"new":{},"old":{}}
+EVENTO INSERT {"new":{},"old":{}}
+EVENTO UPDATE {"new":{},"old":{}}
+EVENTO UPDATE {"new":{},"old":{}}
+SELECT * "permission denied for table ranking_especial"
+SELECT cols [{"posicao":1,"endereco":"0x1234…abcd"},{"posicao":2,"endereco":"0x5678…ef01"}]
+RPC [{"posicao":1,"endereco":"0x1234…abcd","valor_oculto":null,"criado_em":"2026-11-19T23:10:55.802069+00:00"},{"posicao":2,"endereco":"0x5678…ef01","valor_oculto":null,"criado_em":"2026-11-19T23:10:55.802069+00:00"}]
+RPC registar (anon) "permission denied for function registar_lance_especial"
+TOTAL_EVENTOS 4 COM_VALOR 0

@@ -115,6 +115,10 @@ export default function CardEdicaoEspecial({
   // Sem hora do servidor não se mostra contagem («…»): o relógio do aparelho pode estar adiantado (achado do MC94.2).
   let tempo = null;
   if (estado !== ESTADO_ESPECIAL.ENCERRADA) tempo = semRelogio ? "…" : formatarContagem(restanteMs);
+  // UTAC140 (Frente A) — com a edição ABERTA o cronómetro conta para a APURAÇÃO (`termino_em`, R18-140-A: 20:00 BRT).
+  if (estado === ESTADO_ESPECIAL.ACTIVA && !semRelogio) {
+    tempo = `${t("edicao.especial.apuracaoEm", "A apuração será em:")} ${formatarContagem(restanteMs)}`;
+  }
 
   // ── Por baixo da arte: a ACÇÃO da edição (o lance, só com a edição aberta) ou o resultado ──
   let abaixo = null;

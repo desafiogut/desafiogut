@@ -1,0 +1,43 @@
+schema: utac/1
+name: UTAC140
+title: "Abertura imediata da ESPECIAL-RELAMPAGO1, ranking oculto em tempo real, GUTO de boas-vindas e Top 10 restrito a Passe"
+type: produto
+baseline: 27724ed
+motivo: >-
+  O operador antecipa a abertura dos lances da especial para hoje (2026-11-19), com os valores
+  ocultos até à apuração, cronómetro para a apuração, GUTO a explicar a edição e o Top 10 com
+  valores só para quem tem Passe, durante 24 h depois da apuração.
+frentes:
+  - id: A
+    nome: Abertura imediata + cronómetro de apuração
+    entrega: [Blob edicoes-metadata (status/inicio_em), ContagemDecrescente / CartaoEdicao]
+  - id: B
+    nome: ranking_especial (Supabase, RLS, Realtime, get_ranking_especial)
+    entrega: [migração SQL, escrita no lance-relampago]
+  - id: C
+    nome: GUTO — boas-vindas + FAQ com o nome do produto lido da edição
+    entrega: [_lib/guto-perfis.mjs]
+  - id: D
+    nome: Top 10 restrito a portadores de Passe (24 h) — sobre a apuração que já existe (operador)
+    entrega: [resultado-edicao / apuracao-especial, MeusAtivos.jsx]
+  - id: E
+    nome: Tabela oculta em tempo real no Menor Lance Único + guarda de vocabulário
+    entrega: [MercadoLances.jsx, teste «leilão» não introduzido]
+autoriza:
+  - editar netlify/functions/, src/, Supabase (tabelas, RLS, RPC, Realtime)
+  - alterar o Blob edicoes-metadata da ESPECIAL-RELAMPAGO1
+  - atualizar _lib/guto-perfis.mjs
+proibe:
+  - git add -A
+  - alterar o Regulamento v6.1
+  - alterar o bónus +100 do Passe Relâmpago
+  - GUTO revelar valores antes da apuração
+  - valor_oculto em payloads de Realtime antes da apuração
+dependencias:
+  - UTAC138 (apuração + Top 10 + Blob edicoes-resultados) e UTAC139 (AAB v12) fechados
+regras_activas: [E, T, G, L, S, A, P, AU, ST, HI]
+stop_conditions_extra: [ST3]
+ressalvas:
+  - HI5 — 2 h no máximo
+  - A14 — RAM ≥ 1 500 MB antes do build
+  - falha a ler o produto ⇒ «Air Fryer» e reportar

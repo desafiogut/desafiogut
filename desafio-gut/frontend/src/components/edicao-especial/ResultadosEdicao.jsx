@@ -18,7 +18,9 @@ import { COR, T_PADRAO, reais, inteiroSeguro } from "./_estilo-especial.js";
  */
 export default function ResultadosEdicao({ top10, isMobile = false, t = T_PADRAO }) {
   const linhas = (Array.isArray(top10) ? top10 : [])
-    .filter((l) => l && inteiroSeguro(l.valorCentavos) !== null && inteiroSeguro(l.posicao) !== null)
+    // UTAC140 (Frente D) — no ramo público o valor vem restrito (null): a linha mostra-se com «****».
+    // A tabela com valores é de quem tem Passe (Meus Ativos, `resultado-edicao?acao=completo`).
+    .filter((l) => l && inteiroSeguro(l.posicao) !== null)
     .slice(0, 10);
   if (linhas.length === 0) return null;
 
@@ -49,7 +51,7 @@ export default function ResultadosEdicao({ top10, isMobile = false, t = T_PADRAO
             <span style={{ flex: 1, minWidth: 0, color: COR.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {l.nome || l.endereco || "—"}
             </span>
-            <strong style={{ color: COR.text, fontVariantNumeric: "tabular-nums" }}>{reais(l.valorCentavos)}</strong>
+            <strong data-valor={inteiroSeguro(l.valorCentavos) !== null ? "visivel" : "oculto"} style={{ color: COR.text, fontVariantNumeric: "tabular-nums" }}>{inteiroSeguro(l.valorCentavos) !== null ? reais(l.valorCentavos) : "****"}</strong>
           </li>
         ))}
       </ol>

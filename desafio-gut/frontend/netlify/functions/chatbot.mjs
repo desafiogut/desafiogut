@@ -46,6 +46,50 @@ import { registrarDecisao, buscarDecisaoSemelhante } from "./_lib/log-operaciona
 // MC17.1 — saldo de senhas de troco do lojista + resumo para o admin.
 import { lerTroco, resumoTrocoAdmin } from "./_lib/troco-senhas.mjs";
 import { respostaPreflight } from "./_lib/cors.mjs";
+import { buscarEdicao } from "./_lib/edicoes-core.mjs"; // UTAC140 — produto/hora da especial para o GUTO (listarEdicoes já vem do import acima)
+import { configDaEspecial, escolherEspecialAtual } from "./_lib/especial-config.mjs"; // UTAC140b
+import { EDICAO_ESPECIAL_RE, msDe } from "./_lib/edicao-janela.mjs"; // UTAC140
+
+// ── UTAC140 (Frente C) — a edição especial que o GUTO anuncia, lida das edições gravadas ─────────────────
+// UTAC140b — SEM id fixo: é a ESPECIAL-* em curso (ou por abrir) que termina primeiro, entre as edições do Blob
+// `edicoes-metadata`. A frase de boas-vindas pode vir da própria edição (`guto.boasVindas`, com {produto} e
+// {apuracao}); sem ela, a do UTAC140.
+/**
+ * Falha a ler ⇒ sem bloco (o GUTO responde sem a especial) e um aviso no log — nunca inventa a hora.
+ * Sem nome de produto ⇒ `produto: null` (o prompt usa «Air Fryer», PRODUTO_ESPECIAL_PADRAO).
+ * @returns {Promise<{id:string, produto:string|null, termino_em:string, boasVindas:string|null}|null>}
+ */
+export async function especialParaGuto({ listar = listarEdicoes, ler = buscarEdicao, agoraMs = Date.now() } = {}) {
+  let meta = null;
+  try {
+    const { edicoes = {}, agendadas = {} } = (await listar(agoraMs)) || {};
+    const escolhida = escolherEspecialAtual([...Object.values(edicoes), ...Object.values(agendadas)], agoraMs);
+    if (!escolhida) return null;
+    meta = (await ler(escolhida.id)) ?? escolhida; // a crua traz `guto`; a resumida chega para o resto
+  } catch (err) {
+    console.warn("[chatbot] UTAC140: ler a edição especial falhou — sem bloco da especial:", err?.message);
+    return null;
+  }
+  if (!escolherEspecialAtual([meta], agoraMs)) return null; // a crua pode dizer «encerrado»
+  const produto = typeof meta.produto === "string" && meta.produto.trim() ? meta.produto.trim() : null;
+  if (!produto) console.warn("[chatbot] UTAC140: edição especial sem nome de produto — a usar o padrão");
+  return { id: meta.id, produto, termino_em: meta.termino_em, boasVindas: configDaEspecial(meta).guto.boasVindas };
+}
+
+/**
+ * UTAC140 — «Não permite que o GUTO revele os valores antes da apuração»: as intents que calculam sobre os
+ * valores (simulação do vencedor, pulso com o menor lance) recusam uma edição ESPECIAL-* que ainda não
+ * terminou — para TODOS os perfis. Sem metadata legível ⇒ também recusa (fail-closed).
+ */
+export async function especialAindaSecreta(edicaoId, { ler = buscarEdicao, agoraMs = Date.now() } = {}) {
+  if (typeof edicaoId !== "string" || !EDICAO_ESPECIAL_RE.test(edicaoId)) return false;
+  let meta = null;
+  try { meta = await ler(edicaoId); } catch { return true; }
+  const fim = msDe(meta?.termino_em);
+  return fim == null || agoraMs <= fim;
+}
+const RESPOSTA_SIGILO_ESPECIAL = (id) =>
+  `Os valores da edição ${id} são secretos até a apuração — nem eu os posso ver ou estimar antes disso.`;
 
 // ⭐ UTAC110c-1 — as constantes do Blob do índice RAG (`STORE_NAME` e `TOP_K`) SAÍRAM com o RAG:
 // já não há índice nem top-K de excertos. O que o GUTO lê sobre regras é o Regulamento inteiro,
@@ -1044,6 +1088,9 @@ const INTENT_HANDLERS = {
     gate: ehCorpOuAdmin,
     run: async ({ perfil, pergunta }) => {
       const edicaoId = extrairEdicaoId(pergunta) || "R-1";
+      if (await especialAindaSecreta(edicaoId)) { // UTAC140 — sigilo da especial
+        return intentResp(perfil, "simular_vencedor", { resposta: RESPOSTA_SIGILO_ESPECIAL(edicaoId), modoResposta: "acao" });
+      }
       const sim = await simularVencedorMenorLance(edicaoId);
       return intentResp(perfil, "simular_vencedor", {
         resposta: obterResposta("simular_vencedor", perfil, {
@@ -1118,6 +1165,9 @@ const INTENT_HANDLERS = {
     gate: ehCorpOuAdmin,
     run: async ({ perfil, pergunta }) => {
       const edicaoId = extrairEdicaoId(pergunta) || "R-1";
+      if (await especialAindaSecreta(edicaoId)) { // UTAC140 — sigilo da especial
+        return intentResp(perfil, "pulso_edicao", { resposta: RESPOSTA_SIGILO_ESPECIAL(edicaoId), modoResposta: "acao" });
+      }
       const m = await obterMetricasPulso(edicaoId);
       return intentResp(perfil, "pulso_edicao", {
         resposta: obterResposta("pulso_edicao", perfil, {
@@ -1473,7 +1523,11 @@ export default async (req) => {
     // MC96.1 — o histórico vem do cliente e é normalizado em `montarHistorico` (dentro de
     // `chamarLLM`). Campo OPCIONAL: sem ele o comportamento é o de antes.
     resposta = await chamarLLM(pergunta, "", {
-      systemPrompt: obterPromptSystem(perfil, { conformidade: modoConformidade }),
+      // UTAC140 — + a edição especial aberta (produto e hora lidos da edição; fail-soft ⇒ sem bloco).
+      systemPrompt: obterPromptSystem(perfil, {
+        conformidade: modoConformidade,
+        especial: await especialParaGuto().catch(() => null),
+      }),
       historico: body.historico,
     });
   } catch (err) {

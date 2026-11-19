@@ -29,6 +29,7 @@ import { getStore } from "@netlify/blobs";
 import { getLances } from "./data-store.mjs";
 import { buscarEdicao } from "./edicoes-core.mjs";
 import { EDICAO_ESPECIAL_RE, msDe } from "./edicao-janela.mjs";
+import { revelarRankingEspecial } from "./ranking-especial.mjs"; // UTAC140 — revela os valores do ranking ao vivo
 
 export const STORE_RESULTADOS = "edicoes-resultados";
 export const TOP_N = 10;
@@ -107,6 +108,7 @@ function abrirStore() {
  */
 export async function apurarEspecial(edicaoId, {
   agoraMs = Date.now(), store, lerEdicao = buscarEdicao, lerLances = getLances,
+  revelar = revelarRankingEspecial, // UTAC140
 } = {}) {
   if (typeof edicaoId !== "string" || !EDICAO_ESPECIAL_RE.test(edicaoId)) return { ok: false, code: "edicao_id_invalido" };
   const s = store === undefined ? abrirStore() : store;
@@ -144,5 +146,11 @@ export async function apurarEspecial(edicaoId, {
     fonte: "off-chain (Key-Per-Bid)",
   };
   try { await s.setJSON(edicaoId, resultado); } catch { return { ok: false, code: "gravacao_falhou" }; }
+  // UTAC140 (Frente B) — só AGORA (depois do fim + margem de fecho, resultado gravado) os valores entram no
+  // ranking ao vivo (`ranking_especial.valor_oculto`). FAIL-SOFT: o resultado já está gravado e é a fonte.
+  try {
+    const rev = await revelar(edicaoId, lances);
+    if (!rev?.ok) console.warn("[apuracao-especial] revelar ranking falhou (não-fatal):", rev?.code);
+  } catch (err) { console.warn("[apuracao-especial] revelar ranking falhou (não-fatal):", err?.message); }
   return { ok: true, pronto: true, resultado, criado: true };
 }

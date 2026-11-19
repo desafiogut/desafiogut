@@ -273,7 +273,8 @@ describe("MC94.2 · CardEdicaoEspecial — os quatro estados no ecrã", () => {
     assert.match(html, /data-estado="activa"/);
     assert.match(html, /FORMULARIO-DE-LANCE/);
     assert.deepEqual(lanceChamado.at(-1), { idEdicao: "ESPECIAL-AIRFRYER", modalidade: "flash", encerrado: false });
-    assert.match(html, /data-testid="cartao-tempo"[^>]*>00:29:00</, "conta até às 20:30"); // UTAC138 — era /29 min/
+    // UTAC140 (Frente A) — com a edição aberta o tempo diz que conta para a APURAÇÃO. Era: />00:29:00</ (UTAC138; antes /29 min/).
+    assert.match(html, /data-testid="cartao-tempo"[^>]*>A apuração será em: 00:29:00</, "conta até às 20:30");
   });
   test("encerrada: painel do vencedor, sem formulário nem cronómetro", () => {
     const html = render(Card, props(TERMINO + 1, {

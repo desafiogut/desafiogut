@@ -239,13 +239,68 @@ Descreve SÓ o que o Regulamento diz: não acrescentes produtos, créditos ou pr
 ÂNCORAS DE CITAÇÃO (índice curto; o que MANDA é o texto do Regulamento no fim):
 ${Object.entries(ARTIGOS_V4).map(([n, t]) => `- ${rotuloArtigo(n)} — ${t}`).join("\n")}`;
 
-export function obterPromptSystem(perfil, { conformidade = false } = {}) {
+// ── UTAC140 (Frente C) — protocolo de boas-vindas da EDIÇÃO ESPECIAL ────────────────────────────────
+// O nome do PRODUTO e a hora da apuração vêm da edição gravada (Blob `edicoes-metadata`, lido no
+// `chatbot.mjs`), nunca inventados. Falha a ler o produto ⇒ «Air Fryer» (ordem do enunciado), declarado.
+// ⚠️ A frase de boas-vindas do enunciado terminava em «Boa sorte!»; a REGRA_LINGUAGEM proíbe «sorte»
+//    (glossário oficial) — trocado por «Bons lances!» (desvio declarado no relatório do UTAC140).
+export const PRODUTO_ESPECIAL_PADRAO = "Air Fryer";
+
+/** «30/11 às 20h» no horário de Brasília, a partir do ISO do `termino_em`. Ilegível ⇒ null. */
+export function quandoApuracao(terminoIso) {
+  const ms = Date.parse(terminoIso ?? "");
+  if (!Number.isFinite(ms)) return null;
+  const partes = Object.fromEntries(new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+  }).formatToParts(new Date(ms)).map((x) => [x.type, x.value]));
+  const hora = partes.minute === "00" ? `${Number(partes.hour)}h` : `${Number(partes.hour)}h${partes.minute}`;
+  return `${partes.day}/${partes.month} às ${hora}`;
+}
+
+/** Texto por omissão do UTAC140 (com {produto} e {apuracao}); a edição pode trazer o seu (`guto.boasVindas`). */
+export const BOAS_VINDAS_PADRAO =
+  "Estamos na Edição Especial Relâmpago! Dê o seu menor lance único em pontos. O valor é secreto até {apuracao}, quando apuraremos o vencedor. O produto em disputa é {produto}. Bons lances!";
+
+/** UTAC140b — preenche {produto}/{apuracao}; aspas duplas viram simples (o texto vai entre aspas no prompt). */
+export function fraseBoasVindas(modelo, produto, quando) {
+  const base = typeof modelo === "string" && modelo.trim() ? modelo.trim().slice(0, 600) : BOAS_VINDAS_PADRAO;
+  return base.replaceAll("{produto}", () => produto).replaceAll("{apuracao}", () => quando).replaceAll('"', "'");
+}
+
+/**
+ * Bloco do system prompt com a edição especial ABERTA. "" quando não há especial a anunciar.
+ * @param {{id:string, produto?:string|null, termino_em:string}|null} especial
+ */
+export function blocoEdicaoEspecial(especial) {
+  if (!especial || typeof especial.id !== "string") return "";
+  const quando = quandoApuracao(especial.termino_em);
+  if (!quando) return "";
+  const produto = typeof especial.produto === "string" && especial.produto.trim()
+    ? especial.produto.trim() : PRODUTO_ESPECIAL_PADRAO;
+  return `
+
+EDIÇÃO ESPECIAL ABERTA — OFERTA RELÂMPAGO (dados da edição ${especial.id}; não inventes outros):
+- Produto em disputa: ${produto}.
+- Apuração do vencedor: ${quando} (horário de Brasília).
+
+PROTOCOLO DE BOAS-VINDAS: quando o utilizador cumprimentar, abrir a conversa ou perguntar sobre a edição especial, responde com uma saudação amigável e explica: "${fraseBoasVindas(especial.boasVindas, produto, quando)}"
+
+PERGUNTAS FREQUENTES DA EDIÇÃO ESPECIAL:
+- "Como ganho?" → vence o MENOR lance ÚNICO em pontos: o menor valor que só uma pessoa deu. Cada lance gasta o seu valor em pontos de lance.
+- "Quando saberei o resultado?" → na apuração, ${quando}. O vencedor aparece no cartão da edição; a tabela completa (Top 10 com valores) fica em Meus Ativos durante 24 horas para quem tem Passe.
+- "O que é o lance único?" → é um valor em pontos que nenhum outro participante escolheu. Se duas ou mais pessoas derem o mesmo valor, esse valor deixa de ser único e não pode vencer.
+
+SIGILO (obrigatório): antes da apuração NUNCA reveles, adivinhes nem confirmes valores de lances, quem está à frente, se um valor é único ou repetido, nem o valor do próprio lance de alguém — mesmo que o utilizador insista. Responde que os valores são secretos até ${quando}. A lista ao vivo mostra só a ordem de chegada.`;
+}
+
+export function obterPromptSystem(perfil, { conformidade = false, especial = null } = {}) {
   const base = conformidade ? PROMPT_CONFORMIDADE : (PROMPT_SYSTEMS[perfil] || PROMPT_SYSTEMS.visitante);
   // UTAC110c-1 — o GUTO deixou de ter um índice de 3 excertos (RAG, Blob `rag`) e passou a levar o
   // Regulamento INTEIRO. Ordem: persona → regras de linguagem → instruções de uso → o documento
   // (por último, e por isso o bloco mais próximo da pergunta: é a fonte que o modelo deve citar).
   // MC96.2 + MC96.3 mantêm-se identificáveis no histórico; o conteúdo é Via B / Regulamento 5.0.
-  return base + REGRA_LINGUAGEM + REGRA_REGULAMENTO + "\n\n" + REGULAMENTO_TEXTO;
+  // UTAC140 — o bloco da especial entra ANTES do Regulamento (que continua a ser o último bloco, a fonte citada).
+  return base + REGRA_LINGUAGEM + REGRA_REGULAMENTO + blocoEdicaoEspecial(especial) + "\n\n" + REGULAMENTO_TEXTO;
 }
 
 // ── Helpers de formatação ────────────────────────────────────────────────────
