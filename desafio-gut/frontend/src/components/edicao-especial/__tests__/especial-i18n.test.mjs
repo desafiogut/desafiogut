@@ -12,7 +12,8 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
-const COMPONENTES = ["CardEdicaoEspecial", "ContagemDecrescente", "PainelVencedorEspecial"]
+// UTAC140 — + RankingEspecialOculto (tabela ao vivo da especial, chaves edicao.especial.ranking*).
+const COMPONENTES = ["CardEdicaoEspecial", "ContagemDecrescente", "PainelVencedorEspecial", "RankingEspecialOculto"]
   .map((n) => `src/components/edicao-especial/${n}.jsx`);
 const ler = (p) => readFileSync(resolve(RAIZ, p), "utf8");
 
