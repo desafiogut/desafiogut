@@ -55,6 +55,13 @@ const MUTANTES = [
     "const salCompromisso = novoSal();", "const salCompromisso = \"0x\" + \"0\".repeat(64);", BACK],
   ["M17 compromisso sem o sal", join(FN, "_lib/compromisso-lance.mjs"),
     "encode([\"uint256\", \"address\", \"bytes32\"], [valorCentavos, endereco, sal])", "encode([\"uint256\", \"address\"], [valorCentavos, endereco])", BACK],
+  ["M18 tabela aceita endereço curto numa linha COM valor", join(RAIZ, "src/components/TabelaLances.jsx"),
+    "if (lance.oculto === true && typeof lance.enderecoCurto === \"string\" && ENDERECO_CURTO_RE.test(lance.enderecoCurto)) {",
+    "if (typeof lance.enderecoCurto === \"string\" && ENDERECO_CURTO_RE.test(lance.enderecoCurto)) {",
+    FRONT("src/components/__tests__/utac140-tabela-especial.test.mjs")],
+  ["M19 especial volta a ter a tabela vazia (sem os lances ao vivo)", join(RAIZ, "src/pages/MercadoLances.jsx"),
+    "<TabelaLances lances={edicaoEspecial ? lancesEspecial : lances}", "<TabelaLances lances={edicaoEspecial ? [] : lances}",
+    FRONT("src/components/edicao-especial/__tests__/utac140-especial-aberta.test.mjs")],
 ];
 
 let falhas = 0;

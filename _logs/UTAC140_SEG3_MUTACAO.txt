@@ -22,3 +22,7 @@ M6 sem produto por omissão: RED (falhas=1) · md5 idêntico 91deb6e01ce63abecee
 M14 GUTO com a frase fixa (ignora a da edição): RED (falhas=2) · md5 idêntico 91deb6e01ce63abecee75fcaa7ebf239
 
 RESULTADO: 16/16 mortos e restaurados
+
+# UTAC140 — correcção do layout (operador: «o layout é o layout da edição»): mutantes de frontend
+M9 linhas do ranking com o valor: RED · M18 tabela aceita endereço curto numa linha COM valor: RED · M19 especial volta a ter a tabela vazia: RED (md5 idênticos)
+TOTAL: 18/18 mutantes mortos (M1–M14, M16–M19; M15 retirado — efeito não observável no arnês SSR)

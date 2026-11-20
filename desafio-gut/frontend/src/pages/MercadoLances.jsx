@@ -22,7 +22,7 @@ import CartaoEdicao from "../components/CartaoEdicao.jsx";
 // UTAC138 — a edição ESPECIAL também entra aqui, no lugar do cartão Relâmpago e com o mesmo padrão (operador, 2026-11-18).
 import CardEdicaoEspecial from "../components/edicao-especial/CardEdicaoEspecial.jsx";
 import { escolherEspecial } from "../components/edicao-especial/_estilo-especial.js";
-import RankingEspecialOculto from "../components/edicao-especial/RankingEspecialOculto.jsx"; // UTAC140 (Frente E)
+import { useRankingEspecial } from "../hooks/useRankingEspecial.js"; // UTAC140 (Frente E) — lances ao vivo da especial
 import { EM_BREVE_MODE } from "../lib/leilaoLock.js";
 import { getEstadoEdicao } from "../utils/edicao.js";
 import { ORIGEM_PRODUCAO } from "../lib/apiOrigin.js"; // UTAC129
@@ -285,6 +285,9 @@ export default function MercadoLances() {
   );
   // A edição em que este ecrã licita: a especial quando existe; senão a edição activa de sempre.
   const edicaoDoEcra = edicaoEspecial?.id ?? EDICAO_ATIVA;
+  // UTAC140 (Frente E) — os lances da especial, ao vivo e BLINDADOS (ordem de chegada, sem valor), para a tabela
+  // PADRÃO da edição (operador: «o layout é o layout da edição» — só há dois layouts oficiais, Relâmpago e Programada).
+  const lancesEspecial = useRankingEspecial(edicaoEspecial?.id ?? null);
   // UTAC000.17bc (17c/GATE 21) — em que EDIÇÕES o titular deu lance (filtrado pelo token, no servidor).
   const { participacoes } = useMinhasParticipacoes(authToken);
   // MC66 (Direção C) — o cronômetro vivo foi removido da aba Lances ("EM BREVE"
@@ -441,10 +444,9 @@ export default function MercadoLances() {
             {/* UTAC138 — com a especial no ecrã a tabela é a DELA (dizia «Edição R-1» por baixo da especial). Os
                 `lances` do contexto são os da R-1, por isso não se mostram aqui; em mainnet os valores ficam blindados
                 durante a edição (anti-bot MC28.1) e o resultado + Top 10 da especial vivem no cartão dela. */}
-            {/* UTAC140 (Frente E) — com a especial no ecrã, a tabela AO VIVO dela (Supabase Realtime): ordem de chegada +
-                endereço encurtado + «**** pontos». Os valores só existem depois da apuração (R18-140-B/C). */}
-            {edicaoEspecial && <RankingEspecialOculto edicaoId={edicaoEspecial.id} isMobile={isMobile} />}
-            <TabelaLances lances={edicaoEspecial ? [] : lances} idEdicao={edicaoDoEcra} prazoTimestamp={prazoTimestamp} encerrado={encerrado} />
+            {/* UTAC140 (Frente E) — com a especial no ecrã, a MESMA tabela recebe os lances dela ao vivo (Supabase Realtime):
+                linhas blindadas «🔒», ordem de chegada, endereço encurtado. Os valores só existem depois da apuração. */}
+            <TabelaLances lances={edicaoEspecial ? lancesEspecial : lances} idEdicao={edicaoDoEcra} prazoTimestamp={prazoTimestamp} encerrado={encerrado} />
           </section>
         </main>
 

@@ -9,33 +9,28 @@ import { readFileSync } from "node:fs";
 import { carregar, render, texto, fechar } from "../../meus-ativos/__tests__/_render.mjs";
 
 const D = "/src/components/edicao-especial";
-let Ranking, Top10, Passe;
+let Top10, Passe;
 before(async () => {
-  Ranking = await carregar(`${D}/RankingEspecialOculto.jsx`);
   Top10 = await carregar(`${D}/ResultadosEdicao.jsx`);
   Passe = await carregar("/src/components/meus-ativos/Top10EspecialPasse.jsx");
 });
 after(fechar);
 
 const posicoes = (html) => [...html.matchAll(/data-posicao="(\d+)"/g)].map((m) => Number(m[1]));
-const nunca = () => false;
 
-describe("UTAC140 · RankingEspecialOculto (Frente E)", () => {
-  test("ordem de chegada + endereço encurtado + «**** pontos»; o valor NUNCA se desenha, nem que venha", () => {
-    const html = render(Ranking, {
-      edicaoId: "ESPECIAL-RELAMPAGO1", configurado: nunca,
-      inicial: [
-        { posicao: 2, endereco: "0x2222…bbbb", valor_oculto: 777777 },
-        { posicao: 1, endereco: "0x1111…aaaa", valor_oculto: null },
-      ],
-    });
-    assert.deepEqual(posicoes(html), [1, 2]);
-    const t = texto(html);
-    assert.match(t, /1º\s*0x1111…aaaa\s*\*\*\*\* pontos/);
-    assert.match(t, /2 lances/);
-    assert.match(t, /Por ordem de chegada\. Os valores ficam secretos até a apuração\./);
-    assert.equal(html.includes("777777"), false, "um valor que viesse na resposta não pode aparecer");
-    assert.equal((html.match(/data-valor="oculto"/g) || []).length, 2);
+describe("UTAC140 · lances ao vivo na TabelaLances PADRÃO (Frente E — «o layout é o layout da edição»)", () => {
+  const RPC = [
+    { posicao: 2, endereco: "0x2222…bbbb", valor_oculto: 777777 },
+    { posicao: 1, endereco: "0x1111…aaaa", valor_oculto: null },
+  ];
+  test("lancesOcultosDoRanking: blindados, ordem de chegada, endereço encurtado, SEM valor (nem que venha)", async () => {
+    const { lancesOcultosDoRanking } = await import("../_ranking-especial.js");
+    const l = lancesOcultosDoRanking(RPC);
+    assert.deepEqual(l, [
+      { lanceId: "ranking-1", enderecoCurto: "0x1111…aaaa", valor: null, oculto: true, repetido: null },
+      { lanceId: "ranking-2", enderecoCurto: "0x2222…bbbb", valor: null, oculto: true, repetido: null },
+    ]);
+    assert.equal(JSON.stringify(l).includes("777777"), false);
   });
   test("linhasDoRanking: descarta lixo, ordena, e o objecto devolvido não tem valor", async () => {
     const { linhasDoRanking } = await import("../_ranking-especial.js");
@@ -43,12 +38,14 @@ describe("UTAC140 · RankingEspecialOculto (Frente E)", () => {
     assert.deepEqual(l, [{ posicao: 1, endereco: "0x1…a" }, { posicao: 3, endereco: "0x3…c" }]);
     assert.deepEqual(linhasDoRanking(null), []);
   });
-  test("sem dados ainda ⇒ «…»; lista vazia ⇒ convite ao primeiro lance", () => {
-    assert.match(render(Ranking, { edicaoId: "ESPECIAL-RELAMPAGO1", configurado: nunca }), /data-estado="a-carregar"/);
-    const vazio = render(Ranking, { edicaoId: "ESPECIAL-RELAMPAGO1", configurado: nunca, inicial: [] });
-    assert.match(vazio, /data-estado="vazio"/);
-    assert.match(texto(vazio), /Ainda sem lances/);
+  test("MercadoLances: a especial usa a TabelaLances PADRÃO com os lances ao vivo — sem layout próprio (contrato da fonte)", () => {
+    const src = readFileSync(new URL("../../../pages/MercadoLances.jsx", import.meta.url), "utf8").replace(/^\s*\/\/.*$/gm, "");
+    assert.match(src, /const lancesEspecial = useRankingEspecial\(edicaoEspecial\?\.id \?\? null\);/);
+    assert.match(src, /<TabelaLances lances=\{edicaoEspecial \? lancesEspecial : lances\}/);
+    assert.equal(/RankingEspecialOculto/.test(src), false, "a caixa própria saiu (só há 2 layouts oficiais de edição)");
   });
+  // (A renderização real na TabelaLances vive em src/components/__tests__/utac140-tabela-especial.test.mjs — precisa
+  //  do servidor com os duplos do DOMPurify/resultado oficial, como o utac0009.)
 });
 
 describe("UTAC140 · Top 10 (Frente D)", () => {
@@ -80,7 +77,7 @@ describe("UTAC140 · Top 10 (Frente D)", () => {
     assert.equal(pedidos, 0);
   });
   test("UTAC140b · nenhum id de edição fixo no código do Top 10 nem do ranking", () => {
-    for (const f of ["src/components/meus-ativos/Top10EspecialPasse.jsx", "src/components/edicao-especial/RankingEspecialOculto.jsx", "src/pages/MeusAtivos.jsx"]) {
+    for (const f of ["src/components/meus-ativos/Top10EspecialPasse.jsx", "src/hooks/useRankingEspecial.js", "src/pages/MeusAtivos.jsx"]) {
       const s = readFileSync(new URL(`../../../../${f}`, import.meta.url), "utf8");
       assert.equal(/ESPECIAL-[A-Z0-9]+/.test(s.replace(/\/\/.*$/gm, "")), false, `${f} tem um id fixo`);
     }
@@ -96,7 +93,7 @@ describe("UTAC140 · Top 10 (Frente D)", () => {
 describe("UTAC140 · guarda de vocabulário", () => {
   const RAIZ = new URL("../../../../", import.meta.url);
   const NOVOS = [
-    "src/components/edicao-especial/RankingEspecialOculto.jsx",
+    "src/hooks/useRankingEspecial.js",
     "src/components/meus-ativos/Top10EspecialPasse.jsx",
     "src/components/edicao-especial/_ranking-especial.js",
     "src/components/meus-ativos/_top10-passe.js",
@@ -108,7 +105,7 @@ describe("UTAC140 · guarda de vocabulário", () => {
     }
   });
   test("as linhas UTAC140 dos ficheiros alterados não contêm «leilão»", () => {
-    for (const f of ["src/pages/MercadoLances.jsx", "src/pages/MeusAtivos.jsx", "src/components/edicao-especial/CardEdicaoEspecial.jsx", "src/components/edicao-especial/ResultadosEdicao.jsx"]) {
+    for (const f of ["src/pages/MercadoLances.jsx", "src/pages/MeusAtivos.jsx", "src/components/TabelaLances.jsx", "src/components/edicao-especial/CardEdicaoEspecial.jsx", "src/components/edicao-especial/ResultadosEdicao.jsx"]) {
       const linhas = readFileSync(new URL(f, RAIZ), "utf8").split("\n");
       const marcadas = linhas.filter((l, i) => /UTAC140/.test(l) || /UTAC140/.test(linhas[i - 1] ?? "") || /UTAC140/.test(linhas[i - 2] ?? ""));
       assert.ok(marcadas.length > 0, `${f}: esperava linhas UTAC140`);

@@ -40,3 +40,12 @@ Ordem de execução: B → D → C → A → E (B primeiro porque D e E dependem
 - `RankingEspecialOculto.jsx` + `_ranking-especial.js` (puro). Leitura inicial pela RPC, depois subscrição `postgres_changes` filtrada pela edição, com releitura em 400 ms. Mostra «1º · 0x1234…abcd · **** pontos». O valor nunca é desenhado, nem que venha na resposta.
 - Montado no `MercadoLances.jsx` por cima da `TabelaLances`, só com a especial no ecrã.
 - Guarda de vocabulário: teste nos ficheiros novos + linhas UTAC140 (a palavra com acento), mais grep do diff no SEG6.
+
+## Correcção pós-deploy (R18-140-H) — o layout é o da edição
+- ⛔ Erro meu: criei uma caixa própria (`RankingEspecialOculto`, com título, legenda, lista e «**** pontos»). Isto viola a regra do UTAC138, agora explicitada pelo operador: **só há dois layouts oficiais de edição**, o Relâmpago («Dar lance») e a Programada («palpite»).
+- Correcção:
+  - `useRankingEspecial` (RPC + Realtime) entrega as linhas no formato da `TabelaLances` padrão: `oculto: true`, `valor: null`, ordem de chegada, `enderecoCurto`.
+  - A `TabelaLances` aceita `enderecoCurto` só em linhas blindadas.
+  - O `MercadoLances` passa `edicaoEspecial ? lancesEspecial : lances` à mesma tabela de sempre.
+  - O componente e as chaves i18n `edicao.especial.ranking*` saíram.
+- Testes: `src/components/__tests__/utac140-tabela-especial.test.mjs` (render real da `TabelaLances`, servidor do utac0009) + contrato de fonte no `MercadoLances`. Mutantes M18/M19 RED, M9 RED. Total da prova de mutação: 18/18.

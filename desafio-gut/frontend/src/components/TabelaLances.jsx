@@ -23,6 +23,19 @@ function ordenarLances(lances) {
 // «ID do Lance» e o texto de rodapé: a tabela fica com 3 colunas (#, Participante, Valor). O 🏆
 // do vencedor continua na coluna «#» (desktop) e no círculo da posição (mobile).
 
+// UTAC140 — linhas BLINDADAS da especial chegam com o endereço já encurtado pelo servidor (`enderecoCurto`,
+// 0x1234…abcd — o inteiro nunca chega ao browser, R18-140-C). Só para `oculto`: uma linha com valor continua a
+// exigir o endereço inteiro e válido, como antes.
+const ENDERECO_CURTO_RE = /^0x[0-9a-f]{4}…[0-9a-f]{4}$/;
+function enderecoDaLinha(lance) {
+  const inteiro = sanitizeAddress(lance.endereco ?? "");
+  if (inteiro) return { chave: inteiro, abrev: `${inteiro.slice(0, 6)}...${inteiro.slice(-4)}` };
+  if (lance.oculto === true && typeof lance.enderecoCurto === "string" && ENDERECO_CURTO_RE.test(lance.enderecoCurto)) {
+    return { chave: lance.enderecoCurto, abrev: lance.enderecoCurto };
+  }
+  return null;
+}
+
 function nomeOuEndereco(lance, enderecoAbrev) {
   return lance.nomeExibicao || enderecoAbrev;
 }
@@ -165,13 +178,14 @@ function MobileList({ lancesOrdenados, idxVencedor, encerrado }) {
         {lancesOrdenados.map((lance, i) => {
           // MC28.1: linha blindada (mainnet) — valor nunca revelado nesta tabela.
           const oculto = lance.oculto === true;
-          const enderecoSanitizado = sanitizeAddress(lance.endereco ?? "");
+          const linhaEnd = enderecoDaLinha(lance); // UTAC140
+          const enderecoSanitizado = linhaEnd?.chave ?? null;
           const valorSanitizado = oculto ? null : sanitizeLance(lance.valor);
           if (!enderecoSanitizado || (!oculto && valorSanitizado === null)) return null;
 
           const isVencedor = !oculto && i === idxVencedor;
           const itemKey    = oculto ? `${enderecoSanitizado}-${i}` : `${enderecoSanitizado}-${valorSanitizado}`;
-          const enderecoAbrev = `${enderecoSanitizado.slice(0, 6)}...${enderecoSanitizado.slice(-4)}`;
+          const enderecoAbrev = linhaEnd.abrev;
           const nome       = nomeOuEndereco(lance, enderecoAbrev);
           const valorFormatado = oculto ? "🔒" : `R$ ${(valorSanitizado / 100).toFixed(2)}`;
 
@@ -252,13 +266,14 @@ function DesktopTable({ lancesOrdenados, idxVencedor, encerrado }) {
             {lancesOrdenados.map((lance, i) => {
               // MC28.1: linha blindada (mainnet) — valor nunca revelado nesta tabela.
               const oculto = lance.oculto === true;
-              const enderecoSanitizado = sanitizeAddress(lance.endereco ?? "");
+              const linhaEnd = enderecoDaLinha(lance); // UTAC140
+          const enderecoSanitizado = linhaEnd?.chave ?? null;
               const valorSanitizado = oculto ? null : sanitizeLance(lance.valor);
               if (!enderecoSanitizado || (!oculto && valorSanitizado === null)) return null;
 
               const isVencedor = !oculto && i === idxVencedor;
               const itemKey    = oculto ? `${enderecoSanitizado}-${i}` : `${enderecoSanitizado}-${valorSanitizado}`;
-              const enderecoAbrev = `${enderecoSanitizado.slice(0, 6)}...${enderecoSanitizado.slice(-4)}`;
+              const enderecoAbrev = linhaEnd.abrev;
               const nome       = nomeOuEndereco(lance, enderecoAbrev);
               const valorFormatado = oculto ? "🔒" : `R$ ${(valorSanitizado / 100).toFixed(2)}`;
 

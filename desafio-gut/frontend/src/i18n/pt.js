@@ -151,9 +151,6 @@ export default {
   "edicao.especial.semVencedor": "Não houve lance único nesta edição.",
   "edicao.especial.vencedor": "Vencedor",
   "edicao.especial.menorUnico": "Menor lance único",
-  // UTAC140 — cronómetro para a apuração e tabela ao vivo da especial (valores ocultos).
+  // UTAC140 — cronómetro para a apuração.
   "edicao.especial.apuracaoEm": "A apuração será em:",
-  "edicao.especial.rankingTitulo": "⚡ Lances da Oferta Relâmpago",
-  "edicao.especial.rankingLegenda": "Por ordem de chegada. Os valores ficam secretos até a apuração.",
-  "edicao.especial.rankingVazio": "Ainda sem lances. Seja o primeiro!",
 };
