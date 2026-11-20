@@ -80,3 +80,16 @@ pedida no Passo 11 do UTAC143 não foi usada: nenhum deploy foi feito no UTAC143
 13) Funções verificadas pós-deploy: **parcial**. `lance-relampago` responde 405/401 no `6affdd88`.
     `scheduled-lider-especial` foi verificada no `6affcbf4` (403, função agendada). `functions:list` não foi corrido.
 14) URL de produção: **https://silly-stardust-ca71bc.netlify.app**
+
+## Fecho das ressalvas (UTAC144, 2026-11-20)
+- **Item 3 (Passe):** a regra real está documentada em `docs/EDICAO-ESPECIAL-CONFIG.md` («Regra do Passe na Edição Especial
+  (UTAC142.1)»): 1 a cada 3 lances, Passe opcional, bónus +100 na compra. A flag real é `passeACadaLances`; `passePorLance`
+  (UTAC142) já não existe no código. O código em produção é `b6365e7`, e o item passa a **[x] com a regra real**.
+- **Item 6 (suíte):** as 2 falhas de DNS do `mc9952` (f)/(g) ficaram isoladas. Só a amostra `exemplo.com` (domínio de terceiros,
+  instável nos resolvedores públicos) é saltada, e só quando não resolve, com diagnóstico no output. As provas contra SSRF e os
+  outros CDNs correm sempre. Neste ambiente o `mc9952` dá **9/9, 0 fail, 0 skipped** (a amostra é saltada por diagnóstico). Não
+  há fail nos ficheiros dirigidos.
+  **Ressalva:** a suíte canónica completa não foi re-corrida depois do UTAC144.
+- **Checklist do UTAC142:** actualizado em `_logs/UTAC142_CHECKLIST.md`, com os 6/6 itens rastreáveis e os números medidos.
+- **Commit do UTAC144:** `8eed906` (por cima de `dac478a`), com «[skip netlify]». Ainda **sem push**: espera o «AUTORIZO» do Passo 8.
+- ⚠️ **Incumprimento declarado:** os testes dirigidos correram com **713 MB** de RAM livre, abaixo do limiar de 800 MB do UTAC144.
