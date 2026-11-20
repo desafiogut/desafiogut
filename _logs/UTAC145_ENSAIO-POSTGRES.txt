@@ -1,0 +1,16 @@
+UTAC145 — ensaio da RPC registar_lance_passe no Postgres de PRODUÇÃO, dentro de um DO que termina em RAISE (tudo desfeito).
+Endereço fictício 0xensaio-utac145, com 1 Passe Relâmpago creditado só dentro do bloco.
+
+1.ª tentativa — DEFEITO APANHADO (só o Postgres real o mostra):
+  ERROR 23502: null value in column "passe_consumido" … Failing row contains (T1, ESPECIAL-RELAMPAGO1, 0xensaio-utac145, 1, null, …)
+  Causa: o `SELECT … INTO v_pos, v_cons … where lance_id = p_lance_id` sem linha põe v_cons a NULL.
+  Correcção: `v_cons := false;` antes de contar (migração 20261120_utac145_lances_passe.sql).
+  Verificado depois: to_regclass('public.especial_lances_passe') = NULL, funções = 0, inventário de ensaio = 0 (nada ficou).
+
+2.ª tentativa (função corrigida) — ENSAIO_OK:
+  chamada 1 T1 → pos 1, passe false, novo true, restantes 1
+  chamada 2 T2 → pos 2, passe false, novo true, restantes 1
+  chamada 3 T3 → pos 3, passe TRUE, novo true, restantes 0
+  chamada 4 T3 (REPETIDO) → pos 3, passe true, novo FALSE, restantes 0   ← não gasta outra vez
+  chamada 5 T4 → pos 4, passe false · chamada 6 T5 → pos 5 · chamada 7 T6 → pos 6, passe false (sem Passe: o lance passa)
+  linhas = 6 · inventario_final = 0

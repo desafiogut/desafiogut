@@ -29,3 +29,15 @@ próximo lance contaria como 1.º. A semente é relida do Blob no momento de apl
 
 ## Veredicto
 SEGUIR (R18-145-A/B).
+
+## Passo 6 — migração (R18-145-A: «aplica», 2026-11-20)
+1. **Ensaio em Postgres de produção** com DO + RAISE (tudo desfeito), em `_logs/UTAC145_ENSAIO-POSTGRES.txt`. **Apanhou um defeito:** o
+   `SELECT … INTO` sem linha punha `v_cons` a NULL (viola NOT NULL). Corrigido (`v_cons := false;`), com guarda no teste I5. A 2.ª
+   tentativa deu ENSAIO_OK: Passe no 3.º; o 3.º repetido devolve o gravado sem gastar outro; sem Passe no 6.º o lance passa.
+   Sem rasto (tabela/função/inventário de ensaio = NULL/0/0).
+2. **Aplicada** a `utac145_lances_passe` (apply_migration, success). Verificado: tabela + RLS; `registar_lance_passe(p_lance_id,
+   p_edicao_id, p_endereco, p_a_cada)`; só service_role executa; anon não lê nem executa (HTTP: SELECT 401, RPC 42501); 2 chaves (PK + UNIQUE).
+3. **Semente da transição**: o Blob foi relido imediatamente antes = `{"lances":2,"passesConsumidos":0}` (única chave). Inseridas 2
+   linhas com os ids REAIS dos lances (`ranking_especial.id`): `6e578aed…` posição 1 e `39d2bb9f…` posição 2, `passe_consumido=false`.
+   Inventário da conta = 1 Passe (inalterado). Depois do deploy volta-se a comparar o Blob, porque pode entrar um lance no intervalo.
+- A produção continua a correr o código do Blob até ao deploy; a tabela nova fica sem uso até lá (sem efeito nos lances).

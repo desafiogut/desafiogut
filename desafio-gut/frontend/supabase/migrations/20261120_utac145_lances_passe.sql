@@ -48,6 +48,8 @@ begin
     return;
   end if;
 
+  -- ⚠️ achado do ensaio em Postgres (UTAC145): o SELECT … INTO acima, sem linha, põe v_cons a NULL ⇒ repor antes de contar
+  v_cons := false;
   select coalesce(max(e.posicao), 0) + 1 into v_pos
     from public.especial_lances_passe e where e.edicao_id = p_edicao_id and e.endereco = p_endereco;
 

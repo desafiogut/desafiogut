@@ -167,6 +167,8 @@ test("I5 · migração: repetir o MESMO lance devolve o gravado ANTES de contar 
   const consome = corpo.indexOf("public.passes_consumir(p_endereco, 'relampago', 1)");
   assert.ok(repete > 0 && conta > repete && consome > conta, "a ordem repetição → contagem → consumo foi quebrada");
   assert.match(corpo.slice(repete, conta), /if found then[\s\S]*return;/);
+  // achado do ensaio em Postgres: sem linha, o SELECT … INTO deixa v_cons a NULL — tem de ser reposto antes de contar
+  assert.match(corpo.slice(repete, conta), /v_cons := false;/, "falta repor v_cons (NULL viola o NOT NULL de passe_consumido)");
 });
 
 test("I6 · a resposta perde-se no 3.º lance (o que GASTA o Passe): a repetição recupera «Passe gasto» e não gasta outro", async () => {
