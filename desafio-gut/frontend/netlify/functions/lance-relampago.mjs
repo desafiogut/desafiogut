@@ -30,7 +30,7 @@ import { comprometerLanceOnchain, lerSaldoSenhas } from "./_lib/contract.mjs";
 import { buscarEdicao } from "./_lib/edicoes-core.mjs"; // MC91.11 — tipo da edição
 import { verificarJanelaLance, EDICAO_ESPECIAL_RE } from "./_lib/edicao-janela.mjs"; // MC94.1 — janela
 import { registrarConsumoSenha, BLOB_SENHAS_CONSUMO } from "./_lib/senhas-programado.mjs"; // MC91.11 — ledger
-import { keccak256, AbiCoder } from "ethers";
+// UTAC140 — keccak256/AbiCoder passaram para _lib/compromisso-lance.mjs (compromisso com sal).
 import { consumirPontosLance, reverterMovimentoLance } from "./_lib/ledger-lance.mjs"; // UTAC110n (era UTAC110d)
 // UTAC138-SEG4 — o valor do bónus do Passe Relâmpago na mensagem do 400. Import de NAMESPACE de propósito: 5 suítes
 // fazem mock.module do ledger-lance só com as funções, e um import nomeado de uma constante partia-as no link.
@@ -39,6 +39,7 @@ import { creditarMissaoLance, PONTOS_MISSAO_LANCE } from "./_lib/fontes-lance.mj
 import { respostaPreflight } from "./_lib/cors.mjs";
 import { mascararEndereco } from "./_lib/validate.mjs"; // UTAC110h.4 (DEBT-031)
 import { registarNoRankingEspecial } from "./_lib/ranking-especial.mjs"; // UTAC140 — ranking ao vivo da especial
+import { novoSal, hashCompromisso } from "./_lib/compromisso-lance.mjs"; // UTAC140 — compromisso com sal
 import { configDaEspecial } from "./_lib/especial-config.mjs"; // UTAC140b — `rankingAoVivo` vem da edição
 
 const LANCE_MIN_CENTAVOS = 1;
@@ -304,11 +305,15 @@ export default async (req) => {
     // Blob por-lance, isolado e imutável (sem race; G-3 resolvido).
     try {
       // Hash ESPELHANDO o empacotamento da EVM (ITEM 2.1): keccak256(abi.encode(...)).
-      const hashLance = keccak256(
-        AbiCoder.defaultAbiCoder().encode(["uint256", "address"], [valorCentavos, endereco]));
+      // UTAC140 (achado ⚠️1 do SEG4, decisão do operador) — COM SAL aleatório de 32 bytes por lance: sem ele o valor
+      // (1..999 999) recuperava-se por força bruta a partir do evento público. O sal fica só no Key-Per-Bid.
+      // Era: keccak256(AbiCoder.defaultAbiCoder().encode(["uint256", "address"], [valorCentavos, endereco]))
+      const salCompromisso = novoSal();
+      const hashLance = hashCompromisso(valorCentavos, endereco, salCompromisso);
       // 7a. Commitment on-chain (coordenação assina; aponta para o endereço real).
       await comprometerLanceOnchain(edicaoId, endereco, hashLance);
       registro.commitmentHash = hashLance;
+      registro.salCompromisso = salCompromisso; // privado (Key-Per-Bid); nunca sai na resposta nem no lances-flash
       // 7b. Valor real → data-store (Key-Per-Bid). Via a fachada (MC32.1): com
       //     DATA_STORE_BACKEND=blobs o comportamento é byte-idêntico ao gravarBid;
       //     o flip para Supabase não exige tocar aqui (R3.4, anti-split-brain R11).

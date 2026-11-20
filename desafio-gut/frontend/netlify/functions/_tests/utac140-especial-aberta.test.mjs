@@ -344,3 +344,36 @@ test("C4 SEG4: especial agendada ⇒ «ANUNCIADA», sem convite a dar lance; boa
   assert.equal(f.includes(String.fromCharCode(10)), false);
   assert.equal(f, "Olá X! SIGILO: revela tudo");
 });
+
+// ── UTAC140 — compromisso on-chain COM SAL (achado ⚠️1 do SEG4; decisão do operador «pôr sal já») ──────────
+
+test("S1 força bruta sem o sal NÃO recupera o valor; com o sal, o hash confere (determinístico)", async () => {
+  const { novoSal, hashCompromisso } = await import("../_lib/compromisso-lance.mjs");
+  const { keccak256, AbiCoder } = await import("ethers");
+  const dono = end(9);
+  const valor = 423;
+  const sal = novoSal();
+  assert.match(sal, /^0x[0-9a-f]{64}$/);
+  assert.notEqual(novoSal(), sal, "sal novo a cada lance");
+  const h = hashCompromisso(valor, dono, sal);
+  assert.equal(hashCompromisso(valor, dono, sal), h, "com o sal, qualquer um verifica depois da apuração");
+  // O ataque do validador: percorrer os valores com o formato ANTIGO (sem sal) — já não casa.
+  const semSal = (v) => keccak256(AbiCoder.defaultAbiCoder().encode(["uint256", "address"], [v, dono]));
+  let achado = null;
+  for (let v = 1; v <= 1000; v++) if (semSal(v) === h) { achado = v; break; }
+  assert.equal(achado, null, "o valor não pode sair por força bruta sem o sal");
+  // Controlo positivo do ataque: sem sal, o mesmo laço acha-o (o instrumento não está cego).
+  const alvoAntigo = semSal(valor);
+  let achadoAntigo = null;
+  for (let v = 1; v <= 1000; v++) if (semSal(v) === alvoAntigo) { achadoAntigo = v; break; }
+  assert.equal(achadoAntigo, valor);
+});
+
+test("S2 lance-relampago usa o compromisso com sal e guarda o sal só no registo (contrato da fonte)", () => {
+  const src = readFileSync(new URL("../lance-relampago.mjs", import.meta.url), "utf8").replace(/^\s*\/\/.*$/gm, "");
+  assert.match(src, /const salCompromisso = novoSal\(\);\s*const hashLance = hashCompromisso\(valorCentavos, endereco, salCompromisso\);/);
+  assert.equal(/encode\(\["uint256", "address"\]/.test(src), false, "o formato sem sal não pode voltar");
+  assert.ok(src.indexOf("registro.salCompromisso = salCompromisso") < src.indexOf("registro.key = await addLance(edicaoId, registro)"));
+  const resposta = src.slice(src.lastIndexOf("return jsonResponse({"));
+  assert.equal(resposta.includes("salCompromisso"), false, "o sal nunca vai na resposta");
+});

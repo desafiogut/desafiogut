@@ -29,7 +29,8 @@ const MUTANTES = [
   ["M5 sem janela de 24 h", join(FN, "resultado-edicao.mjs"),
     "if (!Number.isFinite(fim) || Date.now() > fim + janelaMs) {", "if (!Number.isFinite(fim)) {", BACK],
   ["M6 sem produto por omissão", join(FN, "_lib/guto-perfis.mjs"),
-    "? especial.produto.trim() : PRODUTO_ESPECIAL_PADRAO;", "? especial.produto.trim() : \"o produto\";", BACK],
+    "  const produto = typeof especial.produto === \"string\" && especial.produto.trim()\n    ? especial.produto.trim() : PRODUTO_ESPECIAL_PADRAO;",
+    "  const produto = typeof especial.produto === \"string\" && especial.produto.trim()\n    ? especial.produto.trim() : \"o produto\";", BACK],
   ["M7 simulador da especial aberto", join(FN, "chatbot.mjs"),
     "  return fim == null || agoraMs <= fim;\n}", "  return false;\n}", BACK],
   ["M8 revelar antes do resultado gravado", join(FN, "_lib/apuracao-especial.mjs"),
@@ -47,13 +48,19 @@ const MUTANTES = [
   ["M13 configuração da edição ignorada", join(FN, "_lib/especial-config.mjs"),
     "  const t = meta && typeof meta.top10 === \"object\" && meta.top10 ? meta.top10 : {};", "  const t = {};", BACK],
   ["M14 GUTO com a frase fixa (ignora a da edição)", join(FN, "_lib/guto-perfis.mjs"),
-    "const base = typeof modelo === \"string\" && modelo.trim() ? modelo.trim().slice(0, 600) : BOAS_VINDAS_PADRAO;", "const base = BOAS_VINDAS_PADRAO;", BACK],
+    "const base = typeof modelo === \"string\" && modelo.trim() ? modelo.replace(/\\s+/g, \" \").trim().slice(0, 600) : BOAS_VINDAS_PADRAO;", "const base = BOAS_VINDAS_PADRAO;", BACK],
   // (M15 «pede sem edição» retirado: o efeito não corre no arnês SSR — mutante que não se consegue observar aqui;
   //  a guarda observável é a de Meus Ativos, `especialTop10 && …`. Declarado no relatório.)
+  ["M16 sal fixo no lance (zero)", join(FN, "lance-relampago.mjs"),
+    "const salCompromisso = novoSal();", "const salCompromisso = \"0x\" + \"0\".repeat(64);", BACK],
+  ["M17 compromisso sem o sal", join(FN, "_lib/compromisso-lance.mjs"),
+    "encode([\"uint256\", \"address\", \"bytes32\"], [valorCentavos, endereco, sal])", "encode([\"uint256\", \"address\"], [valorCentavos, endereco])", BACK],
 ];
 
 let falhas = 0;
-for (const [nome, ficheiro, de, para, corrida] of MUTANTES) {
+// SO=M6,M14 corre só esses (re-corrida dirigida).
+const SO = process.env.SO ? process.env.SO.split(",") : null;
+for (const [nome, ficheiro, de, para, corrida] of MUTANTES.filter(([n]) => !SO || SO.includes(n.split(" ")[0]))) {
   const original = readFileSync(ficheiro, "utf8");
   const antes = md5(ficheiro);
   const bak = join(BAK, `${nome.split(" ")[0]}.bak`);

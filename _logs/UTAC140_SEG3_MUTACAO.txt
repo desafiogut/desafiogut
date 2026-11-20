@@ -1,0 +1,24 @@
+M1 o valor vai para o ranking: RED (falhas=1) · md5 idêntico 652601f382cb3c1dd5f702e6d581767e
+M2 endereço inteiro no ranking: RED (falhas=1) · md5 idêntico 652601f382cb3c1dd5f702e6d581767e
+M3 Top 10 público sem valores (a v12 deixava de o ver): RED (falhas=1) · md5 idêntico 507032b50b7c931b7a9e0df8b8a50269
+M4 sem exigir Passe: RED (falhas=1) · md5 idêntico 507032b50b7c931b7a9e0df8b8a50269
+M5 sem janela de 24 h: RED (falhas=2) · md5 idêntico 507032b50b7c931b7a9e0df8b8a50269
+M6 sem produto por omissão: ⛔ ÂNCORA NÃO CASA (1 vez) — mutante inválido
+M7 simulador da especial aberto: RED (falhas=1) · md5 idêntico 738b4eb74ecfe70303ca8d2c9f2be379
+M8 revelar antes do resultado gravado: RED (falhas=1) · md5 idêntico a6740ad516f8a9b6a8c0f9539d3a2ae4
+M9 linhas do ranking com o valor: RED (falhas=1) · md5 idêntico d93888655e86ff18318fc3536fee2788
+M10 Top 10 público esconde linhas sem valor: RED (falhas=1) · md5 idêntico c8db2dee10392dc1e7e8e871af9b63cd
+M11 cronómetro sem «A apuração será em»: RED (falhas=1) · md5 idêntico 91640148fcf0eaf8c0a927bfc3402487
+M12 lance-relampago sem ranking: RED (falhas=1) · md5 idêntico 163a1d03a740d6363ede824757e7f7aa
+M13 configuração da edição ignorada: RED (falhas=2) · md5 idêntico c127402c4a37f3cd1f3952004b3326c8
+M14 GUTO com a frase fixa (ignora a da edição): ⛔ ÂNCORA NÃO CASA (1 vez) — mutante inválido
+M16 sal fixo no lance (zero): RED (falhas=1) · md5 idêntico 163a1d03a740d6363ede824757e7f7aa
+M17 compromisso sem o sal: RED (falhas=1) · md5 idêntico cafb6d742607d5171d40309aa9493459
+
+RESULTADO: 14/16 mortos e restaurados
+
+# re-corrida dirigida de M6/M14 (âncoras ajustadas à correcção do validador dfc8c53):
+M6 sem produto por omissão: RED (falhas=1) · md5 idêntico 91deb6e01ce63abecee75fcaa7ebf239
+M14 GUTO com a frase fixa (ignora a da edição): RED (falhas=2) · md5 idêntico 91deb6e01ce63abecee75fcaa7ebf239
+
+RESULTADO: 16/16 mortos e restaurados
