@@ -1,0 +1,16 @@
+✔ N1 · token verificado com nome «Ana Souza» e body «Ana S.» → grava «Ana S.» (vem do token) (26.7179ms)
+✖ N2 · FORJA: token com «Ana Souza», body «Fake Name» → o body é IGNORADO, grava «Ana S.» (4.9562ms)
+✖ N3 · FORJA sem nome verificado: token sem `nome`, body «GUTO Oficial» → lance passa SEM nome (endereço curto) (2.2174ms)
+✔ N4 · token INVÁLIDO (assinatura errada) com nome no body → 401 e nada gravado (1.2649ms)
+✖ P1 · identity token válido: devolve o nome Google da carteira certa (11.6841ms)
+✔ P2 · recusa: assinatura de outra chave · iss errado · aud errado · expirado · carteira diferente · lixo (3.5245ms)
+✖ P3 · sem conta Google (só e-mail) ou Google sem nome → { nome: null } (verificado, mas sem nome) (1.0337ms)
+✖ P4 · aceita as duas grafias dos campos (snake e camel) e endereço em maiúsculas (EIP-55) (1.421ms)
+✖ A1 · auth-lance com identidade verificada → token lance-auth leva `nome` (o completo; o lance reduz) (56.4698ms)
+✔ A2 · auth-lance SEM identidade verificada (token ausente, inválido ou de outra carteira) → token sem `nome`; o body não conta (13.5104ms)
+ℹ tests 10
+ℹ pass 4
+ℹ fail 6
+✖ failing tests:
+✖ N2 · FORJA: token com «Ana Souza», body «Fake Name» → o body é IGNORADO, grava «Ana S.» (4.9562ms)
+✖ N3 · FORJA sem nome verificado: token sem `nome`, body «GUTO Oficial» → lance passa SEM nome (endereço curto) (2.2174ms)

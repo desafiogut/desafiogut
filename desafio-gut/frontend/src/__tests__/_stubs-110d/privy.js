@@ -11,3 +11,8 @@ const carteira = Object.freeze({
 });
 export const useWallets = () => ({ wallets: [carteira], ready: true });
 export const usePrivy = () => ({ ready: true, authenticated: true, user: null, login: () => {}, logout: async () => {} });
+
+// UTAC146 — o CardLance pede o identity token do Privy (opcional). Duplo controlável; null = sem token.
+let _identityToken = null;
+export const definirIdentityToken = (t) => { _identityToken = t; };
+export const getIdentityToken = async () => _identityToken;

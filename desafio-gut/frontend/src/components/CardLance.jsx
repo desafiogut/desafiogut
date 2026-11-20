@@ -1,5 +1,6 @@
 import { useState, useRef, useId } from "react";
-import { useWallets } from "@privy-io/react-auth";
+import { useWallets, getIdentityToken } from "@privy-io/react-auth"; // UTAC146 — identity token (nome verificado, ℹ️5)
+import { ToastContainer, useToast } from "../widgets/toast/Toast.jsx"; // UTAC146 — aviso do consumo do Passe (ℹ️7)
 import { keccak256, toUtf8Bytes } from "ethers";
 import { motion, useReducedMotion } from "framer-motion";
 import { capturarExcecao } from "../lib/sentry-alerts.js"; // UTAC110h.4 (DEBT-031/S6) — wrapper que mascara
@@ -64,6 +65,17 @@ const FASES = {
 };
 
 /** UTAC110j.5 — texto do 400 `saldo_pontos_insuficiente` com os números do servidor (sem coerção). */
+/**
+ * UTAC146 (ℹ️7) — o aviso curto quando o lance gastou 1 Passe Relâmpago (regra «1 a cada 3», UTAC142.1). Só com
+ * `passeConsumido === true`; sem consumo, nada (não é um aviso de sucesso genérico). PURO (testável sem DOM).
+ */
+export function mensagemPasseConsumido(resposta) {
+  if (resposta?.passeConsumido !== true) return null;
+  const n = Number.isSafeInteger(resposta?.passesRelampagoRestantes) && resposta.passesRelampagoRestantes >= 0
+    ? resposta.passesRelampagoRestantes : null;
+  return n === null ? "Você usou 1 Passe Relâmpago." : `Você usou 1 Passe Relâmpago. Restam: ${n}.`;
+}
+
 export function mensagemSaldoInsuficiente(erroServidor, valorCentavos) {
   const tem = Number.isSafeInteger(erroServidor?.pontosLance) ? erroServidor.pontosLance : null;
   const precisa = Number.isSafeInteger(erroServidor?.pontosNecessarios) ? erroServidor.pontosNecessarios : valorCentavos;
@@ -88,6 +100,7 @@ export default function CardLance({
   variante   = "cartao",
 }) {
   const embutido = variante === "embutida";
+  const { toasts, add: addToast, remove: removeToast } = useToast(); // UTAC146 (ℹ️7)
   const { wallets } = useWallets();
   const privyWallet = wallets.find((w) => w.walletClientType === "privy") || wallets[0];
   const reduce = useReducedMotion(); // MC20.2 ITEM 6 — morph só-visual do CTA
@@ -178,10 +191,14 @@ export default function CardLance({
     const { signer } = await getSignerFromProvider(provider);
     const signature = await signer.signMessage(message);
 
+    // UTAC146 (ℹ️5) — o identity token do Privy deixa o servidor VERIFICAR o nome Google desta carteira (assinatura,
+    // emissor, app, validade). É opcional: sem ele (opção desligada no painel, falha) o lance segue sem nome.
+    let identityToken = null;
+    try { identityToken = (await getIdentityToken?.()) || null; } catch { identityToken = null; }
     const resp = await fetch("/.netlify/functions/auth-lance", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ endereco: address, signature, message }),
+      body: JSON.stringify({ endereco: address, signature, message, ...(identityToken ? { identityToken } : {}) }),
     });
     const data = await resp.json();
     if (!resp.ok) {
@@ -275,7 +292,8 @@ export default function CardLance({
             valorCentavos,
             edicaoId: edicaoSanitizada,
             idempotencyKey,
-            nomeExibicao: userLabel || null,
+            // UTAC146 (ℹ️5) — o nome já NÃO vai no corpo: o servidor só usa o nome verificado do token (e o corpo
+            // levava o e-mail quando a conta não tem nome Google). Era: `nomeExibicao: userLabel || null`.
           }),
         });
         const data = await resp.json();
@@ -322,6 +340,9 @@ export default function CardLance({
         // UTAC141 (Frente B) — o saldo que o utilizador VÊ (Carteira, Início, cartão) desce AGORA: sem
         // isto só a cópia deste componente relia, e o saldo global ficava «parado» até se mudar de ecrã.
         try { refetchPontosAgora?.(); } catch {}
+        // UTAC146 (ℹ️7) — se este lance gastou 1 Passe (o 3.º, 6.º…), diz-se quantos restam. Sem consumo, nada.
+        const avisoPasse = mensagemPasseConsumido(data);
+        if (avisoPasse) addToast(avisoPasse, "info");
         onLanceSucesso?.({ address, valorCentavos, txHash: data.lanceId, nomeExibicao: userLabel || null });
         return;
       }
@@ -544,6 +565,7 @@ export default function CardLance({
             </>
           )}
         />
+        <ToastContainer toasts={toasts} onDismiss={removeToast} />
       </div>
     );
   }
@@ -761,6 +783,7 @@ export default function CardLance({
         🔒 Lance protegido e sanitizado
       </p>
 
+      <ToastContainer toasts={toasts} onDismiss={removeToast} />
     </Card>
   );
 }

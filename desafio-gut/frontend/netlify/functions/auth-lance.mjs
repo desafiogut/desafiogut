@@ -17,6 +17,7 @@ import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 import { registrarFalhaJwt } from "./_lib/jwt-fail-counter.mjs";
 import { respostaPreflight } from "./_lib/cors.mjs";
 import { mascararEndereco } from "./_lib/validate.mjs"; // UTAC110h.4 (DEBT-031)
+import { verificarIdentidadePrivy } from "./_lib/privy-identidade.mjs"; // UTAC146 — nome verificado (ℹ️5)
 
 const TTL_LANCE_AUTH = 10 * 60; // 10 min
 
@@ -94,14 +95,21 @@ export default async (req) => {
   }
 
   // Emite JWT lance-auth
+  // UTAC146 (ℹ️5, R18-146-A/B) — o nome de exibição só entra no token se vier VERIFICADO: identity token do Privy
+  // (assinatura ES256 + iss + aud + exp) cuja lista de contas inclui ESTA carteira. Qualquer outro nome no body é ignorado.
+  // Opcional e fail-closed: sem identity token (APK antigo, opção desligada no painel, token inválido) o login segue sem nome.
+  const identidade = typeof body.identityToken === "string"
+    ? await verificarIdentidadePrivy(body.identityToken, endereco).catch(() => null)
+    : null;
+
   let token;
   try {
-    token = await assinarLanceAuth(endereco, TTL_LANCE_AUTH);
+    token = await assinarLanceAuth(endereco, TTL_LANCE_AUTH, false, { nome: identidade?.nome ?? null });
   } catch (err) {
     console.error("[auth-lance] assinarLanceAuth falhou:", err?.message);
     return jsonError(500, "jwt_indisponivel", "configuração de servidor incompleta");
   }
 
-  console.info("[auth-lance] token emitido", { endereco: mascararEndereco(endereco) }); // UTAC110h.4 (DEBT-031)
+  console.info("[auth-lance] token emitido", { endereco: mascararEndereco(endereco), nomeVerificado: !!identidade?.nome }); // UTAC110h.4 (DEBT-031) · UTAC146
   return jsonResponse({ token, ttl: TTL_LANCE_AUTH });
 };

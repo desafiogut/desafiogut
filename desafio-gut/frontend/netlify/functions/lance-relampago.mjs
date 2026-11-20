@@ -158,7 +158,9 @@ export default async (req) => {
   // UTAC142.2 (decisão do operador) — guarda-se SÓ «PrimeiroNome I.» (ou null): nunca o nome completo nem o e-mail
   // que o app manda quando a conta não tem nome do Google. Vale para o Key-Per-Bid, a idempotência, o ranking ao
   // vivo e a resposta. Era: `body.nomeExibicao.slice(0, 80).trim() || null`.
-  const nomeExibicao   = formatarNome(body.nomeExibicao);
+  // UTAC146 (ℹ️5, R18-146-B) — o nome vem SÓ do claim `nome` do token lance-auth, que o auth-lance só põe depois de
+  // verificar o identity token do Privy. O `body.nomeExibicao` é IGNORADO (era forjável). Sem claim ⇒ null (endereço curto).
+  const nomeExibicao   = formatarNome(jwtPayload?.nome);
 
   console.info("[lance-relampago] início", {
     endereco: mascararEndereco(endereco), valorCentavos, edicaoId, idem: !!idempotencyKey,

@@ -1,0 +1,11 @@
+V1 fail=1 RED md5_restaurado=SIM (netlify/functions/_lib/privy-identidade.mjs)
+V2 fail=1 RED md5_restaurado=SIM (netlify/functions/_lib/privy-identidade.mjs)
+V3 fail=1 RED md5_restaurado=SIM (netlify/functions/_lib/privy-identidade.mjs)
+V4 fail=0 SOBREVIVEU md5_restaurado=SIM (netlify/functions/_lib/privy-identidade.mjs)
+V5 fail=1 RED md5_restaurado=SIM (netlify/functions/auth-lance.mjs)
+V6 fail=1 RED md5_restaurado=SIM (netlify/functions/lance-relampago.mjs)
+V7 fail=1 RED md5_restaurado=SIM (netlify/functions/_lib/jwt.mjs)
+V8 fail=3 RED md5_restaurado=SIM (src/components/CardLance.jsx)
+V9 fail=1 RED md5_restaurado=SIM (src/components/CardLance.jsx)
+V10 fail=2 RED md5_restaurado=SIM (src/widgets/toast/Toast.jsx)
+V4 = mutante EQUIVALENTE: o JWKS do Privy só tem chaves EC P-256; sem o pin, o jose continua a recusar 'none' e HS* contra chave EC. Fica como defesa em profundidade.

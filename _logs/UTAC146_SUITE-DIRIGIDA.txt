@@ -1,0 +1,20 @@
+RAM livre: 856 MB
+src/__tests__/utac107c-deposito.test.mjs :: ℹ tests 4 ℹ pass 4 ℹ fail 0 
+src/__tests__/utac110d-front.test.mjs :: ℹ tests 15 ℹ pass 15 ℹ fail 0 
+src/__tests__/utac110j-vocabulario-v5.test.mjs :: ℹ tests 12 ℹ pass 12 ℹ fail 0 
+src/__tests__/utac110j5-pontos-lance.test.mjs :: ℹ tests 12 ℹ pass 12 ℹ fail 0 
+src/__tests__/utac129-front.test.mjs :: ℹ tests 5 ℹ pass 5 ℹ fail 0 
+src/__tests__/utac132-apk-sem-pix-build.test.mjs :: ℹ tests 19 ℹ pass 19 ℹ fail 0 
+src/__tests__/utac141-edicao-padrao.test.mjs :: ℹ tests 17 ℹ pass 17 ℹ fail 0 
+src/__tests__/utac146-feedback-passe.test.mjs :: ℹ tests 7 ℹ pass 7 ℹ fail 0 
+src/components/__tests__/citacoesRegulamento.test.mjs :: ℹ tests 9 ℹ pass 9 ℹ fail 0 
+src/components/__tests__/utac109e-cartao-unico.test.mjs :: ℹ tests 16 ℹ pass 16 ℹ fail 0 
+src/components/__tests__/vocabularioUI.test.mjs :: ℹ tests 3 ℹ pass 3 ℹ fail 0 
+src/pages/__tests__/Dashboard.test.mjs :: ℹ tests 54 ℹ pass 54 ℹ fail 0 
+src/pages/__tests__/utac0010-mercado-vencedor.test.mjs :: ℹ tests 18 ℹ pass 18 ℹ fail 0 
+src/pages/__tests__/utac107d-mlc.test.mjs :: ℹ tests 9 ℹ pass 9 ℹ fail 0 
+src/pages/__tests__/utac108c-mlc-aviso.test.mjs :: ℹ tests 17 ℹ pass 17 ℹ fail 0 
+src/pages/__tests__/utac108d-mlc-sempre.test.mjs :: ℹ tests 13 ℹ pass 13 ℹ fail 0 
+src/pages/__tests__/utac108e1-mlc-op.test.mjs :: ℹ tests 24 ℹ pass 24 ℹ fail 0 
+src/pages/__tests__/utac142-inicio-especial.test.mjs :: ℹ tests 3 ℹ pass 3 ℹ fail 0 
+backend (55 ficheiros) :: ℹ fail 0 ℹ pass 723 ℹ tests 723 

@@ -15,3 +15,8 @@ export const usePrivy = () => ({
 });
 export const useWallets = () => ({ wallets: [], ready: true });
 export const chamadasPrivy = () => ({ ...chamadas });
+
+// UTAC146 — o CardLance pede o identity token do Privy (opcional). Duplo controlável; null = sem token.
+let _identityToken = null;
+export const definirIdentityToken = (t) => { _identityToken = t; };
+export const getIdentityToken = async () => _identityToken;

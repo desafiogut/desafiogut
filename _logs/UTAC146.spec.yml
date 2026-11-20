@@ -1,0 +1,22 @@
+schema: utac/1
+name: UTAC146
+title: "Nome verificado pelo identity token do Privy (ℹ️5) + toast do consumo do Passe (ℹ️7) + AAB v12.1"
+type: produto
+baseline: 6886f48   # = origin/main; produção 6afff4cb (8f221a9)
+motivo: >-
+  ℹ️5: o nome do lance vinha do body (forjável). ℹ️7: o app não mostrava o consumo do Passe.
+  O operador pediu também o AAB v12.1 com link para o Ruan.
+frentes:
+  - id: A
+    nome: identity token Privy → auth-lance verifica (JWKS ES256, iss privy.io, aud app id, exp, carteira) → claim `nome` no lance-auth → lance usa SÓ o claim
+    entrega: [_lib/privy-identidade.mjs, auth-lance.mjs, _lib/jwt.mjs, lance-relampago.mjs, src/components/CardLance.jsx, testes]
+  - id: B
+    nome: toast «Você usou 1 Passe Relâmpago. Restam: N.» só com passeConsumido === true
+    entrega: [src/components/CardLance.jsx (useToast existente), teste]
+  - id: C
+    nome: AAB v12.1 (versionCode 12, versionName 1.2.1) + link
+    entrega: [Desktop/DesafioGUT-v12.1/]
+autoriza: [ficheiros nomeados, duplos de teste, push depois de AUTORIZO, build:apk + bundleRelease, upload do AAB para entrega]
+proibe: [git add -A, package-lock, regra do Passe, apuração, contrato, npm run build para o APK]
+dependencias: [operador liga «Return user data in an identity token» no painel Privy (R18-146-A)]
+regras_activas: [E, T, G, L, S, A, P, AU, ST, HI]

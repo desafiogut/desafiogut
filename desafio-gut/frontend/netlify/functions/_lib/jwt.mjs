@@ -39,10 +39,12 @@ export async function verificarPedido(token) {
 
 export { joseErrors };
 
-export async function assinarLanceAuth(endereco, ttlSec = 600, mfaVerified = false) {
+export async function assinarLanceAuth(endereco, ttlSec = 600, mfaVerified = false, { nome = null } = {}) {
   if (!KEY) throw new Error("JWT_SECRET não configurado");
   const claims = { endereco, tipo: "lance-auth" };
   if (mfaVerified) claims.mfa_verified = true;
+  // UTAC146 — nome Google VERIFICADO (identity token do Privy, conferido no auth-lance). Só entra se vier verificado.
+  if (typeof nome === "string" && nome.trim()) claims.nome = nome.trim().slice(0, 80);
   return await new SignJWT(claims)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()

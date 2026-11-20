@@ -77,6 +77,8 @@ export default function Toast({ id, variant = 'info', message, eta = null, onDis
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -10, scale: 0.95 }}
       transition={{ duration: 0.25 }}
+      role="status"
+      aria-live="polite"
       className={`
         fixed top-4 left-1/2 -translate-x-1/2 z-[100]
         flex items-center gap-3 px-4 py-3 rounded-lg

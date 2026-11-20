@@ -92,6 +92,8 @@ test("D6 · apuração: vencedor e Top 10 saem com «PrimeiroNome I.»; e-mail e
 
 test("D7 · origem: o lance-relampago reduz o nome ANTES de o guardar (fonte vigiada)", () => {
   const src = readFileSync(new URL("../lance-relampago.mjs", import.meta.url), "utf8").replace(/^\s*\/\/.*$/gm, "");
-  assert.match(src, /const nomeExibicao\s+= formatarNome\(body\.nomeExibicao\);/);
+  // UTAC146 (ℹ️5) — a origem passou a ser o claim VERIFICADO do token (o body é ignorado); a redução continua na origem.
+  assert.match(src, /const nomeExibicao\s+= formatarNome\(jwtPayload\?\.nome\);/);
   assert.doesNotMatch(src, /body\.nomeExibicao\.slice\(/, "voltou o nome cru");
+  assert.doesNotMatch(src, /formatarNome\(body\.nomeExibicao\)/, "voltou o nome do body (forjável)");
 });
