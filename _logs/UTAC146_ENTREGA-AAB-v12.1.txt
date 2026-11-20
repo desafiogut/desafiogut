@@ -1,0 +1,30 @@
+DesafioGUT — AAB v12.1 (versionCode 13 / versionName 1.2.1)
+Gerado: 20/11/2026 05:18 BRT · código do UTAC146 (commit dbf3df3) + aumento de versão · JVM: Android Studio JBR (Java 21)
+
+FICHEIRO
+  Nome:     DesafioGUT-v12.1.aab
+  Tamanho:  32 438 478 bytes (30,9 MB)
+  sha256:   278af9b893f9bda05354cdab4c913375573e90b63257a745ed578a28570b5940
+  md5:      1ac1e285d602f4c7982343f020a1b97e
+  Cópia local: C:\Users\Moltbot\Desktop\DesafioGUT-v12.1\DesafioGUT-v12.1.aab
+
+PORQUÊ versionCode 13: a v12 (versionCode 12 / 1.2.0, UTAC139) já foi entregue. A Play Console recusa versionCode repetido.
+
+ASSINATURA (keytool -printcert -jarfile): mesmo certificado da v12
+  SHA-256: 85:44:BC:E8:F2:08:E7:79:29:E2:CC:C8:06:EB:D5:B7:51:54:E1:83:28:9A:AE:1B:21:33:30:D4:90:88:17:29
+
+VERIFICADO NO ARTEFACTO
+  manifesto: versionCode "13", versionName "1.2.1"
+  build:apk → validar-dist-rede: «bundle coerente com PRODUÇÃO (mainnet)»; contrato mainnet presente
+  strings de PIX proibidas no APK: 0
+  código novo presente: aviso «Você usou 1 Passe Relâmpago» e envio do identity token do Privy
+
+O QUE MUDA PARA O UTILIZADOR (face à v12)
+  - Edição Especial: formulário «Dar Lance» no Início (como o «Dar palpite»), saldo de pontos actualizado na hora,
+    tabela ao vivo com «PrimeiroNome I.».
+  - Aviso curto quando um lance gasta 1 Passe Relâmpago (a cada 3 lances), com quantos restam.
+  - O nome na tabela passa a ser verificado (Google via Privy), quando a opção estiver ligada no painel do Privy.
+
+LINK PARA O RUAN
+  https://gofile.io/d/UuvbtvOS   (md5 publicado pelo serviço = md5 local: upload íntegro)
+  Litterbox testado antes: «No file!» (HTTP 412) — continua em baixo.
