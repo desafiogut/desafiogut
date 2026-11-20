@@ -286,9 +286,9 @@ test("C3 chatbot: especialParaGuto lê a edição (falha ⇒ null; terminada ⇒
 
 test("K1 configDaEspecial: omissões = decisões do UTAC140; inválidos caem na omissão", async () => {
   const { configDaEspecial } = await import("../_lib/especial-config.mjs");
-  assert.deepEqual(configDaEspecial(null), { rankingAoVivo: true, passePorLance: true, avisosLider: true, top10: { publico: true, janelaHoras: 24, exigePasse: true }, guto: { boasVindas: null } });
+  assert.deepEqual(configDaEspecial(null), { rankingAoVivo: true, passeACadaLances: 3, avisosLider: true, top10: { publico: true, janelaHoras: 24, exigePasse: true }, guto: { boasVindas: null } }); // UTAC142.1
   assert.deepEqual(configDaEspecial({ rankingAoVivo: false, top10: { publico: false, janelaHoras: 48, exigePasse: false }, guto: { boasVindas: " Olá {produto} " } }),
-    { rankingAoVivo: false, passePorLance: true, avisosLider: true, top10: { publico: false, janelaHoras: 48, exigePasse: false }, guto: { boasVindas: "Olá {produto}" } }); // UTAC142 — 2 campos novos (R18-142-C/E)
+    { rankingAoVivo: false, passeACadaLances: 3, avisosLider: true, top10: { publico: false, janelaHoras: 48, exigePasse: false }, guto: { boasVindas: "Olá {produto}" } }); // UTAC142 — 2 campos novos (R18-142-C/E)
   assert.deepEqual(configDaEspecial({ rankingAoVivo: "não", top10: { publico: 0, janelaHoras: 0, exigePasse: "x" }, guto: { boasVindas: "x".repeat(601) } }),
     configDaEspecial(null));
   assert.equal(configDaEspecial({ top10: { janelaHoras: 721 } }).top10.janelaHoras, 24);

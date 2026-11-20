@@ -1,33 +1,49 @@
-// UTAC142 (Frente C, R18-142-C) — na EDIÇÃO ESPECIAL cada lance consome 1 Passe Relâmpago, além dos pontos.
-// Só na especial: o Relâmpago normal continua sem Passe (R18-129-3, provado em utac129-lance-sem-passe).
+// UTAC142.1 (decisão do operador, substitui a R18-142-C) — na EDIÇÃO ESPECIAL o lance gasta SÓ pontos. Quem tem Passe
+// Relâmpago gasta 1 a cada 3 lances (3.º, 6.º, 9.º…); sem Passe nessa altura o lance passa na mesma. O bónus +100 fica
+// na compra (não é testado aqui: comprar-passe-relampago, UTAC138).
 //
-// REAIS: `lance-relampago.mjs`, `_lib/especial-config.mjs`, `_lib/edicao-janela.mjs`. Inventário e ledger = duplos
-// com estado, iguais aos do utac129 (o inventário com STOCK por endereço e a RPC atómica modelada).
+// REAIS: `lance-relampago.mjs`, `_lib/passe-a-cada-lances.mjs`, `_lib/especial-config.mjs`, `_lib/edicao-janela.mjs`.
+// Duplos: inventário e ledger com estado; Blobs com ETag + `onlyIfMatch`/`onlyIfNew` e intercalação forçada entre a
+// leitura e a escrita (para a corrida ser real).
 // node --test --experimental-test-module-mocks _tests/utac142-especial-passe.test.mjs
 import { test, mock, before, beforeEach } from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 
 const ADDR = "0x5baf46609dd9188e081cc78f70e61a6ea07f32b8";
 const ESP = "ESPECIAL-RELAMPAGO1";
-let mockEdicao = null;
-let mockPontos = 0;
-let passes = 0;
-let inventarioEmBaixo = false;
-let chamadas = [];       // ["consumir"|"devolver", tipo]
-let revertidos = [];     // refs devolvidas no ledger
+let mockEdicao = null, mockPontos = 0, passes = 0, inventarioEmBaixo = false, falharBlindagem = false;
+let chamadas = [];
 let refsLedger = new Set();
-let valorDaRef = new Map();
-let falharBlindagem = false;
 
-const mem = new Map();
-const fakeStore = {
-  async setJSON(k, o) { mem.set(k, JSON.stringify(o)); },
-  async get(k, { type } = {}) { const v = mem.get(k); return v === undefined ? null : (type === "json" ? JSON.parse(v) : v); },
-  async list() { return { blobs: [...mem.keys()].map((key) => ({ key })) }; },
-  async delete(k) { mem.delete(k); },
-};
+const stores = new Map();
+const etag = (v) => `"${createHash("sha1").update(v).digest("hex")}"`;
+const pausa = () => new Promise((r) => setImmediate(r));
+function store(name) {
+  if (!stores.has(name)) {
+    const m = new Map();
+    stores.set(name, {
+      m,
+      async get(k, { type } = {}) { const v = m.get(k); return v === undefined ? null : (type === "json" ? JSON.parse(v) : v); },
+      async getWithMetadata(k, { type } = {}) {
+        const v = m.get(k); await pausa();
+        return v === undefined ? null : { data: type === "json" ? JSON.parse(v) : v, etag: etag(v) };
+      },
+      async set(k, v, o = {}) {
+        await pausa();
+        if (o.onlyIfNew && m.has(k)) return { modified: false };
+        if (o.onlyIfMatch && (!m.has(k) || etag(m.get(k)) !== o.onlyIfMatch)) return { modified: false };
+        m.set(k, String(v)); return { modified: true, etag: etag(String(v)) };
+      },
+      async setJSON(k, o) { m.set(k, JSON.stringify(o)); return { modified: true }; },
+      async list() { return { blobs: [...m.keys()].map((key) => ({ key })) }; },
+      async delete(k) { m.delete(k); },
+    });
+  }
+  return stores.get(name);
+}
 
-mock.module("@netlify/blobs", { namedExports: { getStore: () => fakeStore } });
+mock.module("@netlify/blobs", { namedExports: { getStore: (o) => store(typeof o === "string" ? o : o.name) } });
 mock.module("../_lib/jwt.mjs", { namedExports: { verificarLanceAuth: async () => ({ endereco: ADDR }) } });
 mock.module("../_lib/rate-limiter.mjs", { namedExports: { aplicarRateLimit: async () => null } });
 mock.module("../_lib/rbac.mjs", { namedExports: { getRole: async () => ({ role: "user" }) } });
@@ -57,12 +73,9 @@ mock.module("../_lib/ledger-lance.mjs", { namedExports: {
   consumirPontosLance: async (e, valor, ref) => {
     if (refsLedger.has(ref)) return { ok: true, criado: false, pontos: mockPontos };
     if (mockPontos < valor) return { ok: false, code: "PONTOS_LANCE_INSUFICIENTES", pontos: mockPontos };
-    refsLedger.add(ref); valorDaRef.set(ref, valor); mockPontos -= valor; return { ok: true, criado: true, pontos: mockPontos };
+    refsLedger.add(ref); mockPontos -= valor; return { ok: true, criado: true, pontos: mockPontos };
   },
-  // modela o real: remove o movimento e devolve o delta
-  reverterMovimentoLance: async (e, ref) => {
-    revertidos.push(ref); mockPontos += valorDaRef.get(ref) ?? 0; valorDaRef.delete(ref); return { ok: true, revertido: true };
-  },
+  reverterMovimentoLance: async () => ({ ok: true, revertido: true }),
   creditarPontosLance: async () => ({ ok: true, criado: true, pontos: mockPontos }),
   lerLedgerLance: async () => ({ creditos: 0, pontos: mockPontos, historico: [] }),
   PONTOS_LANCE_BONUS_PASSE_RELAMPAGO: 100,
@@ -80,8 +93,8 @@ const especial = (extra = {}) => ({
   inicio_em: new Date(Date.now() - 3600e3).toISOString(), termino_em: new Date(Date.now() + 3600e3).toISOString(), ...extra,
 });
 beforeEach(() => {
-  mem.clear(); mockEdicao = especial(); mockPontos = 50; passes = 3; inventarioEmBaixo = false;
-  chamadas = []; revertidos = []; refsLedger = new Set(); valorDaRef = new Map(); falharBlindagem = false;
+  stores.clear(); mockEdicao = especial(); mockPontos = 100; passes = 5; inventarioEmBaixo = false; falharBlindagem = false;
+  chamadas = []; refsLedger = new Set();
 });
 async function lance(valor, { edicaoId = ESP, idempotencyKey } = {}) {
   const r = await handler({
@@ -92,87 +105,98 @@ async function lance(valor, { edicaoId = ESP, idempotencyKey } = {}) {
   });
   return { status: r.status, corpo: await r.json() };
 }
-const codigo = (c) => c.error?.code ?? c.code;
+const consumos = () => chamadas.filter((c) => c[0] === "consumir").length;
+const contagem = () => JSON.parse(store("especial-lances-passe").m.get(`${ESP}:${ADDR}`) ?? "null");
 
-test("C1 · especial: lance aceite consome 1 Passe Relâmpago E os pontos do valor", async () => {
-  const r = await lance(2);
-  assert.equal(r.status, 201, JSON.stringify(r.corpo));
+test("C1 · os lances 1 e 2 gastam SÓ pontos; o 3.º gasta também 1 Passe Relâmpago", async () => {
+  const r1 = await lance(1); const r2 = await lance(2);
+  assert.equal(r1.status, 201); assert.equal(r2.status, 201);
+  assert.equal(consumos(), 0, "gastou Passe antes do 3.º lance");
+  assert.equal(r1.corpo.passeConsumido, false);
+  const r3 = await lance(3);
+  assert.equal(r3.status, 201);
+  assert.equal(r3.corpo.passeConsumido, true);
+  assert.equal(r3.corpo.passesRelampagoRestantes, 4);
+  assert.equal(passes, 4);
+  assert.equal(mockPontos, 100 - 6, "os pontos são sempre o valor do lance");
+});
+
+test("C2 · a cada 3: nove lances gastam exactamente 3 Passes (no 3.º, 6.º e 9.º)", async () => {
+  const quando = [];
+  for (let i = 1; i <= 9; i++) { const r = await lance(i); assert.equal(r.status, 201); if (r.corpo.passeConsumido) quando.push(i); }
+  assert.deepEqual(quando, [3, 6, 9]);
   assert.equal(passes, 2);
-  assert.equal(mockPontos, 48);
-  assert.deepEqual(chamadas, [["consumir", "relampago"]]);
-  assert.equal(r.corpo.passeConsumido, true);
-  assert.equal(r.corpo.passesRelampagoRestantes, 2);
+  assert.deepEqual(contagem().lances, 9);
+  assert.deepEqual(contagem().passesConsumidos, 3);
 });
 
-test("C2 · 1 Passe POR LANCE: três lances gastam três Passes; o quarto é recusado", async () => {
-  for (const v of [1, 2, 3]) assert.equal((await lance(v)).status, 201);
-  assert.equal(passes, 0);
-  const r = await lance(4);
-  assert.equal(r.status, 400);
-  assert.equal(codigo(r.corpo), "sem_passes_disponiveis");
-});
-
-test("C3 · sem Passe: 400, os pontos VOLTAM (efeito líquido zero) e nenhum Passe é criado", async () => {
+test("C3 · SEM Passe: todos os lances passam só com pontos (o Passe é opcional, nunca bloqueia)", async () => {
   passes = 0;
-  const r = await lance(5);
-  assert.equal(r.status, 400);
-  assert.equal(codigo(r.corpo), "sem_passes_disponiveis");
-  assert.equal(revertidos.length, 1, "os pontos do lance recusado não voltaram");
-  assert.equal(mockPontos, 50);
-  assert.deepEqual(chamadas, [["consumir", "relampago"]], "chamou devolverPasse sem ter consumido (MA2)");
-  assert.equal(passes, 0);
+  for (let i = 1; i <= 4; i++) {
+    const r = await lance(i);
+    assert.equal(r.status, 201, JSON.stringify(r.corpo));
+    assert.equal(r.corpo.passeConsumido, false);
+  }
+  assert.equal(mockPontos, 100 - 10);
+  assert.equal(contagem().passesConsumidos, 0);
 });
 
-test("C4 · inventário em baixo: 503, pontos devolvidos, nunca se assume que há Passe (fail-closed)", async () => {
+test("C4 · inventário em baixo no 3.º lance: o lance passa (fail-soft), nenhum Passe gasto", async () => {
   inventarioEmBaixo = true;
-  const r = await lance(5);
-  assert.equal(r.status, 503);
-  assert.equal(codigo(r.corpo), "inventario_indisponivel");
-  assert.equal(revertidos.length, 1);
-  assert.equal(chamadas.filter((c) => c[0] === "devolver").length, 0);
+  for (let i = 1; i <= 3; i++) assert.equal((await lance(i)).status, 201);
+  assert.equal(passes, 5);
 });
 
-test("C5 · a blindagem falha DEPOIS do consumo: o Passe volta UMA vez e os pontos também", async () => {
+test("C5 · nunca há devolução: o Passe só se gasta DEPOIS de o lance existir (blindagem a falhar ⇒ nem conta nem gasta)", async () => {
+  await lance(1); await lance(2);
   falharBlindagem = true;
-  const r = await lance(5);
+  const r = await lance(3);
   assert.equal(r.status, 502);
-  assert.equal(passes, 3, "o Passe do lance falhado não voltou (ou voltou a dobrar)");
-  assert.deepEqual(chamadas, [["consumir", "relampago"], ["devolver", "relampago"]]);
-  assert.equal(revertidos.length, 1);
+  assert.equal(consumos(), 0);
+  assert.equal(chamadas.filter((c) => c[0] === "devolver").length, 0);
+  assert.equal(contagem().lances, 2, "um lance falhado não pode contar");
 });
 
-test("C6 · BIDIRECCIONAL: o Relâmpago normal NÃO toca no inventário (R18-129-3 intacta fora da especial)", async () => {
+test("C6 · BIDIRECCIONAL: o Relâmpago normal não conta nem toca no inventário", async () => {
   mockEdicao = { id: "RELAMP-1", tipo: "relampago" };
-  passes = 0;
-  const r = await lance(5, { edicaoId: "RELAMP-1" });
-  assert.equal(r.status, 201, JSON.stringify(r.corpo));
+  for (let i = 1; i <= 3; i++) assert.equal((await lance(i, { edicaoId: "RELAMP-1" })).status, 201);
   assert.deepEqual(chamadas, []);
-  assert.equal(r.corpo.passeConsumido, false);
+  assert.equal(stores.get("especial-lances-passe")?.m.size ?? 0, 0);
 });
 
-test("C7 · dinâmico: a especial com `passePorLance:false` no Blob não consome Passe", async () => {
-  mockEdicao = especial({ passePorLance: false });
-  passes = 0;
-  const r = await lance(5);
-  assert.equal(r.status, 201, JSON.stringify(r.corpo));
-  assert.deepEqual(chamadas, []);
+test("C7 · dinâmico: `passeACadaLances: 2` gasta no 2.º e 4.º; `0` desliga", async () => {
+  mockEdicao = especial({ passeACadaLances: 2 });
+  const quando = [];
+  for (let i = 1; i <= 4; i++) { const r = await lance(i); if (r.corpo.passeConsumido) quando.push(i); }
+  assert.deepEqual(quando, [2, 4]);
+  stores.clear(); chamadas = []; mockEdicao = especial({ passeACadaLances: 0 });
+  for (let i = 10; i <= 13; i++) await lance(i);
+  assert.equal(consumos(), 0);
 });
 
-test("C8 · idempotência: repetir a MESMA idempotencyKey não consome um 2.º Passe", async () => {
+test("C8 · idempotência: a MESMA idempotencyKey repetida não conta um 2.º lance", async () => {
   const k = "0x" + "ab".repeat(16);
   assert.equal((await lance(5, { idempotencyKey: k })).status, 201);
-  mem.clear(); // sem a cache de idempotência, o 2.º pedido chega ao débito
-  const r2 = await lance(5, { idempotencyKey: k });
-  assert.equal(r2.status, 409);
-  assert.equal(passes, 2, "o pedido repetido gastou outro Passe");
-  assert.equal(chamadas.filter((c) => c[0] === "consumir").length, 1);
+  store("lance-idem").m.clear?.();
+  for (const s of stores.values()) if (s !== stores.get("especial-lances-passe")) s.m.clear();
+  assert.equal((await lance(5, { idempotencyKey: k })).status, 409);
+  assert.equal(contagem().lances, 1);
 });
 
-test("C9 · concorrência: 5 lances em paralelo com 3 Passes → 3 aceites, 2 recusados, inventário nunca negativo", async () => {
-  const rs = await Promise.all([1, 2, 3, 4, 5].map((v) => lance(v)));
-  const ok = rs.filter((r) => r.status === 201).length;
-  assert.equal(ok, 3);
-  assert.equal(rs.filter((r) => codigo(r.corpo) === "sem_passes_disponiveis").length, 2);
-  assert.equal(passes, 0);
-  assert.equal(mockPontos, 50 - rs.filter((r) => r.status === 201).reduce((s, r) => s + r.corpo.valorCentavos, 0));
+test("C9 · CONCORRÊNCIA: 6 lances em paralelo ⇒ contagem 6 (sem números repetidos) e exactamente 2 Passes gastos", async () => {
+  const rs = await Promise.all([1, 2, 3, 4, 5, 6].map((v) => lance(v)));
+  assert.equal(rs.filter((r) => r.status === 201).length, 6);
+  assert.equal(contagem().lances, 6);
+  assert.equal(consumos(), 2, "a corrida gastou Passes a mais ou a menos");
+  assert.equal(passes, 3);
+});
+
+test("C10 · lib: sem Passe no N-ésimo lance, a contagem fica ok e diz porquê (code sem_passes), sem marcar consumo", async () => {
+  const { contarLanceEConsumirPasse } = await import("../_lib/passe-a-cada-lances.mjs");
+  const s = store("c10");
+  const semPasse = async () => ({ ok: false, code: "sem_passes" });
+  for (let i = 1; i <= 2; i++) await contarLanceEConsumirPasse({ store: s, edicaoId: ESP, endereco: ADDR, consumirPasse: semPasse });
+  const r = await contarLanceEConsumirPasse({ store: s, edicaoId: ESP, endereco: ADDR, consumirPasse: semPasse });
+  assert.deepEqual(r, { ok: true, lances: 3, passeConsumido: false, code: "sem_passes" });
+  assert.equal(JSON.parse(s.m.get(`${ESP}:${ADDR}`)).passesConsumidos, 0);
 });

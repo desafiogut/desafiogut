@@ -139,9 +139,7 @@ test("A6 (achado MA2 do SEG4) a falha da blindagem devolve os PONTOS e nunca cri
   assert.deepEqual(chamadasInventario, [], "um lance falhado mexeu no inventário de Passes");
   const src = readFileSync(new URL("../lance-relampago.mjs", import.meta.url), "utf8")
     .split("\n").filter((l) => !/^\s*\/\//.test(l)).join("\n");
-  // UTAC142 (R18-142-C) — a especial passou a consumir 1 Passe por lance, logo a devolução existe outra vez, mas
-  // SÓ atrás da bandeira `passeConsumido` (posta depois de `consumirPasse` ok). A guarda de fonte que a proibia
-  // foi trocada por prova de COMPORTAMENTO: aqui (Relâmpago normal) `chamadasInventario` fica vazio acima, e em
-  // utac142-especial-passe C3/C5 prova-se que a devolução nunca corre sem consumo (o risco MA2).
-  assert.match(src, /if \(!passeConsumido\) return;/, "a devolução do Passe tem de estar atrás da bandeira do consumo");
+  // UTAC142.1 — a guarda original volta (sem devolução de Passe no lance). O consumo da especial (1 a cada N lances)
+  // corre DEPOIS de o lance existir, logo não há nada a devolver; `passeConsumido` é agora só um campo da resposta.
+  assert.doesNotMatch(src, /devolverPasse\(/, "os ramos de devolução do Passe voltaram");
 });

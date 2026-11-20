@@ -41,7 +41,8 @@ import { mascararEndereco } from "./_lib/validate.mjs"; // UTAC110h.4 (DEBT-031)
 import { registarNoRankingEspecial } from "./_lib/ranking-especial.mjs"; // UTAC140 — ranking ao vivo da especial
 import { novoSal, hashCompromisso } from "./_lib/compromisso-lance.mjs"; // UTAC140 — compromisso com sal
 import { configDaEspecial } from "./_lib/especial-config.mjs"; // UTAC140b — `rankingAoVivo` vem da edição
-import { consumirPasse, devolverPasse } from "./_lib/passes-inventario.mjs"; // UTAC142 (R18-142-C) — Passe por lance na especial
+import { consumirPasse } from "./_lib/passes-inventario.mjs"; // UTAC142.1 — 1 Passe a cada N lances na especial (opcional)
+import { contarLanceEConsumirPasse, STORE_CONTAGEM } from "./_lib/passe-a-cada-lances.mjs"; // UTAC142.1
 
 const LANCE_MIN_CENTAVOS = 1;
 const LANCE_MAX_CENTAVOS = 999999;
@@ -205,15 +206,7 @@ export default async (req) => {
   const ehProgramado = tipoEdicao === "programado";
   const lanceId = randomUUID();
   let refConsumoPontos = null; // UTAC110n — preenchido só quando o lance gasta pontos de lance
-  // UTAC142 (R18-142-C) — `true` SÓ depois de `consumirPasse` ter devolvido ok. A devolução só corre com esta
-  // bandeira: o achado MA2 do UTAC129 mostrou que ramos de devolução «armados» sem consumo CRIAVAM Passes.
-  let passeConsumido = false;
-  const devolverPasseDoLance = async () => {
-    if (!passeConsumido) return;
-    passeConsumido = false;
-    const d = await devolverPasse({ endereco, tipo: "relampago" }).catch(() => ({ ok: false }));
-    if (!d.ok) console.error("[lance-relampago] devolver o Passe do lance falhou", mascararEndereco(endereco));
-  };
+
 
   // ── 6. Consumo do pagamento (programado = senha; flash = saldo R$) ────────
   let debito;
@@ -281,36 +274,11 @@ export default async (req) => {
       refConsumoPontos = null; // o consumo é do outro pedido — nunca o devolver daqui
       return jsonError(409, "lance_em_processamento", "este lance já está a ser processado (mesma idempotencyKey)");
     }
-    // UTAC142 (R18-142-C, decisão do operador) — na EDIÇÃO ESPECIAL cada lance consome também 1 Passe Relâmpago
-    // (ligável por edição: `passePorLance` no Blob; omissão = ligado). Reverte a R18-129-3 SÓ na especial: o
-    // Relâmpago normal continua a gastar só pontos. Ordem: os pontos primeiro (idempotentes por `ref`, um
-    // pedido repetido sai acima com 409 sem tocar no inventário), depois o Passe (RPC atómica). Sem Passe ⇒ os
-    // pontos voltam e o lance é recusado sem efeito líquido.
-    let passesRestantes = null;
-    if (EDICAO_ESPECIAL_RE.test(edicaoId) && configDaEspecial(meta).passePorLance) {
-      let p;
-      try { p = await consumirPasse({ endereco, tipo: "relampago" }); }
-      catch { p = { ok: false, code: "inventario_indisponivel" }; }
-      if (!p.ok) {
-        const rev = await reverterMovimentoLance(endereco, refConsumoPontos).catch(() => ({ ok: false }));
-        if (!rev.ok) console.error("[lance-relampago] devolver os pontos (sem Passe) falhou");
-        refConsumoPontos = null;
-        if (p.code === "sem_passes") {
-          return jsonError(400, "sem_passes_disponiveis",
-            "Cada lance na Edição Especial usa 1 Passe Relâmpago e você não tem nenhum. Os pontos não foram gastos.",
-            { passesRelampago: 0 });
-        }
-        return jsonError(503, "inventario_indisponivel", "não foi possível ler os seus Passes agora — nada foi cobrado");
-      }
-      passeConsumido = true;
-      passesRestantes = Number.isInteger(p.restantes) ? p.restantes : null;
-    }
     debito = {
       ok: true,
       resultado: {
         saldoAntesCentavos: null, saldoDepoisCentavos: null,
         pontosLanceGastos: valorCentavos, pontosLanceRestantes: consumo.pontos,
-        passeConsumido, passesRelampagoRestantes: passesRestantes,
       },
     };
   } else {
@@ -361,7 +329,6 @@ export default async (req) => {
         const rev = await reverterMovimentoLance(endereco, refConsumoPontos).catch(() => ({ ok: false }));
         if (!rev.ok) console.error("[lance-relampago] devolver os pontos de lance falhou");
       }
-      await devolverPasseDoLance(); // UTAC142 — o lance não existe ⇒ o Passe volta
       return jsonError(502, "blindagem_falhou", "não foi possível registar o lance blindado");
     }
   } else {
@@ -404,7 +371,6 @@ export default async (req) => {
         const rev = await reverterMovimentoLance(endereco, refConsumoPontos).catch(() => ({ ok: false }));
         if (!rev.ok) console.error("[lance-relampago] devolver os pontos de lance falhou");
       }
-      await devolverPasseDoLance(); // UTAC142 — o lance não existe ⇒ o Passe volta
       return jsonError(502, "persistencia_falhou", "não foi possível registar o lance — nada foi cobrado");
     }
   }
@@ -419,6 +385,19 @@ export default async (req) => {
     const r = await registarNoRankingEspecial({ lanceId, edicaoId, endereco, nomeExibicao }).catch(() => ({ ok: false })); // UTAC142 — nome reduzido
     if (r.ok) posicaoRanking = r.posicao;
     else console.warn("[lance-relampago] ranking especial falhou (não-fatal):", r.code);
+  }
+
+  // ── 7a''. UTAC142.1 (decisão do operador) — na especial o lance gasta SÓ pontos; quem tem Passe Relâmpago gasta 1
+  // a cada N lances (`passeACadaLances` no Blob; omissão 3; 0 desliga). Sem Passe, o lance passa na mesma. Corre
+  // DEPOIS de o lance existir ⇒ nada a devolver. FAIL-SOFT: nunca recusa nem desfaz um lance aceite.
+  let consumoPasse = { passeConsumido: false, passesRelampagoRestantes: null };
+  const aCada = EDICAO_ESPECIAL_RE.test(edicaoId) ? configDaEspecial(meta).passeACadaLances : 0;
+  if (aCada > 0) {
+    const c = await contarLanceEConsumirPasse({
+      store: abrirStore(STORE_CONTAGEM), edicaoId, endereco, consumirPasse, aCada,
+    }).catch(() => ({ ok: false, passeConsumido: false, code: "excecao" }));
+    if (!c.ok) console.warn("[lance-relampago] contagem do Passe falhou (não-fatal):", c.code);
+    consumoPasse = { passeConsumido: c.passeConsumido === true, passesRelampagoRestantes: c.passesRelampagoRestantes ?? null };
   }
 
   // ── 7b. UTAC110f — missão «Completar 1 lance» (+10 pontos de lance, 1× por dia de Manaus) ─────
@@ -474,8 +453,8 @@ export default async (req) => {
     creditoLanceConsumido: false,        // LEGADO (110d) — mantido para não partir clientes antigos
     creditosLanceRestantes: null,        // LEGADO (110d) — o lance já não gasta créditos
     pontosLanceConsumidos: debito.resultado.pontosLanceGastos ?? null, // UTAC110n
-    passeConsumido: debito.resultado.passeConsumido === true,                  // UTAC142 (R18-142-C)
-    passesRelampagoRestantes: debito.resultado.passesRelampagoRestantes ?? null, // UTAC142
+    passeConsumido: consumoPasse.passeConsumido,                     // UTAC142.1 — gasto neste lance (a cada N)
+    passesRelampagoRestantes: consumoPasse.passesRelampagoRestantes, // UTAC142.1
     // ⚠️ O +10 da missão do dia é creditado DEPOIS do débito (:7b). Devolver o saldo do momento do
     // débito dava 63 quando o utilizador passa a ter 73 — achado ⚠️2 do validador SEG8. O campo
     // responde pelo estado no FIM do pedido, que é o que o ecrã mostra.

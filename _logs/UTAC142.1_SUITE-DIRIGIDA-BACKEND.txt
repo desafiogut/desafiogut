@@ -1,0 +1,1996 @@
+[saldoRs:teste] credito início { pedidoId: 'pix1', endereco: '0xabc0…0abc', valorCentavos: 5000 }
+[saldoRs:teste] credito concluído {
+  pedidoId: 'pix1',
+  endereco: '0xabc0…0abc',
+  valorCentavos: 5000,
+  saldoAntes: 0,
+  saldoDepois: 5000
+}
+[saldoRs:desconhecido] credito início { pedidoId: 'pix2', endereco: '0xabc0…0abc', valorCentavos: 3000 }
+[saldoRs:desconhecido] credito concluído {
+  pedidoId: 'pix2',
+  endereco: '0xabc0…0abc',
+  valorCentavos: 3000,
+  saldoAntes: 0,
+  saldoDepois: 3000
+}
+[saldoRs:desconhecido] credito início { pedidoId: 'pix2', endereco: '0xabc0…0abc', valorCentavos: 3000 }
+[saldoRs:desconhecido] idempotent — pedido já creditado em R$ { pedidoId: 'pix2' }
+[saldoRs:desconhecido] credito início { pedidoId: 'pix3', endereco: '0xabc0…0abc', valorCentavos: 1000 }
+[saldoRs:desconhecido] credito concluído {
+  pedidoId: 'pix3',
+  endereco: '0xabc0…0abc',
+  valorCentavos: 1000,
+  saldoAntes: 0,
+  saldoDepois: 1000
+}
+[saldoRs:debito:lance-R1] início { endereco: '0xabc0…0abc', valorCentavos: 400 }
+[saldoRs:debito:lance-R1] concluído {
+  endereco: '0xabc0…0abc',
+  saldoAntes: 1000,
+  saldoDepois: 600,
+  valorCentavos: 400,
+  tentativa: 1
+}
+[saldoRs:desconhecido] credito início { pedidoId: 'pix4', endereco: '0xabc0…0abc', valorCentavos: 200 }
+[saldoRs:desconhecido] credito concluído {
+  pedidoId: 'pix4',
+  endereco: '0xabc0…0abc',
+  valorCentavos: 200,
+  saldoAntes: 0,
+  saldoDepois: 200
+}
+[saldoRs:debito:lance-R1] início { endereco: '0xabc0…0abc', valorCentavos: 500 }
+[saldoRs:debito:lance-R1] saldo insuficiente { endereco: '0xabc0…0abc', saldoAntes: 200, valor: 500 }
+[saldoRs:desconhecido] credito início { pedidoId: 'pix5', endereco: '0xabc0…0abc', valorCentavos: 1000 }
+[saldoRs:desconhecido] credito concluído {
+  pedidoId: 'pix5',
+  endereco: '0xabc0…0abc',
+  valorCentavos: 1000,
+  saldoAntes: 0,
+  saldoDepois: 1000
+}
+[saldoRs:debito:lance-R1] início { endereco: '0xabc0…0abc', valorCentavos: 1000 }
+[saldoRs:debito:lance-R1] concluído {
+  endereco: '0xabc0…0abc',
+  saldoAntes: 1000,
+  saldoDepois: 0,
+  valorCentavos: 1000,
+  tentativa: 1
+}
+[saldoRs:reembolso:lance-falhou] { endereco: '0xabc0…0abc', saldoAntes: 0, saldoDepois: 1000 }
+[saldoRs:desconhecido] credito início { pedidoId: 'pixC', endereco: '0xabc0…0abc', valorCentavos: 1000 }
+[saldoRs:desconhecido] credito concluído {
+  pedidoId: 'pixC',
+  endereco: '0xabc0…0abc',
+  valorCentavos: 1000,
+  saldoAntes: 0,
+  saldoDepois: 1000
+}
+[saldoRs:debito:conc-1] início { endereco: '0xabc0…0abc', valorCentavos: 400 }
+[saldoRs:debito:conc-2] início { endereco: '0xabc0…0abc', valorCentavos: 400 }
+[saldoRs:debito:conc-3] início { endereco: '0xabc0…0abc', valorCentavos: 400 }
+[saldoRs:debito:conc-1] concluído {
+  endereco: '0xabc0…0abc',
+  saldoAntes: 1000,
+  saldoDepois: 600,
+  valorCentavos: 400,
+  tentativa: 1
+}
+[saldoRs:debito:conc-2] CAS perdeu (tentativa 1/5) — relendo saldo { endereco: '0xabc0…0abc' }
+[saldoRs:debito:conc-2] concluído {
+  endereco: '0xabc0…0abc',
+  saldoAntes: 600,
+  saldoDepois: 200,
+  valorCentavos: 400,
+  tentativa: 2
+}
+[saldoRs:debito:conc-3] CAS perdeu (tentativa 1/5) — relendo saldo { endereco: '0xabc0…0abc' }
+[saldoRs:debito:conc-3] CAS perdeu (tentativa 2/5) — relendo saldo { endereco: '0xabc0…0abc' }
+[saldoRs:debito:conc-3] saldo insuficiente { endereco: '0xabc0…0abc', saldoAntes: 200, valor: 400 }
+(node:16948) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ credita R$ e lê saldo (8.25ms)
+✔ crédito idempotente por pedidoId não duplica (2.0964ms)
+✔ débito com saldo suficiente (fluxo de lance) debita (3.0638ms)
+✔ débito com saldo insuficiente bloqueia sem alterar saldo (5.7362ms)
+✔ reembolso devolve ao saldo (compensação pós-falha de lance) (5.2654ms)
+✔ débito concorrente é atômico (anti double-spend via CAS) (4.5329ms)
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 50,
+  edicaoId: 'PROG-1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 50,
+  edicaoId: 'PROG-1',
+  lanceId: '741e450f-2832-4d22-901e-a332ac7b86db',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 50,
+  edicaoId: 'PROG-1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 37,
+  edicaoId: 'R-1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 37,
+  edicaoId: 'R-1',
+  lanceId: '994adc6d-3d4a-4dc7-a70f-3a6ca9fc8812',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 50,
+  edicaoId: 'R-1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 50,
+  edicaoId: 'R-1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] blindagem (commit/KPB) falhou: rpc
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 50,
+  edicaoId: 'R-1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 50,
+  edicaoId: 'R-1',
+  lanceId: '211ff924-edc3-49f0-8dfc-a29dc29c1cab',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 51,
+  edicaoId: 'R-1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 51,
+  edicaoId: 'R-1',
+  lanceId: 'd9dabc78-028d-4120-bfac-3b8b82a770a7',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 50,
+  edicaoId: 'R-1',
+  idem: true,
+  role: 'user'
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 10,
+  edicaoId: 'R-1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 10,
+  edicaoId: 'R-1',
+  lanceId: '93afd365-db7b-4e2f-a750-61ed1b9aa145',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 40,
+  edicaoId: 'R-1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] persistir lance falhou: blob indisponivel
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 40,
+  edicaoId: 'R-1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 40,
+  edicaoId: 'R-1',
+  lanceId: '76ca4403-6996-478a-baa6-fea43cfaa6c3',
+  saldoAntes: null,
+  saldoDepois: null
+}
+(node:1776) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ PROGRAMADO: nao debita R$, consome 1 senha no ledger e mantem blindagem (1214.1944ms)
+✔ PROGRAMADO sem senhas on-chain: 400 senhas_insuficientes, sem debito, sem consumo (1.9305ms)
+✔ RELAMPAGO: gasta 37 pontos de lance (o valor do lance), NAO debita R$ e NAO consome senha (6.9891ms)
+✔ RELAMPAGO sem pontos de lance: 400 saldo_pontos_insuficiente, sem blindagem nem gravacao (2.3341ms)
+✔ UTAC110n: a blindagem falha -> 502 e os pontos gastos VOLTAM (3.8142ms)
+✔ UTAC110n (SEG4 V1): 2 lances sem chave gastam 2 valores distintos (6.0228ms)
+✔ UTAC110n (SEG4 W5): mesma idempotencyKey ja consumida -> 409, sem 2.o debito nem 2.o lance (2.061ms)
+✔ edicao sem metadata (R-1 sintetica): tratada como relampago (gasta pontos) (3.7274ms)
+✔ LEGADO (fora de mainnet): persistencia falha -> 502 e os pontos gastos VOLTAM (2.7703ms)
+✔ LEGADO (fora de mainnet): com o Blob a funcionar, grava e responde 201 (2.2718ms)
+(node:17912) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ grava uma linha por PARTICIPANTE, com acerto ou sem ele (22.9324ms)
+✔ fechar a mesma rodada duas vezes não duplica nem soma (idempotente) (8.0911ms)
+✔ refechar NÃO apaga os pontos do bónus já ganho (31.9627ms)
+✔ rodada sem lances válidos não grava nada (0.8001ms)
+✔ erro do Supabase PROPAGA — não passa em silêncio (4.5302ms)
+✔ ranking ordena por pontos e desempata por MAIS ACERTOS (6.7471ms)
+✔ desempate concorda com atualizarRanking quando os acertos são iguais (4.1544ms)
+✔ ranking com empate total partilha posição (1-2-2-4) (1.0269ms)
+✔ ranking: linha sem pontos_totais NÃO chega ao 1.º lugar (0.564ms)
+✔ cinco ciclos seguidos com acerto dão UM bónus, pelo fluxo real (23.4475ms)
+✔ uma rodada FALHADA parte a sequência e adia o bónus (5.7644ms)
+✔ o bónus é pago em 50 PONTOS DE LANCE — não fica dívida de senhas (6.6517ms)
+✔ o store NUNCA credita senhas on-chain (4.6808ms)
+✔ feedback devolve posição, sequência e quanto falta para o bónus (4.7968ms)
+✔ feedback: rodada falhada NÃO conta para a sequência (3.0625ms)
+✔ feedback reflecte o bónus JÁ emitido e o direito por liquidar (7.0188ms)
+✔ feedback de quem não jogou devolve zeros, não erro (1.4271ms)
+✔ recalcularPosicoes NÃO mexe nas posições de outros ciclos (3.1823ms)
+✔ empate total é determinístico — a ordem do input não muda o ranking (1.1938ms)
+✔ faltamParaBonus reinicia depois de completar uma sequência (9.5477ms)
+✔ repontuar NÃO apaga a liquidação já feita (evita pagamento duplo) (9.0748ms)
+✔ duas consolidações EM PARALELO do mesmo ciclo dão UM só bónus (11.4885ms)
+✔ endereços são normalizados para minúsculas (o CHECK do SQL exige) (2.6484ms)
+✔ depois de UM bónus, os ciclos seguintes NÃO concedem outro (17.9662ms)
+✔ uma SEGUNDA sequência de 5 concede um segundo bónus (e só um) (30.0192ms)
+✔ refechar um ciclo com bónus não concede um bónus extra (10.2092ms)
+✔ o upsert NUNCA escreve as colunas do cadeado do bónus (5.3823ms)
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 37,
+  edicaoId: 'ESPECIAL-AIRFRYER',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 37,
+  edicaoId: 'ESPECIAL-AIRFRYER',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] ranking especial falhou (não-fatal): supabase_indisponivel
+[lance-relampago] contagem do Passe falhou (não-fatal): store.getWithMetadata is not a function
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 37,
+  edicaoId: 'ESPECIAL-AIRFRYER',
+  lanceId: '711df105-e86d-4a74-9283-7c7b89d5b442',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 37,
+  edicaoId: 'ESPECIAL-AIRFRYER',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 37,
+  edicaoId: 'ESPECIAL-AIRFRYER',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 37,
+  edicaoId: 'ESPECIAL-AIRFRYER',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 37,
+  edicaoId: 'RELAMP-3',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 37,
+  edicaoId: 'R-1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 37,
+  edicaoId: 'R-1',
+  lanceId: 'b7870bdc-2d17-4ec7-80a4-3e846643b1ba',
+  saldoAntes: null,
+  saldoDepois: null
+}
+(node:2988) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ especial antes da abertura: 409 edicao_nao_iniciada, nada consumido (1235.7465ms)
+✔ especial dentro da janela: 201, consome 1 CRÉDITO de lance e NÃO senha (23.2217ms)
+✔ especial depois do fim: 409 edicao_encerrada, nada consumido (2.1959ms)
+✔ especial encerrada pelo admin dentro da janela: 409, nada consumido (2.3786ms)
+✔ especial sem metadata (Blob em baixo): 503 fail-closed, nunca cai em R$ (1.7851ms)
+✔ PROG/RELAMP com termino_em no passado também são recusadas (1.9361ms)
+✔ controlo: R-1 sem metadata continua a passar (compat intacta) (4.6809ms)
+[lances-flash] marcador de consolidação ilegível: blobs em baixo
+(node:15860) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ A1 — mainnet, edição POR CONSOLIDAR: nenhum valor nem unicidade sai; o Key-Per-Bid nem é lido (17.4659ms)
+✔ A2 — mainnet, edição CONSOLIDADA: os valores do Key-Per-Bid saem, com repetido (5.6438ms)
+✔ A3 — marcador ilegível ⇒ trata-se como POR CONSOLIDAR (nunca revela por engano) (3.8992ms)
+✔ A4 — consolidada mas o Key-Per-Bid falha ⇒ 503 (não finge lista vazia) (2.7875ms)
+✔ A5 — anti-bot MC28.1 intacto: acao=verificar continua 403 em mainnet (aberta E consolidada) (4.2461ms)
+✔ A6 — fora de mainnet o comportamento legado não mudou (valor + repetido do blob) (3.5841ms)
+✔ D1 — quem foi menor único e foi repetido depois FOI líder; quem nunca foi, não (1.1449ms)
+✔ D2 — a ordem é a de CHEGADA (processadoEm), não a da lista (0.9248ms)
+✔ D3 — destronado por um lance MENOR também conta como «foi líder» (0.7806ms)
+✔ D4 — valores inválidos não lideram (null, 0, texto, fracção) (1.2344ms)
+✔ E1 — sem token ⇒ 401; token lance-auth ⇒ 401 (só user-session) (6.6053ms)
+✔ E2 — POR CONSOLIDAR ⇒ estado null e nenhum valor é lido (a etiqueta não existe durante a edição) (2.7449ms)
+✔ E3 — consolidada: os 3 estados, cada titular vê o SEU (5.1248ms)
+✔ E4 — titular SEM lance na edição ⇒ estado null (não se inventa um «não é») (2.0255ms)
+✔ E5 — o endereço vem SÓ do token: ?endereco= de outro é ignorado (1.9583ms)
+✔ E6 — o vencedor OFICIAL decide «menor», mesmo com endereço EIP-55 no marcador (2.1341ms)
+✔ E7 — a resposta do estado não traz valores nem os lances de outros (1.9809ms)
+✔ A7 — consolidada mas AINDA ABERTA (status aberto, prazo futuro) ⇒ nada se revela, KPB não lido (2.8517ms)
+✔ A8 — consolidada SEM metadata (R-1 sintetizado, sem janela) ⇒ nunca revela (2.439ms)
+✔ A9 — aberta com prazo VENCIDO conta como fechada (o lance-relampago já recusa) (1.6516ms)
+✔ A10 — a lista revelada é imutável: o 2.º pedido não volta a ler o Key-Per-Bid (achado A2) (2.1822ms)
+✔ A11 — a cache EXPIRA (2.ª ronda R1): passado o TTL relê o Key-Per-Bid (ex.: lances anonimizados) (2.4472ms)
+✔ A12 — consolidada com INÍCIO FUTURO (agendada) não revela (V23 da 2.ª ronda) (1.2236ms)
+[saldoRs:debito:comprar-passe-relampago] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-relampago] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 500,
+  saldoDepois: 300,
+  valorCentavos: 200,
+  tentativa: 1
+}
+[saldoRs:debito:comprar-passe-programado] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-programado] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 500,
+  saldoDepois: 300,
+  valorCentavos: 200,
+  tentativa: 1
+}
+[saldoRs:debito:comprar-passe-relampago] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-relampago] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 500,
+  saldoDepois: 300,
+  valorCentavos: 200,
+  tentativa: 1
+}
+[saldoRs:debito:comprar-passe-programado] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-programado] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 300,
+  saldoDepois: 100,
+  valorCentavos: 200,
+  tentativa: 1
+}
+[saldoRs:debito:comprar-passe-relampago] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-relampago] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 500,
+  saldoDepois: 300,
+  valorCentavos: 200,
+  tentativa: 1
+}
+[saldoRs:debito:comprar-passe-relampago] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-relampago] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-relampago] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-relampago] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-relampago] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-relampago] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 500,
+  saldoDepois: 300,
+  valorCentavos: 200,
+  tentativa: 1
+}
+[saldoRs:debito:comprar-passe-relampago] CAS perdeu (tentativa 1/5) — relendo saldo { endereco: '0xaaaa…aaaa' }
+[saldoRs:debito:comprar-passe-relampago] CAS perdeu (tentativa 1/5) — relendo saldo { endereco: '0xaaaa…aaaa' }
+[saldoRs:debito:comprar-passe-relampago] CAS perdeu (tentativa 1/5) — relendo saldo { endereco: '0xaaaa…aaaa' }
+[saldoRs:debito:comprar-passe-relampago] CAS perdeu (tentativa 1/5) — relendo saldo { endereco: '0xaaaa…aaaa' }
+[saldoRs:debito:comprar-passe-relampago] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 300,
+  saldoDepois: 100,
+  valorCentavos: 200,
+  tentativa: 2
+}
+[saldoRs:debito:comprar-passe-relampago] CAS perdeu (tentativa 2/5) — relendo saldo { endereco: '0xaaaa…aaaa' }
+[saldoRs:debito:comprar-passe-relampago] CAS perdeu (tentativa 2/5) — relendo saldo { endereco: '0xaaaa…aaaa' }
+[saldoRs:debito:comprar-passe-relampago] CAS perdeu (tentativa 2/5) — relendo saldo { endereco: '0xaaaa…aaaa' }
+[saldoRs:debito:comprar-passe-relampago] saldo insuficiente { endereco: '0xaaaa…aaaa', saldoAntes: 100, valor: 200 }
+[saldoRs:debito:comprar-passe-relampago] saldo insuficiente { endereco: '0xaaaa…aaaa', saldoAntes: 100, valor: 200 }
+[saldoRs:debito:comprar-passe-relampago] saldo insuficiente { endereco: '0xaaaa…aaaa', saldoAntes: 100, valor: 200 }
+[saldoRs:reembolso:comprar-passe-relampago] { endereco: '0xaaaa…aaaa', saldoAntes: 100, saldoDepois: 300 }
+[saldoRs:debito:comprar-passe-relampago] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-relampago] saldo insuficiente { endereco: '0xaaaa…aaaa', saldoAntes: 100, valor: 200 }
+[saldoRs:debito:comprar-passe-programado] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-programado] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 500,
+  saldoDepois: 300,
+  valorCentavos: 200,
+  tentativa: 1
+}
+[saldoRs:debito:comprar-passe-relampago] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-relampago] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 500,
+  saldoDepois: 300,
+  valorCentavos: 200,
+  tentativa: 1
+}
+[saldoRs:reembolso:comprar-passe-relampago] { endereco: '0xaaaa…aaaa', saldoAntes: 300, saldoDepois: 500 }
+[saldoRs:debito:comprar-passe-relampago] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-relampago] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 500,
+  saldoDepois: 300,
+  valorCentavos: 200,
+  tentativa: 1
+}
+[saldoRs:debito:comprar-passe-programado] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-programado] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 500,
+  saldoDepois: 300,
+  valorCentavos: 200,
+  tentativa: 1
+}
+[saldoRs:debito:comprar-passe-programado] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-programado] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 300,
+  saldoDepois: 100,
+  valorCentavos: 200,
+  tentativa: 1
+}
+[saldoRs:debito:comprar-passe-relampago] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-relampago] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 500,
+  saldoDepois: 300,
+  valorCentavos: 200,
+  tentativa: 1
+}
+[saldoRs:debito:comprar-passe-relampago] início { endereco: '0xaaaa…aaaa', valorCentavos: 1000 }
+[saldoRs:debito:comprar-passe-relampago] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 1500,
+  saldoDepois: 500,
+  valorCentavos: 1000,
+  tentativa: 1
+}
+[saldoRs:debito:comprar-passe-programado] início { endereco: '0xaaaa…aaaa', valorCentavos: 600 }
+[saldoRs:debito:comprar-passe-programado] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 1000,
+  saldoDepois: 400,
+  valorCentavos: 600,
+  tentativa: 1
+}
+[saldoRs:debito:comprar-passe-relampago] início { endereco: '0xaaaa…aaaa', valorCentavos: 600 }
+[saldoRs:debito:comprar-passe-relampago] saldo insuficiente { endereco: '0xaaaa…aaaa', saldoAntes: 500, valor: 600 }
+[saldoRs:debito:comprar-passe-relampago] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-relampago] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 500,
+  saldoDepois: 300,
+  valorCentavos: 200,
+  tentativa: 1
+}
+[saldoRs:debito:comprar-passe-relampago] início { endereco: '0xaaaa…aaaa', valorCentavos: 2000 }
+[saldoRs:debito:comprar-passe-relampago] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 2500,
+  saldoDepois: 500,
+  valorCentavos: 2000,
+  tentativa: 1
+}
+[saldoRs:reembolso:comprar-passe-relampago] { endereco: '0xaaaa…aaaa', saldoAntes: 500, saldoDepois: 2500 }
+[saldoRs:debito:comprar-passe-relampago] início { endereco: '0xaaaa…aaaa', valorCentavos: 2000 }
+[saldoRs:debito:comprar-passe-relampago] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 2500,
+  saldoDepois: 500,
+  valorCentavos: 2000,
+  tentativa: 1
+}
+(node:1132) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ A1 constantes: Passe = 1 ponto de fidelidade (UTAC136, Art. 7º v6; era 10); crédito legado = 1 (3.6223ms)
+✔ A2 creditar crédito: +1, idempotente por ref; consumir: 1 → 0; a 0 RECUSA e nada muda (7.5435ms)
+✔ A3 sem linha nenhuma: consumir RECUSA (nunca cria saldo negativo nem linha) (1.2839ms)
+✔ A4 pontos de lance: «compra» continua recusada; «passe-relampago» passou a ser válido (110n) (3.0471ms)
+✔ A5 o lance consome CRÉDITO — não toca nos pontos de fidelidade nem nos pontos de lance (3.8585ms)
+✔ A6 ledgers SEPARADOS: escritas alternadas nos dois não perdem entradas de nenhum (4.5138ms)
+✔ A7 CAS: outro escritor muda os créditos entre a leitura e a escrita → relê e não perde nada (2.0621ms)
+✔ A7b CAS cobre pontos_lance: um escritor concorrente que só muda os pontos de lance é respeitado (1.6605ms)
+✔ A7c ABA (SEG4 W3): crédito+consumo concorrentes deixam os contadores iguais — o histórico NÃO se perde (2.9803ms)
+✔ A8 reverter: devolve o crédito e remove a entrada (o retry volta a consumir) (2.6312ms)
+✔ B1 Passe Relâmpago: 201, −R$ 2,00, +1 ponto (compra), +100 pontos de lance (UTAC138), 0 créditos (38.6804ms)
+✔ B2 Passe Programado: 201, −R$ 2,00, +1 ponto (UTAC136); NÃO mexe no ledger de lance (8.003ms)
+✔ B3 os dois Passes são SEPARADOS: a mesma chave nos dois endpoints são 2 compras distintas (20.4625ms)
+✔ B4 idempotência: repetir a MESMA chave → 200, cobra UMA vez, credita UMA vez (9.2024ms)
+✔ B5 concorrência: 5 cliques simultâneos com a mesma chave → cobra 1×, credita 1× (33.7782ms)
+✔ B6 sem saldo: 402 e NADA creditado (5.3352ms)
+✔ B7 auth bidireccional: sem token 401; token lance-auth (propósito errado) 401; user-session 201 (8.4224ms)
+✔ B8 (UTAC138) falha no bónus de pontos de lance ⇒ 502, ponto desfeito, R$ devolvido, nada creditado (9.8279ms)
+✔ B9 (UTAC136/138) compra Relâmpago com o ponto já creditado → o retry completa só o ECOQUILDO, sem bónus nem cobrança (4.5232ms)
+✔ B9b (UTAC138) compra Relâmpago a meio DEPOIS do corte → o retry credita os +100 em falta (1×), sem cobrar (8.9985ms)
+✔ B10 o ponto de um Passe novo CONTA para o cartão (tipo compra); UTAC136: 1 por Passe (12.5374ms)
+✔ B11 ler-pontos devolve os DOIS ledgers (e mantém os campos antigos) (8.6661ms)
+✔ UTAC112 P1: 5 Passes Relâmpago ⇒ debita R$ 10,00 · +5 fidelidade · +500 pontos de lance (UTAC138) · +5 ECOQUILDO (4.3213ms)
+✔ UTAC112 P2: 3 Passes Programados ⇒ R$ 6,00 · +3 (UTAC136) · +3 ECOQUILDO · sem pontos de lance; repetir a chave não cobra 2× (6.9195ms)
+✔ UTAC112 P3: saldo insuficiente para o pacote ⇒ 402 com o total, NADA debitado nem creditado (4.7524ms)
+✔ UTAC112 P4: só 1, 3, 5 ou 10 — o resto é 400 sem tocar no saldo; ausente = 1 (contrato antigo) (29.9791ms)
+✔ UTAC112 P5: compra de 10 a MEIO (ECOQUILDO falhou) ⇒ o retry completa 10 ECOQUILDO, sem cobrar de novo (10.24ms)
+✔ UTAC112 P6: creditarPasseGoogle recusa quantidade fora de 1..100 (0, 101, fracção, texto) sem creditar (4.4146ms)
+✔ UTAC112 P7 (achado 1 do validador): compra de 5 A MEIO completada por um retry que pede 1 ⇒ usa os 5 já creditados, sem cobrar (4.5617ms)
+[creditar-eco-quildo] log fail-closed: admin_logs indisponível
+[saldoRs:debito:comprar-passe-relampago] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-relampago] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 500,
+  saldoDepois: 300,
+  valorCentavos: 200,
+  tentativa: 1
+}
+[saldoRs:debito:comprar-passe-programado] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-programado] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 500,
+  saldoDepois: 300,
+  valorCentavos: 200,
+  tentativa: 1
+}
+[saldoRs:debito:comprar-passe-relampago] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-relampago] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 1000,
+  saldoDepois: 800,
+  valorCentavos: 200,
+  tentativa: 1
+}
+[saldoRs:debito:comprar-passe-programado] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-programado] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 800,
+  saldoDepois: 600,
+  valorCentavos: 200,
+  tentativa: 1
+}
+[saldoRs:debito:comprar-passe-programado] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-programado] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 600,
+  saldoDepois: 400,
+  valorCentavos: 200,
+  tentativa: 1
+}
+[saldoRs:debito:comprar-passe-relampago] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-relampago] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 500,
+  saldoDepois: 300,
+  valorCentavos: 200,
+  tentativa: 1
+}
+[saldoRs:reembolso:comprar-passe-relampago] { endereco: '0xaaaa…aaaa', saldoAntes: 300, saldoDepois: 500 }
+[saldoRs:debito:comprar-passe-relampago] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-relampago] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 500,
+  saldoDepois: 300,
+  valorCentavos: 200,
+  tentativa: 1
+}
+[saldoRs:debito:comprar-passe-programado] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-programado] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 500,
+  saldoDepois: 300,
+  valorCentavos: 200,
+  tentativa: 1
+}
+[saldoRs:reembolso:comprar-passe-programado] { endereco: '0xaaaa…aaaa', saldoAntes: 300, saldoDepois: 500 }
+[saldoRs:debito:comprar-passe-relampago] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-relampago] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 500,
+  saldoDepois: 300,
+  valorCentavos: 200,
+  tentativa: 1
+}
+[saldoRs:debito:comprar-passe-relampago] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-relampago] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-relampago] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-relampago] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-relampago] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-relampago] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 500,
+  saldoDepois: 300,
+  valorCentavos: 200,
+  tentativa: 1
+}
+[saldoRs:debito:comprar-passe-relampago] CAS perdeu (tentativa 1/5) — relendo saldo { endereco: '0xaaaa…aaaa' }
+[saldoRs:debito:comprar-passe-relampago] CAS perdeu (tentativa 1/5) — relendo saldo { endereco: '0xaaaa…aaaa' }
+[saldoRs:debito:comprar-passe-relampago] CAS perdeu (tentativa 1/5) — relendo saldo { endereco: '0xaaaa…aaaa' }
+[saldoRs:debito:comprar-passe-relampago] CAS perdeu (tentativa 1/5) — relendo saldo { endereco: '0xaaaa…aaaa' }
+[saldoRs:debito:comprar-passe-relampago] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 300,
+  saldoDepois: 100,
+  valorCentavos: 200,
+  tentativa: 2
+}
+[saldoRs:debito:comprar-passe-relampago] CAS perdeu (tentativa 2/5) — relendo saldo { endereco: '0xaaaa…aaaa' }
+[saldoRs:debito:comprar-passe-relampago] CAS perdeu (tentativa 2/5) — relendo saldo { endereco: '0xaaaa…aaaa' }
+[saldoRs:debito:comprar-passe-relampago] CAS perdeu (tentativa 2/5) — relendo saldo { endereco: '0xaaaa…aaaa' }
+[saldoRs:debito:comprar-passe-relampago] saldo insuficiente { endereco: '0xaaaa…aaaa', saldoAntes: 100, valor: 200 }
+[saldoRs:debito:comprar-passe-relampago] saldo insuficiente { endereco: '0xaaaa…aaaa', saldoAntes: 100, valor: 200 }
+[saldoRs:debito:comprar-passe-relampago] saldo insuficiente { endereco: '0xaaaa…aaaa', saldoAntes: 100, valor: 200 }
+[saldoRs:reembolso:comprar-passe-relampago] { endereco: '0xaaaa…aaaa', saldoAntes: 100, saldoDepois: 300 }
+[saldoRs:debito:comprar-passe-relampago] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-relampago] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 1000,
+  saldoDepois: 800,
+  valorCentavos: 200,
+  tentativa: 1
+}
+[saldoRs:debito:comprar-passe-programado] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-programado] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 800,
+  saldoDepois: 600,
+  valorCentavos: 200,
+  tentativa: 1
+}
+[saldoRs:debito:comprar-passe-programado] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-programado] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 600,
+  saldoDepois: 400,
+  valorCentavos: 200,
+  tentativa: 1
+}
+(node:19564) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ A1 constantes: 1 ECOQUILDO = R$ 0,50 = 50 centavos (UTAC136; era R$ 1,00 = 100); 1 por Passe; motivos fechados (6.7257ms)
+✔ A2 o duplo modela os CHECKs da migração 20261014 (saldo >= 0, histórico array, lastro linha única) (13.2521ms)
+✔ A3 lerEcoQuildo: sem linha → zeros; endereço inválido → zeros; com linha → saldo + histórico (3.1424ms)
+✔ A4 creditar: emite; idempotente pela MESMA ref; motivo/valor/endereço inválidos RECUSAM sem escrever (2.4395ms)
+✔ A5 debitar: gasta o saldo; idempotente pela chave; acima do saldo RECUSA e o saldo nunca fica negativo (11.8658ms)
+✔ A6 CAS: um escritor concorrente muda a linha entre a leitura e a gravação → relê e não perde nada (3.7979ms)
+✔ A7 reverter devolve o valor e remove a entrada; o retry com a MESMA chave volta a debitar (4.3864ms)
+✔ A8 lastro: emissão soma e uso subtrai; a reserva é DERIVADA; estado impossível é recusado (6.3027ms)
+✔ A9 lastro sem a linha única → LASTRO_AUSENTE (não inventa um lastro); CAS no lastro não perde o concorrente (2.4856ms)
+✔ B1 ler-eco-quildo: 401 sem token e com lance-auth; 405 com POST; 200 com user-session (30.0818ms)
+✔ B2 usar-eco-quildo: debita e move o lastro; idempotente pela chave; acima do saldo é 400 (34.1727ms)
+✔ B3 usar: SÓ o próprio titular — a chave nunca vem do corpo e não há destinatário (Art. 49º) (3.0555ms)
+✔ B4 creditar-eco-quildo (admin): guarda real; emite + lastro; idempotente; audita; sem log NÃO emite (21.3333ms)
+✔ B5 lastro-eco-quildo (admin): 401 sem ser admin; 200 com os três números e o invariante do Art. 50º (7.9202ms)
+✔ C1 Passe Relâmpago: 201 com +1 ponto, +100 pontos de lance (UTAC138), +1 ECOQUILDO, e o lastro leva +R$ 0,50 (13.0808ms)
+✔ C2 Passe Programado: 201 com +1 ponto (UTAC136) +1 ECOQUILDO (motivo próprio) e SEM crédito de lance (4.8037ms)
+✔ C3 lastro ACUMULA com várias compras (emitido = nº de Passes; reserva = emitido × 50) (27.9856ms)
+✔ C4 se o ECOQUILDO falhar, a compra é DESFEITA por inteiro (pontos, crédito e R$ de volta) (13.316ms)
+✔ C5 se o LASTRO falhar, o ECOQUILDO é desfeito e a compra reverte (nunca moeda sem lastro) (5.9575ms)
+✔ C6 idempotência: repetir a chave → 200, UM só ECOQUILDO e UM só lastro (5 cliques simultâneos) (26.5951ms)
+✔ C7 ciclo completo: comprar 3 Passes → usar 2 no site → saldo 1 e lastro (3, 2, 50) (29.1221ms)
+✔ C8 compra a MEIO (pontos + crédito sim, ECOQUILDO não) → o retry completa o ECOQUILDO sem cobrar (9.3927ms)
+✔ B2b usar: se o LASTRO falhar, o ECOQUILDO é DEVOLVIDO ao saldo (502 lastro_falhou) (5.2889ms)
+✔ B4b creditar (admin): se o LASTRO falhar, a EMISSÃO é desfeita (nunca moeda sem lastro) (5.4195ms)
+(node:2288) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ D1 diaManaus: a meia-noite de Manaus é 04:00 UTC (R18-110f-4) (5.3061ms)
+✔ D2 constantes do operador: login 5 · missão 10 · indicação 50 · limite 10/mês (0.8236ms)
+✔ A1 login: 1.º do dia +5 · 2.º do mesmo dia 0 · dia seguinte +5 (bidireccional) (5.7771ms)
+✔ A2 login: a fronteira é a de Manaus — 03:59Z e 04:01Z do MESMO dia UTC são 2 dias (2 créditos) (3.3389ms)
+✔ A3 login: 5 logins EM PARALELO no mesmo dia → UM só crédito (CAS + ref diária) (9.7014ms)
+✔ A4 login: um escritor concorrente entre a leitura e a escrita é respeitado (CAS relê) (2.5237ms)
+✔ A5 login: erro do banco → ok:false (nunca finge que creditou) (1.5653ms)
+✔ A6 endpoint: sem token 401 · token lance-auth 401 · GET 405 · pausado 503 (nada creditado) (27.5817ms)
+✔ A7 endpoint: user-session → 200 +5; repetir → 200 jaCreditado (endereço SÓ do token) (6.6507ms)
+✔ A8 endpoint: falha do banco → 502 credito_falhou (9.3169ms)
+✔ C1 missão: 1.º lance do dia +10 · 2.º do mesmo dia 0 · dia seguinte +10 (3.6892ms)
+✔ C2 missão: 5 lances em paralelo no mesmo dia → UM crédito de +10 (2.4456ms)
+✔ C3 login e missão são INDEPENDENTES no mesmo dia (5 + 10 = 15); estadoMissoesHoje lê o histórico (2.522ms)
+✔ C4 as fontes NUNCA mexem nos créditos de lance nem nos pontos de fidelidade (5.5305ms)
+✔ B1 indicação válida: +50 ao indicante e +50 ao indicado (1.5189ms)
+✔ B2 auto-indicação → AUTO_INDICACAO e NADA creditado (também com caixas diferentes) (0.6191ms)
+✔ B3 idempotência: repetir a mesma indicação → nenhum crédito extra (2.3067ms)
+✔ B4 o indicado só recebe UMA vez na vida, mesmo indicado por outro (o indicante novo recebe) (2.8834ms)
+✔ B5 limite mensal: o 11.º indicado do mês NÃO paga o indicante (o indicado recebe); o mês seguinte paga (10.5929ms)
+✔ B6 o limite não bloqueia a idempotência: re-registar um indicado já pago no 10.º slot não falha (8.7978ms)
+✔ B7 o limite conta SÓ indicações FEITAS — o bónus de indicado (`indicacao-recebida`) não ocupa slot (10.1173ms)
+✔ A9 endpoint: um endereço de OUTRA pessoa no corpo é IGNORADO — credita só o titular do token (anti-IDOR) (3.9414ms)
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 37,
+  edicaoId: 'RELAMP-1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 37,
+  edicaoId: 'RELAMP-1',
+  lanceId: '22f17152-12d6-4bbb-92d2-670d94c14e3e',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 37,
+  edicaoId: 'RELAMP-1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 37,
+  edicaoId: 'RELAMP-1',
+  lanceId: 'fbeb3168-2230-4ffd-93a0-ec9817495cb8',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 38,
+  edicaoId: 'RELAMP-1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 38,
+  edicaoId: 'RELAMP-1',
+  lanceId: 'f90a22b9-04d1-4d49-9592-3ad2273a7d59',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 37,
+  edicaoId: 'PROG-1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 37,
+  edicaoId: 'PROG-1',
+  lanceId: '3d78fcba-2fc1-4ac5-81a5-444d14899372',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 37,
+  edicaoId: 'RELAMP-1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 37,
+  edicaoId: 'RELAMP-1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] blindagem (commit/KPB) falhou: rpc
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 37,
+  edicaoId: 'RELAMP-1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] missão do lance falhou (não-fatal): ERRO_DB
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 37,
+  edicaoId: 'RELAMP-1',
+  lanceId: '675ae087-eba0-417c-bf8c-63b850a1b675',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 39,
+  edicaoId: 'RELAMP-1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] missão do lance falhou (não-fatal): boom
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 39,
+  edicaoId: 'RELAMP-1',
+  lanceId: '0333bc52-ed6e-465b-aaac-22826390fb70',
+  saldoAntes: null,
+  saldoDepois: null
+}
+(node:19704) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ L1 lance relâmpago bem-sucedido → missão +10 com a ref do DIA de Manaus; resposta diz creditado (1284.6985ms)
+✔ L2 2.º lance do mesmo dia → a missão não volta a creditar (creditado:false); o lance continua 201 (10.0554ms)
+✔ L3 lance PROGRAMADO não conta para a missão (missaoLance:null, 0 chamadas) (5.215ms)
+✔ L4 lance RECUSADO (sem créditos) → nenhuma missão (2.4291ms)
+✔ L5 blindagem falha (lance NÃO registado) → nenhuma missão (11.5166ms)
+✔ L6 a missão falha (ok:false) ou LANÇA → o lance continua 201 (fail-soft) (9.0564ms)
+[MC17.5.1] T5 registrarConversao acionado {
+  codigo: 'IND-MA2XPU',
+  indicador: '0xaaaa…aaaa',
+  indicado: '0xbbbb…bbbb'
+}
+[MC17.5.1] T6 concederBonus(indicador) {
+  indicador: '0xaaaa…aaaa',
+  bonusOk: true,
+  bonusCode: null,
+  txHash: '0xtest'
+}
+[MC17.5.1] T6 crédito indicado { indicado: '0xbbbb…bbbb', txHashIndicado: '0xtest' }
+[MC17.4.2] usar-codigo resultado {
+  codigo: 'IND-MA2XPU',
+  indicado: '0xbbbb…bbbb',
+  indicador: '0xaaaa…aaaa',
+  vinculoIdempotent: false,
+  ipGateOk: true,
+  ipCount: 1,
+  deviceTracked: false,
+  conversaoOk: true,
+  conversaoCode: null,
+  conversaoIdempotent: false,
+  bonusIndicador: true,
+  bonusIndicadorCode: null
+}
+[MC17.5.1] T5 registrarConversao acionado {
+  codigo: 'IND-35KV8E',
+  indicador: '0xaaaa…aaaa',
+  indicado: '0xbbbb…bbbb'
+}
+[MC17.5.1] T6 concederBonus(indicador) {
+  indicador: '0xaaaa…aaaa',
+  bonusOk: true,
+  bonusCode: null,
+  txHash: '0xtest'
+}
+[MC17.5.1] T6 crédito indicado { indicado: '0xbbbb…bbbb', txHashIndicado: '0xtest' }
+[MC17.4.2] usar-codigo resultado {
+  codigo: 'IND-35KV8E',
+  indicado: '0xbbbb…bbbb',
+  indicador: '0xaaaa…aaaa',
+  vinculoIdempotent: false,
+  ipGateOk: true,
+  ipCount: 1,
+  deviceTracked: false,
+  conversaoOk: true,
+  conversaoCode: null,
+  conversaoIdempotent: false,
+  bonusIndicador: true,
+  bonusIndicadorCode: null
+}
+[MC17.5.1] T5 registrarConversao acionado {
+  codigo: 'IND-E1DHJA',
+  indicador: '0xaaaa…aaaa',
+  indicado: '0xbbbb…bbbb'
+}
+[MC17.5.1] T6 concederBonus(indicador) {
+  indicador: '0xaaaa…aaaa',
+  bonusOk: true,
+  bonusCode: null,
+  txHash: '0xtest'
+}
+[MC17.5.1] T6 crédito indicado { indicado: '0xbbbb…bbbb', txHashIndicado: '0xtest' }
+[MC17.4.2] usar-codigo resultado {
+  codigo: 'IND-E1DHJA',
+  indicado: '0xbbbb…bbbb',
+  indicador: '0xaaaa…aaaa',
+  vinculoIdempotent: false,
+  ipGateOk: true,
+  ipCount: 1,
+  deviceTracked: false,
+  conversaoOk: true,
+  conversaoCode: null,
+  conversaoIdempotent: false,
+  bonusIndicador: true,
+  bonusIndicadorCode: null
+}
+[MC17.5.1] T5 registrarConversao acionado {
+  codigo: 'IND-E1DHJA',
+  indicador: '0xaaaa…aaaa',
+  indicado: '0xbbbb…bbbb'
+}
+[MC17.4.2] usar-codigo resultado {
+  codigo: 'IND-E1DHJA',
+  indicado: '0xbbbb…bbbb',
+  indicador: '0xaaaa…aaaa',
+  vinculoIdempotent: true,
+  ipGateOk: true,
+  ipCount: 1,
+  deviceTracked: false,
+  conversaoOk: true,
+  conversaoCode: null,
+  conversaoIdempotent: true,
+  bonusIndicador: null,
+  bonusIndicadorCode: null
+}
+[MC17.5.1] T5 registrarConversao acionado {
+  codigo: 'IND-YNPOK2',
+  indicador: '0xaaaa…aaaa',
+  indicado: '0x1111…1111'
+}
+[MC17.5.1] T6 concederBonus(indicador) {
+  indicador: '0xaaaa…aaaa',
+  bonusOk: true,
+  bonusCode: null,
+  txHash: '0xtest'
+}
+[MC17.5.1] T6 crédito indicado { indicado: '0x1111…1111', txHashIndicado: '0xtest' }
+[MC17.4.2] usar-codigo resultado {
+  codigo: 'IND-YNPOK2',
+  indicado: '0x1111…1111',
+  indicador: '0xaaaa…aaaa',
+  vinculoIdempotent: false,
+  ipGateOk: true,
+  ipCount: 1,
+  deviceTracked: false,
+  conversaoOk: true,
+  conversaoCode: null,
+  conversaoIdempotent: false,
+  bonusIndicador: true,
+  bonusIndicadorCode: null
+}
+[MC17.5.1] T5 registrarConversao acionado {
+  codigo: 'IND-1SFDZ9',
+  indicador: '0xcccc…cccc',
+  indicado: '0x2222…2222'
+}
+[MC17.5.1] T6 concederBonus(indicador) {
+  indicador: '0xcccc…cccc',
+  bonusOk: true,
+  bonusCode: null,
+  txHash: '0xtest'
+}
+[MC17.5.1] T6 crédito indicado { indicado: '0x2222…2222', txHashIndicado: '0xtest' }
+[MC17.4.2] usar-codigo resultado {
+  codigo: 'IND-1SFDZ9',
+  indicado: '0x2222…2222',
+  indicador: '0xcccc…cccc',
+  vinculoIdempotent: false,
+  ipGateOk: true,
+  ipCount: 2,
+  deviceTracked: false,
+  conversaoOk: true,
+  conversaoCode: null,
+  conversaoIdempotent: false,
+  bonusIndicador: true,
+  bonusIndicadorCode: null
+}
+[MC17.4.2] usar-codigo resultado {
+  codigo: 'IND-PNRCJP',
+  indicado: '0x3333…3333',
+  indicador: '0xdddd…dddd',
+  vinculoIdempotent: false,
+  ipGateOk: false,
+  ipCount: 2,
+  deviceTracked: false,
+  conversaoOk: false,
+  conversaoCode: 'suspeita_sybil_ip',
+  conversaoIdempotent: false,
+  bonusIndicador: null,
+  bonusIndicadorCode: null
+}
+[MC17.5.1] T5 registrarConversao acionado {
+  codigo: 'IND-VTHGVR',
+  indicador: '0xaaaa…aaaa',
+  indicado: '0xbbbb…bbbb'
+}
+[MC17.5.1] T6 concederBonus(indicador) {
+  indicador: '0xaaaa…aaaa',
+  bonusOk: true,
+  bonusCode: null,
+  txHash: '0xtest'
+}
+[MC17.5.1] T6 crédito indicado { indicado: '0xbbbb…bbbb', txHashIndicado: '0xtest' }
+[MC17.4.2] usar-codigo resultado {
+  codigo: 'IND-VTHGVR',
+  indicado: '0xbbbb…bbbb',
+  indicador: '0xaaaa…aaaa',
+  vinculoIdempotent: false,
+  ipGateOk: true,
+  ipCount: 1,
+  deviceTracked: false,
+  conversaoOk: true,
+  conversaoCode: null,
+  conversaoIdempotent: false,
+  bonusIndicador: true,
+  bonusIndicadorCode: null
+}
+(node:19600) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ R1 indicação válida → 200 e +50 pontos de lance ao indicante E ao indicado (43.2723ms)
+✔ R2 auto-indicação → 400 auto_indicacao e NADA creditado (6.2019ms)
+✔ R3 o mesmo indicado por OUTRO código → 409 ja_indicado e nenhum ponto extra (16.0942ms)
+✔ R4 idempotência: repetir o MESMO código → 200 idempotent e os pontos não mudam (16.5116ms)
+✔ R5 throttle de IP excedido → vincula mas NÃO credita pontos (pontosLance:null) (29.9402ms)
+✔ R6 sem token → 401 e nada creditado (4.1787ms)
+✔ R7 o ledger falha → o vínculo fica (200) e a resposta diz que não creditou (fail-soft) (5.6657ms)
+(node:19128) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ (a) Relâmpago: 201 · +1 ponto · +100 pontos de lance (UTAC138) · +1 ECOQUILDO · saldo R$ INTACTO (76.2951ms)
+✔ (a) Programado: 201 · +1 ponto (UTAC136) · +1 ECOQUILDO · SEM créditos de lance (16.7255ms)
+✔ o MESMO recibo 2× ⇒ 200 idempotente, mesmos números, SEM repetir créditos nem consultar a Google (22.1524ms)
+✔ dois RECIBOS diferentes ⇒ dois créditos (a chave é o token, não colide) (25.2504ms)
+✔ compra a MEIO (ponto escrito, ECOQUILDO não) ⇒ o retry COMPLETA sem repetir pontos (UTAC136: formato v6) (17.4296ms)
+✔ (b) recibo cancelada (purchaseState 1) ⇒ 409 compra_cancelada e NADA creditado (8.8409ms)
+✔ (b) recibo pendente (purchaseState 2) ⇒ 409 compra_pendente e NADA creditado (7.894ms)
+✔ (b) recibo estado desconhecido (3) ⇒ 409 compra_nao_encontrada e NADA creditado (14.9155ms)
+✔ (b) recibo token inexistente (HTTP 404) ⇒ 409 compra_nao_encontrada e NADA creditado (16.7546ms)
+✔ (b) recibo token inválido (HTTP 410) ⇒ 409 token_invalido e NADA creditado (20.2859ms)
+✔ (b) recibo credencial sem acesso (HTTP 403) ⇒ 503 google_play_indisponivel e NADA creditado (11.5776ms)
+✔ (b) recibo Google em baixo (HTTP 500) ⇒ 503 google_play_indisponivel e NADA creditado (7.8609ms)
+✔ (b) recibo rede em baixo ⇒ 503 google_play_indisponivel e NADA creditado (5.7719ms)
+[saldoRs:debito:comprar-passe-relampago] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-relampago] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 500,
+  saldoDepois: 300,
+  valorCentavos: 200,
+  tentativa: 1
+}
+✔ (b) recibo OAuth2 recusa (HTTP 400) ⇒ 503 google_play_indisponivel e NADA creditado (11.8085ms)
+✔ (b) SEM a env var da service account ⇒ 503 google_play_nao_configurado e ZERO idas à Google (3.5803ms)
+✔ (b) a credencial existe mas está ILEGÍVEL ⇒ 503, sem ir à Google (4.2821ms)
+✔ (b) recibo de OUTRA conta ⇒ 409 e nada creditado (não se credita no endereço errado) (3.4174ms)
+✔ (c) tipo desconhecido ⇒ 400 e ZERO idas à Google (3.7505ms)
+✔ (c) tipo ausente ⇒ 400 e ZERO idas à Google (2.7158ms)
+✔ (c) sku do OUTRO Passe (defesa em profundidade) ⇒ 400 e ZERO idas à Google (2.6167ms)
+✔ (c) sku inventado ⇒ 400 e ZERO idas à Google (2.2165ms)
+✔ (c) sku ausente ⇒ 400 e ZERO idas à Google (2.6885ms)
+✔ (c) purchaseToken curto ⇒ 400 e ZERO idas à Google (2.3549ms)
+✔ (c) purchaseToken ausente ⇒ 400 e ZERO idas à Google (2.6089ms)
+✔ (c) purchaseToken não-string ⇒ 400 e ZERO idas à Google (2.3772ms)
+✔ (c) sem Bearer ⇒ 401 e ZERO idas à Google (1.5399ms)
+✔ (c) token de LANCE (Via A) não serve: o endpoint exige sessão de utilizador (3.0723ms)
+✔ (c) método GET ⇒ 405 (1.5082ms)
+✔ A/B: o PIX DEBITA R$ 2,00; o Google Play NÃO debita — mesmos benefícios, pagamentos diferentes (29.1971ms)
+✔ refGoogle: determinístico, ≤ 200 chars, distinto por token e por tipo (2.0919ms)
+✔ o registo guarda o que foi entregue e o motivo recebe o orderId da Google (8.8729ms)
+✔ falha do registo no fecho NÃO esconde a entrega: responde ok, alerta e o retry é idempotente (14.7665ms)
+✔ CORRIDA: o mesmo recibo chega 2× ao mesmo tempo (o INSERT colide na PK) ⇒ 200 idempotente (8.3731ms)
+✔ CORRIDA ENTRE CONTAS: o mesmo recibo, duas carteiras em paralelo ⇒ 409 na segunda (ALTO-1) (7.5069ms)
+✔ o ECOQUILDO é o ÚLTIMO passo: se o crédito do PONTO DE FIDELIDADE falhar, o ECOQUILDO NÃO é emitido (UTAC136) (8.9847ms)
+✔ UTAC112 G1: recibo com quantity 5 (Relâmpago) ⇒ +5 fidelidade · +500 pontos de lance (UTAC138) · +5 ECOQUILDO · lastro 5 (11.1941ms)
+✔ UTAC112 G2: o MESMO recibo de 3 entregue 2× ⇒ 200 com quantidade 3 e nada creditado 2× (9.9866ms)
+✔ UTAC112 G3: quantity ausente, null, 0, fracção ou texto no recibo ⇒ conta como 1 (nunca 0) (22.1496ms)
+✔ UTAC112 G4: a quantidade NUNCA vem do corpo do cliente — só do recibo (11.5451ms)
+[saldoRs:debito:comprar-passe-relampago] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-relampago] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 500,
+  saldoDepois: 300,
+  valorCentavos: 200,
+  tentativa: 1
+}
+[saldoRs:debito:comprar-passe-relampago] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-relampago] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 500,
+  saldoDepois: 300,
+  valorCentavos: 200,
+  tentativa: 1
+}
+[saldoRs:debito:comprar-passe-relampago] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-relampago] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 500,
+  saldoDepois: 300,
+  valorCentavos: 200,
+  tentativa: 1
+}
+[saldoRs:reembolso:comprar-passe-relampago] { endereco: '0xaaaa…aaaa', saldoAntes: 300, saldoDepois: 500 }
+[saldoRs:debito:comprar-passe-programado] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-programado] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 500,
+  saldoDepois: 300,
+  valorCentavos: 200,
+  tentativa: 1
+}
+[pontuacao-store] crédito dos pontos de lance do bónus falhou: ERRO_DB
+(node:18632) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ A1 · um lance de 37 pontos gasta 37 pontos do saldo (e nada mais) (34.3574ms)
+✔ A2 · saldo insuficiente RECUSA e não escreve nada (nunca saldo negativo) (1.7484ms)
+✔ A3 · idempotência: a MESMA ref não debita duas vezes (retry do mesmo lance) (2.4272ms)
+✔ A4 · reversão devolve os pontos: o retry volta a poder gastar (3.1624ms)
+✔ A5 · cadeia do lance: 200 pontos − 37 do lance + 10 da missão do dia = 173 (2.5931ms)
+✔ A6 · quantidade inválida é recusada (0, negativo, fraccionário) — sem escrita (1.3496ms)
+✔ B1 · (era 200 no 110n, 0 no UTAC136) comprar o Passe Relâmpago credita +100 pontos de lance (UTAC138) (30.3683ms)
+✔ B2 · idempotência do Passe: repetir a chave não repete o bónus (UTAC138) (16.9478ms)
+✔ B3 · rollback: falha do ECOQUILDO desfaz a compra e o R$ volta (UTAC136: sem pontos de lance a desfazer) (18.6431ms)
+✔ B4 · o Passe Programado NÃO dá pontos de lance (16.0788ms)
+✔ C1 · 5 acertos seguidos creditam 50 pontos de lance, motivo sequencia, com ref por ciclo (8.184ms)
+✔ C2 · o bónus NÃO enfileira senhas on-chain (a coluna fica a 0) (6.7291ms)
+✔ C3 · 1 bónus por ciclo: reconsolidar o mesmo ciclo não paga outros 50 (6.3397ms)
+✔ C4 · anti-cumulativa (MC93-C): ciclos seguintes com derrotas não voltam a pagar (42.395ms)
+✔ C5 · se o crédito falhar, a reclamação é LIBERTADA e o retry paga (não se perde o bónus) (5.1123ms)
+✔ D1 · o ciclo: alvo 225 · 15 pontos/dia · 15 dias (15×15 = 225 ≥ 225) (0.4819ms)
+✔ D2 · um utilizador que SÓ faz missões chega ao alvo em 15 dias (sem Passe) (5.7549ms)
+✔ D3 · o progresso do ciclo não conta o bónus do Passe nem o gasto do lance (0.8201ms)
+✔ D2b · o ciclo é BRUTO: com 1 lance de 1 ponto/dia, 15 dias dão 210 líquidos (≥ 200) (18.4976ms)
+✔ E1 · a migração converte 1 crédito em 200 pontos e zera os créditos (1.2974ms)
+✔ E2 · é IDEMPOTENTE por construção: o guard e a zeragem estão na MESMA instrução (0.9307ms)
+✔ E3 · regista a conversão no historico_lance com motivo próprio e o delta certo (1.308ms)
+✔ E4 · deriva: 3 créditos ⇒ 600 pontos (a aritmética do SQL, aplicada) (0.7107ms)
+✔ E5 · a ref da conversão leva o instante, para não colidir numa re-conversão (0.8263ms)
+✔ E6 · o índice do placar vive em migração PRÓPRIA, não na conversão (3.7275ms)
+✔ F1 · ordena pelo SALDO ACTUAL, com posições 1-2-2-4 e endereços mascarados (2.4006ms)
+✔ F2 · endpoint: devolve o placar do saldo, sem endereço inteiro e sem quem tem 0 (3.4565ms)
+✔ F3 · o placar segue o SALDO: quem gasta num lance desce (3.4098ms)
+✔ F4 · método e limite inválidos (2.8881ms)
+✔ F5 · duplo: a 1.ª ordem é a primária e o limit corta o conjunto certo (1.8958ms)
+✔ G1 · (v6.1) Art. 6º: o Passe Programado não concede pontos de lance; Art. 7º: o Relâmpago dá +100 (= constante) (8.5844ms)
+✔ G2 · a invariante corpo(v6.1) == corpo(GUTO) mantém-se byte a byte (UTAC138; era v6) (4.433ms)
+✔ G3 · o módulo do runtime espelha o documento (3.º sítio da invariante) (4.5944ms)
+✔ G4 · a âncora do Art. 6º no GUTO é um excerto VERBATIM do artigo (era o Art. 17º do v5.1) (6.4281ms)
+✔ H1 · 1 senha = 200 pontos, e a dívida é zerada na MESMA instrução (0.958ms)
+✔ H2 · idempotente por construção: a zeragem tem o guard na mesma instrução (1.0179ms)
+✔ H3 · cobre quem NÃO tem linha em public.pontos (UPSERT, não UPDATE simples) (0.5779ms)
+✔ H4 · a ref leva o instante da execução (não repete numa re-conversão) e o motivo é próprio (0.4602ms)
+✔ H5 · não apaga nem reescreve a fila: só deixa de haver dívida (worker e sweeper ficam) (0.5639ms)
+(node:10452) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ UTAC120 · crédito soma ao inventário e o consumo atómico desconta (10.5501ms)
+✔ UTAC120 · sem stock ⇒ sem_passes (e o inventário NÃO fica negativo) (1.2196ms)
+✔ UTAC120 · os dois tipos são independentes (relâmpago não paga palpite) (1.2001ms)
+✔ UTAC120 · devolver repõe o passe (reversão de um fluxo que falhou) (1.29ms)
+✔ UTAC120 · erro da RPC ⇒ fail-closed inventario_indisponivel (nunca ok:true) (1.6868ms)
+✔ UTAC120→UTAC129→UTAC142.1 · o LANCE não exige Passe; o consumo a cada N lances é só da especial (3.3096ms)
+✔ UTAC136 · (era UTAC120: o PALPITE consome 1 Passe) o palpite NÃO consome nem devolve Passe (1.4009ms)
+✔ UTAC120 · a COMPRA credita o inventário depois de creditar os benefícios (1.454ms)
+[auth-user] sessão emitida { endereco: '0xb2e1…83dc', visitorId: 'ausente' }
+[auth-user] sessão emitida { endereco: '0xb2e1…83dc', visitorId: 'ausente' }
+[auth-user] sessão emitida { endereco: '0xb2e1…83dc', visitorId: 'ausente' }
+[auth-user] sessão emitida { endereco: '0xb2e1…83dc', visitorId: 'ausente' }
+[auth-user] sessão emitida { endereco: '0xb2e1…83dc', visitorId: 'ausente' }
+[auth-user] sessão emitida { endereco: '0xb2e1…83dc', visitorId: 'ausente' }
+[auth-user] sessão emitida { endereco: '0xb2e1…83dc', visitorId: 'ausente' }
+[auth-user] sessão emitida { endereco: '0xb2e1…83dc', visitorId: 'ausente' }
+[auth-user] sessão emitida { endereco: '0xb2e1…83dc', visitorId: 'ausente' }
+[auth-user] sessão emitida { endereco: '0xb2e1…83dc', visitorId: 'ausente' }
+[auth-user] sessão emitida { endereco: '0xb2e1…83dc', visitorId: 'ausente' }
+[auth-user] sessão emitida { endereco: '0xb2e1…83dc', visitorId: 'ausente' }
+[auth-user] sessão emitida { endereco: '0xb2e1…83dc', visitorId: 'ausente' }
+[auth-user] sessão emitida { endereco: '0xb2e1…83dc', visitorId: 'ausente' }
+[auth-user] sessão emitida { endereco: '0xb2e1…83dc', visitorId: 'ausente' }
+[auth-user] sessão emitida { endereco: '0xb2e1…83dc', visitorId: 'ausente' }
+[auth-user] boas-vindas não creditadas (não-fatal): excecao:db em baixo
+[auth-user] sessão emitida { endereco: '0xb2e1…83dc', visitorId: 'ausente' }
+[auth-user] sessão emitida { endereco: '0xb2e1…83dc', visitorId: 'ausente' }
+(node:16744) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ B0 a constante é a da decisão do operador (literal, não a própria constante) (1.4876ms)
+✔ B1 (positivo) 1.º login de uma conta nova → 200 com token E +50 pontos de lance, motivo boas-vindas (23.1501ms)
+✔ B2 (idempotência) relogar 3× → continua 50, uma só entrada (20.9015ms)
+✔ B3 (concorrência) 10 logins em paralelo → uma só entrada de +50 (59.3785ms)
+✔ B4 (soma, não substitui) conta que já tinha pontos recebe +50 por cima, uma vez (11.1149ms)
+✔ B5 (negativo) assinatura de OUTRA carteira → 401 e nenhum bónus (19.463ms)
+✔ B6 (fail-soft) com a base de dados em baixo o LOGIN continua 200 — o bónus fica para o próximo login (12.564ms)
+[auth-user] boas-vindas não creditadas (não-fatal): TIMEOUT
+[auth-user] sessão emitida { endereco: '0xb2e1…83dc', visitorId: 'ausente' }
+✔ B7 (achado ℹ️1 do SEG4) Supabase PENDURADO → o login responde 200 dentro do teto (não fica à espera) (1513.465ms)
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 1,
+  edicaoId: 'RELAMP-1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 1,
+  edicaoId: 'RELAMP-1',
+  lanceId: '62782348-a3ff-4aad-9fb9-5001bb5b158f',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 7,
+  edicaoId: 'RELAMP-1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 7,
+  edicaoId: 'RELAMP-1',
+  lanceId: '38e6ee53-808c-4ca5-8853-ba60d34bae9f',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 10,
+  edicaoId: 'RELAMP-1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 7,
+  edicaoId: 'RELAMP-1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] blindagem (commit/KPB) falhou: rpc
+(node:16328) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ A1 (positivo) sem NENHUM Passe e com 5 pontos grátis → lance de 1 ponto aceite, missão +10 creditada (939.9006ms)
+✔ A2 (o furo F1 fechado) o lance NUNCA toca no inventário de Passes (4.3588ms)
+✔ A3 (negativo) pontos insuficientes → 400 saldo_pontos_insuficiente, sem missão e sem inventário (1.6478ms)
+✔ A4 (entrada inválida) lance de 0 → recusado com erro visível, sem débito (1.0158ms)
+✔ A5 (UTAC136, substitui R18-129-3) o PALPITE já NÃO consome Passe — fonte vigiada (1.2975ms)
+✔ A6 (achado MA2 do SEG4) a falha da blindagem devolve os PONTOS e nunca cria Passe (3.3937ms)
+[saldoRs:debito:comprar-passe-relampago] início { endereco: '0xaaaa…aaaa', valorCentavos: 200 }
+[saldoRs:debito:comprar-passe-relampago] concluído {
+  endereco: '0xaaaa…aaaa',
+  saldoAntes: 500,
+  saldoDepois: 300,
+  valorCentavos: 200,
+  tentativa: 1
+}
+(node:7940) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ V6 constantes: R$ 0,50 por ECOQUILDO · 50 por conversão · 1 ponto por Passe · Passe Programado (3.268ms)
+✔ (b) 49 ECOQUILDO ⇒ NÃO converte: saldo, inventário, pontos e lastro intactos (9.2059ms)
+✔ (a) 50 ECOQUILDO ⇒ 1 Passe Programado + 1 ponto (compra) · saldo 0 · lastro (50, 50, 0) (5.7316ms)
+✔ (a) 120 ECOQUILDO ⇒ 2 conversões, saldo 20, reserva 20 × R$ 0,50 = 1000 centavos (5.179ms)
+✔ idempotência: converter de novo com saldo < 50 não faz nada; a k-ésima ref nunca se repete (4.9407ms)
+✔ CONCORRÊNCIA (T4): 10 conversões simultâneas sobre 100 ECOQUILDO ⇒ exactamente 2 Passes e 2 pontos (11.6168ms)
+✔ (c) falha do inventário ⇒ conversão DESFEITA: ECOQUILDO, ponto e lastro voltam; alerta (5.9688ms)
+✔ (c) falha do lastro ⇒ nada convertido e o ECOQUILDO volta (1.3811ms)
+✔ débito da conversão recusa ref fora do namespace e saldo insuficiente (nunca negativo) (1.1892ms)
+✔ USO · crédito de administrador de 55 ⇒ 201 com passesConvertidos 1 e saldo 5 (20.1854ms)
+✔ USO · comprar o Passe Relâmpago com 49 ECOQUILDO no saldo ⇒ o 50.º converte; +100 pontos de lance (UTAC138) (13.5654ms)
+✔ SEG2 · conversão desfeita ao lado de outra concorrente não bloqueia as conversões seguintes (24.0745ms)
+[scheduled-encerrar-especial] {"id":"ESPECIAL-RELAMPAGO1","apuracao":"a_apurar","encerrada":true,"consolidacao":"aguarda_margem"}
+[scheduled-encerrar-especial] {"id":"ESPECIAL-RELAMPAGO1","apuracao":"apurada","encerrada":true,"consolidacao":409,"final":false}
+[scheduled-encerrar-especial] {"id":"ESPECIAL-RELAMPAGO1","apuracao":"ja_apurada","encerrada":true,"consolidacao":409,"final":false}
+[scheduled-encerrar-especial] {"id":"ESPECIAL-RELAMPAGO1","apuracao":"a_apurar","encerrada":true,"consolidacao":"aguarda_margem"}
+[scheduled-encerrar-especial] {"id":"ESPECIAL-RELAMPAGO1","apuracao":"apurada","encerrada":true,"consolidacao":409,"final":false}
+✔ V-A1 a margem cobre um pedido inteiro ao lance-relampago (≥ 60 s, o limite de uma função síncrona) (4.6246ms)
+✔ V-A2 30 s depois do fim ainda é «a_apurar» (o lance do último ms pode estar no tx.wait(1) on-chain) (1.6868ms)
+✔ V-A3 lance aceite às 19:59:59.999 e gravado 20 s depois (commit on-chain) ENTRA no resultado definitivo (2.0669ms)
+✔ V-B1 nome com «@» (o userLabel de quem entra por e-mail) não é publicado: cai para o endereço encurtado (1.1725ms)
+(node:19048) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ V-C1 tick() dentro da margem: «a_apurar», sem gravar; tick() depois da margem: «apurada» e grava (9.8429ms)
+✔ V-C2 (R18-138-H) a consolidação on-chain espera a margem de fecho; depois dela corre 1× (4.6537ms)
+[jwt] JWT_SECRET ausente — assinarPedido/verificarPedido vão falhar
+[apuracao-especial] revelar ranking falhou (não-fatal): pg
+[apuracao-especial] revelar ranking falhou (não-fatal): supabase_indisponivel
+[apuracao-especial] revelar ranking falhou (não-fatal): supabase_indisponivel
+[apuracao-especial] revelar ranking falhou (não-fatal): supabase_indisponivel
+[apuracao-especial] revelar ranking falhou (não-fatal): supabase_indisponivel
+[chatbot] UTAC140: edição especial sem nome de produto — a usar o padrão
+[chatbot] UTAC140: ler a edição especial falhou — sem bloco da especial: blob
+[apuracao-especial] revelar ranking falhou (não-fatal): supabase_indisponivel
+(node:8288) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ B1 registar: endereço ENCURTADO, sem valor, só ESPECIAL-*; idempotência delegada ao id do lance (2.6511ms)
+✔ B2 registar recusa: edição normal, endereço inválido, sem id; erro do Supabase ⇒ ok:false (fail-soft) (0.6257ms)
+✔ B3 revelar: só valores inteiros ≥ 1 com id; lista vazia não chama o Supabase (0.5126ms)
+✔ B4 a apuração só revela DEPOIS do fim + margem; durante e na margem não revela nada (3.1196ms)
+✔ B5 o lance-relampago regista no ranking DEPOIS de persistir, sem o valor (contrato da fonte) (1.5615ms)
+✔ B6 migração: anon sem privilégio em valor_oculto, RLS só na especial, Realtime ligado (1.1503ms)
+✔ D1 público: Top 10 COM valores, como no UTAC138 (R18-140-G — a v12 só desenha linhas com valor) (6.2116ms)
+✔ D2 completo: sem token 401; token inválido 401; sem Passe 403 «Acesso restrito a portadores de Passe» (3.049ms)
+✔ D3 completo com Passe (Relâmpago OU Programado) ⇒ 200 com os valores; inventário em baixo ⇒ 503 (4.6692ms)
+✔ D4 completo depois de fim + 24 h ⇒ 410; antes do fim ⇒ pronto:false sem valores (1.496ms)
+✔ C1 bloco do GUTO: produto da edição, hora de Brasília, FAQ e sigilo; sem «leilão» nem «sorte» (19.2946ms)
+✔ C2 sem nome de produto ⇒ «Air Fryer»; o prompt só leva o bloco quando há especial (0.8915ms)
+✔ C3 chatbot: especialParaGuto lê a edição (falha ⇒ null; terminada ⇒ null) e especialAindaSecreta fecha o simulador (250.9538ms)
+✔ K1 configDaEspecial: omissões = decisões do UTAC140; inválidos caem na omissão (0.7402ms)
+✔ K2 resultado-edicao segue a edição: top10.publico=false esconde valores; exigePasse=false abre; janelaHoras muda o 410 (1.7969ms)
+✔ K3 lance-relampago só regista no ranking com rankingAoVivo (contrato da fonte) (0.6358ms)
+✔ K4 migração 140b: RLS e RPC por padrão ESPECIAL-* (sem id fixo na BD) (0.5691ms)
+✔ C4 SEG4: especial agendada ⇒ «ANUNCIADA», sem convite a dar lance; boasVindas com quebras de linha colapsadas (1.2243ms)
+✔ S1 força bruta sem o sal NÃO recupera o valor; com o sal, o hash confere (determinístico) (123.511ms)
+✔ S2 lance-relampago usa o compromisso com sal e guarda o sal só no registo (contrato da fonte) (1.0065ms)
+(node:19432) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ A1 · um lance de 1 ponto(s) DEBITA 1 (saldo 50 → 49) e grava o movimento (12.1579ms)
+✔ A1b · com o saldo EXACTO de 1, o lance de 1 debita até 0 (fronteira) (1.8218ms)
+✔ A2 · um lance de 2 ponto(s) DEBITA 2 (saldo 50 → 48) e grava o movimento (1.2137ms)
+✔ A2b · com o saldo EXACTO de 2, o lance de 2 debita até 0 (fronteira) (1.1332ms)
+✔ A3 · sequência real 1 → 2 → 3 debita os três (Σ 6), cada um com a sua ref (2.9799ms)
+✔ A4 · BIDIRECCIONAL — 0 e negativos continuam recusados, sem escrever nada (1.2914ms)
+✔ A5 · lance de 2 com saldo 1 → recusa sem saldo negativo (0.9883ms)
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 1,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+(node:6440) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 1,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: '574b4fcf-3990-40f0-b38e-a928776e2fcd',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 2,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 2,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: '5f38335e-c22f-4b65-ab9c-290c26c9a87c',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 3,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 3,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: '6adbdbe4-3ba5-4abc-a2dc-528cdcfa3701',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 1,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+✔ C1 · os lances 1 e 2 gastam SÓ pontos; o 3.º gasta também 1 Passe Relâmpago (105.0837ms)
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 1,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: '8eeb67f3-aa65-4109-8cea-97c592aaaf26',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 2,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 2,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: '9797c309-cb5a-4ffe-ac9f-adc3ef016a38',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 3,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 3,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: 'a36f42aa-0dcd-4029-bd23-82a610e16b73',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 4,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 4,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: '8205df7b-8106-4301-bff1-611891b47da1',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 5,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 5,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: 'ebdeb44f-5096-4dea-afac-646ac6ec8809',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 6,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 6,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: '5dec2ef9-56d8-4f16-82f6-e770c41a460a',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 7,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 7,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: '27a67859-bf57-4ac2-a842-c9ae2bf43f92',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 8,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 8,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: '3e6798b3-a6d9-4cf2-be46-7ff55a22c819',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 9,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 9,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: '6f6d4833-46e9-43d0-8aa7-be999bc74ae2',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 1,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+✔ C2 · a cada 3: nove lances gastam exactamente 3 Passes (no 3.º, 6.º e 9.º) (32.5611ms)
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 1,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: 'bfa1340f-ffae-4402-8fec-881ec84727a5',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 2,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 2,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: 'be46e149-de8c-49bb-90fa-3c85ec41126d',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 3,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 3,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: '4252ac3f-7107-4638-b9f9-3151671ab027',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 4,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 4,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: '54527b43-9a7f-45d9-a9c3-ca6dab67ff27',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 1,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+✔ C3 · SEM Passe: todos os lances passam só com pontos (o Passe é opcional, nunca bloqueia) (10.0645ms)
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 1,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: '28d08485-1a26-4236-a8c0-52f0bca9f416',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 2,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 2,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: '27cf71aa-7cc5-4bdc-b421-91c282a4a842',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 3,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 3,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: '17676141-0768-4ae3-8164-919042800d85',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 1,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+✔ C4 · inventário em baixo no 3.º lance: o lance passa (fail-soft), nenhum Passe gasto (7.1662ms)
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 1,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: '83abca09-ecd5-48a4-9ece-63454b9a3ff7',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 2,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 2,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: 'af4c383c-3122-4f42-b2c0-21d14c1b400a',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 3,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] blindagem (commit/KPB) falhou: rpc
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 1,
+  edicaoId: 'RELAMP-1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 1,
+  edicaoId: 'RELAMP-1',
+  lanceId: 'c01dab17-75e3-4681-93dd-ffba9ce31180',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 2,
+  edicaoId: 'RELAMP-1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 2,
+  edicaoId: 'RELAMP-1',
+  lanceId: '826775c5-3011-4a7f-bb66-a55a9a9f985c',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 3,
+  edicaoId: 'RELAMP-1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 3,
+  edicaoId: 'RELAMP-1',
+  lanceId: '1eebf821-a025-4f27-9ac1-dbacce0cd439',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 1,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+✔ C5 · nunca há devolução: o Passe só se gasta DEPOIS de o lance existir (blindagem a falhar ⇒ nem conta nem gasta) (7.8109ms)
+✔ C6 · BIDIRECCIONAL: o Relâmpago normal não conta nem toca no inventário (5.5901ms)
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 1,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: 'dcc90bea-2e31-4970-a157-e5b0f5404f9b',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 2,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 2,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: 'a28423b0-692d-4090-8071-506653942649',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 3,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 3,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: '8f23369e-1be2-49fe-aeb9-25fb831add6c',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 4,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 4,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: '47c88e41-a6ea-44cb-97ee-c1b7ba130f05',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 10,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 10,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: 'a9ec62aa-6c95-4f78-bdac-6aecf657be0d',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 11,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 11,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: '9a412dd1-6075-4092-bd7d-42196e1601d0',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 12,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 12,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: '3729f93b-c07e-4129-afb6-74c3ab3b7641',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 13,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 13,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: '6ed16203-f659-409b-be86-78cfb12acc83',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 5,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: true,
+  role: 'user'
+}
+✔ C7 · dinâmico: `passeACadaLances: 2` gasta no 2.º e 4.º; `0` desliga (24.5906ms)
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 5,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: '561bf4a3-5d3a-4fb0-b33b-20b1b34db2bf',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 5,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: true,
+  role: 'user'
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 1,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 2,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 3,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 4,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 5,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+[lance-relampago] início {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 6,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  idem: false,
+  role: 'user'
+}
+✔ C8 · idempotência: a MESMA idempotencyKey repetida não conta um 2.º lance (5.2592ms)
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 1,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: '33506519-ce9b-4240-a0c7-44b34b138ca4',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 5,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: '2b576125-a96c-45b9-b3c4-84718dc6b389',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 6,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: '49b99a50-185d-406a-b571-7846635cc34d',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 2,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: '3dda89a0-03a5-4514-9473-53e3c5717bf9',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 3,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: '1ad7acf1-5d14-4fe9-8832-503fb8706ebd',
+  saldoAntes: null,
+  saldoDepois: null
+}
+[lance-relampago] concluído {
+  endereco: '0x5baf…32b8',
+  valorCentavos: 4,
+  edicaoId: 'ESPECIAL-RELAMPAGO1',
+  lanceId: '134128a7-fb63-45be-871c-ae4d4f009139',
+  saldoAntes: null,
+  saldoDepois: null
+}
+✔ C9 · CONCORRÊNCIA: 6 lances em paralelo ⇒ contagem 6 (sem números repetidos) e exactamente 2 Passes gastos (86.8603ms)
+✔ C10 · lib: sem Passe no N-ésimo lance, a contagem fica ok e diz porquê (code sem_passes), sem marcar consumo (3.4461ms)
+[scheduled-lider-especial] [{"id":"ESPECIAL-RELAMPAGO1","avisos":[["lider_menor_unico","0xaaaa…aaaa"]]}]
+[scheduled-lider-especial] [{"id":"ESPECIAL-RELAMPAGO1","avisos":[]}]
+[scheduled-lider-especial] []
+[scheduled-lider-especial] []
+[scheduled-lider-especial] []
+[scheduled-lider-especial] []
+[scheduled-lider-especial] [{"id":"ESPECIAL-RELAMPAGO1","avisos":[]}]
+[scheduled-lider-especial] edição falhou (não-fatal) ESPECIAL-RELAMPAGO1 db
+[scheduled-lider-especial] [{"id":"ESPECIAL-RELAMPAGO1","erro":true},{"id":"ESPECIAL-NATAL2","avisos":[["lider_menor_unico","0xbbbb…bbbb"]]}]
+(node:16608) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ E1 · 1.º evento: quem passa a ter o menor único recebe «lider_menor_unico» (e só ele) (4.18ms)
+✔ E2 · 2.º evento: B dá um lance menor e único → A recebe «lider_perdeu», B «lider_menor_unico» (0.7493ms)
+✔ E3 · 3.º evento: C repete o 2 de B (deixa de ser único) → A VOLTA a liderar: «lider_voltou»; B perde (0.5395ms)
+✔ E4 · sem mudança de líder entre janelas → nenhum aviso (não é por lance) (0.7033ms)
+✔ E5 · ANTI-ORÁCULO: nenhuma mensagem leva valor (nem «R$», nem dígitos do lance), em nenhum dos 3 tipos (0.6254ms)
+✔ E6 · só portadores: líder sem Passe não é avisado e o ex-líder recebe «deixou de ser» (0.7406ms)
+✔ E7 · primeiroNome nunca sai de um e-mail; só nome de pessoa (0.9472ms)
+✔ E8 · portador: inventário > 0, ou Passe gasto nesta edição; o resto não (fail-closed) (0.7321ms)
+✔ E9 · tick: avisa por janela, grava o estado, e o tick seguinte sem mudança não repete (4.8926ms)
+✔ E10 · tick BIDIRECCIONAL: especial fechada, por abrir ou com avisosLider:false → nada (3.4101ms)
+✔ E12 · tick: líder SEM Passe (inventário 0 e nada gasto) não é avisado (1.1543ms)
+✔ E11 · fail-soft: a leitura de lances de uma edição falha → as outras seguem (1.9455ms)
+✔ D1 · formatarNome: «PrimeiroNome I.», partículas saltadas, e-mail e lixo recusados (3.9289ms)
+✔ D2 · o espelho do frontend é IGUAL ao do backend (mesmos casos, mesma saída) (1.2479ms)
+✔ D3 · formatarNomeExibicao: sem nome de pessoa cai no endereço; sem nada, «—» (0.6255ms)
+✔ D4 · registar manda SÓ o nome reduzido (nunca o completo nem o e-mail); sem nome, a chamada é a do UTAC140 (1.3032ms)
+✔ D5 · migração: coluna com CHECK sem «@», grant de coluna ao anon, RPC devolve o nome e NÃO mexe no valor_oculto (14.7254ms)
+ℹ tests 333
+ℹ suites 0
+ℹ pass 333
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6442.0819

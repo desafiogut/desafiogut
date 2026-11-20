@@ -89,17 +89,17 @@ const fonte = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
 // UTAC129 (R18-129-3) — INVERTIDO: o lance deixou de consumir Passe (furo F1 do UTAC128). O texto
 // original deste teste exigia `consumirPasse` + `sem_passes_disponiveis` no lance; o comportamento novo
 // é provado no handler real em `utac129-lance-sem-passe.test.mjs` (A1-A4).
-// UTAC142 (R18-142-C) — o Relâmpago NORMAL continua sem Passe; só a EDIÇÃO ESPECIAL (com `passePorLance`) consome 1
-// por lance. A guarda passou de «nunca» a «só dentro do ramo da especial». Comportamento: utac142-especial-passe C6.
-test("UTAC120→UTAC129→UTAC142 · o LANCE só consome Passe dentro do ramo da edição especial", () => {
+// UTAC142.1 (R18-142.1-A) — o lance NUNCA exige Passe; só na EDIÇÃO ESPECIAL, e depois de o lance existir, quem tem
+// Passe gasta 1 a cada N lances (`passeACadaLances`). A guarda: o consumo vive só em `_lib/passe-a-cada-lances.mjs`,
+// chamado só no ramo da especial, e o lance nunca responde `sem_passes_disponiveis`. Comportamento: utac142-especial-passe.
+test("UTAC120→UTAC129→UTAC142.1 · o LANCE não exige Passe; o consumo a cada N lances é só da especial", () => {
   const src = fonte("../lance-relampago.mjs");
   const codigo = src.split("\n").filter((l) => !/^\s*\/\//.test(l)).join("\n"); // sem comentários
-  const chamadas = codigo.match(/consumirPasse\(/g) ?? [];
-  assert.equal(chamadas.length, 1, "consumirPasse tem de aparecer uma só vez");
-  const ramo = codigo.indexOf("if (EDICAO_ESPECIAL_RE.test(edicaoId) && configDaEspecial(meta).passePorLance) {");
-  assert.ok(ramo > 0, "falta o ramo da especial");
-  const pos = codigo.indexOf("consumirPasse(");
-  assert.ok(pos > ramo && pos - ramo < 300, "consumirPasse fora do ramo da especial");
+  assert.doesNotMatch(codigo, /consumirPasse\(/, "o lance voltou a chamar consumirPasse directamente");
+  assert.doesNotMatch(codigo, /"sem_passes_disponiveis"/, "o lance voltou a exigir Passe");
+  assert.match(codigo, /const aCada = EDICAO_ESPECIAL_RE\.test\(edicaoId\) \? configDaEspecial\(meta\)\.passeACadaLances : 0;/);
+  assert.ok(codigo.indexOf("contarLanceEConsumirPasse({") > codigo.indexOf("registro.key = await addLance(edicaoId, registro)"),
+    "o Passe só se gasta depois de o lance existir");
 });
 
 // UTAC136 — Regulamento v6.0: o palpite é GRATUITO. O teste do UTAC120 («o PALPITE consome 1 Passe

@@ -15,6 +15,7 @@ import { lerInventario } from "./_lib/passes-inventario.mjs";
 import { adicionarNotificacao } from "./_lib/notificacoes-usuario.mjs";
 import { avaliarLider, JANELA_AVISO_MS } from "./_lib/lider-especial.mjs";
 import { mascararEndereco } from "./_lib/validate.mjs";
+import { passesConsumidosNaEdicao, STORE_CONTAGEM } from "./_lib/passe-a-cada-lances.mjs"; // UTAC142.1
 
 export const CRON = "*/5 * * * *";
 export const STORE_LIDER = "especial-lider";
@@ -24,19 +25,26 @@ function abrirEstado() {
   catch (err) { console.warn("[scheduled-lider-especial] store indisponível:", err?.message); return null; }
 }
 
-/** Portador de Passe: com `passePorLance` todo o licitante da especial gastou um; sem ela, pergunta-se ao inventário. */
-export function predicadoPortador(meta, { ler = lerInventario } = {}) {
-  if (configDaEspecial(meta).passePorLance) return () => true;
+function abrirContagem() {
+  try { return getStore({ name: STORE_CONTAGEM, consistency: "strong" }); } catch { return null; }
+}
+
+/**
+ * UTAC142.1 — portador de Passe = tem Passe no inventário AGORA, ou já gastou pelo menos um NESTA edição (o Passe
+ * a cada N lances pode tê-lo deixado a 0). O lance já não exige Passe, logo licitar não basta. Fail-closed.
+ */
+export function predicadoPortador(edicaoId, { ler = lerInventario, contagem = null } = {}) {
   return async (e) => {
+    if (contagem && (await passesConsumidosNaEdicao(contagem, edicaoId, e)) > 0) return true;
     const inv = await ler(e).catch(() => ({ ok: false }));
-    return !!inv.ok && (inv.passesRelampago + inv.passesProgramado) > 0;
+    return !!inv?.ok && (Number(inv.passesRelampago) + Number(inv.passesProgramado)) > 0;
   };
 }
 
 /** Um tick. Dependências injectáveis para teste. Nunca lança. */
 export async function tick({
   agoraMs = Date.now(), listar = listarEdicoes, ler = buscarEdicao, lerLances = getLances,
-  store = abrirEstado(), notificar = adicionarNotificacao, lerInv = lerInventario,
+  store = abrirEstado(), notificar = adicionarNotificacao, lerInv = lerInventario, contagem = abrirContagem(),
 } = {}) {
   const relatorio = [];
   if (!store) return relatorio;
@@ -51,7 +59,7 @@ export async function tick({
       if (!meta || verificarJanelaLance(meta, agoraMs) || !configDaEspecial(meta).avisosLider) continue;
       const anterior = await store.get(id, { type: "json" });
       const { estado, avisos } = await avaliarLider({
-        edicaoId: id, lances: await lerLances(id), estadoAnterior: anterior, ehPortador: predicadoPortador(meta, { ler: lerInv }),
+        edicaoId: id, lances: await lerLances(id), estadoAnterior: anterior, ehPortador: predicadoPortador(id, { ler: lerInv, contagem }),
       });
       for (const a of avisos) {
         await notificar(a.endereco, { tipo: a.tipo, edicaoId: id, valor: null, mensagem: a.mensagem, ref: `janela:${janela}` });

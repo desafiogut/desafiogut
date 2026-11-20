@@ -1,0 +1,32 @@
+schema: utac/1
+name: UTAC142.1
+title: "Especial — lance só com pontos; Passe opcional gasto a cada 3 lances; bónus +100 na compra"
+type: produto
+baseline: 42ebf6e   # main = produção (deploy 6affcbf4)
+motivo: >-
+  O operador reverteu a R18-142-C («1 Passe por lance»), que bloqueava quem não tem Passe.
+  O lance gasta só pontos. Quem tem Passe Relâmpago gasta 1 a cada 3 lances. O bónus +100 fica na compra.
+frentes:
+  - id: A
+    nome: Passe a cada N lances (contador CAS por edição/endereço, depois do lance; fail-soft)
+    entrega: [_lib/passe-a-cada-lances.mjs, lance-relampago.mjs, _lib/especial-config.mjs (passeACadaLances)]
+  - id: B
+    nome: «Portador» dos avisos = Passe no inventário OU Passe gasto nesta edição
+    entrega: [scheduled-lider-especial.mjs, _lib/lider-especial.mjs]
+  - id: C
+    nome: Testes + guardas antigas + docs
+    entrega: [_tests/utac142-especial-passe, utac120, utac129, utac140, utac142-lider, docs/EDICAO-ESPECIAL-CONFIG.md]
+autoriza:
+  - editar netlify/functions/ e docs/ (ficheiros nomeados)
+  - libertar RAM (decisão do operador)
+  - deploy --build --prod + push (continuação da autorização do UTAC142)
+proibe:
+  - git add -A
+  - alterar o Regulamento, o bónus +100 da compra ou o contrato on-chain
+  - migração SQL
+dependencias:
+  - UTAC142 publicado (42ebf6e)
+regras_activas: [E, T, G, L, S, A, P, AU, ST, HI]
+stop_conditions_extra: [ST3]
+ressalvas:
+  - A14 — RAM livre >= 1500 MB antes da suíte

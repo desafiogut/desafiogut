@@ -59,11 +59,13 @@ test("E7 · primeiroNome nunca sai de um e-mail; só nome de pessoa", () => {
   assert.equal(L.primeiroNome(null), null);
 });
 
-test("E8 · portador: com passePorLance todo o licitante conta; sem ela pergunta-se ao inventário (fail-closed)", async () => {
-  assert.equal(await predicadoPortador({})(A), true);
-  const p = predicadoPortador({ passePorLance: false }, { ler: async (e) => (e === A ? { ok: true, passesRelampago: 1, passesProgramado: 0 } : { ok: false }) });
-  assert.equal(await p(A), true);
-  assert.equal(await p(B), false);
+// UTAC142.1 — o lance já não exige Passe: portador = Passe no inventário AGORA, ou Passe gasto NESTA edição.
+test("E8 · portador: inventário > 0, ou Passe gasto nesta edição; o resto não (fail-closed)", async () => {
+  const contagem = { async get(k) { return k === `${ID}:${C}` ? { lances: 3, passesConsumidos: 1 } : null; } };
+  const p = predicadoPortador(ID, { contagem, ler: async (e) => (e === A ? { ok: true, passesRelampago: 1, passesProgramado: 0 } : e === C ? { ok: true, passesRelampago: 0, passesProgramado: 0 } : { ok: false }) });
+  assert.equal(await p(A), true, "tem Passe no inventário");
+  assert.equal(await p(C), true, "gastou o último Passe nesta edição");
+  assert.equal(await p(B), false, "inventário ilegível e nada gasto");
 });
 
 // ── o tick do cron ───────────────────────────────────────────────────────────────────────────────
@@ -77,7 +79,8 @@ const metaAberta = { id: ID, tipo: "relampago", status: "ativo", inicio_em: "202
 test("E9 · tick: avisa por janela, grava o estado, e o tick seguinte sem mudança não repete", async () => {
   const store = storeMem(); const enviados = [];
   const deps = { agoraMs: agora, store, listar: async () => [{ id: ID }, { id: "R-1" }], ler: async () => metaAberta,
-    lerLances: async () => [lance(A, 4), lance(B, 6)], notificar: async (e, n) => { enviados.push([e, n]); return true; } };
+    lerLances: async () => [lance(A, 4), lance(B, 6)], notificar: async (e, n) => { enviados.push([e, n]); return true; },
+    lerInv: async () => ({ ok: true, passesRelampago: 1, passesProgramado: 0 }), contagem: null }; // UTAC142.1 — portador explícito
   await tick(deps);
   assert.deepEqual(enviados.map(([e, n]) => [e, n.tipo, n.valor]), [[A, L.TIPO_LIDER, null]]);
   assert.match(enviados[0][1].ref, /^janela:\d+$/);
@@ -100,11 +103,20 @@ test("E10 · tick BIDIRECCIONAL: especial fechada, por abrir ou com avisosLider:
   }
 });
 
+test("E12 · tick: líder SEM Passe (inventário 0 e nada gasto) não é avisado", async () => {
+  const enviados = [];
+  await tick({ agoraMs: agora, store: storeMem(), listar: async () => [{ id: ID }], ler: async () => metaAberta,
+    lerLances: async () => [lance(A, 4)], notificar: async (e, n) => { enviados.push(n); },
+    lerInv: async () => ({ ok: true, passesRelampago: 0, passesProgramado: 0 }), contagem: null });
+  assert.deepEqual(enviados, []);
+});
+
 test("E11 · fail-soft: a leitura de lances de uma edição falha → as outras seguem", async () => {
   const ID2 = "ESPECIAL-NATAL2"; const enviados = [];
   await tick({ agoraMs: agora, store: storeMem(), listar: async () => [{ id: ID }, { id: ID2 }],
     ler: async (id) => ({ ...metaAberta, id }),
     lerLances: async (id) => { if (id === ID) throw new Error("db"); return [lance(B, 1)]; },
-    notificar: async (e, n) => { enviados.push([e, n.edicaoId]); } });
+    notificar: async (e, n) => { enviados.push([e, n.edicaoId]); },
+    lerInv: async () => ({ ok: true, passesRelampago: 1, passesProgramado: 0 }), contagem: null });
   assert.deepEqual(enviados, [[B, ID2]]);
 });

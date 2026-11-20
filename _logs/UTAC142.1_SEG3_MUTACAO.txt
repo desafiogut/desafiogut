@@ -1,0 +1,9 @@
+N1 fail=4 RED md5_restaurado=SIM (netlify/functions/_lib/passe-a-cada-lances.mjs)
+N2 fail=1 RED md5_restaurado=SIM (netlify/functions/_lib/passe-a-cada-lances.mjs)
+N3 fail=0 SOBREVIVEU md5_restaurado=SIM (netlify/functions/_lib/passe-a-cada-lances.mjs)
+N4 fail=5 RED md5_restaurado=SIM (netlify/functions/_lib/passe-a-cada-lances.mjs)
+N5 fail=1 RED md5_restaurado=SIM (netlify/functions/_lib/passe-a-cada-lances.mjs)
+N6 fail=1 RED md5_restaurado=SIM (netlify/functions/lance-relampago.mjs)
+N7 fail=1 RED md5_restaurado=SIM (netlify/functions/scheduled-lider-especial.mjs)
+N8 fail=1 RED md5_restaurado=SIM (netlify/functions/_lib/especial-config.mjs)
+N3 (2.ª ronda, com C10) fail=1 RED md5_restaurado=SIM

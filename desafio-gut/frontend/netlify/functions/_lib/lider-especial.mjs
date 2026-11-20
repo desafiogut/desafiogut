@@ -7,8 +7,8 @@
 //   1. o estado é avaliado por JANELA (cron de 5 min), nunca no instante do lance ⇒ o aviso não diz QUAL lance foi;
 //   2. a mensagem NÃO leva valor nenhum (nem o do próprio), só «lideras / deixaste de liderar»;
 //   3. só o líder (e o ex-líder) recebem algo; ninguém sabe nada sobre os outros;
-//   4. só portadores de Passe (com `passePorLance` cada lance da especial já gastou 1 Passe, logo todo o licitante
-//      o é; sem essa regra, pergunta-se ao inventário).
+//   4. só portadores de Passe: Passe no inventário agora, ou pelo menos um gasto nesta edição (UTAC142.1: o lance já
+//      não exige Passe, que se gasta 1 a cada N lances; ver `scheduled-lider-especial.mjs#predicadoPortador`).
 //
 // PURO: sem Blobs, sem env. Quem chama traz os lances, o estado anterior e o predicado de portador.
 
