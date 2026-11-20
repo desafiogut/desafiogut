@@ -65,7 +65,8 @@ test("E8 · portador: inventário > 0, ou Passe gasto nesta edição; o resto n�
   const p = predicadoPortador(ID, { contagem, ler: async (e) => (e === A ? { ok: true, passesRelampago: 1, passesProgramado: 0 } : e === C ? { ok: true, passesRelampago: 0, passesProgramado: 0 } : { ok: false }) });
   assert.equal(await p(A), true, "tem Passe no inventário");
   assert.equal(await p(C), true, "gastou o último Passe nesta edição");
-  assert.equal(await p(B), false, "inventário ilegível e nada gasto");
+  // UTAC142-SEG4 — ilegível é INDETERMINADO (o tick salta a janela), não «não portador»; continua a não avisar.
+  await assert.rejects(p(B), /portador_indeterminado/, "inventário ilegível e nada gasto");
 });
 
 // ── o tick do cron ───────────────────────────────────────────────────────────────────────────────
@@ -119,4 +120,27 @@ test("E11 · fail-soft: a leitura de lances de uma edição falha → as outras 
     notificar: async (e, n) => { enviados.push([e, n.edicaoId]); },
     lerInv: async () => ({ ok: true, passesRelampago: 1, passesProgramado: 0 }), contagem: null });
   assert.deepEqual(enviados, [[B, ID2]]);
+});
+
+// UTAC142-SEG4 (validador) — o predicado era fail-closed devolvendo `false` quando o inventário não se lia. Uma falha
+// TRANSITÓRIA fazia o líder (portador, ainda o menor único) receber «deixou de ser o menor único» e, na janela
+// seguinte, «voltou» — mensagem FALSA a quem continua a ganhar. Indeterminado ≠ «não portador»: a janela salta-se
+// (sem avisos e sem gravar estado) e a seguinte compara com o último estado bom. Continua fail-closed: nada é enviado.
+test("E13 · falha transitória do inventário: a janela salta-se — nem «perdeu» falso, nem «voltou» a seguir", async () => {
+  const store = storeMem(); const enviados = []; let emBaixo = false;
+  const deps = (t) => ({ agoraMs: agora + t * L.JANELA_AVISO_MS, store, listar: async () => [{ id: ID }], ler: async () => metaAberta,
+    lerLances: async () => [lance(A, 4), lance(B, 6), lance(B, 6)], notificar: async (e, n) => { enviados.push([t, e, n.tipo]); return true; },
+    lerInv: async () => (emBaixo ? { ok: false, code: "inventario_indisponivel" } : { ok: true, passesRelampago: 1, passesProgramado: 0 }), contagem: null });
+  await tick(deps(0));
+  emBaixo = true; const r1 = await tick(deps(1));
+  emBaixo = false; await tick(deps(2));
+  assert.deepEqual(enviados.map(([t, e, tipo]) => [t, e, tipo]), [[0, A, L.TIPO_LIDER]], JSON.stringify(enviados));
+  assert.deepEqual(r1, [{ id: ID, erro: true }], "a janela indeterminada tem de ficar registada como erro, não como «sem líder»");
+  assert.equal(JSON.parse(store.m.get(ID)).lider, A);
+});
+
+test("E14 · contagem ilegível também é indeterminado (não cai para «não portador»)", async () => {
+  const contagem = { async get() { throw new Error("blobs 503"); } };
+  const p = predicadoPortador(ID, { contagem, ler: async () => ({ ok: true, passesRelampago: 0, passesProgramado: 0 }) });
+  await assert.rejects(p(C), /portador_indeterminado/);
 });

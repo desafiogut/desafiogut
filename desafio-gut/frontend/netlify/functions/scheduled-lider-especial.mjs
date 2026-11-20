@@ -15,7 +15,7 @@ import { lerInventario } from "./_lib/passes-inventario.mjs";
 import { adicionarNotificacao } from "./_lib/notificacoes-usuario.mjs";
 import { avaliarLider, JANELA_AVISO_MS } from "./_lib/lider-especial.mjs";
 import { mascararEndereco } from "./_lib/validate.mjs";
-import { passesConsumidosNaEdicao, STORE_CONTAGEM } from "./_lib/passe-a-cada-lances.mjs"; // UTAC142.1
+import { chaveContagem, STORE_CONTAGEM } from "./_lib/passe-a-cada-lances.mjs"; // UTAC142.1
 
 export const CRON = "*/5 * * * *";
 export const STORE_LIDER = "especial-lider";
@@ -32,12 +32,22 @@ function abrirContagem() {
 /**
  * UTAC142.1 — portador de Passe = tem Passe no inventário AGORA, ou já gastou pelo menos um NESTA edição (o Passe
  * a cada N lances pode tê-lo deixado a 0). O lance já não exige Passe, logo licitar não basta. Fail-closed.
+ *
+ * UTAC142-SEG4 (validador) — leitura falhada (inventário OU contagem) é INDETERMINADO, não «não portador»: lança
+ * `portador_indeterminado` e o `tick` salta a edição nessa janela (sem avisos, sem gravar estado). Antes devolvia
+ * `false` e o líder ainda vencedor recebia «deixou de ser o menor único» e, na janela seguinte, «voltou».
  */
 export function predicadoPortador(edicaoId, { ler = lerInventario, contagem = null } = {}) {
   return async (e) => {
-    if (contagem && (await passesConsumidosNaEdicao(contagem, edicaoId, e)) > 0) return true;
-    const inv = await ler(e).catch(() => ({ ok: false }));
-    return !!inv?.ok && (Number(inv.passesRelampago) + Number(inv.passesProgramado)) > 0;
+    if (contagem) {
+      let gastos;
+      try { gastos = Number((await contagem.get(chaveContagem(edicaoId, e), { type: "json" }))?.passesConsumidos) || 0; }
+      catch { throw new Error("portador_indeterminado"); }
+      if (gastos > 0) return true;
+    }
+    const inv = await ler(e).catch(() => null);
+    if (!inv?.ok) throw new Error("portador_indeterminado");
+    return (Number(inv.passesRelampago) || 0) + (Number(inv.passesProgramado) || 0) > 0;
   };
 }
 
