@@ -23,6 +23,13 @@ const CASOS = [
   ["0x5baf…32b8", null],
   ["<script>", null],
   ["", null], [null, null], [42, null],
+  // UTAC142-SEG4 (validador) — a inicial é o 1.º CARÁCTER, não a 1.ª unidade UTF-16: com uma letra fora do BMP
+  // (ideogramas CJK da extensão B, letras matemáticas) `segundo[0]` dava um surrogate solto («Ana \ud840.»).
+  ["Ana 𠀋mei", "Ana 𠀋."],
+  ["Ana 𝓢ouza", "Ana 𝓢."],
+  // Mutantes sobreviventes do validador (N2/N3): a 2.ª palavra com lixo é recusada; o 1.º nome tem no máximo 40 letras.
+  ["Ana <b>", null],
+  ["A".repeat(41), null],
 ];
 
 test("D1 · formatarNome: «PrimeiroNome I.», partículas saltadas, e-mail e lixo recusados", () => {

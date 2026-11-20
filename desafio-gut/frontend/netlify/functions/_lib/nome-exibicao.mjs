@@ -15,7 +15,8 @@ export function formatarNome(nome) {
   if (partes.length === 0 || !PALAVRA.test(partes[0]) || !partes.every((p) => PALAVRA.test(p) || INICIAL.test(p))) return null;
   const primeiro = partes[0];
   const segundo = partes.slice(1).find((p) => !PARTICULAS.has(p.toLowerCase()));
-  return segundo ? `${primeiro} ${segundo[0].toLocaleUpperCase("pt-BR")}.` : primeiro;
+  // UTAC142-SEG4 — o 1.º CARÁCTER (code point), não a 1.ª unidade UTF-16: `segundo[0]` partia letras fora do BMP.
+  return segundo ? `${primeiro} ${String.fromCodePoint(segundo.codePointAt(0)).toLocaleUpperCase("pt-BR")}.` : primeiro;
 }
 
 /** O que a tabela mostra: o nome reduzido, ou o endereço que vier (já encurtado), ou «—». */
