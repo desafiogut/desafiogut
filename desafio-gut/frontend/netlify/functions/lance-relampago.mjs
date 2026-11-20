@@ -41,8 +41,8 @@ import { mascararEndereco } from "./_lib/validate.mjs"; // UTAC110h.4 (DEBT-031)
 import { registarNoRankingEspecial } from "./_lib/ranking-especial.mjs"; // UTAC140 — ranking ao vivo da especial
 import { novoSal, hashCompromisso } from "./_lib/compromisso-lance.mjs"; // UTAC140 — compromisso com sal
 import { configDaEspecial } from "./_lib/especial-config.mjs"; // UTAC140b — `rankingAoVivo` vem da edição
-import { consumirPasse } from "./_lib/passes-inventario.mjs"; // UTAC142.1 — 1 Passe a cada N lances na especial (opcional)
-import { contarLanceEConsumirPasse, STORE_CONTAGEM } from "./_lib/passe-a-cada-lances.mjs"; // UTAC142.1
+// UTAC145 — o consumo do Passe a cada N lances passou para a RPC `registar_lance_passe` (já não se chama consumirPasse aqui)
+import { contarLanceEConsumirPasse } from "./_lib/passe-a-cada-lances.mjs"; // UTAC142.1 · UTAC145 (contagem no Postgres)
 import { formatarNome } from "./_lib/nome-exibicao.mjs"; // UTAC142.2 — o nome é reduzido na origem
 
 const LANCE_MIN_CENTAVOS = 1;
@@ -395,9 +395,9 @@ export default async (req) => {
   let consumoPasse = { passeConsumido: false, passesRelampagoRestantes: null };
   const aCada = EDICAO_ESPECIAL_RE.test(edicaoId) ? configDaEspecial(meta).passeACadaLances : 0;
   if (aCada > 0) {
-    const c = await contarLanceEConsumirPasse({
-      store: abrirStore(STORE_CONTAGEM), edicaoId, endereco, consumirPasse, aCada,
-    }).catch(() => ({ ok: false, passeConsumido: false, code: "excecao" }));
+    // UTAC145 — contagem e consumo numa transacção do Postgres, por `lanceId` (repetir não conta 2×; ℹ️3 do SEG4).
+    const c = await contarLanceEConsumirPasse({ lanceId, edicaoId, endereco, aCada })
+      .catch(() => ({ ok: false, passeConsumido: false, code: "excecao" }));
     if (!c.ok) console.warn("[lance-relampago] contagem do Passe falhou (não-fatal):", c.code);
     consumoPasse = { passeConsumido: c.passeConsumido === true, passesRelampagoRestantes: c.passesRelampagoRestantes ?? null };
   }

@@ -1,67 +1,69 @@
-// _lib/passe-a-cada-lances.mjs — UTAC142.1 (decisão do operador, substitui a R18-142-C «1 Passe por lance»).
-// Na edição especial o lance gasta SÓ pontos. Quem tem Passe Relâmpago gasta 1 a cada N lances (omissão 3: no 3.º,
-// 6.º, 9.º…). Sem Passe nessa altura, o lance passa na mesma: o Passe é opcional e nunca bloqueia. O bónus de +100
-// pontos continua na COMPRA (Regulamento v6.1, Art. 7º), não aqui.
+// _lib/passe-a-cada-lances.mjs — UTAC142.1 (regra) · UTAC145 (contagem no Postgres).
+// Regra (R18-142.1-A, intocada): na edição especial o lance gasta SÓ pontos. Quem tem Passe Relâmpago gasta 1 a cada N
+// lances (omissão 3: no 3.º, 6.º, 9.º…). Sem Passe nessa altura, o lance passa na mesma. O bónus de +100 pontos continua
+// na COMPRA (Regulamento v6.1, Art. 7º), não aqui.
 //
-// Corre DEPOIS de o lance existir, logo nunca há Passe a devolver (o risco MA2 do UTAC129 não volta).
-// Contador por (edição, endereço) num Blob com escrita condicional por ETag: dois lances em paralelo recebem números
-// DIFERENTES, e só um deles cai no múltiplo de N (nem dois consumos, nem nenhum). FAIL-SOFT: devolve sempre.
+// UTAC145 — a contagem saiu do Blob `especial-lances-passe` (ℹ️3 do SEG4 do UTAC142: uma escrita que chegava mas cuja
+// resposta se perdia contava o mesmo lance 2×). Agora: RPC `registar_lance_passe` (migração 20261120_utac145), uma linha
+// por LANCE com `lance_id` como chave primária. Posição e consumo decididos na mesma transacção. Repetir com o mesmo
+// `lanceId` devolve o resultado já gravado ⇒ esta lib PODE repetir quando a resposta falha, sem risco de dupla contagem.
+//
+// Corre DEPOIS de o lance existir ⇒ nunca há Passe a devolver. FAIL-SOFT: devolve sempre, nunca lança.
 
-export const STORE_CONTAGEM = "especial-lances-passe";
+import { getSupabase } from "./supabase-client.mjs";
+
 export const LANCES_POR_PASSE_PADRAO = 3;
-// Achado no próprio UTAC142.1 (C9): com 5 tentativas e 6 lances simultâneos do mesmo utilizador, 2 ficavam por contar.
-// Cada ronda de conflito só deixa passar UM; com recuo aleatório curto, 12 tentativas cobrem rajadas bem acima do
-// limite real (rate limit 5 lances/min por carteira).
-const TENTATIVAS = 12;
-const recuo = () => new Promise((r) => setTimeout(r, Math.floor(Math.random() * 25)));
+export const TABELA_LANCES_PASSE = "especial_lances_passe";
+/** O Blob do UTAC142.1 (só para a semente da transição; o código já não escreve nele). */
+export const STORE_CONTAGEM_LEGADO = "especial-lances-passe";
+const TENTATIVAS = 3;
 
-export const chaveContagem = (edicaoId, endereco) => `${edicaoId}:${String(endereco).toLowerCase()}`;
-
-/**
- * Lê → muta → grava condicional (até 12 vezes, com recuo aleatório). `set`, nunca `setJSON` (no @netlify/blobs 10.0–10.4 o setJSON não
- * envia o If-Match — `_lib/pedidos.mjs` MC102.0). Só um `etag` na resposta confirma a escrita.
- */
-async function casAtualizar(store, chave, mutar) {
-  for (let i = 0; i < TENTATIVAS; i++) {
-    const lido = await store.getWithMetadata(chave, { type: "json" });
-    const atual = lido?.data ?? { lances: 0, passesConsumidos: 0 };
-    const novo = mutar({ lances: Number(atual.lances) || 0, passesConsumidos: Number(atual.passesConsumidos) || 0 });
-    novo.atualizadoEm = new Date().toISOString();
-    const cond = lido?.etag ? { onlyIfMatch: lido.etag } : { onlyIfNew: true };
-    const w = await store.set(chave, JSON.stringify(novo), cond);
-    if (w?.modified && w.etag) return novo;
-    await recuo();
-  }
-  throw new Error("conflito_contagem");
+function cliente(dep) {
+  if (dep) return dep;
+  try { return getSupabase(); } catch { return null; }
 }
 
 /**
- * Conta o lance (já gravado) e, se for o N-ésimo, tenta gastar 1 Passe Relâmpago.
+ * Regista o lance (já gravado) na contagem e, se for o N-ésimo, gasta 1 Passe Relâmpago — tudo numa transacção.
  * @returns {Promise<{ok:boolean, lances?:number, passeConsumido:boolean, passesRelampagoRestantes?:number|null, code?:string}>}
  */
-export async function contarLanceEConsumirPasse({ store, edicaoId, endereco, consumirPasse, aCada = LANCES_POR_PASSE_PADRAO }) {
-  if (!store || !Number.isInteger(aCada) || aCada < 1) return { ok: false, passeConsumido: false, code: "desligado" };
-  const chave = chaveContagem(edicaoId, endereco);
-  let contagem;
-  try { contagem = await casAtualizar(store, chave, (c) => ({ ...c, lances: c.lances + 1 })); }
-  catch (err) { return { ok: false, passeConsumido: false, code: err?.message || "contagem_falhou" }; }
+export async function contarLanceEConsumirPasse({ lanceId, edicaoId, endereco, aCada = LANCES_POR_PASSE_PADRAO, supabase } = {}) {
+  if (!Number.isInteger(aCada) || aCada < 1) return { ok: false, passeConsumido: false, code: "desligado" };
+  if (typeof lanceId !== "string" || !lanceId) return { ok: false, passeConsumido: false, code: "lance_id_obrigatorio" };
+  const sb = cliente(supabase);
+  if (!sb?.rpc) return { ok: false, passeConsumido: false, code: "supabase_indisponivel" };
 
-  if (contagem.lances % aCada !== 0) return { ok: true, lances: contagem.lances, passeConsumido: false };
-
-  let p;
-  try { p = await consumirPasse({ endereco, tipo: "relampago" }); }
-  catch { p = { ok: false, code: "inventario_indisponivel" }; }
-  if (!p?.ok) return { ok: true, lances: contagem.lances, passeConsumido: false, code: p?.code ?? "sem_passes" };
-
-  // Registo do consumo (serve o «portador» dos avisos do GUTO). Best-effort: o Passe já foi gasto.
-  await casAtualizar(store, chave, (c) => ({ ...c, passesConsumidos: c.passesConsumidos + 1 })).catch(() => {});
-  return { ok: true, lances: contagem.lances, passeConsumido: true, passesRelampagoRestantes: Number.isInteger(p.restantes) ? p.restantes : null };
+  let ultimo = "rpc_falhou";
+  for (let i = 0; i < TENTATIVAS; i++) {
+    try {
+      const { data, error } = await sb.rpc("registar_lance_passe", {
+        p_lance_id: lanceId, p_edicao_id: edicaoId, p_endereco: endereco, p_a_cada: aCada,
+      });
+      if (!error) {
+        const l = Array.isArray(data) ? data[0] : data;
+        if (!l || !Number.isInteger(l.posicao_lance)) return { ok: false, passeConsumido: false, code: "resposta_invalida" };
+        return {
+          ok: true, lances: l.posicao_lance, passeConsumido: l.passe_gasto === true,
+          passesRelampagoRestantes: l.passe_gasto === true && Number.isInteger(l.passes_restantes) ? l.passes_restantes : null,
+        };
+      }
+      ultimo = "rpc_falhou";
+    } catch { ultimo = "excecao"; }
+    // repetir é seguro: o mesmo lance_id devolve o gravado (nem conta nem consome outra vez)
+  }
+  return { ok: false, passeConsumido: false, code: ultimo };
 }
 
-/** Quantos Passes este endereço já gastou nesta edição (0 sem registo ou em falha). */
-export async function passesConsumidosNaEdicao(store, edicaoId, endereco) {
-  try {
-    const d = await store?.get(chaveContagem(edicaoId, endereco), { type: "json" });
-    return Number(d?.passesConsumidos) || 0;
-  } catch { return 0; }
+/**
+ * Quantos Passes este endereço já gastou nesta edição. Serve o «portador» dos avisos do GUTO.
+ * LANÇA em falha de leitura: quem chama trata como INDETERMINADO (correcção do validador do UTAC142, ⚠️1), nunca como 0.
+ */
+export async function passesConsumidosNaEdicao(edicaoId, endereco, { supabase } = {}) {
+  const sb = cliente(supabase);
+  if (!sb?.from) throw new Error("supabase_indisponivel");
+  const { count, error } = await sb.from(TABELA_LANCES_PASSE)
+    .select("lance_id", { count: "exact", head: true })
+    .eq("edicao_id", edicaoId).eq("endereco", endereco).eq("passe_consumido", true);
+  if (error) throw new Error("leitura_falhou");
+  return Number(count) || 0;
 }

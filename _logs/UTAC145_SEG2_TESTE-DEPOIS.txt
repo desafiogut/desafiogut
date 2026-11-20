@@ -1,0 +1,6 @@
+✔ I1 · falha de resposta (503) na contagem do 1.º lance: o Passe sai no 3.º lance, UMA vez (não no 2.º) (51.7535ms)
+✔ I2 · sem falhas: 6 lances gastam 2 Passes, no 3.º e no 6.º (a regra continua igual) (9.4363ms)
+✔ I3 · sem Passe no 3.º lance: o lance passa só com pontos e nada é consumido (3.2609ms)
+ℹ tests 3
+ℹ pass 3
+ℹ fail 0

@@ -39,6 +39,8 @@ Para escrever: `netlify blobs:get edicoes-metadata <ID>` → editar o JSON → `
   «1 Passe por lance» com a flag `passePorLance`). O operador substituiu-a no UTAC142.1 (R18-142.1-A/B) por esta regra. A flag
   `passePorLance` **já não existe no código**.
 - **Config por edição:** `passeACadaLances` no Blob `edicoes-metadata` (inteiro 0..100; omissão `3`; `0` desliga o consumo).
-- **Onde vive:** `netlify/functions/_lib/passe-a-cada-lances.mjs` (contador por edição e endereço, Blob `especial-lances-passe`,
-  escrita condicional por ETag), chamado por `lance-relampago.mjs`. Em produção desde `9646895`; o commit actual de produção
+- **Onde vive:** `netlify/functions/_lib/passe-a-cada-lances.mjs`, chamado por `lance-relampago.mjs`. **Desde o UTAC145** a contagem
+  está no Postgres: tabela `especial_lances_passe` (uma linha por lance, `lance_id` chave primária) e RPC `registar_lance_passe`,
+  que conta e consome na mesma transacção. Repetir o mesmo lance não conta 2× (ℹ️3 do SEG4 do UTAC142). Antes estava no Blob
+  `especial-lances-passe`, que já não é escrito. Em produção desde `9646895`; o commit actual de produção
   é `b6365e7`.

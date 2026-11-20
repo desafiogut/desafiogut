@@ -43,6 +43,22 @@ function store(name) {
   return stores.get(name);
 }
 
+// UTAC145 — a contagem saiu do Blob para o Postgres: duplo da RPC `registar_lance_passe` (migração 20261120_utac145).
+// Uma linha por lance (lance_id único); o consumo chama o `passes_consumir` (aqui: o mesmo estado `passes` do inventário).
+let linhas = new Map();
+const rpcLancePasse = ({ p_lance_id, p_edicao_id, p_endereco, p_a_cada }) => {
+  const ja = linhas.get(p_lance_id);
+  if (ja) return { data: [{ posicao_lance: ja.posicao, passe_gasto: ja.passe, novo: false, passes_restantes: passes }], error: null };
+  if (inventarioEmBaixo) return { data: null, error: { message: "passes_inventario indisponível" } }; // a transacção falha inteira
+  const posicao = [...linhas.values()].filter((l) => l.edicao === p_edicao_id && l.endereco === p_endereco).length + 1;
+  let passe = false;
+  if (p_a_cada > 0 && posicao % p_a_cada === 0) { chamadas.push(["consumir", "relampago"]); if (passes >= 1) { passes -= 1; passe = true; } }
+  linhas.set(p_lance_id, { edicao: p_edicao_id, endereco: p_endereco, posicao, passe });
+  return { data: [{ posicao_lance: posicao, passe_gasto: passe, novo: true, passes_restantes: passes }], error: null };
+};
+const supabaseDuplo = { async rpc(nome, args) { await pausa(); return nome === "registar_lance_passe" ? rpcLancePasse(args) : { data: null, error: { message: nome } }; } };
+mock.module("../_lib/supabase-client.mjs", { namedExports: {
+  getSupabase: () => supabaseDuplo, getSupabaseReadOnly: () => supabaseDuplo, supabaseConfigurado: () => true } });
 mock.module("@netlify/blobs", { namedExports: { getStore: (o) => store(typeof o === "string" ? o : o.name) } });
 mock.module("../_lib/jwt.mjs", { namedExports: { verificarLanceAuth: async () => ({ endereco: ADDR }) } });
 mock.module("../_lib/rate-limiter.mjs", { namedExports: { aplicarRateLimit: async () => null } });
@@ -93,7 +109,7 @@ const especial = (extra = {}) => ({
   inicio_em: new Date(Date.now() - 3600e3).toISOString(), termino_em: new Date(Date.now() + 3600e3).toISOString(), ...extra,
 });
 beforeEach(() => {
-  stores.clear(); mockEdicao = especial(); mockPontos = 100; passes = 5; inventarioEmBaixo = false; falharBlindagem = false;
+  stores.clear(); linhas = new Map(); mockEdicao = especial(); mockPontos = 100; passes = 5; inventarioEmBaixo = false; falharBlindagem = false;
   chamadas = []; refsLedger = new Set();
 });
 async function lance(valor, { edicaoId = ESP, idempotencyKey } = {}) {
@@ -106,7 +122,11 @@ async function lance(valor, { edicaoId = ESP, idempotencyKey } = {}) {
   return { status: r.status, corpo: await r.json() };
 }
 const consumos = () => chamadas.filter((c) => c[0] === "consumir").length;
-const contagem = () => JSON.parse(store("especial-lances-passe").m.get(`${ESP}:${ADDR}`) ?? "null");
+// UTAC145 — a contagem lê-se da «tabela» do duplo (era o Blob `especial-lances-passe`)
+const contagem = () => {
+  const minhas = [...linhas.values()].filter((l) => l.edicao === ESP && l.endereco === ADDR);
+  return { lances: minhas.length, passesConsumidos: minhas.filter((l) => l.passe).length };
+};
 
 test("C1 · os lances 1 e 2 gastam SÓ pontos; o 3.º gasta também 1 Passe Relâmpago", async () => {
   const r1 = await lance(1); const r2 = await lance(2);
@@ -161,7 +181,7 @@ test("C6 · BIDIRECCIONAL: o Relâmpago normal não conta nem toca no inventári
   mockEdicao = { id: "RELAMP-1", tipo: "relampago" };
   for (let i = 1; i <= 3; i++) assert.equal((await lance(i, { edicaoId: "RELAMP-1" })).status, 201);
   assert.deepEqual(chamadas, []);
-  assert.equal(stores.get("especial-lances-passe")?.m.size ?? 0, 0);
+  assert.equal(linhas.size, 0, "o Relâmpago normal registou na contagem da especial");
 });
 
 test("C7 · dinâmico: `passeACadaLances: 2` gasta no 2.º e 4.º; `0` desliga", async () => {
@@ -169,7 +189,7 @@ test("C7 · dinâmico: `passeACadaLances: 2` gasta no 2.º e 4.º; `0` desliga",
   const quando = [];
   for (let i = 1; i <= 4; i++) { const r = await lance(i); if (r.corpo.passeConsumido) quando.push(i); }
   assert.deepEqual(quando, [2, 4]);
-  stores.clear(); chamadas = []; mockEdicao = especial({ passeACadaLances: 0 });
+  stores.clear(); linhas = new Map(); chamadas = []; mockEdicao = especial({ passeACadaLances: 0 });
   for (let i = 10; i <= 13; i++) await lance(i);
   assert.equal(consumos(), 0);
 });
@@ -178,7 +198,7 @@ test("C8 · idempotência: a MESMA idempotencyKey repetida não conta um 2.º la
   const k = "0x" + "ab".repeat(16);
   assert.equal((await lance(5, { idempotencyKey: k })).status, 201);
   store("lance-idem").m.clear?.();
-  for (const s of stores.values()) if (s !== stores.get("especial-lances-passe")) s.m.clear();
+  for (const s of stores.values()) s.m.clear(); // UTAC145 — a contagem já não está em Blob
   assert.equal((await lance(5, { idempotencyKey: k })).status, 409);
   assert.equal(contagem().lances, 1);
 });
@@ -191,12 +211,15 @@ test("C9 · CONCORRÊNCIA: 6 lances em paralelo ⇒ contagem 6 (sem números rep
   assert.equal(passes, 3);
 });
 
-test("C10 · lib: sem Passe no N-ésimo lance, a contagem fica ok e diz porquê (code sem_passes), sem marcar consumo", async () => {
+test("C10 · lib: sem Passe no N-ésimo lance, a contagem fica ok e não marca consumo; repetir o MESMO lance não conta 2×", async () => {
   const { contarLanceEConsumirPasse } = await import("../_lib/passe-a-cada-lances.mjs");
-  const s = store("c10");
-  const semPasse = async () => ({ ok: false, code: "sem_passes" });
-  for (let i = 1; i <= 2; i++) await contarLanceEConsumirPasse({ store: s, edicaoId: ESP, endereco: ADDR, consumirPasse: semPasse });
-  const r = await contarLanceEConsumirPasse({ store: s, edicaoId: ESP, endereco: ADDR, consumirPasse: semPasse });
-  assert.deepEqual(r, { ok: true, lances: 3, passeConsumido: false, code: "sem_passes" });
-  assert.equal(JSON.parse(s.m.get(`${ESP}:${ADDR}`)).passesConsumidos, 0);
+  passes = 0;
+  const base = { edicaoId: ESP, endereco: ADDR, supabase: supabaseDuplo };
+  for (const id of ["L1", "L2"]) await contarLanceEConsumirPasse({ ...base, lanceId: id });
+  const r = await contarLanceEConsumirPasse({ ...base, lanceId: "L3" });
+  assert.deepEqual(r, { ok: true, lances: 3, passeConsumido: false, passesRelampagoRestantes: null });
+  const again = await contarLanceEConsumirPasse({ ...base, lanceId: "L3" });
+  assert.equal(again.lances, 3, "repetir o mesmo lance mudou a contagem");
+  assert.equal(contagem().lances, 3);
+  assert.deepEqual(await contarLanceEConsumirPasse({ ...base, lanceId: "" }), { ok: false, passeConsumido: false, code: "lance_id_obrigatorio" });
 });

@@ -1,0 +1,9 @@
+✖ I1 · falha de resposta (503) na contagem do 1.º lance: o Passe sai no 3.º lance, UMA vez (não no 2.º) (82.4476ms)
+✔ I2 · sem falhas: 6 lances gastam 2 Passes, no 3.º e no 6.º (a regra continua igual) (8.3872ms)
+✔ I3 · sem Passe no 3.º lance: o lance passa só com pontos e nada é consumido (3.3667ms)
+ℹ tests 3
+ℹ pass 2
+ℹ fail 1
+✖ failing tests:
+✖ I1 · falha de resposta (503) na contagem do 1.º lance: o Passe sai no 3.º lance, UMA vez (não no 2.º) (82.4476ms)
+  AssertionError [ERR_ASSERTION]: o Passe saiu no(s) lance(s) [2] — o 1.º lance foi contado duas vezes

@@ -1,0 +1,22 @@
+schema: utac/1
+name: UTAC145
+title: "Contagem do Passe (1 a cada 3) idempotente no Postgres + observação do 1.º lance real + push"
+type: produto
+baseline: ce5b366   # local; origin/main 4fef228; produção 6affdd88 (b6365e7)
+motivo: >-
+  ℹ️3 do SEG4 do UTAC142: o contador no Blob conta 2× um lance quando o Blobs grava mas responde 503 (o retry
+  interno da lib leva 412 e o CAS soma de novo). A regra (1 a cada 3, R18-142.1-A) não muda; só a contagem.
+frentes:
+  - id: A
+    nome: Contagem no Postgres — tabela especial_lances_passe (lance_id PK) + RPC atómica que conta e consome
+    entrega: [supabase/migrations/20261120_utac145_lances_passe.sql, _lib/passe-a-cada-lances.mjs,
+              lance-relampago.mjs, scheduled-lider-especial.mjs, _tests/utac145-passe-idempotencia.test.mjs]
+  - id: B
+    nome: Observação do 1.º lance real (só leitura)
+    entrega: [_logs/UTAC145_SEG-1_MEDICAO.md]
+autoriza: [ficheiros nomeados, migração aplicada pelo executor depois de «aplica» (R18-145-A), deploy depois da migração,
+           push depois de AUTORIZO, leitura do Supabase/Blob (R18-145-B)]
+proibe: [git add -A, package-lock, push -f, mudar a regra do Passe, escrita em dados fora da migração]
+dependencias: [UTAC142.1 em produção]
+regras_activas: [E, T, G, L, S, A, P, AU, ST, HI]
+stop_conditions_extra: [ST3, ST5]

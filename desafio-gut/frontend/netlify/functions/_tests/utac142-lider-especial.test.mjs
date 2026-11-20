@@ -61,7 +61,8 @@ test("E7 · primeiroNome nunca sai de um e-mail; só nome de pessoa", () => {
 
 // UTAC142.1 — o lance já não exige Passe: portador = Passe no inventário AGORA, ou Passe gasto NESTA edição.
 test("E8 · portador: inventário > 0, ou Passe gasto nesta edição; o resto não (fail-closed)", async () => {
-  const contagem = { async get(k) { return k === `${ID}:${C}` ? { lances: 3, passesConsumidos: 1 } : null; } };
+  // UTAC145 — a contagem é uma função (edição, endereço) → Passes gastos (tabela especial_lances_passe; era o Blob)
+  const contagem = async (ed, e) => (ed === ID && e === C ? 1 : 0);
   const p = predicadoPortador(ID, { contagem, ler: async (e) => (e === A ? { ok: true, passesRelampago: 1, passesProgramado: 0 } : e === C ? { ok: true, passesRelampago: 0, passesProgramado: 0 } : { ok: false }) });
   assert.equal(await p(A), true, "tem Passe no inventário");
   assert.equal(await p(C), true, "gastou o último Passe nesta edição");
@@ -140,7 +141,7 @@ test("E13 · falha transitória do inventário: a janela salta-se — nem «perd
 });
 
 test("E14 · contagem ilegível também é indeterminado (não cai para «não portador»)", async () => {
-  const contagem = { async get() { throw new Error("blobs 503"); } };
+  const contagem = async () => { throw new Error("leitura_falhou"); }; // UTAC145 — Postgres em vez do Blob
   const p = predicadoPortador(ID, { contagem, ler: async () => ({ ok: true, passesRelampago: 0, passesProgramado: 0 }) });
   await assert.rejects(p(C), /portador_indeterminado/);
 });

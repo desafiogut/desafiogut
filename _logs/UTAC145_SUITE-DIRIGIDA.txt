@@ -1,0 +1,7 @@
+RAM livre: 1670 MB
+_tests/utac145-passe-idempotencia.test.mjs :: ℹ tests 3 ℹ pass 3 ℹ fail 0 
+_tests/utac142-especial-passe.test.mjs :: ℹ tests 10 ℹ pass 10 ℹ fail 0 
+_tests/utac120-inventario.test.mjs :: ℹ tests 8 ℹ pass 8 ℹ fail 0 
+_tests/utac142-lider-especial.test.mjs :: ℹ tests 14 ℹ pass 14 ℹ fail 0 
+_tests/utac129-lance-sem-passe.test.mjs :: ℹ tests 6 ℹ pass 6 ℹ fail 0 
+_tests/utac140-especial-aberta.test.mjs :: ℹ tests 20 ℹ pass 20 ℹ fail 0 

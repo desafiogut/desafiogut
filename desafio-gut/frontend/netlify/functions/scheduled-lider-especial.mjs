@@ -15,7 +15,7 @@ import { lerInventario } from "./_lib/passes-inventario.mjs";
 import { adicionarNotificacao } from "./_lib/notificacoes-usuario.mjs";
 import { avaliarLider, JANELA_AVISO_MS } from "./_lib/lider-especial.mjs";
 import { mascararEndereco } from "./_lib/validate.mjs";
-import { chaveContagem, STORE_CONTAGEM } from "./_lib/passe-a-cada-lances.mjs"; // UTAC142.1
+import { passesConsumidosNaEdicao } from "./_lib/passe-a-cada-lances.mjs"; // UTAC142.1 · UTAC145 (Postgres)
 
 export const CRON = "*/5 * * * *";
 export const STORE_LIDER = "especial-lider";
@@ -23,10 +23,6 @@ export const STORE_LIDER = "especial-lider";
 function abrirEstado() {
   try { return getStore({ name: STORE_LIDER, consistency: "strong" }); }
   catch (err) { console.warn("[scheduled-lider-especial] store indisponível:", err?.message); return null; }
-}
-
-function abrirContagem() {
-  try { return getStore({ name: STORE_CONTAGEM, consistency: "strong" }); } catch { return null; }
 }
 
 /**
@@ -37,11 +33,13 @@ function abrirContagem() {
  * `portador_indeterminado` e o `tick` salta a edição nessa janela (sem avisos, sem gravar estado). Antes devolvia
  * `false` e o líder ainda vencedor recebia «deixou de ser o menor único» e, na janela seguinte, «voltou».
  */
+// UTAC145 — `contagem` é agora uma FUNÇÃO (edicaoId, endereco) → nº de Passes gastos, lida da tabela
+// `especial_lances_passe` (era o Blob do UTAC142.1). Continua a lançar em falha ⇒ indeterminado (⚠️1 do validador).
 export function predicadoPortador(edicaoId, { ler = lerInventario, contagem = null } = {}) {
   return async (e) => {
     if (contagem) {
       let gastos;
-      try { gastos = Number((await contagem.get(chaveContagem(edicaoId, e), { type: "json" }))?.passesConsumidos) || 0; }
+      try { gastos = Number(await contagem(edicaoId, e)) || 0; }
       catch { throw new Error("portador_indeterminado"); }
       if (gastos > 0) return true;
     }
@@ -54,7 +52,7 @@ export function predicadoPortador(edicaoId, { ler = lerInventario, contagem = nu
 /** Um tick. Dependências injectáveis para teste. Nunca lança. */
 export async function tick({
   agoraMs = Date.now(), listar = listarEdicoes, ler = buscarEdicao, lerLances = getLances,
-  store = abrirEstado(), notificar = adicionarNotificacao, lerInv = lerInventario, contagem = abrirContagem(),
+  store = abrirEstado(), notificar = adicionarNotificacao, lerInv = lerInventario, contagem = passesConsumidosNaEdicao,
 } = {}) {
   const relatorio = [];
   if (!store) return relatorio;
