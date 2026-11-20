@@ -13,6 +13,9 @@
 // `EM_BREVE_MODE` (a guarda estrutural do MC88.43 continua a valer).
 
 export { COR, T_PADRAO, caixa, encurtar, reais, inteiroSeguro } from "../meus-ativos/_estilo.js";
+// O `export {…} from` acima NÃO cria um binding local: para usar as cores DENTRO deste módulo
+// (SELO_ESPECIAL) é preciso importá-las também.
+import { COR as COR_T } from "../meus-ativos/_estilo.js";
 
 /** Os quatro estados visuais (HARD GATE 4 do MC94.2). */
 export const ESTADO_ESPECIAL = Object.freeze({
@@ -24,6 +27,20 @@ export const ESTADO_ESPECIAL = Object.freeze({
 
 /** Quanto antes da abertura o card passa a "abrindo". */
 export const JANELA_A_ABRIR_MS = 60_000;
+
+/**
+ * UTAC141 — O SELO de estado da especial, numa só tabela: o cartão e a tabela de lances passam a dizer
+ * a MESMA coisa. Foi a divergência entre os dois («🕒 Em breve» na tabela, «🟢 Aberta» no cartão) que o
+ * operador viu em produção: a tabela perguntava ao `getEstadoEdicao` global, que segue o `EM_BREVE_MODE`,
+ * e não à edição. Quem desenha o estado de uma edição lê-o da EDIÇÃO (`estadoEspecial`), nunca de uma
+ * flag global.
+ */
+export const SELO_ESPECIAL = Object.freeze({
+  [ESTADO_ESPECIAL.AGENDADA]:  Object.freeze({ chave: "edicao.especial.badgeEmBreve",  texto: "🕒 Em breve",  cor: "#ff6b35" }),
+  [ESTADO_ESPECIAL.A_ABRIR]:   Object.freeze({ chave: "edicao.especial.badgeAbrindo",  texto: "⏳ Abrindo",   cor: "#fbbf24" }),
+  [ESTADO_ESPECIAL.ACTIVA]:    Object.freeze({ chave: "edicao.especial.badgeAberta",   texto: "🟢 Aberta",    cor: COR_T.success }),
+  [ESTADO_ESPECIAL.ENCERRADA]: Object.freeze({ chave: "edicao.especial.badgeEncerrada", texto: "🔴 Encerrada", cor: COR_T.danger }),
+});
 
 /**
  * MC94.3.1 — quanto tempo a especial continua a mostrar-se DEPOIS do fim

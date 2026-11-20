@@ -21,7 +21,7 @@ import SemSaldoBanner, { mostrarAvisoSemSaldo } from "../components/SemSaldoBann
 import CartaoEdicao from "../components/CartaoEdicao.jsx";
 // UTAC138 — a edição ESPECIAL também entra aqui, no lugar do cartão Relâmpago e com o mesmo padrão (operador, 2026-11-18).
 import CardEdicaoEspecial from "../components/edicao-especial/CardEdicaoEspecial.jsx";
-import { escolherEspecial } from "../components/edicao-especial/_estilo-especial.js";
+import { escolherEspecial, estadoEspecial, ESTADO_ESPECIAL, SELO_ESPECIAL } from "../components/edicao-especial/_estilo-especial.js";
 import { useRankingEspecial } from "../hooks/useRankingEspecial.js"; // UTAC140 (Frente E) — lances ao vivo da especial
 import { EM_BREVE_MODE } from "../lib/leilaoLock.js";
 import { getEstadoEdicao } from "../utils/edicao.js";
@@ -287,7 +287,27 @@ export default function MercadoLances() {
   const edicaoDoEcra = edicaoEspecial?.id ?? EDICAO_ATIVA;
   // UTAC140 (Frente E) — os lances da especial, ao vivo e BLINDADOS (ordem de chegada, sem valor), para a tabela
   // PADRÃO da edição (operador: «o layout é o layout da edição» — só há dois layouts oficiais, Relâmpago e Programada).
-  const lancesEspecial = useRankingEspecial(edicaoEspecial?.id ?? null);
+  // UTAC141 (Frente C) — `rankingNonce` força a tabela a RELER no instante em que o próprio utilizador lança:
+  // o Realtime pode chegar tarde (ou não chegar, se o canal ainda não estava subscrito) e a tabela ficava em
+  // «Nenhum lance registado» com o lance já aceite no servidor. Uma leitura, nenhuma escrita.
+  const [rankingNonce, setRankingNonce] = useState(0);
+  const lancesEspecial = useRankingEspecial(edicaoEspecial?.id ?? null, { nonce: rankingNonce });
+  // UTAC141 (Frente C, correcção do selo) — o estado do selo vem da EDIÇÃO (a mesma função do cartão), nunca do
+  // `EM_BREVE_MODE` global: era isso que fazia a tabela dizer «🕒 Em breve» com o cartão a dizer «🟢 Aberta».
+  // UTAC141 (achado ⚠️1 do validador) — o relógio de 1 s vive DENTRO do cartão (`CardEdicaoEspecial`), que
+  // publica o estado por `onEstado`. A página guarda-o: o selo da tabela passa a ser o do cartão NO MESMO
+  // instante (antes era uma fotografia do relógio na página, 1 s atrasada no fecho, e os dois divergiam).
+  const agoraServidor = Date.now() + (Number.isFinite(offsetRelogioMs) ? offsetRelogioMs : 0);
+  const [estadoDaEspecial, setEstadoDaEspecial] = useState(
+    () => (edicaoEspecial ? estadoEspecial(edicaoEspecial, agoraServidor) : null),
+  );
+  useEffect(() => { setEstadoDaEspecial(edicaoEspecial ? estadoEspecial(edicaoEspecial, agoraServidor) : null); },
+    [edicaoEspecial?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  // ⚠️6 do validador — com a especial no ecrã mas sem datas legíveis (`estadoEspecial` → null) o cartão
+  // desaparece; a tabela não pode cair no selo GLOBAL («🕒 Em breve», que seria inventar). Fica neutra.
+  const seloEspecial = edicaoEspecial
+    ? (estadoDaEspecial ? SELO_ESPECIAL[estadoDaEspecial] : { texto: "—", cor: "#6b7db8" })
+    : null;
   // UTAC000.17bc (17c/GATE 21) — em que EDIÇÕES o titular deu lance (filtrado pelo token, no servidor).
   const { participacoes } = useMinhasParticipacoes(authToken);
   // MC66 (Direção C) — o cronômetro vivo foi removido da aba Lances ("EM BREVE"
@@ -308,6 +328,8 @@ export default function MercadoLances() {
 
   const onLanceSucessoWrapper = useCallback((info) => {
     setMeuUltimoLance({ valor: info.valorCentavos, edicao: edicaoDoEcra }); // UTAC138 — a especial quando existe
+    // UTAC141 — o lance DESTE utilizador aparece já na tabela (sem esperar pelo evento do Realtime).
+    setRankingNonce((n) => n + 1);
     handleLanceSucesso?.(info);
   }, [handleLanceSucesso, edicaoDoEcra]);
 
@@ -388,10 +410,12 @@ export default function MercadoLances() {
               <CardEdicaoEspecial
                 edicao={edicaoEspecial}
                 offsetMs={offsetRelogioMs}
+                onEstado={setEstadoDaEspecial}
                 isMobile={isMobile}
                 renderLance={({ idEdicao, modalidade: mod, encerrado: fechada }) => (
                   <CardLance
                     idEdicao={idEdicao}
+                    variante="embutida"
                     onLanceSucesso={onLanceSucessoWrapper}
                     address={address}
                     isConnected={isConnected}
@@ -446,7 +470,14 @@ export default function MercadoLances() {
                 durante a edição (anti-bot MC28.1) e o resultado + Top 10 da especial vivem no cartão dela. */}
             {/* UTAC140 (Frente E) — com a especial no ecrã, a MESMA tabela recebe os lances dela ao vivo (Supabase Realtime):
                 linhas blindadas «🔒», ordem de chegada, endereço encurtado. Os valores só existem depois da apuração. */}
-            <TabelaLances lances={edicaoEspecial ? lancesEspecial : lances} idEdicao={edicaoDoEcra} prazoTimestamp={prazoTimestamp} encerrado={encerrado} />
+            <TabelaLances
+              lances={edicaoEspecial ? lancesEspecial : lances}
+              idEdicao={edicaoDoEcra}
+              prazoTimestamp={prazoTimestamp}
+              encerrado={edicaoEspecial ? estadoDaEspecial === ESTADO_ESPECIAL.ENCERRADA : encerrado}
+              ocultosPermanentes={!!edicaoEspecial}
+              selo={edicaoEspecial ? seloEspecial : undefined}
+            />
           </section>
         </main>
 

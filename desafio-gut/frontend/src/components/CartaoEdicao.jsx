@@ -20,7 +20,9 @@ import CarrosselGUTO, { SLIDES } from "./CarrosselGUTO.jsx";
 
 /** UTAC109e — a acção de cada família: a única coisa que muda entre os cartões. */
 export const ACOES = Object.freeze({
-  lance: Object.freeze({ botao: "Dar lance", rotulo: "Seu lance (em centavos)" }),
+  // UTAC141 — «em pontos»: o lance do Relâmpago gasta PONTOS de lance pelo seu valor (1 ponto = R$ 0,01,
+  // Art. 18º). Dizer «centavos» no campo fazia o utilizador ler a unidade errada em todo o app.
+  lance: Object.freeze({ botao: "Dar lance", rotulo: "Seu lance (em pontos)" }),
   palpite: Object.freeze({ botao: "Dar palpite", rotulo: "Seu palpite (nº de lances)" }),
 });
 

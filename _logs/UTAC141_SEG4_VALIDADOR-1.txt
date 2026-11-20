@@ -1,0 +1,54 @@
+## VEREDICTO: **APROVADO COM RESSALVAS**
+
+Não consegui refutar as duas correcções centrais (débito de pontos no ecrã e rótulo em pontos) — medi-as. Mas encontrei **defeitos reais** na tabela ao vivo, na variante `embutida` e **buracos de teste** que deixam passar mutantes óbvios. Tudo o que segue é working-tree (git `M`/`??`); nada está commitado nem em produção.
+
+---
+
+### ⚠️ Accionáveis
+
+**⚠️1 — A tabela ao vivo esvazia-se no instante do próprio lance (regressão do sintoma que a UTAC141 queria matar).**
+`hooks/useRankingEspecial.js:38` faz `setLances([])` na 1.ª linha do efeito; o efeito depende de `nonce` (`:84`). `MercadoLances.jsx:320` incrementa `rankingNonce` no sucesso → efeito re-corre → **tabela mostra «📭 Nenhum lance registrado ainda. / Seja o primeiro a lançar.»** e só depois repovoa. É literalmente o texto do ticket.
+Prova: `grep -n "setLances(\[\])" -A2 desafio-gut/frontend/src/hooks/useRankingEspecial.js` + `sed -n '38,40p;84p'`. Correção: `setLances([])` só quando `edicaoId` muda (estado/ref separado do `nonce`).
+
+**⚠️2 — Na variante `embutida` desconectada há um botão de LARGURA TODA — o que a própria skill proíbe.**
+`CardLance.jsx:483-491`: `style={{ ...ESTILO_ACAO.botao, width: "100%" }}` («⚡ Aceito o DesafioGUT»), e **por baixo** o `FormularioAcao` completo (rótulo + input + botão dourado desligados) → dois CTAs empilhados, um deles de largura toda. O skill diz «**Nunca** botão de largura toda/centrado» e «a acção é idêntico ao Dar Palpite» (o OP não desenha CTA de ligação nenhum: `OfertasProgramadas.jsx:136-147`).
+Prova: `sed -n '478,495p' desafio-gut/frontend/src/components/CardLance.jsx`. Nenhum teste cobre o estado `isConnected=false` da embutida (teste D monta sempre `isConnected:true`, `src/__tests__/utac141-edicao-padrao.test.mjs:141`).
+
+**⚠️3 — BUraco de teste: o `selo` da tabela não tem nenhum teste de ligação página→tabela. Mutante sobrevive.**
+O teste A só faz `assert.match(pagina, /SELO_ESPECIAL\[estadoDaEspecial\]/)` (utac141:100) e o teste B monta `TabelaLances` à mão. Se apagares `selo={edicaoEspecial ? seloEspecial : undefined}` em `MercadoLances.jsx:466`, **tudo continua verde** — a regressão exacta do UTAC140 volta em silêncio.
+Prova mental executável: remover a linha 466 e correr `node --test src/__tests__/utac141-edicao-padrao.test.mjs` → 8/8 verde. Falta um teste que renderize `MercadoLances` (ou um grep do literal `selo={`/`encerrado={edicaoEspecial ?`).
+
+**⚠️4 — O campo do palpite na OP agora FECHA enquanto envia, e a skill afirma o contrário.**
+`_formAcaoEdicao.jsx` (`campoBloqueado = desabilitadoCampo ?? bloqueado`): a OP não passa `desabilitadoCampo` (`OfertasProgramadas.jsx:136-147`), logo `disabled = enviando`. **Antes (`git show 3bbdebe:.../OfertasProgramadas.jsx`) o input não tinha `disabled` nenhum.** O skill (ponto 2) diz «O campo não fecha só porque o botão está desligado» — falso no caminho por omissão.
+Prova: `git show 3bbdebe:desafio-gut/frontend/src/pages/OfertasProgramadas.jsx | grep -n "<input" -A6` (sem `disabled`) vs `grep -n "campoBloqueado" desafio-gut/frontend/src/components/_formAcaoEdicao.jsx`.
+
+**⚠️5 — O selo da tabela é CONGELADO: não diverge hoje, diverge no minuto do fecho.**
+`MercadoLances.jsx:297` calcula `agoraServidor = Date.now()+offset` **uma vez por render**, sem ticker (o MC66 removeu o cronómetro vivo: `grep -n "setInterval" page` → nada). O cartão tem ticker de 1 s (`CardEdicaoEspecial.jsx`, `useAgoraServidor`). No `termino_em` o cartão passa a «🔴 Encerrada» e a tabela fica «🟢 Aberta» até um re-render qualquer — o mesmo tipo de divergência que a UTAC141 diz ter eliminado.
+
+**⚠️6 — Se `estadoEspecial` devolve `null` (datas ilegíveis), a tabela mente.**
+`estadoDaEspecial===null` → `seloEspecial=null` (`MercadoLances.jsx:298-299`) → a tabela cai no fallback `getEstadoEdicao` = «🕒 Em breve» (`TabelaLances.jsx:137-139`), enquanto o cartão **desaparece** (`CardEdicaoEspecial.jsx:` `if (!estado) return null`). Resultado: cartão ausente + tabela a anunciar «Em breve» + `encerrado=false`. Não está declarado.
+
+**⚠️7 — Teste RELAXADO que esconde defeito: `utac106f-ofertas.test.mjs:96-104`.**
+O `input()`/`botao()` passaram a **fabricar** nós a partir das props do `FormularioAcao` (`{ type:"number", props:{ disabled: f.props.desabilitado, value: f.props.valor } }`). Um teste que verifique `disabled` deixa de provar que o `FormularioAcao` o **renderiza** — se o componente ignorasse `desabilitado`, o teste continuava verde. Mesmo padrão em `utac109e-cartao-unico.test.mjs` (passou de asserção do `{aPalpitar ? "Enviando…" : …}` renderizado para `assert.match` de source).
+
+**⚠️8 — Regressões menores declaradas como «não houve».**
+- `valorPreview` em pontos só existe na variante `cartao` (`CardLance.jsx:384-388`); a embutida **perde o preview** inteiro — as variantes não são iguais como se afirma.
+- A embutida perde também o *pipeline* («🔐 Autenticando…») e o aviso «Mín 1 ponto · Máx 5 lances/min · Cooldown 3s» — o ecrã da especial deixa de anunciar o limite de 5 lances/min.
+- Comentário **falso** logo acima do código novo: `CardLance.jsx:~597` «O valor CONTINUA em CENTAVOS… rótulo «(R$)»» — contradiz `rotuloInput` 3 linhas abaixo.
+- `CartaoEdicao.jsx:8` (comentário) e o ramo legado `CardLance.jsx:450` ainda dizem «(em centavos)»; o skill afirma «**nunca** «(em centavos)»» — absoluto falso (o ramo é inalcançável, mas a frase não é verdadeira).
+
+---
+
+### ℹ️ Limitações / o que NÃO consegui refutar
+
+- **Débito real, confirmado na BD** (não por comentário): `select … jsonb_array_elements(historico_lance) where motivo='lance'` → `delta "-1"`, `motivo "lance"`, `2026-11-20T00:53:29Z`. E `consumirPontosLance` recebe `valorCentavos` (`netlify/functions/lance-relampago.mjs:258`). ✅
+- **`refetchPontosAgora` é real e é chamado no SUCESSO**: `AppContext.jsx:923` (`useCallback` sobre `setPontosNonce`) e `:1372` (no `value`); `CardLance.jsx:324` no ramo de sucesso (e `:303` no 400). O `?.()` é redundante, mas não esconde nada neste caso (o teste F falha se trocares por `refetchPontosLance`: o spy nunca é chamado). ✅ **Não refutado.**
+- **Não verifiquei** que `hooks/usePontos.js` consome `pontosNonce` (presumo-o do UTAC110g/`utac110g-p2-refetch-horario.test.mjs`). Se não consumir, todo o Frente B é cosmético — é o único elo que ficou por medir.
+- **Produção não validada em runtime**: o site tem gate de regulamento, o `MercadoLances` é chunk lazy e o `prod.js` só referencia 23 chunks (sem `MercadoLances-*.js`); `grep -r "data-variante-lance"` nos 23 → 0. Além disso `git status` mostra tudo `M`, logo **as correcções não estão deployadas**. O build local `dist/assets/MercadoLances-CpXcvEUr.js` contém *simultaneamente* `data-variante-lance` **e** `Seu lance (em centavos)` (ramo legado) — coerente com o código, não com o site.
+- **Estado real da especial (API de produção `/edicoes`)**: `ESPECIAL-RELAMPAGO1` `inicio 2026-11-20T00:22:40Z` / `termino 2026-11-30T23:00Z`, `agora 2026-11-20T01:55Z` → ACTIVA. Com `EM_BREVE_MODE` a tabela antiga diria «Em breve»; a correcção é efectiva. `ranking_especial` tem 1 linha (00:53:41Z) — a leitura por anon tem dados.
+- **`useRankingEspecial` limpeza: OK.** `cancelado`, `clearTimeout`, `clearInterval`, `removeEventListener`, `removeChannel` — todos presentes (`:74-84`). Mas **não há guarda de sequência**: intervalo + `visibilitychange` + Realtime podem sobrepor-se e uma resposta velha sobrescrever a nova; e o intervalo de 20 s continua a correr com a edição já encerrada.
+- `encerrado` da tabela passou a vir da especial: **não vaza valores** — as linhas da especial são `oculto:true` e `valorFormatado = "🔒"` independentemente de `encerrado` (`TabelaLances.jsx` `MobileList`). O `prazoTimestamp` passado continua a ser o da **R-1** (`MercadoLances.jsx:464`), escondido só porque `est.timer != null` sob `EM_BREVE_MODE`.
+- **Skill `utac-edicoes` (repo + Hermes)**: coincide com o código em 4 dos 5 pontos (selo, `nonce`+20 s+visibilidade, débito, variantes). Frases **falsas**: «Nunca botão de largura toda» (⚠️2) e «o campo não fecha só porque o botão está desligado» (⚠️4); «nunca «(em centavos)»» é demasiado absoluto (ramo legado). O ficheiro do repo é a fonte; a skill Hermes só aponta para lá.
+- **Mutantes**: (1) remover `variante="embutida"` de `MercadoLances.jsx:406` → **nenhum teste vermelho** (teste D monta `CardLance` directamente) — buraco. (2) trocar `refetchPontosAgora` por `refetchPontosLance` no sucesso → **F fica vermelho** ✅ coberto. (3) tirar o `selo` do `TabelaLances` → **nenhum vermelho** (⚠️3) — buraco.
+
+**Resumo**: B (débito) e o rótulo em pontos estão certos e medidos; A (layout) tem um botão de largura toda que viola a própria skill; C (tabela ao vivo) introduz um *flash* para «Nenhum lance registado» no exacto momento do próprio lance e o selo tem dois caminhos de divergência (congelado no tempo; `null` → «Em breve»). Nenhum ficheiro do repo foi alterado, nenhum commit, nenhum deploy.

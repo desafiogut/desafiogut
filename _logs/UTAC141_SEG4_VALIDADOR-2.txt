@@ -1,0 +1,51 @@
+Tree intact (21 ficheiros / 332+134, igual ao início). Segue a lista reconstruída.
+
+---
+
+## Ressalvas reconstruídas — UTAC141 (3 áreas, prova medida)
+
+**1. ⚠️ accionável — `selo` e `encerrado` são uma FOTOGRAFIA do relógio, e só o cartão tem relógio**
+`pages/MercadoLances.jsx:297-299` (e `:465-466`) · `components/edicao-especial/CardEdicaoEspecial.jsx:67`
+
+`agoraServidor`/`estadoDaEspecial`/`seloEspecial` são calculados **no corpo do render**. O `MercadoLances` não tem nenhum temporizador (único `setInterval` do ficheiro é o do `CountdownOverlay`, `:43`), enquanto o cartão ticka de 1 em 1 s. Nas duas fronteiras os dois voltam a divergir — o defeito que o patch diz ter fechado:
+- à abertura, o cartão já monta o formulário (tick de 1 s) e a tabela continua a dizer «🕒 Em breve»;
+- ao fecho, o cartão já mostra o `PainelVencedorEspecial` e a tabela continua «🟢 Aberta».
+Janela de até 20 s (a recarga do ranking é que provoca o render), e **indefinida** quando a RPC falha: `ler()` só faz `setLances` se `!error` → nenhum render novo, o selo congela no instante do último render bom.
+Prova: `node --test _probe141/probe2.test.mjs` → «A3 · com a RPC a falhar, o intervalo lê mas NÃO re-renderiza» = `leituras = 4 · renderizações = 2 (base 2)`; e `estadoEspecial` na fronteira: `termino-1s = activa · termino+1s = encerrada`.
+
+**2. ⚠️ accionável — o `encerrado` da especial passou a governar a DIVULGAÇÃO da tabela**
+`components/TabelaLances.jsx:145` (legenda), `:261` (cabeçalho), `:298`/`:308` (classe `gut-valor-reveal` + `valorFormatado`) · chamado por `MercadoLances.jsx:465`
+
+Para a R-1, `encerrado` significa «os valores já são públicos». Para a especial significa só «passaram as 20:00». As linhas da especial são **sempre** `valor:null, oculto:true` (`_ranking-especial.js:lancesOcultosDoRanking`) — nunca haverá valor nesta tabela, nem depois da apuração. Resultado: a partir de `termino_em` o cabeçalho passa a **«Valor (R$)»** sobre células 🔒, a animação de revelação corre sobre elas e a legenda «🔒 valores ocultos até o fim» desaparece (a única explicação do 🔒).
+Prova (render real, `probe2.test.mjs` "A1"):
+`ABERTA : 📋 Lances — Edição ESPECIAL-X 🔴 Encerrada 🔒 valores ocultos até o fim # Participante Valor 🔒`
+`FIM    : 📋 Lances — Edição ESPECIAL-X 🔴 Encerrada # Participante Valor (R$)`
+(asserções: `Valor (R$)` presente, `/R\$ \d/` ausente, `valores ocultos` ausente.)
+
+**3. ⚠️ accionável — o `nonce` ESVAZIA a tabela no instante do próprio lance**
+`hooks/useRankingEspecial.js:36-37` (`setLances([])` no topo do efeito) + `MercadoLances.jsx:318-321`
+
+O `nonce` está nas dependências (`:84`), logo cada lance corre o efeito outra vez, que começa por `setLances([])`. Entre o «✅ Lance registado» e a resposta da RPC a tabela mostra **«Nenhum lance registado ainda»** — exactamente o sintoma que o UTAC141 existe para fechar. O reset só é necessário quando `edicaoId` muda, não quando o nonce muda. (No mesmo passo, o canal Realtime é destruído e ressubscrito a cada lance: `:82` + `:58`.)
+Prova: `probe.test.mjs` «A3-1» → `linhas durante a releitura = 0` (com 1 linha antes e 1 depois).
+
+**4. ⚠️ accionável — sem guarda de leitura em voo: a resposta VELHA sobrepõe-se à NOVA**
+`hooks/useRankingEspecial.js:44-52` (nenhum `emVoo`/sequência), `:67-70` (dois gatilhos extra na MESMA instância)
+
+Três gatilhos chamam `ler()` sem serialização (nonce, intervalo de 20 s, `visibilitychange`). A leitura de montagem pode ficar em voo e ser ultrapassada por uma mais recente; quando a antiga chega, escreve por cima. O utilizador vê uma linha **desaparecer** até ao poll seguinte (≤20 s).
+Prova: `probe2.test.mjs` «A3» → `leituras em voo ao mesmo tempo = 3` · `linhas com a resposta NOVA = 2` · `linhas depois das respostas VELHAS = 1` (asserção `1 !== 2` → RED, é o defeito).
+Controlos positivos medidos no mesmo ficheiro (o mecanismo funciona hoje): intervalo `20 ms` → `1 → 4` leituras em 80 ms e zero depois do unmount; `visibilitychange` regista 1 listener e remove-o; escrita pós-unmount: `tardias() = []`.
+
+**5. ℹ️ limitação — variante «embutida»: os 4 estados estão certos, mas dois são inalcançáveis por teste**
+`components/CardLance.jsx:456-463` (esqueleto), `:500-501` (`desabilitado`/`desabilitadoCampo`) · `CardEdicaoEspecial.jsx:122-124`
+
+Medido (props reais do `FormularioAcao`): ligado/vazio → `desabilitado:true, desabilitadoCampo:false` (escreve-se, botão desliga — o invariante do padrão cumpre-se); sem pontos → idem + mensagem e atalho; sem carteira → `campo:true` + botão «⚡ Aceito o DesafioGUT»; encerrada → `campo:true` + «Esta edição já fechou». O formulário nunca desaparece nesses estados (só sem valor fica o botão desligado).
+Limitações: (a) `encerrado` é **inalcançável** na embutida — o único chamador fixa `encerrado:false` e só monta com `estado === ACTIVA` (`CardEdicaoEspecial.jsx:122-124`), logo esse ramo é código morto; (b) o esqueleto de conformidade não é exercitável (`pages/__tests__/_stubs/useRecursosApp.js:16` fixa `isLeilaoAtivo: true`); (c) sem `offsetRelogioMs` finito (`semRelogio`) o cartão mostra «…» e **não monta formulário nenhum** com a edição aberta — decisão declarada no MC94.2, aqui só registada.
+
+**6. ⚠️ accionável — buracos de teste (mutantes que passam)**
+- **A1:** nenhum teste afirma o `encerrado` que a página passa à tabela. O teste A só verifica o `selo` (`utac141-edicao-padrao.test.mjs:91-93`). Mutante `encerrado={edicaoEspecial ? estadoDaEspecial === ENCERRADA : encerrado}` → `encerrado={encerrado}` → **verde**. Devia apanhar: teste A/B (que já monta a `TabelaLances` com `encerrado` explícito).
+- **A2:** `desabilitadoCampo` aparece **uma vez** em todos os testes e é o teste C a passá-lo como prop ao `FormularioAcao` (`:114`), nunca o wiring do `CardLance`. Mutante `desabilitadoCampo={false}` (ou `={!ocupado}`) → **verde**. Devia apanhar: teste D, que já monta a variante embutida.
+- **A3:** o único teste do hook passa `intervaloMs: 0` (`:294`). Apagar o bloco do intervalo **e** o do `visibilitychange` `useRankingEspecial.js:65-73` (e a limpeza `:78-81`) → **verde**. Devia apanhar: teste G, que injeta `obterCliente`/`configurado` e só lhe falta `intervaloMs` curto + `document` falso.
+
+**Bloqueantes: 0**
+
+*(Sondas em `C:\Users\Moltbot\_probe141\` — `probe.test.mjs` 7/8 e `probe2.test.mjs` 4/5 verdes; a única falha de cada um é a asserção que descreve o defeito 3 e 4. Nenhum ficheiro do repo foi criado, alterado ou commitado; `git diff --stat` fechou igual: 21 ficheiros, +332/−134.)*

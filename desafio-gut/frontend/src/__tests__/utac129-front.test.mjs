@@ -60,6 +60,12 @@ test("C5 (UTAC137, substitui R18-129-3) o PALPITE já NÃO pede Passe no Início
     const c = codigo(ler(f));
     assert.doesNotMatch(c, /Precisa de 1 Passe Programado para palpitar/, `${f}: voltou o aviso`);
     assert.doesNotMatch(c, /semPasseProgramado/, `${f}: o botão do palpite voltou a depender do inventário`);
-    assert.match(c, /disabled=\{aPalpitar\}/, `${f}: o botão do palpite só fecha enquanto envia`);
+    // UTAC141 — na OP o botão é o `FormularioAcao` (padrão único): o estado entra como `enviando`, e é
+    // ele que desliga o botão. No Início o botão continua próprio (`disabled={aPalpitar}`).
+    if (f.endsWith("OfertasProgramadas.jsx")) {
+      assert.match(c, /enviando=\{aPalpitar\}/, `${f}: o botão do palpite só fecha enquanto envia`);
+    } else {
+      assert.match(c, /disabled=\{aPalpitar\}/, `${f}: o botão do palpite só fecha enquanto envia`);
+    }
   }
 });

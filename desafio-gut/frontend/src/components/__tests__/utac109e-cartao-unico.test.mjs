@@ -1,6 +1,6 @@
 // utac109e-cartao-unico.test.mjs — UTAC109e. Padronizar as edições:
 //   • o cartão da edição RELÂMPAGO é o padrão — UM só formato para as duas famílias (a variante compacta saiu);
-//   • a ÚNICA diferença é a acção: «Dar lance» / «Seu lance (em centavos)» (MLC) vs «Dar palpite» /
+//   • a ÚNICA diferença é a acção: «Dar lance» / «Seu lance (em pontos)» (MLC — UTAC141) vs «Dar palpite» /
 //     «Seu palpite (nº de lances)» (OP);
 //   • o GUTO ANIMADO 7 (vídeo 7 do carrossel, via `CarrosselGUTO`) substitui o GUTO estático, só no cartão VAZIO.
 //
@@ -53,16 +53,16 @@ const formato = (h) => h
 describe("UTAC109e · a acção é a única diferença", () => {
   test("os textos da acção são os decididos (pt-BR), um par por família", () => {
     assert.deepEqual(JSON.parse(JSON.stringify(ACOES)), {
-      lance: { botao: "Dar lance", rotulo: "Seu lance (em centavos)" },
+      lance: { botao: "Dar lance", rotulo: "Seu lance (em pontos)" },
       palpite: { botao: "Dar palpite", rotulo: "Seu palpite (nº de lances)" },
     });
     assert.ok(Object.isFrozen(ACOES) && Object.isFrozen(ACOES.lance) && Object.isFrozen(ACOES.palpite), "a tabela de acções tem de ser imutável");
   });
 
-  test("A · vazio: o lance mostra «Dar lance» + «(em centavos)»; nunca «Dar palpite»", () => {
+  test("A · vazio: o lance mostra «Dar lance» + «(em pontos)»; nunca «Dar palpite»", () => {
     const h = r({ ...VAZIO, acao: "lance" });
     assert.match(h, /data-acao="lance"/);
-    assert.match(h, /<label[^>]*for="lance-sem-edicao"[^>]*>Seu lance \(em centavos\)<\/label>/);
+    assert.match(h, /<label[^>]*for="lance-sem-edicao"[^>]*>Seu lance \(em pontos\)<\/label>/);
     assert.match(h, /<input[^>]*id="lance-sem-edicao"[^>]*type="number"[^>]*disabled=""/);
     assert.match(h, /<button[^>]*disabled=""[^>]*>Dar lance<\/button>/);
     assert.doesNotMatch(h, /Dar palpite|nº de lances/);
@@ -74,7 +74,7 @@ describe("UTAC109e · a acção é a única diferença", () => {
     assert.match(h, /<label[^>]*for="palpite-sem-edicao"[^>]*>Seu palpite \(nº de lances\)<\/label>/);
     assert.match(h, /<input[^>]*id="palpite-sem-edicao"[^>]*type="number"[^>]*disabled=""/, "o campo do palpite tem de ser numérico");
     assert.match(h, /<button[^>]*disabled=""[^>]*>Dar palpite<\/button>/);
-    assert.doesNotMatch(h, /Dar lance|em centavos/);
+    assert.doesNotMatch(h, /Dar lance|em centavos|em pontos/);
   });
 
   test("formato visual IDÊNTICO no vazio: tirando os textos da acção, o HTML é o mesmo", () => {
@@ -164,8 +164,12 @@ describe("UTAC109e · as páginas usam o cartão único com a acção certa (cab
   test("OP: os DOIS cartões (vazio e com edição) com acao=\"palpite\"; o botão real diz «Dar palpite»", () => {
     const f = op();
     assert.equal((f.match(/<CartaoEdicao\b[^>]*\bacao="palpite"/g) || []).length, 2);
-    assert.match(f, /\{aPalpitar \? "Enviando…" : ACOES\.palpite\.botao\}/);
-    assert.match(f, /\{ACOES\.palpite\.rotulo\}<\/label>/);
+    // UTAC141 (SKILL utac-edicoes) — o botão real passou a ser o `FormularioAcao` (o padrão ÚNICO das
+    // edições): a OP passa-lhe o rótulo, o verbo e o estado de envio. O desenho é o mesmo do lance.
+    assert.match(f, /<FormularioAcao/);
+    assert.match(f, /rotulo=\{ACOES\.palpite\.rotulo\}/);
+    assert.match(f, /botao=\{ACOES\.palpite\.botao\}/);
+    assert.match(f, /enviando=\{aPalpitar\}/);
     assert.doesNotMatch(f, /acao="lance"|Palpitar<|"Palpitar"|Dar lance|em centavos/);
   });
 

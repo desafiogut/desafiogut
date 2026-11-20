@@ -1,0 +1,19 @@
+
+UTAC141 · MUTAÇÃO
+==============================================================================
+[MORTO         ] M1 · especial perde variante embutida
+                 ✖ D2 · a fonte: a Edição Especial monta o CardLance com variante="embutida" (3.1365ms) · md5 OK
+[MORTO         ] M2 · rótulo volta a centavos
+                 ✖ D · variante EMBUTIDA: sem segundo cartão, sem «🎯 Dar Lance», campo+botão na mesma linha, «em pontos» (32.64 · md5 OK
+[MORTO         ] M3 · saldo global deixa de ser relido
+                 ✖ F · depois do lance o CardLance manda reler TODOS os `usePontos` (refetchPontosAgora) (64.4296ms) · md5 OK
+[MORTO         ] M4 · nonce sai das deps da tabela
+                 ✖ G · useRankingEspecial: o `nonce` força uma releitura (o lance do próprio utilizador aparece já) (93.5863ms) · md5 OK
+[MORTO         ] M5 · tabela ignora o selo da edição
+                 ✖ B · BIDIRECCIONAL — com `selo` a tabela diz «🟢 Aberta»; sem `selo` mantém «Em breve» (16.1443ms) · md5 OK
+[MORTO         ] M6 · selo calculado mas não passado
+                 ✖ A · SELO_ESPECIAL: uma só tabela, quatro estados, a ABERTA diz «🟢 Aberta» (6626.8739ms) · md5 OK
+[MORTO         ] M7 · botão desligado fecha o campo
+                 ✖ C · FormularioAcao: rótulo + LINHA [campo · botão]; botão desligado NÃO desliga o campo (1.5681ms) · md5 OK
+==============================================================================
+VEREDITO: TODOS MORTOS 7/7

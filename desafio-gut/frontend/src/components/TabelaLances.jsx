@@ -40,7 +40,14 @@ function nomeOuEndereco(lance, enderecoAbrev) {
   return lance.nomeExibicao || enderecoAbrev;
 }
 
-export default function TabelaLances({ lances = [], idEdicao, prazoTimestamp, encerrado: encerradoProp }) {
+export default function TabelaLances({
+  lances = [], idEdicao, prazoTimestamp, encerrado: encerradoProp, selo,
+  // UTAC141 (achado ⚠️2 do 2.º validador) — a tabela AO VIVO da especial nunca revela valores (as linhas
+  // são `oculto`/`valor:null` por desenho; o valor só aparece no resultado/Top 10). Sem esta bandeira, ao
+  // passar o `termino_em` o cabeçalho mudava para «Valor (R$)» sobre células 🔒 e a legenda do cadeado
+  // desaparecia — o `encerrado` da R-1 significa «os valores já são públicos», o da especial não.
+  ocultosPermanentes = false,
+}) {
   const isMobile = useIsMobile();
   const edicaoSanitizada = sanitizeString(idEdicao ?? "");
   const agora = Date.now() / 1000;
@@ -50,6 +57,8 @@ export default function TabelaLances({ lances = [], idEdicao, prazoTimestamp, en
 
   // MC88.43 — mesma pergunta que o Dashboard faz, com o mesmo `encerrado`.
   const est = getEstadoEdicao({ id: idEdicao }, { encerrado });
+  // Divulgação ≠ estado: só há valores a revelar quando a tabela os pode ter.
+  const divulgar = encerrado && !ocultosPermanentes;
 
   // A data do prazo é informação REAL, e por isso mesmo contradizia o "EM BREVE"
   // do Dashboard: provava que o leilão estava a decorrer. Só se mostra quando a
@@ -134,17 +143,17 @@ export default function TabelaLances({ lances = [], idEdicao, prazoTimestamp, en
               Prazo: {prazoFormatado}
             </span>
           )}
-          <span style={{ ...estilos.statusBadge, background: est.cor }}>
-            {est.badge}
+          <span style={{ ...estilos.statusBadge, background: selo?.cor ?? est.cor }}>
+            {selo?.texto ?? est.badge}
           </span>
           {/* Este aviso NÃO segue a fonte única de propósito: ele espelha a regra
               de DIVULGAÇÃO (valores só aparecem depois do fim), que continua
               amarrada ao `encerrado` on-chain — ver MobileList/DesktopTable
               abaixo. Trocá-lo por est.encerrada punha o aviso "valores ocultos"
               ao lado de valores já revelados. Presentação não manda em divulgação. */}
-          {!encerrado && lances.length > 0 && (
+          {!divulgar && lances.length > 0 && (
             <span style={{ fontSize: isMobile ? "0.68rem" : "0.74rem", color: "#6b7db8", fontStyle: "italic" }}>
-              🔒 valores ocultos até o fim
+              {encerrado && ocultosPermanentes ? "🔒 valores revelados no resultado da edição" : "🔒 valores ocultos até o fim"}
             </span>
           )}
         </div>
@@ -162,9 +171,9 @@ export default function TabelaLances({ lances = [], idEdicao, prazoTimestamp, en
           <span style={{ fontSize: "0.78rem", color: "#6b7db8" }}>Seja o primeiro a lançar.</span>
         </div>
       ) : isMobile ? (
-        <MobileList lancesOrdenados={lancesOrdenados} idxVencedor={idxVencedor} encerrado={encerrado} />
+        <MobileList lancesOrdenados={lancesOrdenados} idxVencedor={idxVencedor} encerrado={divulgar} />
       ) : (
-        <DesktopTable lancesOrdenados={lancesOrdenados} idxVencedor={idxVencedor} encerrado={encerrado} />
+        <DesktopTable lancesOrdenados={lancesOrdenados} idxVencedor={idxVencedor} encerrado={divulgar} />
       )}
 
     </div>

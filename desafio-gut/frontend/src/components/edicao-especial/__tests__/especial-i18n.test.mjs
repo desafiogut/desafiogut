@@ -12,8 +12,12 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
+// UTAC141 — o SELO da especial (`chave`/`texto`) passou a viver em `_estilo-especial.js` (uma só tabela,
+// partilhada pelo cartão e pela tabela de lances). O extractor tem de o ler lá, senão as 4 chaves do
+// selo passariam a «órfãs» por o call-site ter mudado de ficheiro.
 const COMPONENTES = ["CardEdicaoEspecial", "ContagemDecrescente", "PainelVencedorEspecial"]
-  .map((n) => `src/components/edicao-especial/${n}.jsx`);
+  .flatMap((n) => [`src/components/edicao-especial/${n}.jsx`])
+  .concat(["src/components/edicao-especial/_estilo-especial.js"]);
 const ler = (p) => readFileSync(resolve(RAIZ, p), "utf8");
 
 function fallbacks() {

@@ -43,7 +43,7 @@ import CartaoEdicao from "../CartaoEdicao.jsx"; // UTAC138 — o padrão do layo
 import PainelVencedorEspecial from "./PainelVencedorEspecial.jsx";
 import { useResultadoEspecial } from "./useResultadoEspecial.js";
 import {
-  COR, T_PADRAO, ESTADO_ESPECIAL, estadoEspecial, alvoDaContagem, formatarContagem,
+  COR, T_PADRAO, ESTADO_ESPECIAL, SELO_ESPECIAL, estadoEspecial, alvoDaContagem, formatarContagem,
 } from "./_estilo-especial.js";
 
 
@@ -71,12 +71,9 @@ function useAgoraServidor(offsetMs, agoraFixo) {
   return base + (Number.isFinite(offsetMs) ? offsetMs : 0);
 }
 
-const BADGE = {
-  [ESTADO_ESPECIAL.AGENDADA]:  { chave: "edicao.especial.badgeEmBreve",   texto: "🕒 Em breve",   cor: "#ff6b35" },
-  [ESTADO_ESPECIAL.A_ABRIR]:   { chave: "edicao.especial.badgeAbrindo",   texto: "⏳ Abrindo",    cor: "#fbbf24" },
-  [ESTADO_ESPECIAL.ACTIVA]:    { chave: "edicao.especial.badgeAberta",    texto: "🟢 Aberta",     cor: COR.success },
-  [ESTADO_ESPECIAL.ENCERRADA]: { chave: "edicao.especial.badgeEncerrada", texto: "🔴 Encerrada",  cor: COR.danger },
-};
+// UTAC141 — o selo vive em `_estilo-especial.js` (`SELO_ESPECIAL`) porque a TABELA de lances o desenha
+// também: uma só tabela de estados, para o cartão e a tabela não voltarem a divergir.
+const BADGE = SELO_ESPECIAL;
 
 // UTAC138 — a caixa amarela (`caixa`) e o `ROTULO` saíram com o layout próprio: o invólucro é o `CartaoEdicao`.
 
@@ -95,12 +92,18 @@ const BADGE = {
  */
 export default function CardEdicaoEspecial({
   edicao, offsetMs, renderLance, isMobile = false, t = T_PADRAO, agoraMs,
-  resultadoEspecial, titulo,
+  resultadoEspecial, titulo, onEstado,
 }) {
   const agora = useAgoraServidor(offsetMs, agoraMs);
   const estado = estadoEspecial(edicao, agora);
   const encerrada = estado === ESTADO_ESPECIAL.ENCERRADA;
   const lido = useResultadoEspecial(edicao?.id, encerrada && !resultadoEspecial);
+
+  // UTAC141 (achado ⚠️1 do validador) — o CARTÃO é o único que tem relógio (tick de 1 s). Quem desenha o
+  // estado da MESMA edição noutro sítio (o selo da tabela) tem de ler daqui: uma fotografia do relógio na
+  // página ficava 1 segundo atrasada no instante do fecho e os dois voltavam a divergir.
+  useEffect(() => { onEstado?.(estado); }, [estado, onEstado]);
+
   if (!estado) return null;
 
   const resultado = resultadoEspecial ?? lido;

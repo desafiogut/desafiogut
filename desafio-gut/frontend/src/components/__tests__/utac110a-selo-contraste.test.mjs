@@ -172,6 +172,8 @@ test("A5 · o resto da `statusBadge` não mudou (padding, raio, tamanho, peso)",
   assert.match(selo.estilo, /font-weight:700/);
   // e o selo continua a ser o mesmo elemento do cabeçalho da tabela (não foi recriado noutro sítio)
   const fonte = readFileSync(caminho(SRC, "components/TabelaLances.jsx"), "utf8");
-  assert.match(fonte, /<span style=\{\{ \.\.\.estilos\.statusBadge, background: est\.cor \}\}>/);
+  // UTAC141 — o selo passou a aceitar o estado da EDIÇÃO (`selo?.cor ?? est.cor`): mesma forma, mesma
+  // classe de estilos, e o `est.cor` continua a ser o fallback (o comportamento antigo preservado).
+  assert.match(fonte, /<span style=\{\{ \.\.\.estilos\.statusBadge, background: (selo\?\.cor \?\? )?est\.cor \}\}>/);
   assert.equal((fonte.match(/estilos\.statusBadge/g) || []).length, 1, "o selo passou a ser usado em mais do que um sítio");
 });

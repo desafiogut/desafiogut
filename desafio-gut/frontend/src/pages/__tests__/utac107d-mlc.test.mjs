@@ -157,15 +157,21 @@ describe("UTAC107d · Menor Lance Único", () => {
     assert.match(c, /const pad\s*= isMobile \? "1rem" : "2rem";/, "controlo: a Carteira mudou de envelope");
   });
 
-  test("SEG3/R18-C · rótulo VISÍVEL «Seu lance (em centavos)» ligado ao campo; unidade = centavos", () => {
+  // UTAC141 — ALTERADO (declarado): o rótulo deixou de ser o TEXTO cravado «(em centavos)». O Relâmpago
+  // paga em PONTOS de lance (1 ponto = R$ 0,01, Art. 18º), e o rótulo passa a dizer a unidade que o
+  // utilizador GASTA. O que este teste guarda continua a ser o essencial do R18-C: há rótulo VISÍVEL,
+  // ligado ao campo por `htmlFor`, e o número é inteiro (teclado numérico, sem vírgula).
+  test("SEG3/R18-C · rótulo VISÍVEL ligado ao campo; UTAC141: a unidade é PONTOS no Relâmpago", () => {
     const c = codigo(ler("components/CardLance.jsx"));
-    const label = c.match(/<label\s+htmlFor=\{(\w+)\}[^>]*>([^<]+)<\/label>/);
+    const label = c.match(/<label\s+htmlFor=\{(\w+)\}[^>]*>\{([^}]+)\}<\/label>/);
     assert.ok(label, "o <label> do lance não está ligado ao campo (htmlFor)");
-    assert.equal(label[2].trim(), "Seu lance (em centavos)");
+    assert.equal(label[2].trim(), "rotuloInput", "o rótulo voltou a ser texto cravado");
+    assert.match(c, /const rotuloInput = isProgramado \? "Seu lance \(em centavos\)" : "Seu lance \(em pontos\)";/);
+    assert.match(c, /const placeholderInput = isProgramado \? "Ex: 5 = R\$ 0,05" : "Ex\.: 40";/);
+    assert.doesNotMatch(c, />Seu lance \(em centavos\)<\/label>/, "rótulo fixo em centavos (o Relâmpago gasta pontos)");
     const input = c.slice(c.indexOf(label[0])).match(/<input[\s\S]*?\/>/)?.[0] ?? "";
-    assert.match(input, new RegExp(`id=\\{${label[1]}\\}`), "o <input> não tem o id do rótulo");
-    assert.match(input, /inputMode="numeric"/, "falta o teclado numérico (centavos são inteiros)");
-    assert.match(input, /placeholder="Ex: 5 = R\$ 0,05"/, "o placeholder em centavos mudou");
-    assert.doesNotMatch(label[2], /R\$/, "o rótulo diz R$ com o campo em centavos (licita 100× menos)");
+    assert.match(input, new RegExp(`id=\{${label[1]}\}`), "o <input> não tem o id do rótulo");
+    assert.match(input, /inputMode="numeric"/, "falta o teclado numérico (o valor é inteiro)");
+    assert.match(input, /placeholder=\{placeholderInput\}/, "o placeholder deixou de seguir a unidade");
   });
 });

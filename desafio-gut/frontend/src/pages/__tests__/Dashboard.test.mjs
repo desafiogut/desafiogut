@@ -630,13 +630,13 @@ describe("UTAC109f · Início — ordem final e pendências do 109e", () => {
     assert.doesNotMatch(sec, /🏆|ver todos/i);
   });
 
-  test("glass MLC sem edição (EM BREVE) = o cartão vazio da aba MLC: GUTO 7 + «Seu lance (em centavos)» desligado", () => {
+  test("glass MLC sem edição (EM BREVE) = o cartão vazio da aba MLC: GUTO 7 + «Seu lance (em pontos)» desligado", () => {
     definirPontos({}); definirResultadoOficial(null);
     const v = fatia(renderizar(), ">⚡ Relâmpago<");
     assert.match(v, /data-vazio="true"/);
     assert.match(v, /data-acao="lance"/);
     assert.match(v, /data-testid="guto-animado-7"/);
-    assert.match(v, /<label[^>]*>Seu lance \(em centavos\)<\/label>/);
+    assert.match(v, /<label[^>]*>Seu lance \(em pontos\)<\/label>/);
     assert.match(v, /<button[^>]*disabled=""[^>]*>Dar lance<\/button>/);
     assert.match(texto(v), /Nenhuma edição em andamento/);
     assert.match(v, /data-testid="cartao-estado"[^>]*>SEM EDIÇÃO</, "V5: o vazio do Relâmpago perdeu «SEM EDIÇÃO»");

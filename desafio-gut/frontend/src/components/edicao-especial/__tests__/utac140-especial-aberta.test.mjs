@@ -40,8 +40,11 @@ describe("UTAC140 · lances ao vivo na TabelaLances PADRÃO (Frente E — «o la
   });
   test("MercadoLances: a especial usa a TabelaLances PADRÃO com os lances ao vivo — sem layout próprio (contrato da fonte)", () => {
     const src = readFileSync(new URL("../../../pages/MercadoLances.jsx", import.meta.url), "utf8").replace(/^\s*\/\/.*$/gm, "");
-    assert.match(src, /const lancesEspecial = useRankingEspecial\(edicaoEspecial\?\.id \?\? null\);/);
-    assert.match(src, /<TabelaLances lances=\{edicaoEspecial \? lancesEspecial : lances\}/);
+    // UTAC141 — a chamada ganhou o `nonce` (o lance do próprio utilizador força a releitura) e a tabela
+    // passou a receber o selo da edição; o que este contrato guarda é o mesmo: a especial usa a tabela
+    // PADRÃO alimentada pelos lances ao vivo, sem layout próprio.
+    assert.match(src, /const lancesEspecial = useRankingEspecial\(edicaoEspecial\?\.id \?\? null, \{ nonce: rankingNonce \}\);/);
+    assert.match(src, /<TabelaLances[\s\S]{0,300}?lances=\{edicaoEspecial \? lancesEspecial : lances\}/);
     assert.equal(/RankingEspecialOculto/.test(src), false, "a caixa própria saiu (só há 2 layouts oficiais de edição)");
   });
   // (A renderização real na TabelaLances vive em src/components/__tests__/utac140-tabela-especial.test.mjs — precisa

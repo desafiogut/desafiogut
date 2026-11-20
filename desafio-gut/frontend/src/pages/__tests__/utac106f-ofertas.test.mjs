@@ -31,7 +31,7 @@ const ALIASES = [
   { find: /^\.\.\/lib\/leilaoLock\.js$/, replacement: resolve(AQUI, "_stubs", "leilaoLock.js") },
 ];
 
-let vite, React, renderToStaticMarkup, montar, duploDeFetch, definirContexto, OfertasProgramadas, definirEmBreve;
+let vite, React, renderToStaticMarkup, montar, duploDeFetch, definirContexto, OfertasProgramadas, definirEmBreve, FormularioAcao;
 
 before(async () => {
   const { createServer } = await import(pathToFileURL(resolve(AQUI, "..", "..", "..", "node_modules", "vite", "dist", "node", "index.js")).href);
@@ -44,6 +44,7 @@ before(async () => {
   ({ definirContexto } = await vite.ssrLoadModule("/src/pages/__tests__/_stubs/AppContext.jsx"));
   OfertasProgramadas = (await vite.ssrLoadModule("/src/pages/OfertasProgramadas.jsx")).default;
   ({ definirEmBreve } = await vite.ssrLoadModule("/src/pages/__tests__/_stubs/leilaoLock.js"));
+  FormularioAcao = (await vite.ssrLoadModule("/src/components/_formAcaoEdicao.jsx")).default;
 });
 after(async () => { if (vite) await vite.close(); });
 
@@ -92,12 +93,24 @@ async function montarEcra(responder, contexto = ctx()) {
     html: () => renderToStaticMarkup(React.createElement(React.Fragment, null, ctrl.resultado())),
     texto: () => semTags(renderToStaticMarkup(React.createElement(React.Fragment, null, ctrl.resultado()))),
     nos,
-    input: () => nos().find((n) => n.type === "input"),
-    botao: (t) => nos().filter((n) => n.type === "button").find((b) => texto(b).includes(t)),
+    // UTAC141 — a acção da edição é o `FormularioAcao` (padrão único, SKILL utac-edicoes): o <input> e o
+    // <button> vivem DENTRO dele e um varrimento de elementos React não desce a componentes-função.
+    // `formularios()` expõe o elemento; `input()`/`botao()`/`clicar()` caem nele quando não há nó solto.
+    formularios: () => nos().filter((n) => n.type === FormularioAcao),
+    input: () => nos().find((n) => n.type === "input") ?? (() => {
+      const f = nos().find((n) => n.type === FormularioAcao);
+      return f ? { type: "number", props: { type: "number", value: f.props.valor, onChange: f.props.onChange, disabled: f.props.desabilitado } } : undefined;
+    })(),
+    botao: (t) => nos().filter((n) => n.type === "button").find((b) => texto(b).includes(t)) ?? (() => {
+      const f = nos().find((n) => n.type === FormularioAcao);
+      return f && String(f.props.botao).includes(t) ? { type: "button", props: { onClick: f.props.onEnviar, disabled: f.props.desabilitado } } : undefined;
+    })(),
     clicar: async (t) => {
       const b = nos().filter((n) => n.type === "button").find((x) => texto(x).includes(t));
-      assert.ok(b, `não encontrei «${t}»; botões: ${JSON.stringify(nos().filter((n) => n.type === "button").map(texto))}`);
-      await b.props.onClick();
+      if (b) { await b.props.onClick(); await ctrl.assentar(); return; }
+      const f = nos().find((n) => n.type === FormularioAcao && String(n.props.botao).includes(t));
+      assert.ok(f, `não encontrei «${t}»; botões: ${JSON.stringify(nos().filter((n) => n.type === "button").map(texto))}`);
+      await f.props.onEnviar();
       await ctrl.assentar();
     },
   };
@@ -363,19 +376,20 @@ test("UTAC107e.1 · palpitar no 2.º cartão regista na edição DESSE cartão",
     return { status: 200, json: LEITURA() };
   }, ctx({ edicoes: DUAS }));
   try {
-    const inputs = c.nos().filter((n) => n.type === "input");
-    assert.equal(inputs.length, 2);
-    const segundo = inputs.find((n) => n.props.id === "palpite-PROG-8");
+    // UTAC141 — dois cartões ⇒ dois `FormularioAcao` (cada um com o seu id e o seu envio).
+    const formularios = c.formularios();
+    assert.equal(formularios.length, 2);
+    const segundo = formularios.find((n) => n.props.id === "palpite-PROG-8");
+    assert.ok(segundo, "o 2.º cartão não tem formulário próprio");
     segundo.props.onChange({ target: { value: "7" } });
     await c.ctrl.assentar();
-    const botoes = c.nos().filter((n) => n.type === "button" && texto(n).includes("Dar palpite"));
-    await botoes[1].props.onClick();
+    await c.formularios()[1].props.onEnviar();
     await c.ctrl.assentar();
     assert.match(corpo, /"edicaoId":"PROG-8"/);
     assert.match(corpo, /"valor":7/);
     const h = c.html();
     assert.match(h, /data-estado-palpite="com_palpite"[\s\S]*?Seu palpite: 7 lances/, "o 2.º cartão não passou a «com palpite»");
-    assert.equal(c.nos().filter((n) => n.type === "input").length, 1, "o 1.º cartão devia continuar com o campo");
+    assert.equal(c.formularios().length, 1, "o 1.º cartão devia continuar com o campo");
   } finally { c.dup.restaurar(); }
 });
 
@@ -453,10 +467,12 @@ test("UTAC107e.1 (validador) · o erro do palpite aparece SÓ no cartão que fal
     ? { status: 409, json: { code: "sem_passe" } }
     : { status: 200, json: LEITURA() }, ctx({ edicoes: DUAS }));
   try {
-    const segundo = c.nos().find((n) => n.type === "input" && n.props.id === "palpite-PROG-8");
+    // UTAC141 — o campo e o botão vivem dentro do `FormularioAcao` de cada cartão.
+    const segundo = c.formularios().find((n) => n.props.id === "palpite-PROG-8");
+    assert.ok(segundo, "o 2.º cartão não tem formulário próprio");
     segundo.props.onChange({ target: { value: "3" } });
     await c.ctrl.assentar();
-    await c.nos().filter((n) => n.type === "button" && texto(n).includes("Dar palpite"))[1].props.onClick();
+    await c.formularios()[1].props.onEnviar();
     await c.ctrl.assentar();
     const alertas = c.nos().filter((n) => n.props?.role === "alert");
     assert.equal(alertas.length, 1, `esperava 1 alerta, vi ${alertas.length}`);

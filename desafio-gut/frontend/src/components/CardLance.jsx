@@ -31,6 +31,8 @@ import { usePontos } from "../hooks/usePontos.js";
 // UTAC110j.5 — o lance GASTA o seu valor em pontos de lance (backend UTAC110n). O estado por créditos
 // (`estadoCreditosLance`/`rotuloCreditos` de `lib/passes.js`) deixou de ser usado aqui; fica como legado.
 import { estadoPontosLance, rotuloPontosLance } from "../lib/pontosLance.js";
+// UTAC141 (SKILL utac-edicoes) — a acção embutida é o formulário CANÓNICO da edição (o mesmo do palpite).
+import FormularioAcao, { ESTILO_ACAO } from "./_formAcaoEdicao.jsx";
 
 // UTAC132.1 (DEBT-088) — corte em TEMPO DE BUILD, a mesma flag do UTAC132 (só o `build:apk` a define).
 // No APK não há saldo R$ nem PIX: o minificador apaga a frase de recarga e o guarda recusa-a no AAB.
@@ -80,7 +82,12 @@ export default function CardLance({
   encerrado,
   modalidade = "flash",
   ready      = true,
+  // UTAC141 (SKILL utac-edicoes) — "cartao" (omissão): o formulário é um cartão próprio (o Relâmpago do
+  // MLC). "embutida": a acção DENTRO do `CartaoEdicao`, como o «Dar palpite» da Programada — sem segundo
+  // cartão, sem cabeçalho próprio, com o botão ao lado do campo. É a variante da edição especial.
+  variante   = "cartao",
 }) {
+  const embutido = variante === "embutida";
   const { wallets } = useWallets();
   const privyWallet = wallets.find((w) => w.walletClientType === "privy") || wallets[0];
   const reduce = useReducedMotion(); // MC20.2 ITEM 6 — morph só-visual do CTA
@@ -99,6 +106,10 @@ export default function CardLance({
     // UTAC110d-front — sem token user-session o `usePontos` ainda não leu: conta como «a carregar»
     // (antes mostrava «Sem créditos…» por instantes, enganador — ℹ️ do validador).
     authToken,
+    // UTAC141 (Frente B) — o `usePontos` deste componente e o da Carteira/Início são INSTÂNCIAS
+    // diferentes: reler aqui só mudava o número desta caixa. Este nonce do AppContext manda reler
+    // TODAS as instâncias, para o saldo do ecrã descer no instante do lance.
+    refetchPontosAgora,
   } = useAppContext();
 
   // MC91.11 — conversão automática R$ → senha (programado sem senha on-chain).
@@ -287,7 +298,10 @@ export default function CardLance({
             lance_em_processamento:   "Este lance já está sendo processado. Aguarde um instante.",
           };
           // O servidor diz que não há pontos que cheguem: relê-se para o ecrã não mentir.
-          if (data?.error?.code === "saldo_pontos_insuficiente") { try { refetchPontosLance?.(); } catch {} }
+          if (data?.error?.code === "saldo_pontos_insuficiente") {
+            try { refetchPontosLance?.(); } catch {}
+            try { refetchPontosAgora?.(); } catch {}
+          }
           throw new Error(msgMap[data?.error?.code] ?? data?.error?.message ?? "Erro no lance relâmpago.");
         }
         registrarLance(address);
@@ -305,6 +319,9 @@ export default function CardLance({
               restantes: Number.isSafeInteger(data?.pontosLanceRestantes) ? data.pontosLanceRestantes : null }
           : null);
         try { refetchPontosLance?.(); } catch {}
+        // UTAC141 (Frente B) — o saldo que o utilizador VÊ (Carteira, Início, cartão) desce AGORA: sem
+        // isto só a cópia deste componente relia, e o saldo global ficava «parado» até se mudar de ecrã.
+        try { refetchPontosAgora?.(); } catch {}
         onLanceSucesso?.({ address, valorCentavos, txHash: data.lanceId, nomeExibicao: userLabel || null });
         return;
       }
@@ -367,6 +384,11 @@ export default function CardLance({
   }
 
   const valorReais = valor ? `R$ ${(parseInt(valor || "0", 10) / 100).toFixed(2)}` : "";
+  // UTAC141 — o lance Relâmpago lê o MESMO número em PONTOS (1 ponto = R$ 0,01): o que o campo mostra
+  // é a unidade que o utilizador gasta, não a que ele não paga.
+  const valorPreview = !valor ? ""
+    : isProgramado ? valorReais
+    : `${parseInt(valor, 10)} ${parseInt(valor, 10) === 1 ? "ponto" : "pontos"}`;
 
   // MC88.40 — o estado "stale" deixou de ter sufixo textual. " (antigo)" era
   // jargão interno do MC88.34 exposto ao utilizador; passa a ser sinalizado por
@@ -421,8 +443,25 @@ export default function CardLance({
       ? "⏳ Carregando saldo..."
     : "Dar lance"; // UTAC109e (R18-B) — o mesmo verbo do cartão: «Dar lance» (MLC) / «Dar palpite» (OP)
 
-  // MC29.1 — skeleton de conformidade (não monta o formulário on-chain).
+  // UTAC141 (operador: «onde diz "Seu lance (em centavos) · R$ 0,05" deve dizer "Seu lance (em pontos)"»).
+  // O Relâmpago (e a especial, que é Relâmpago) paga em PONTOS — 1 ponto = R$ 0,01, logo o número é o
+  // mesmo, mas a unidade que o utilizador lê passa a ser a que ele gasta. O Programado LEGADO mantém
+  // centavos: aí o valor ainda é lido em R$ pelo contrato.
+  const rotuloInput = isProgramado ? "Seu lance (em centavos)" : "Seu lance (em pontos)";
+  const placeholderInput = isProgramado ? "Ex: 5 = R$ 0,05" : "Ex.: 40";
+
+  // MC29.1 — skeleton de conformidade (não monta o formulário on-chain). Tem de vir ANTES da variante
+  // embutida: no APK `isLeilaoAtivo` é false e nenhum formulário de lance pode ser montado (o esqueleto
+  // embutido ocupa o mesmo lugar, sem segundo cartão).
   if (recursosCarregando || !isLeilaoAtivo) {
+    if (embutido) {
+      return (
+        <div data-variante-lance="embutida" aria-busy={recursosCarregando} aria-hidden="true">
+          <div style={{ height: "0.9rem", width: "40%", borderRadius: "6px", background: "rgba(255,255,255,0.06)", marginBottom: "0.5rem" }} />
+          <div style={{ height: "48px", borderRadius: "10px", background: "rgba(255,255,255,0.05)" }} />
+        </div>
+      );
+    }
     return (
       <Card glow="primary" className="p-6 flex flex-col gap-4" aria-busy={recursosCarregando} aria-hidden="true">
         <div style={{ height: "1.2rem", width: "40%", borderRadius: "6px", background: "rgba(255,255,255,0.06)" }} />
@@ -430,6 +469,82 @@ export default function CardLance({
         <div style={{ height: "3rem", borderRadius: "12px", background: "rgba(255,255,255,0.05)" }} />
         <div style={{ height: "2.6rem", borderRadius: "28px", background: "rgba(255,255,255,0.05)" }} />
       </Card>
+    );
+  }
+
+  // ── UTAC141 — A ACÇÃO EMBUTIDA (a única da especial): rótulo + LINHA [campo · botão] ──────────
+  // Sem segundo cartão, sem «🎯 Dar Lance», sem barra de carteira, sem botão de largura toda: é o
+  // formulário do «Dar palpite», o padrão aprovado (`components/_formAcaoEdicao.jsx`).
+  if (embutido) {
+    const avisoPontos = !isProgramado && !encerrado && semPontosFlash && pontosL.mensagem;
+    return (
+      <div data-variante-lance="embutida" data-edicao={edicaoSanitizada}>
+        {!isConnected && (
+          <button
+            type="button"
+            onClick={onConnect}
+            disabled={!ready}
+            style={{ ...ESTILO_ACAO.botao, opacity: ready ? 1 : 0.7 }}
+          >
+            {ready ? "⚡ Aceito o DesafioGUT" : "⏳ Aguarde..."}
+          </button>
+        )}
+        <FormularioAcao
+          id={idCampoLance}
+          moldura={false}
+          rotulo={rotuloInput}
+          valor={valor}
+          onChange={(e) => setValor(e.target.value)}
+          placeholder={placeholderInput}
+          botao={labelBotao}
+          desabilitado={desabilitado || encerrado}
+          desabilitadoCampo={ocupado || !isConnected || encerrado}
+          onEnviar={handleDarLance}
+          tipo="number" min="1" max="999999"
+          extra={(
+            <>
+              {!isProgramado && (
+                <p style={estilos.hintInput}>Mín 1 ponto · Máx 5 lances/min · Cooldown 3s</p>
+              )}
+              {!isProgramado && isConnected && pontosL.custo !== null && (
+                <p data-custo-lance="" style={estilos.custoLance}>
+                  Este lance custa <strong>{rotuloPontosLance(pontosL.custo)}</strong>
+                  {pontosL.saldo !== null && <> · seu saldo: <strong>{rotuloPontosLance(pontosL.saldo)}</strong></>}
+                </p>
+              )}
+              {avisoPontos && (
+                <div
+                  role="status"
+                  data-pontos-lance={pontosL.estado}
+                  style={pontosL.estado === "erro" ? estilos.boxErro : estilos.boxAvisoNeutro}
+                >
+                  {pontosL.mensagem}
+                  {(pontosL.estado === "sem_pontos" || pontosL.estado === "insuficiente") && (
+                    <>{" "}<a href="/carteira" data-atalho-pontos="" style={estilos.atalhoPontos}>Ver missões de hoje →</a></>
+                  )}
+                </div>
+              )}
+              {fase === FASES.SUCESSO && (
+                <div style={estilos.boxSucesso}>
+                  <p style={{ margin: 0, fontWeight: "600" }}>✅ Lance registado!</p>
+                  {!isProgramado && ultimoGasto && (
+                    <p data-gasto-lance="" style={estilos.txText}>
+                      −{rotuloPontosLance(ultimoGasto.consumidos)}
+                      {ultimoGasto.restantes !== null && <> · restam {rotuloPontosLance(ultimoGasto.restantes)}</>}
+                    </p>
+                  )}
+                </div>
+              )}
+              {(fase === FASES.ERRO || erro) && erro && (
+                <div style={estilos.boxErro}>⚠️ {erro}</div>
+              )}
+              {encerrado && (
+                <p style={estilos.hintInput}>Esta edição já fechou — novos lances estão bloqueados.</p>
+              )}
+            </>
+          )}
+        />
+      </div>
     );
   }
 
@@ -484,11 +599,11 @@ export default function CardLance({
       </div>
 
       <div style={estilos.inputGroup}>
-        {/* UTAC107d (R18-C) — rótulo visível LIGADO ao campo (`htmlFor`; antes era um <label>
-            solto, sem associação para leitores de ecrã). O valor CONTINUA em CENTAVOS: um
-            rótulo «(R$)» faria quem digita «1» licitar R$ 0,01 a pensar em R$ 1,00. `inputMode`
-            numérico: centavos são inteiros (o teclado decimal deixaria escrever vírgula). */}
-        <label htmlFor={idCampoLance} style={estilos.labelInput}>Seu lance (em centavos)</label>
+        {/* UTAC107d (R18-C) — rótulo visível LIGADO ao campo (`htmlFor`; antes era um <label> solto, sem
+            associação para leitores de ecrã). UTAC141 — a UNIDADE vem de `rotuloInput`: PONTOS no Relâmpago
+            (é o que o lance gasta, 1 ponto = R$ 0,01) e centavos só no Programado legado, onde o valor ainda
+            é lido em R$. `inputMode` numérico: o valor é inteiro (o teclado decimal deixaria escrever vírgula). */}
+        <label htmlFor={idCampoLance} style={estilos.labelInput}>{rotuloInput}</label>
         <div style={estilos.inputWrapper}>
           <input
             id={idCampoLance}
@@ -498,13 +613,15 @@ export default function CardLance({
             max="999999"
             value={valor}
             onChange={(e) => setValor(e.target.value)}
-            placeholder="Ex: 5 = R$ 0,05"
+            placeholder={placeholderInput}
             style={estilos.input}
             disabled={ocupado || !isConnected || encerrado}
           />
-          {valorReais && <span style={estilos.valorPreview}>{valorReais}</span>}
+          {valorPreview && <span style={estilos.valorPreview}>{valorPreview}</span>}
         </div>
-        <p style={estilos.hintInput}>Mín R$ 0,01 · Máx 5 lances/min · Cooldown 3s</p>
+        <p style={estilos.hintInput}>
+          {isProgramado ? "Mín R$ 0,01 · Máx 5 lances/min · Cooldown 3s" : "Mín 1 ponto · Máx 5 lances/min · Cooldown 3s"}
+        </p>
         {/* UTAC110j.5 — o CUSTO do lance, em pontos, ao lado do saldo: o utilizador vê o que vai gastar. */}
         {!isProgramado && isConnected && pontosL.custo !== null && (
           <p data-custo-lance="" style={estilos.custoLance}>

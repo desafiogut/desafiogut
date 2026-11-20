@@ -1367,6 +1367,9 @@ export function AppProvider({ children }) {
     refetchSaldoRs,
     // UTAC110g (F2/P-2) — contador que manda o `usePontos` reler (crédito do login diário + tick horário).
     pontosNonce,
+    // UTAC141 (Frente B) — o MESMO contador, exposto como acção: quem gasta pontos (o lance) chama-o
+    // depois do sucesso e TODAS as instâncias de `usePontos` (Carteira, Início, cartão) releem.
+    refetchPontosAgora,
     // MC15.6 ITEM 2 — notificações proativas (polling adaptativo).
     notificacoes,
     notificacoesNaoLidas,

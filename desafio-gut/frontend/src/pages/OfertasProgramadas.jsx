@@ -32,6 +32,8 @@ import { usePalpite, usePalpitesDaEdicao } from "../hooks/usePalpite.js";
 // UTAC120 (Frente B) — o palpite consome 1 PASSE PROGRAMADO (backend UTAC120): sem ele, não se envia.
 import { useInventarioPasses, semPasses } from "../hooks/useInventarioPasses.js";
 import BalaoComprarPasse from "../components/BalaoComprarPasse.jsx";
+// UTAC141 (SKILL utac-edicoes) — a acção da edição é o padrão CANÓNICO (o mesmo do lance da especial).
+import FormularioAcao from "../components/_formAcaoEdicao.jsx";
 // UTAC108h.3 — as regras do palpite mudaram de casa (vivem em `lib/palpite.js`), porque o Início
 // passou a mostrar o vidro «🎫 Programada» com a zona de palpite dentro. Uma só verdade para as
 // duas telas: `estaAberta` / `edicoesProgramadasDe` / `estadoPalpite` / `PILULA`.
@@ -131,29 +133,22 @@ export default function OfertasProgramadas() {
           style={{ height: "100%" }}
         >
           <div style={{ paddingTop: "0.6rem", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+          {/* UTAC141 (achado ⚠️4 do validador) — antes do padrão único o campo do palpite NÃO tinha
+              `disabled`: só o botão fechava enquanto enviava. Mantém-se assim (`desabilitadoCampo={false}`). */}
           {estado === "sem_palpite" && (
-            <div>
-              <label htmlFor={idCampo} style={{ display: "block", color: COR.text, fontSize: "0.82rem", fontWeight: 700, marginBottom: "0.35rem" }}>{ACOES.palpite.rotulo}</label>
-              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                <input
-                  id={idCampo} type="number" inputMode="numeric" min="0" step="1"
-                  value={valores[ed.id] ?? ""}
-                  onChange={(e) => setValores((m) => ({ ...m, [ed.id]: e.target.value }))}
-                  placeholder="Ex.: 120"
-                  style={{ flex: "1 1 120px", minHeight: "48px", padding: "0.6rem 0.75rem", borderRadius: "10px", border: "1px solid rgba(107,125,184,0.45)", background: "rgba(12,16,24,0.55)", color: COR.text, fontSize: "0.9rem" }}
-                />
-                {/* UTAC120 — sem Passe Programado o envio fica desligado, com o MESMO cinzento do estado
-                    «Enviando…» deste botão (o desligado do app); o motivo e a compra ficam logo abaixo. */}
-                <button
-                  type="button" onClick={() => palpitar(ed.id)} disabled={aPalpitar}
-                  style={{ minHeight: "48px", padding: "0.6rem 1.1rem", borderRadius: "10px", cursor: aPalpitar ? "wait" : "pointer", border: "none", background: aPalpitar ? "rgba(107,125,184,0.35)" : COR.gold, color: "#12161f", fontWeight: 800, fontSize: "0.86rem" }}
-                >
-                  {aPalpitar ? "Enviando…" : ACOES.palpite.botao}
-                </button>
-              </div>
-              {/* UTAC137 (Regulamento v6.0): o palpite é gratuito. Aqui havia o aviso «Precisa de 1 Passe Programado
-                  para palpitar.» com o atalho de compra, mostrado quando o inventário de Passes Programados era 0. */}
-            </div>
+            <FormularioAcao
+              id={idCampo}
+              moldura={false}
+              rotulo={ACOES.palpite.rotulo}
+              valor={valores[ed.id] ?? ""}
+              onChange={(e) => setValores((m) => ({ ...m, [ed.id]: e.target.value }))}
+              placeholder="Ex.: 120"
+              botao={ACOES.palpite.botao}
+              enviando={aPalpitar}
+              desabilitadoCampo={false}
+              onEnviar={() => palpitar(ed.id)}
+              tipo="number" min="0" step="1"
+            />
           )}
           {estado === "com_palpite" && (
             <div>

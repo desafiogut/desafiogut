@@ -145,7 +145,7 @@ describe("UTAC108e.1 · SEG3 · sem edição → cartão vazio (não aviso solto
     assert.match(c, /data-testid="lance-desativado"/);
     assert.match(c, /<input[^>]*id="lance-sem-edicao"[^>]*disabled=""/, "o campo não está desligado");
     assert.match(c, /<button[^>]*disabled=""[^>]*>Dar lance<\/button>/, "o botão não está desligado");
-    assert.match(c, /<label[^>]*for="lance-sem-edicao"[^>]*>Seu lance \(em centavos\)<\/label>/, "rótulo do lance perdido");
+    assert.match(c, /<label[^>]*for="lance-sem-edicao"[^>]*>Seu lance \(em pontos\)<\/label>/, "rótulo do lance perdido");
     assert.ok(!html.includes('data-stub="card-lance"'), "sem edição o CardLance não devia montar");
   });
 
