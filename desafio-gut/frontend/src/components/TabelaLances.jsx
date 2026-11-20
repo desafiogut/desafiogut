@@ -9,6 +9,7 @@ import { useResultadoOficial } from "../hooks/useResultadoOficial.js";
 // MC88.43 — este cabeçalho era o lado que VAZAVA no B4: anunciava "🟢 Ativo" e
 // a data real do prazo enquanto o Dashboard, no mesmo instante, dizia "EM BREVE".
 import { getEstadoEdicao } from "../utils/edicao.js";
+import { formatarNomeExibicao } from "../lib/nomeExibicao.js"; // UTAC142 (Frente D)
 
 function ordenarLances(lances) {
   // MC28.1: cmp null-safe — lances blindados (valor null em mainnet) mantêm ordem
@@ -36,8 +37,10 @@ function enderecoDaLinha(lance) {
   return null;
 }
 
+// UTAC142 (Frente D, R18-142-D) — «PrimeiroNome I.» em vez do nome completo (ou do e-mail, que é o que o
+// `nomeExibicao` traz quando a conta não tem nome do Google); sem nome de pessoa, o endereço encurtado.
 function nomeOuEndereco(lance, enderecoAbrev) {
-  return lance.nomeExibicao || enderecoAbrev;
+  return formatarNomeExibicao(enderecoAbrev, lance.nomeExibicao);
 }
 
 export default function TabelaLances({

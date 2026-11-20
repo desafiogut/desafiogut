@@ -151,7 +151,8 @@ test("B5 o lance-relampago regista no ranking DEPOIS de persistir, sem o valor (
   const src = readFileSync(new URL("../lance-relampago.mjs", import.meta.url), "utf8");
   const chamada = src.match(/registarNoRankingEspecial\(\{([^}]*)\}\)/);
   assert.ok(chamada, "o lance-relampago tem de chamar registarNoRankingEspecial");
-  assert.deepEqual(chamada[1].split(",").map((s) => s.trim()), ["lanceId", "edicaoId", "endereco"]);
+  // UTAC142 (Frente D) — + nomeExibicao (reduzido a «PrimeiroNome I.» dentro do registar; nunca o valor).
+  assert.deepEqual(chamada[1].split(",").map((s) => s.trim()), ["lanceId", "edicaoId", "endereco", "nomeExibicao"]);
   assert.ok(src.indexOf("registarNoRankingEspecial({") > src.indexOf("registro.key = await addLance(edicaoId, registro)"),
     "o ranking só recebe o lance depois de ele existir no Key-Per-Bid");
 });
@@ -285,9 +286,9 @@ test("C3 chatbot: especialParaGuto lê a edição (falha ⇒ null; terminada ⇒
 
 test("K1 configDaEspecial: omissões = decisões do UTAC140; inválidos caem na omissão", async () => {
   const { configDaEspecial } = await import("../_lib/especial-config.mjs");
-  assert.deepEqual(configDaEspecial(null), { rankingAoVivo: true, top10: { publico: true, janelaHoras: 24, exigePasse: true }, guto: { boasVindas: null } });
+  assert.deepEqual(configDaEspecial(null), { rankingAoVivo: true, passePorLance: true, avisosLider: true, top10: { publico: true, janelaHoras: 24, exigePasse: true }, guto: { boasVindas: null } });
   assert.deepEqual(configDaEspecial({ rankingAoVivo: false, top10: { publico: false, janelaHoras: 48, exigePasse: false }, guto: { boasVindas: " Olá {produto} " } }),
-    { rankingAoVivo: false, top10: { publico: false, janelaHoras: 48, exigePasse: false }, guto: { boasVindas: "Olá {produto}" } });
+    { rankingAoVivo: false, passePorLance: true, avisosLider: true, top10: { publico: false, janelaHoras: 48, exigePasse: false }, guto: { boasVindas: "Olá {produto}" } }); // UTAC142 — 2 campos novos (R18-142-C/E)
   assert.deepEqual(configDaEspecial({ rankingAoVivo: "não", top10: { publico: 0, janelaHoras: 0, exigePasse: "x" }, guto: { boasVindas: "x".repeat(601) } }),
     configDaEspecial(null));
   assert.equal(configDaEspecial({ top10: { janelaHoras: 721 } }).top10.janelaHoras, 24);

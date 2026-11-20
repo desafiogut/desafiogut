@@ -1,0 +1,11 @@
+M1 fail=3 RED md5_restaurado=SIM (netlify/functions/_lib/ledger-lance.mjs)
+M2 fail=7 RED md5_restaurado=SIM (netlify/functions/lance-relampago.mjs)
+M3 fail=1 RED md5_restaurado=SIM (netlify/functions/lance-relampago.mjs)
+M4 fail=0 SOBREVIVEU md5_restaurado=SIM (netlify/functions/lance-relampago.mjs)
+M5 fail=2 RED md5_restaurado=SIM (netlify/functions/_lib/lider-especial.mjs)
+M6 fail=1 RED md5_restaurado=SIM (netlify/functions/_lib/lider-especial.mjs)
+M7 fail=1 RED md5_restaurado=SIM (netlify/functions/_lib/lider-especial.mjs)
+M8 fail=1 RED md5_restaurado=SIM (netlify/functions/scheduled-lider-especial.mjs)
+M9 fail=2 RED md5_restaurado=SIM (netlify/functions/_lib/nome-exibicao.mjs)
+M10 fail=1 RED md5_restaurado=SIM (netlify/functions/_lib/ranking-especial.mjs)
+M4 = mutante EQUIVALENTE: a linha 'refConsumoPontos = null' precede um return imediato em todos os ramos (sem efeito observável). Declarado, não é buraco de teste.

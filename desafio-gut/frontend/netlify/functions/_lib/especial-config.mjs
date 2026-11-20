@@ -7,6 +7,10 @@
 //                                          com valor — R18-140-G)                                · omissão: true
 //   top10.janelaHoras    inteiro 1..720    quanto tempo depois do fim a tabela completa se serve · omissão: 24
 //   top10.exigePasse     boolean           a tabela completa (Meus Ativos) exige Passe           · omissão: true
+//   passePorLance        boolean           cada lance consome 1 Passe Relâmpago, além dos pontos
+//                                          (UTAC142, R18-142-C)                                   · omissão: true
+//   avisosLider          boolean           GUTO avisa o líder do menor lance único, por janela
+//                                          (UTAC142, R18-142-E)                                   · omissão: true
 //   guto.boasVindas      texto ≤ 600       frase de boas-vindas do GUTO; aceita {produto} e
 //                                          {apuracao}                                            · omissão: a do UTAC140
 //
@@ -16,6 +20,8 @@ import { EDICAO_ESPECIAL_RE, msDe } from "./edicao-janela.mjs";
 
 export const CONFIG_ESPECIAL_PADRAO = Object.freeze({
   rankingAoVivo: true,
+  passePorLance: true, // UTAC142 (R18-142-C)
+  avisosLider: true,   // UTAC142 (R18-142-E)
   top10: Object.freeze({ publico: true, janelaHoras: 24, exigePasse: true }),
   guto: Object.freeze({ boasVindas: null }),
 });
@@ -35,6 +41,8 @@ export function configDaEspecial(meta) {
   const g = meta && typeof meta.guto === "object" && meta.guto ? meta.guto : {};
   return {
     rankingAoVivo: bool(meta?.rankingAoVivo, P.rankingAoVivo),
+    passePorLance: bool(meta?.passePorLance, P.passePorLance),
+    avisosLider: bool(meta?.avisosLider, P.avisosLider),
     top10: {
       publico: bool(t.publico, P.top10.publico),
       janelaHoras: inteiroEntre(t.janelaHoras, 1, 720, P.top10.janelaHoras),

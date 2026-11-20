@@ -105,6 +105,10 @@ const NOTIF_CARD_KIND = {
   lance_unico:          "lance_unico",
   perdeu_exclusividade: "perdeu_exclusividade",
   voce_venceu:          "voce_venceu",
+  // UTAC142 (Frente E) — líder do menor lance único da especial, avaliado por janela (sem valores).
+  lider_menor_unico:    "lance_unico",
+  lider_voltou:         "lance_unico",
+  lider_perdeu:         "perdeu_exclusividade",
   // MC15.8.1 — indução do Indique e Ganhe (card roxo) + relatório admin.
   indicacao_convertida: "indicacao",
   relatorio_indicacoes: "indicacao",

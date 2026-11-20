@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAppContext, useAppTimer } from "../context/AppContext.jsx";
@@ -34,6 +34,15 @@ import { escolherEspecial, ehEspecial } from "../components/edicao-especial/_est
 import { useT } from "../context/IdiomaContext.jsx";
 
 // UTAC138 — o CardLance lazy da especial saiu: o vidro usa o botão padrão e o lance faz-se na aba Menor Lance Único.
+// UTAC142 (Frente B, pedido do operador) — VOLTA, na variante «embutida» do UTAC141: a acção da especial no Início é o
+// MESMO formulário do «Dar Palpite» e do Menor Lance Único (campo + botão lado a lado, `FormularioAcao`), não um botão
+// centrado que leva à outra aba. Lazy: o Início não carrega o CardLance enquanto não houver especial aberta.
+const CardLance = lazy(() => import("../components/CardLance.jsx"));
+
+/** UTAC142 — reserva a altura da linha do formulário (48 px + rótulo) enquanto o CardLance carrega (CLS 0). */
+function EsqueletoAcao() {
+  return <div aria-hidden="true" data-testid="esqueleto-acao-especial" style={{ height: "4.6rem" }} />;
+}
 
 /**
  * UTAC138 — o botão «⚡ Dar lance» do vidro Relâmpago do Início, extraído SEM mudança para que a edição ESPECIAL use
@@ -180,6 +189,7 @@ export default function Dashboard() {
     // MC94.2 — edição especial: `agendadas` antes da hora, `offsetRelogioMs`
     // para a contagem na hora do servidor; o resto é para o CardLance dela.
     agendadas, offsetRelogioMs, isConnected, ready, abrirModal, desconectar,
+    handleLanceSucesso, // UTAC142 (Frente B) — o lance da especial no Início
   } = useAppContext();
   // UTAC000.17bc (17c/GATE 21) — em que EDIÇÕES o titular deu lance (filtrado pelo token, no servidor).
   const { participacoes } = useMinhasParticipacoes(authToken);
@@ -423,7 +433,22 @@ export default function Dashboard() {
             isMobile={isMobile}
             t={t}
             titulo="⚡ Relâmpago"
-            renderLance={() => <BotaoDarLance encerrada={false} onClick={() => navigate("/mercado")} />}
+            renderLance={({ idEdicao, modalidade: mod, encerrado: fechada }) => (
+              <Suspense fallback={<EsqueletoAcao />}>
+                <CardLance
+                  idEdicao={idEdicao}
+                  variante="embutida"
+                  onLanceSucesso={handleLanceSucesso}
+                  address={address}
+                  isConnected={isConnected}
+                  onConnect={abrirModal}
+                  onDisconnect={desconectar}
+                  encerrado={fechada}
+                  modalidade={mod}
+                  ready={ready}
+                />
+              </Suspense>
+            )}
           />
         ) : estAtiva.emBreve ? (
           // UTAC109f (R18-A) — sem edição o vidro Relâmpago é o MESMO cartão vazio da aba MLC

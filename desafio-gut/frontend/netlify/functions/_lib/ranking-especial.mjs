@@ -11,6 +11,7 @@
 
 import { getSupabase, supabaseConfigurado } from "./supabase-client.mjs";
 import { EDICAO_ESPECIAL_RE } from "./edicao-janela.mjs";
+import { formatarNome } from "./nome-exibicao.mjs"; // UTAC142 (Frente D) — só «PrimeiroNome I.», nunca e-mail
 
 const ENDERECO_RE = /^0x[0-9a-fA-F]{40}$/;
 
@@ -31,15 +32,17 @@ function cliente(dep) {
  * Idempotente: o mesmo `lanceId` devolve a mesma posição (função SQL sob advisory lock).
  * @returns {Promise<{ok:true, posicao:number} | {ok:false, code:string}>}
  */
-export async function registarNoRankingEspecial({ lanceId, edicaoId, endereco }, { supabase } = {}) {
+export async function registarNoRankingEspecial({ lanceId, edicaoId, endereco, nomeExibicao }, { supabase } = {}) {
   if (typeof edicaoId !== "string" || !EDICAO_ESPECIAL_RE.test(edicaoId)) return { ok: false, code: "nao_especial" };
   const curto = encurtar(endereco);
   if (typeof lanceId !== "string" || !lanceId || !curto) return { ok: false, code: "dados_invalidos" };
   const sb = cliente(supabase);
   if (!sb?.rpc) return { ok: false, code: "supabase_indisponivel" };
   try {
+    // UTAC142 — `p_nome` só vai quando há nome de pessoa reduzido; sem ele a chamada fica igual à do UTAC140.
+    const nome = formatarNome(nomeExibicao);
     const { data, error } = await sb.rpc("registar_lance_especial", {
-      p_id: lanceId, p_edicao_id: edicaoId, p_endereco: curto,
+      p_id: lanceId, p_edicao_id: edicaoId, p_endereco: curto, ...(nome ? { p_nome: nome } : {}),
     });
     if (error) return { ok: false, code: "registo_falhou" };
     return { ok: true, posicao: Number(data) };

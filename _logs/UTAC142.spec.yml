@@ -1,0 +1,47 @@
+schema: utac/1
+name: UTAC142
+title: "Edição Especial — débito 1-2 pts, layout do Início, Passe, nome na tabela, avisos do GUTO"
+type: produto
+baseline: 3bbdebe   # HEAD medido; árvore com UTAC141 (Hermes) POR COMMITAR e já publicado
+motivo: >-
+  O operador reporta 5 defeitos na Especial aberta (débito <3, botão centrado no Início,
+  Passe não consumido, endereço em vez de nome, GUTO sem avisos de menor lance único).
+frentes:
+  - id: A
+    nome: Débito de 1 e 2 pontos (lance-relampago + ledger-lance) + teste de regressão
+    entrega: [netlify/functions/__tests__ (teste novo), código só se o SEG-1 achar a trava]
+  - id: B
+    nome: Início — cartão da Especial com FormularioAcao (input + botão lado a lado)
+    entrega: [src/pages/Dashboard.jsx, teste]
+  - id: C
+    nome: Consumo de Passe ao participar na Especial
+    entrega: [lance-relampago.mjs, _lib/passes-inventario.mjs, teste]  # depende de R18-142-C
+  - id: D
+    nome: Tabela — «PrimeiroNome I.» (fallback endereço curto)
+    entrega: [src/lib util nova, TabelaLances.jsx, ranking_especial/RPC]  # depende de R18-142-D
+  - id: E
+    nome: GUTO — avisos menor-único / deixou / voltou (só portadores de Passe)
+    entrega: [_lib/notificacoes-usuario.mjs, lance-relampago.mjs ramo mainnet, teste]
+autoriza:
+  - editar netlify/functions/ e src/ (ficheiros nomeados)
+  - SELECT no Supabase (inspeção)
+  - adicionar testes
+  - despachar validador adversarial
+proibe:
+  - git add -A
+  - alterar apuração do vencedor (salvo o mínimo para os avisos)
+  - alterar o Regulamento
+  - tocar no contrato on-chain
+  - migração SQL sem autorização explícita (ST3)
+  - stage/commit de ficheiros do UTAC141 (outra sessão)
+dependencias:
+  - UTAC141 fechado (commit) OU decisão do operador sobre a árvore partilhada
+  - R18-142-A..E (respostas às perguntas do SEG-1)
+regras_activas: [E, T, G, L, S, A, P, AU, ST, HI]
+regras_extra: []
+stop_conditions_extra: [ST3]
+ressalvas:
+  - HI5 — máximo 2 h
+  - A14 — RAM livre >= 1500 MB antes da suíte
+  - Frente E não pode expor valores antes da apuração
+subdivisoes: []

@@ -252,12 +252,15 @@ describe("MC94.2/MC94.3.1 · Dashboard — a edição especial NO SLOT", () => {
   // UTAC138 (operador: «a edição precisa entrar no padrão que já temos, não ter um próprio») — no Início a especial
   // aberta mostra o MESMO botão «⚡ Dar lance» da edição activa (leva à aba Menor Lance Único, que monta o
   // formulário da especial). Antes: o Início montava um `CardLance` lazy da especial dentro do slot.
-  test("UTAC138 · na hora (já em `edicoes`): o vidro mostra o botão padrão «⚡ Dar lance», sem formulário próprio", () => {
+  // UTAC142 (Frente B, pedido do operador) — invertido: o UTAC138 pôs aqui o botão centrado «⚡ Dar lance» (→ /mercado);
+  // o operador mandou usar o formulário PADRÃO (o do «Dar Palpite»: campo + botão lado a lado = CardLance «embutida»,
+  // lazy). Em SSR sai o esqueleto que reserva a altura; a montagem prova-se em utac142-inicio-especial B2.
+  test("UTAC138→UTAC142 · na hora (já em `edicoes`): o vidro monta o formulário padrão (esqueleto em SSR), não o botão centrado", () => {
     const html = renderizar({ edicoes: { "R-1": R1, "ESPECIAL-AIRFRYER": especial(Date.now() - 60_000, { status: "aberto" }) } });
     assert.match(html, /data-estado="activa"/);
-    assert.match(texto(html), /⚡ Dar lance/);
-    assert.doesNotMatch(html, /data-stub="card-lance"/, "o Início voltou a montar um formulário próprio da especial");
-    assert.doesNotMatch(html, /aria-busy="true"/, "voltou o espaço reservado do CardLance lazy");
+    assert.doesNotMatch(texto(html), /⚡ Dar lance/);
+    assert.match(html, /data-testid="esqueleto-acao-especial"/);
+    assert.doesNotMatch(html, /aria-busy="true"/, "voltou o espaço reservado antigo do CardLance lazy");
   });
 
   test("na hora, a especial NÃO é desenhada TAMBÉM nas prateleiras (UTAC108h.2)", () => {

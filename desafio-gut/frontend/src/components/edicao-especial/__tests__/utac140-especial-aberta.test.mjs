@@ -27,15 +27,18 @@ describe("UTAC140 · lances ao vivo na TabelaLances PADRÃO (Frente E — «o la
     const { lancesOcultosDoRanking } = await import("../_ranking-especial.js");
     const l = lancesOcultosDoRanking(RPC);
     assert.deepEqual(l, [
-      { lanceId: "ranking-1", enderecoCurto: "0x1111…aaaa", valor: null, oculto: true, repetido: null },
-      { lanceId: "ranking-2", enderecoCurto: "0x2222…bbbb", valor: null, oculto: true, repetido: null },
+      // UTAC142 (Frente D) — + `nomeExibicao` (null sem nome do servidor ⇒ a tabela mostra o endereço).
+      { lanceId: "ranking-1", enderecoCurto: "0x1111…aaaa", nomeExibicao: null, valor: null, oculto: true, repetido: null },
+      { lanceId: "ranking-2", enderecoCurto: "0x2222…bbbb", nomeExibicao: null, valor: null, oculto: true, repetido: null },
     ]);
     assert.equal(JSON.stringify(l).includes("777777"), false);
   });
   test("linhasDoRanking: descarta lixo, ordena, e o objecto devolvido não tem valor", async () => {
     const { linhasDoRanking } = await import("../_ranking-especial.js");
     const l = linhasDoRanking([{ posicao: 3, endereco: "0x3…c" }, null, { posicao: "x", endereco: "a" }, { posicao: 1, endereco: "" }, { posicao: 1, endereco: "0x1…a", valor_oculto: 5 }]);
-    assert.deepEqual(l, [{ posicao: 1, endereco: "0x1…a" }, { posicao: 3, endereco: "0x3…c" }]);
+    assert.deepEqual(l, [{ posicao: 1, endereco: "0x1…a", nome: null }, { posicao: 3, endereco: "0x3…c", nome: null }]); // UTAC142 + nome
+    assert.equal(linhasDoRanking([{ posicao: 1, endereco: "0x1…a", nome_exibicao: "Ana S." }])[0].nome, "Ana S.");
+    assert.equal(linhasDoRanking([{ posicao: 1, endereco: "0x1…a", nome_exibicao: "ana@x.com" }])[0].nome, null, "nunca e-mail");
     assert.deepEqual(linhasDoRanking(null), []);
   });
   test("MercadoLances: a especial usa a TabelaLances PADRÃO com os lances ao vivo — sem layout próprio (contrato da fonte)", () => {

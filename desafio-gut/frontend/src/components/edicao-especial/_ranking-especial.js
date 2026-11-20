@@ -1,11 +1,13 @@
 // UTAC140 (Frente E) — lógica PURA da tabela ao vivo da especial (sem React: testável com node --test).
 import { inteiroSeguro } from "../meus-ativos/_estilo.js";
+import { formatarNome } from "../../lib/nomeExibicao.js"; // UTAC142
 
 /** PURO — linhas desenháveis a partir da resposta da RPC. Ignora lixo; NUNCA devolve o valor. */
 export function linhasDoRanking(data) {
   return (Array.isArray(data) ? data : [])
     .filter((l) => l && inteiroSeguro(l.posicao) !== null && typeof l.endereco === "string" && l.endereco)
-    .map((l) => ({ posicao: l.posicao, endereco: l.endereco }))
+    // UTAC142 (Frente D) — o nome vem já reduzido do servidor; volta a passar pelo formatador (defesa: nunca «@»).
+    .map((l) => ({ posicao: l.posicao, endereco: l.endereco, nome: formatarNome(l.nome_exibicao) }))
     .sort((a, b) => a.posicao - b.posicao);
 }
 
@@ -18,6 +20,7 @@ export function lancesOcultosDoRanking(data) {
   return linhasDoRanking(data).map((l) => ({
     lanceId: `ranking-${l.posicao}`,
     enderecoCurto: l.endereco,
+    nomeExibicao: l.nome, // UTAC142 — null ⇒ a tabela mostra o endereço encurtado
     valor: null,
     oculto: true,
     repetido: null,
