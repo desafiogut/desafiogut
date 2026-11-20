@@ -97,3 +97,10 @@ pedida no Passo 11 do UTAC143 não foi usada: nenhum deploy foi feito no UTAC143
   voltado a abrir em segundo plano): **1732 MB** livres antes · **frontend VERDE 1383/1383** · **backend VERDE 1557/1563** ·
   **VEREDITO: VERDE** (`_logs/UTAC144_SUITE.txt`). A ressalva acima («não re-corrida») fica **resolvida**. O incumprimento dos
   713 MB fica registado, mas os números passaram a ter uma corrida canónica com o A14 cumprido.
+
+## Push (UTAC144, Passos 8–10)
+- **Passo 8:** o operador respondeu «**AUTORIZO**».
+- **Passo 9:** `git push origin HEAD:main` → `b6365e7..4fef228`, sem força. Commits enviados: `dac478a`, `8eed906`, `85bae10`, `4fef228`
+  (o último, que é o que o Netlify lê, tem «[skip netlify]»).
+- **Passo 10:** `listSiteDeploys` logo a seguir ao push mostrou **nenhum build novo**. O publicado continua a ser
+  `6affdd886ee6aec7c09c99fa` (commit `b6365e7`). `git show origin/main:docs/EDICAO-ESPECIAL-CONFIG.md` contém «1 a cada 3 lances».
