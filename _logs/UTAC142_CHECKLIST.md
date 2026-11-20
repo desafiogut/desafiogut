@@ -14,3 +14,7 @@ Itens 1–5 em produção: commit `b6365e7`, deploy `6affdd88`. Números medidos
   Neste ambiente: `mc9952` 9/9, 0 skipped (amostra saltada por diagnóstico, não por skip). A última suíte canónica completa (UTAC142.2,
   antes deste ajuste) deu backend VERDE 1557/1563 e frontend 2 falhas = estas duas. **A suíte completa não foi re-corrida depois do
   UTAC144** (RAM 713 MB): o «verde» do frontend vem da soma «suíte anterior − as 2 falhas agora isoladas», não de uma corrida nova.
+
+**Actualização (mesmo dia):** a suíte canónica completa foi re-corrida depois do UTAC144, com 1732 MB livres:
+**frontend VERDE 1383/1383 · backend VERDE 1557/1563 · VEREDITO VERDE** (`_logs/UTAC144_SUITE.txt`). O item 6 deixa de
+depender da soma e passa a ter corrida própria.

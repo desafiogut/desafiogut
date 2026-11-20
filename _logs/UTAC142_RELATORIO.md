@@ -93,3 +93,7 @@ pedida no Passo 11 do UTAC143 não foi usada: nenhum deploy foi feito no UTAC143
 - **Checklist do UTAC142:** actualizado em `_logs/UTAC142_CHECKLIST.md`, com os 6/6 itens rastreáveis e os números medidos.
 - **Commit do UTAC144:** `8eed906` (por cima de `dac478a`), com «[skip netlify]». Ainda **sem push**: espera o «AUTORIZO» do Passo 8.
 - ⚠️ **Incumprimento declarado:** os testes dirigidos correram com **713 MB** de RAM livre, abaixo do limiar de 800 MB do UTAC144.
+- **Suíte canónica completa re-corrida depois do UTAC144** (o operador fechou programas; o executor fechou o Edge, que tinha
+  voltado a abrir em segundo plano): **1732 MB** livres antes · **frontend VERDE 1383/1383** · **backend VERDE 1557/1563** ·
+  **VEREDITO: VERDE** (`_logs/UTAC144_SUITE.txt`). A ressalva acima («não re-corrida») fica **resolvida**. O incumprimento dos
+  713 MB fica registado, mas os números passaram a ter uma corrida canónica com o A14 cumprido.
