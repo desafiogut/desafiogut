@@ -27,3 +27,8 @@ Executor: Claude Code (Opus 5.5) · 2026-11-20 · baseline `42ebf6e` = origin/ma
 - Commit `9646895` (local, **sem push**). Rascunho `6affd18f…` publicado: `CDN requesting 0 files and 4 functions`, o frontend é igual ao da produção.
 - `netlify deploy --prod --build` foi **negado pela permissão** do Claude Code (é uma mudança nova; a autorização era do UTAC142). Falta o OK explícito do operador para a produção e para o push.
 - Pendentes: suíte completa (RAM 906 MB; fechar o Edge foi negado) e o validador adversarial (SEG4 do UTAC142 e do 142.1).
+
+## Publicação (autorizada pelo operador: «pode publicar em produção e fazer o push»)
+- Produção `6affd2dba1f9a2847b28b51d` (`getSite.published_deploy` = este, `ready`, 04:59:43Z): `CDN requesting 0 files and 4 functions`.
+  Bundle `index-FfbOXuQZ.js` (frontend igual); `lance-relampago` responde 405 a GET e 401 a POST sem token.
+- Limite declarado: a versão da função não é observável por HTTP sem sessão. A prova é o deploy publicado conter o commit `9646895`.
