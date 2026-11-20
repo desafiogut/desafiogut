@@ -5,6 +5,7 @@
 // aceitam-se DOMÍNIOS, e `resolvesToBlocked` resolve o DNS e valida cada endereço (fail-closed).
 // ⚠️ Mede-se sobre CÓDIGO (stripper): os comentários nomeiam payloads, `:`, `hex`, etc.
 import { test } from "node:test";
+import { lookup } from "node:dns/promises"; // UTAC144 — condição de execução da amostra instável (ver amostraSemDns)
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
@@ -19,6 +20,15 @@ const codigo = (s) => s.replace(/\{\/\*[\s\S]*?\*\/\}/g, "").replace(/\/\*[\s\S]
   .split(/\r?\n/).map((l) => l.replace(/(^|[^:"'`\\])\/\/.*$/, "$1")).join("\n");
 
 const { isBlockedHostname, isBlockedIp } = await import("file://" + resolve(FE, "netlify/functions/img-proxy.mjs").replace(/\\/g, "/"));
+// UTAC144 (R18-144-C) — `exemplo.com` é um domínio de TERCEIROS que responde de forma instável nos resolvedores públicos
+// (medido: @8.8.8.8 sem endereço, @1.1.1.1 timeout e depois 104.247.81.99, lookup local ENOTFOUND). Só ESSA amostra é saltada,
+// e só quando não resolve no momento; os ataques via sslip.io e os outros CDNs correm sempre e continuam estritos.
+const AMOSTRA_INSTAVEL = "exemplo.com";
+async function amostraSemDns(t, host, resolver = lookup) {
+  if (host !== AMOSTRA_INSTAVEL) return false;
+  try { await resolver(host); return false; }
+  catch (e) { t.diagnostic(`${host} sem DNS neste ambiente (${e?.code ?? e}) — amostra saltada`); return true; }
+}
 const passaria = (alvo) => { const u = new URL(alvo); if (isBlockedHostname(u.hostname)) return "403"; const l = /^\d+\.\d+\.\d+\.\d+$/.test(u.hostname) || u.hostname.includes(":"); return l ? "PASSA(dns saltada)" : "PASSA(dns corre)"; };
 
 test("controlo positivo do instrumento: a função REAL foi importada", () => {
@@ -82,7 +92,7 @@ test("MC99.5.2.1c/INVERSÃO · (d) os internos classicos continuam recusados", (
   }
 });
 
-test("MC99.5.2.1d → 1e/DNS · (f) caminho do DNS: AAAA-only bloqueado, dominios legitimas passam", async () => {
+test("MC99.5.2.1d → 1e/DNS · (f) caminho do DNS: AAAA-only bloqueado, dominios legitimas passam", async (t) => {
   // A lacuna que o 5.º validador explorou: o caminho do DNS nao tinha teste, e o sslip.io (DNS
   // PUBLICO que codifica o endereco no nome) chegava ao fetch. Decisao do operador (R18) na 6.ª
   // geração: ignorar AAAA e validar A. ⚠️ ESSA regra FOI REFUTADA (MC99.5.2.1e) pelo «nome
@@ -96,9 +106,13 @@ test("MC99.5.2.1d → 1e/DNS · (f) caminho do DNS: AAAA-only bloqueado, dominio
     assert.equal(await resolvesToBlocked(host), true, host + " NAO e bloqueado (exploit do DNS reaberto)");
   }
   // (b) dominios legitimos: PASSA (o CDN dual-stack tem de continuar a funcionar)
+  let legitimosF = 0; // UTAC144 — o salto nunca pode esvaziar a prova
   for (const host of ["i.imgur.com", "cdn.jsdelivr.net", "exemplo.com"]) {
+    if (await amostraSemDns(t, host)) continue; // UTAC144 — só a amostra instável, só sem DNS
     assert.equal(await resolvesToBlocked(host), false, host + " foi BLOQUEADO (o proxy de imagens morre)");
+    legitimosF++;
   }
+  assert.ok(legitimosF >= 2, `só ${legitimosF} domínio(s) legítimo(s) verificado(s) — o salto do UTAC144 cresceu`);
   // (c) o desenho: autoriza CADA endereco devolvido e isola os IPv4 para fixar
   const c = codigo(ler(FE + "/netlify/functions/img-proxy.mjs"));
   assert.match(c, /const v4 = results\.filter\(\(r\) => !r\.address\.includes\(":"\)\)/,
@@ -108,7 +122,7 @@ test("MC99.5.2.1d → 1e/DNS · (f) caminho do DNS: AAAA-only bloqueado, dominio
   assert.match(c, /isBlockedIp\(r\.address\)/, "o isBlockedIp deixou de ser aplicado aos enderecos do DNS");
 });
 
-test("MC99.5.2.1e/7.ª GERAÇÃO · (g) o «nome prefixado» deixou de passar, e a ligação é FIXADA", async () => {
+test("MC99.5.2.1e/7.ª GERAÇÃO · (g) o «nome prefixado» deixou de passar, e a ligação é FIXADA", async (t) => {
   // O ataque que REFUTOU a 6.ª geração: um A público (isca que a validação aprova) + um AAAA
   // interno (o alvo, escolhido pela 2.ª resolução do próprio fetch). Agora resolve-se UMA vez, e
   // o endereço que o conector usa é o que NÓS devolvemos — o fetch já não escolhe.
@@ -130,12 +144,16 @@ test("MC99.5.2.1e/7.ª GERAÇÃO · (g) o «nome prefixado» deixou de passar, e
     assert.equal(d.pin, null, host + " foi bloqueado mas devolveu um endereco para fixar");
   }
   // (b) legítimos dual-stack: passam E devolvem um IPv4 PÚBLICO — é esse endereço que a ligação usa
+  let legitimosG = 0; // UTAC144 — o salto nunca pode esvaziar a prova
   for (const host of ["cdn.jsdelivr.net", "i.imgur.com", "exemplo.com"]) {
+    if (await amostraSemDns(t, host)) continue; // UTAC144 — só a amostra instável, só sem DNS
+    legitimosG++;
     const d = await resolverEEscolher(host);
     assert.equal(d.bloqueado, false, host + " foi BLOQUEADO (o proxy de imagens morre)");
     assert.match(String(d.pin), /^\d+\.\d+\.\d+\.\d+$/, host + " nao devolveu um IPv4 publico para fixar: " + d.pin);
     assert.equal(isBlockedIp(d.pin), false, host + " devolveu para fixar um endereco que a guarda considera bloqueado: " + d.pin);
   }
+  assert.ok(legitimosG >= 2, `só ${legitimosG} domínio(s) legítimo(s) verificado(s) — o salto do UTAC144 cresceu`);
   // (c) o desenho: UM Agent com lookup PRÓPRIO que devolve o endereço fixado (a ligação não resolve)
   const c = codigo(ler(FE + "/netlify/functions/img-proxy.mjs"));
   assert.match(c, /connect: \{ lookup: lookupValidado \}/, "falta o connect.lookup — a decisao deixou de estar na ligacao");
@@ -158,4 +176,13 @@ test("MC99.5.2/gate · o texto legal esta atras de um botao (sem resumo), FECHAD
   assert.equal((c.match(/type="checkbox"/g) || []).length, 4, "esperava 4 aceites");
   assert.ok(!/maxHeight|overflowY/.test((c.match(/scrollBox:\s*\{([\s\S]*?)\n\s*\}/) || ["", ""])[1] || "x"),
     "o texto volta a ficar cortado ao expandir");
+});
+
+// UTAC144 (R18-144-C) — o salto é ESTREITO: qualquer outro host sem DNS continua a contar (falha o teste que o usa).
+test("UTAC144 · o salto por DNS vale SÓ para a amostra exemplo.com (outro host sem DNS não é saltado)", async (t) => {
+  assert.equal(await amostraSemDns(t, "nao-existe.invalid"), false, "um host que não é a amostra foi saltado");
+  assert.equal(await amostraSemDns(t, "i.imgur.com"), false);
+  // com DNS a funcionar, a amostra CORRE (o salto é condicional, não permanente)
+  assert.equal(await amostraSemDns(t, "exemplo.com", async () => ({ address: "104.247.81.99", family: 4 })), false);
+  assert.equal(await amostraSemDns(t, "exemplo.com", async () => { throw Object.assign(new Error("x"), { code: "ENOTFOUND" }); }), true);
 });

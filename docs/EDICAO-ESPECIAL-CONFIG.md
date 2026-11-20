@@ -27,3 +27,18 @@ guardas `especialAindaSecreta` do `chatbot.mjs`, não num campo da edição.
 
 Para escrever: `netlify blobs:get edicoes-metadata <ID>` → editar o JSON → `netlify blobs:set edicoes-metadata <ID> --input <ficheiro> --force`
 (o padrão está em `scripts/utac140-abrir-especial.mjs`).
+
+## Regra do Passe na Edição Especial (UTAC142.1)
+
+- O lance gasta **só pontos de lance**: o valor do lance em pontos. Nunca exige Passe.
+- Quem tem Passe Relâmpago gasta **1 a cada 3 lances** na especial (no 3.º, 6.º, 9.º…). O Passe só se gasta depois de o lance
+  estar gravado; por isso nunca há Passe a devolver.
+- Quem **não tem Passe continua a poder dar lance**, só com pontos. Nessa altura não se gasta nada e o lance passa.
+- O bónus de **+100 pontos** de lance continua a ser dado **na compra** do Passe Relâmpago (Regulamento v6.1, Art. 7º).
+- **Substituição registada:** o spec original do UTAC142 pedia «1 Passe por participação» (R18-142-C, implementada como
+  «1 Passe por lance» com a flag `passePorLance`). O operador substituiu-a no UTAC142.1 (R18-142.1-A/B) por esta regra. A flag
+  `passePorLance` **já não existe no código**.
+- **Config por edição:** `passeACadaLances` no Blob `edicoes-metadata` (inteiro 0..100; omissão `3`; `0` desliga o consumo).
+- **Onde vive:** `netlify/functions/_lib/passe-a-cada-lances.mjs` (contador por edição e endereço, Blob `especial-lances-passe`,
+  escrita condicional por ETag), chamado por `lance-relampago.mjs`. Em produção desde `9646895`; o commit actual de produção
+  é `b6365e7`.

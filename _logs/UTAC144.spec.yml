@@ -1,0 +1,19 @@
+schema: utac/1
+name: UTAC144
+title: "Fecho das ressalvas do UTAC142 — regra real do Passe documentada + skip condicional do host de DNS instável"
+type: saneamento
+baseline: dac478a   # local, por cima de origin/main b6365e7 (= produção 6affdd88)
+motivo: >-
+  O checklist do UTAC142 ficou com 2 itens por fechar: a regra do Passe (mudada no UTAC142.1) e a «suíte verde»
+  (2 falhas de DNS do mc9952 com exemplo.com). Fechar sem esconder nenhuma das duas.
+frentes:
+  - id: A
+    nome: Documentar a regra real do Passe + checklist do UTAC142
+    entrega: [docs/EDICAO-ESPECIAL-CONFIG.md, _logs/UTAC142_CHECKLIST.md]
+  - id: B
+    nome: mc9952 (f)/(g) — saltar SÓ a amostra exemplo.com quando não resolve
+    entrega: [desafio-gut/frontend/src/__tests__/mc9952-seguranca-gate.test.mjs]
+autoriza: [docs, o teste mc9952, logs/relatório, commit, push com [skip netlify] depois de AUTORIZO]
+proibe: [código de produção, regra do Passe, deploy, git add -A, package-lock, push -f]
+dependencias: [UTAC142/142.1/142.2 publicados (b6365e7)]
+regras_activas: [E, T, G, P, AU, ST, HI]

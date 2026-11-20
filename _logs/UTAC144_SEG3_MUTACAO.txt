@@ -1,0 +1,4 @@
+mutante [if (host !== AMOSTRA_INSTAVEL) return false; → ] fail=1 RED md5=SIM
+mutante [try { await lookup(host); return false; } → try { await lookup(host); return true; }] fail=0 SOBREVIVEU md5=SIM
+mutante [if (host !== AMOSTRA_INSTAVEL) return false; → if (host !== AMOSTRA_INSTAVEL) return true;] fail=3 RED md5=SIM
+mutante 2 (2.ª ronda, resolvedor injectável) [saltar mesmo com DNS] fail=1 RED md5=SIM

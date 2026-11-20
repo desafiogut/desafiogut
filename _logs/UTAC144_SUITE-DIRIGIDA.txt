@@ -1,0 +1,13 @@
+RAM livre: 713 MB
+src/components/edicao-especial/__tests__/utac140-especial-aberta.test.mjs :: ℹ tests 12 ℹ pass 12 ℹ fail 0 ℹ skipped 0 
+src/pages/__tests__/Dashboard.test.mjs :: ℹ tests 54 ℹ pass 54 ℹ fail 0 ℹ skipped 0 
+src/pages/__tests__/utac142-inicio-especial.test.mjs :: ℹ tests 3 ℹ pass 3 ℹ fail 0 ℹ skipped 0 
+src/__tests__/mc9952-seguranca-gate.test.mjs :: ℹ tests 9 ℹ pass 9 ℹ fail 0 ℹ skipped 0 
+_tests/utac140-especial-aberta.test.mjs :: tests 20 pass 20 fail 0 skipped 0
+_tests/utac142-debito-1-2.test.mjs :: tests 7 pass 7 fail 0 skipped 0
+_tests/utac142-especial-passe.test.mjs :: tests 10 pass 10 fail 0 skipped 0
+_tests/utac142-lider-especial.test.mjs :: tests 14 pass 14 fail 0 skipped 0
+_tests/utac142-nome-exibicao.test.mjs :: tests 7 pass 7 fail 0 skipped 0
+(as 5 linhas do backend foram transcritas da saída do terminal: o `tee` apontava para um caminho relativo errado a partir de netlify/functions)
+⚠️ INCUMPRIMENTO DECLARADO: a RAM livre no arranque era 713 MB, abaixo do limiar de 800 MB do UTAC144. O executor mediu, mas não parou
+antes de correr os testes. Todos ficaram verdes; os números valem, a regra não foi cumprida.
