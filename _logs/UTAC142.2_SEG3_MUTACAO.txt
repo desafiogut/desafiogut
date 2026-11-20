@@ -1,0 +1,2 @@
+P1 fail=2 RED md5_restaurado=SIM (netlify/functions/_lib/apuracao-especial.mjs)
+P2 fail=1 RED md5_restaurado=SIM (netlify/functions/lance-relampago.mjs)

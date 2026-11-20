@@ -90,7 +90,9 @@ test("V-B1 nome com «@» (o userLabel de quem entra por e-mail) não é publica
   const r = await M.apurarEspecial(ID, { agoraMs: FIM + M.MARGEM_FECHO_MS + 1 });
   assert.equal(r.resultado.vencedor.nome, null);
   assert.equal(r.resultado.vencedor.endereco, "0x0000…0001");
-  assert.equal(r.resultado.top10[1].nome, "Ana Souza", "um nome normal continua a sair, aparado");
+  // UTAC142.2 (decisão do operador) — o nome normal sai REDUZIDO a «PrimeiroNome I.» (era o nome completo, aparado).
+  assert.equal(r.resultado.top10[1].nome, "Ana S.", "um nome normal sai como «PrimeiroNome I.»");
+  assert.equal(storeDe(M.STORE_RESULTADOS).mem.get(ID).includes("Souza"), false, "o apelido completo não é publicado");
   assert.equal(r.resultado.top10[2].nome, null);
   const gravado = storeDe(M.STORE_RESULTADOS).mem.get(ID);
   assert.equal(gravado.includes("@"), false, "o Blob definitivo não guarda o e-mail");

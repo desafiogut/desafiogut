@@ -30,6 +30,7 @@ import { getLances } from "./data-store.mjs";
 import { buscarEdicao } from "./edicoes-core.mjs";
 import { EDICAO_ESPECIAL_RE, msDe } from "./edicao-janela.mjs";
 import { revelarRankingEspecial } from "./ranking-especial.mjs"; // UTAC140 — revela os valores do ranking ao vivo
+import { formatarNome } from "./nome-exibicao.mjs"; // UTAC142.2 — Top 10 e vencedor com «PrimeiroNome I.»
 
 export const STORE_RESULTADOS = "edicoes-resultados";
 export const TOP_N = 10;
@@ -50,13 +51,12 @@ export function encurtarEndereco(e) {
 
 const valorValido = (v) => Number.isSafeInteger(v) && v >= 1;
 
-/** UTAC138-SEG4 — nome publicável no Top 10 público: texto aparado (≤ 80) e SEM «@» (um e-mail é dado
- *  pessoal — LGPD — e é o que o frontend envia como nomeExibicao a quem entra por e-mail). */
-const nomePublico = (n) => {
-  if (typeof n !== "string") return null;
-  const t = n.trim().slice(0, 80);
-  return t && !t.includes("@") ? t : null;
-};
+/** UTAC138-SEG4 — nome publicável no Top 10 público: SEM «@» (um e-mail é dado pessoal — LGPD — e é o que o
+ *  frontend envia como nomeExibicao a quem entra por e-mail).
+ *  UTAC142.2 (decisão do operador) — e REDUZIDO a «PrimeiroNome I.», o mesmo da tabela ao vivo
+ *  (`_lib/nome-exibicao.mjs`). Era o nome completo aparado a 80 caracteres. Também cobre os lances antigos do
+ *  Key-Per-Bid, gravados com o nome cru antes de a redução passar a ser feita na origem. */
+const nomePublico = (n) => formatarNome(n);
 
 /**
  * PURO. Vencedor + Top N dos menores lances ÚNICOS + métricas, a partir da lista de lances.

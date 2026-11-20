@@ -43,6 +43,7 @@ import { novoSal, hashCompromisso } from "./_lib/compromisso-lance.mjs"; // UTAC
 import { configDaEspecial } from "./_lib/especial-config.mjs"; // UTAC140b — `rankingAoVivo` vem da edição
 import { consumirPasse } from "./_lib/passes-inventario.mjs"; // UTAC142.1 — 1 Passe a cada N lances na especial (opcional)
 import { contarLanceEConsumirPasse, STORE_CONTAGEM } from "./_lib/passe-a-cada-lances.mjs"; // UTAC142.1
+import { formatarNome } from "./_lib/nome-exibicao.mjs"; // UTAC142.2 — o nome é reduzido na origem
 
 const LANCE_MIN_CENTAVOS = 1;
 const LANCE_MAX_CENTAVOS = 999999;
@@ -154,9 +155,10 @@ export default async (req) => {
   const idempotencyKey = typeof body.idempotencyKey === "string" && body.idempotencyKey.length > 0
     ? body.idempotencyKey.slice(0, 66)
     : null;
-  const nomeExibicao   = typeof body.nomeExibicao === "string"
-    ? body.nomeExibicao.slice(0, 80).trim() || null
-    : null;
+  // UTAC142.2 (decisão do operador) — guarda-se SÓ «PrimeiroNome I.» (ou null): nunca o nome completo nem o e-mail
+  // que o app manda quando a conta não tem nome do Google. Vale para o Key-Per-Bid, a idempotência, o ranking ao
+  // vivo e a resposta. Era: `body.nomeExibicao.slice(0, 80).trim() || null`.
+  const nomeExibicao   = formatarNome(body.nomeExibicao);
 
   console.info("[lance-relampago] início", {
     endereco: mascararEndereco(endereco), valorCentavos, edicaoId, idem: !!idempotencyKey,

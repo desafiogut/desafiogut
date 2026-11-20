@@ -1,0 +1,20 @@
+schema: utac/1
+name: UTAC142.2
+title: "Correcções do SEG4 do UTAC142 (patches do validador) + nome reduzido no resultado final e na origem"
+type: produto
+baseline: 4961aa8
+motivo: >-
+  O validador independente aprovou com ressalvas e corrigiu 2 defeitos no branch dele. O operador mandou aplicar,
+  publicar e reduzir também o nome do Top 10/vencedor (e do Key-Per-Bid) a «PrimeiroNome I.».
+frentes:
+  - id: A
+    nome: Aplicar e5ef05a + 99d467e (fast-forward de utac142-val)
+    entrega: [scheduled-lider-especial.mjs, _lib/nome-exibicao.mjs, src/lib/nomeExibicao.js, testes]
+  - id: B
+    nome: Nome reduzido no resultado final (apuração) e na origem (lance-relampago)
+    entrega: [_lib/apuracao-especial.mjs, lance-relampago.mjs, _tests/utac142-nome-exibicao, _tests/utac138-seg4-validador]
+autoriza: [editar os ficheiros nomeados, aplicar os patches, push + deploy (operador)]
+proibe: [git add -A, Regulamento, contrato on-chain, migração]
+dependencias: [UTAC142 SEG4 = APROVADO COM RESSALVAS (_logs/UTAC142_SEG4_VALIDADOR.md)]
+regras_activas: [E, T, G, L, S, A, P, AU, ST, HI]
+ressalvas: [A14 — RAM livre >= 1500 MB antes da suíte]

@@ -1,0 +1,4 @@
+LIVRE_ANTES_SUITE_MB: 1585
+frontend: VERMELHO 2 falha(s)
+backend: VERDE 1557/1563 pass
+VEREDITO: VERMELHO

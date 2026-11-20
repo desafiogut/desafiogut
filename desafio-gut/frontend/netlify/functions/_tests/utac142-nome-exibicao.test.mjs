@@ -75,3 +75,23 @@ test("D5 · migração: coluna com CHECK sem «@», grant de coluna ao anon, RPC
   assert.match(sql, /grant execute on function public\.registar_lance_especial\(text, text, text, text\) to service_role;/);
   assert.doesNotMatch(sql, /registar_lance_especial[^;]*to anon/);
 });
+
+// ── UTAC142.2 (decisão do operador) — o nome é reduzido também no resultado final e na ORIGEM ─────────────────────
+test("D6 · apuração: vencedor e Top 10 saem com «PrimeiroNome I.»; e-mail e lixo caem para o endereço (null)", async () => {
+  const { calcularResultado } = await import("../_lib/apuracao-especial.mjs");
+  const e = (n) => "0x" + String(n).padStart(40, "0");
+  const r = calcularResultado([
+    { endereco: e(1), valorCentavos: 2, nomeExibicao: "Maria Clara Souza" },
+    { endereco: e(2), valorCentavos: 5, nomeExibicao: "joao@gmail.com" },
+    { endereco: e(3), valorCentavos: 9, nomeExibicao: "<b>x</b>" },
+  ]);
+  assert.equal(r.vencedor.nome, "Maria C.");
+  assert.deepEqual(r.top10.map((l) => l.nome), ["Maria C.", null, null]);
+  assert.equal(JSON.stringify(r).includes("Souza"), false);
+});
+
+test("D7 · origem: o lance-relampago reduz o nome ANTES de o guardar (fonte vigiada)", () => {
+  const src = readFileSync(new URL("../lance-relampago.mjs", import.meta.url), "utf8").replace(/^\s*\/\/.*$/gm, "");
+  assert.match(src, /const nomeExibicao\s+= formatarNome\(body\.nomeExibicao\);/);
+  assert.doesNotMatch(src, /body\.nomeExibicao\.slice\(/, "voltou o nome cru");
+});
