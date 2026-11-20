@@ -62,3 +62,10 @@ Disco: 17 GB livres (OK). RAM livre: **846 MB < 1500**, portão A14 **fechado** 
 - **R18-142-E** avisos: **ligar na mainnet com limite anti-oráculo**: só portadores de Passe, sem valor no texto, estado reavaliado por janela e não por lance.
 - **R18-142-D** nome: **migração autorizada**; «PrimeiroNome I.» só de nome Google; o servidor recusa `@`; sem nome → endereço curto.
 - A (débito 1/2) e B (layout do Início): sem pergunta. A = teste de regressão (o servidor já debita). B = FormularioAcao no Início.
+
+## Publicação (2026-11-20, autorizada pelo operador: «pode aplicar a migração, fazer o deploy e o push»)
+- Hermes (sessão 20261119_220414_a4e044) recebeu o pedido de parar e respondeu: «UTAC141 parado — sem alterações por gravar».
+- Migração `utac142_ranking_nome` aplicada em produção. Verificado: coluna `nome_exibicao` presente; `registar_lance_especial(p_id, p_edicao_id, p_endereco, p_nome)`; o anon lê o nome mas não `valor_oculto` e não pode executar o registo; 6 linhas intactas.
+- Rascunho `6affcaae…`: guarda de rede igual à da produção anterior (Sepolia só como constante da guarda, mainnet no chunk web3).
+- Produção `6affcbf4…`: `CDN requesting 0 files` (o artefacto do rascunho), bundle `index-FfbOXuQZ.js`. RPC anon devolve `nome_exibicao` com `valor_oculto: null`; `SELECT *` anon → 401; `lance-relampago` 405 (GET); `scheduled-lider-especial` 403 (agendada).
+- Pendente: o validador adversarial (SEG4) e a suíte completa (RAM < 1500 MB, A14).
