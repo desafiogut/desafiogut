@@ -22,3 +22,8 @@ Executor: Claude Code (Opus 5.5) · 2026-11-20 · baseline `42ebf6e` = origin/ma
 
 ## Veredito
 **SEGUIR** (as decisões estão tomadas; sem conflitos por resolver).
+
+## Estado no fim da sessão
+- Commit `9646895` (local, **sem push**). Rascunho `6affd18f…` publicado: `CDN requesting 0 files and 4 functions`, o frontend é igual ao da produção.
+- `netlify deploy --prod --build` foi **negado pela permissão** do Claude Code (é uma mudança nova; a autorização era do UTAC142). Falta o OK explícito do operador para a produção e para o push.
+- Pendentes: suíte completa (RAM 906 MB; fechar o Edge foi negado) e o validador adversarial (SEG4 do UTAC142 e do 142.1).
