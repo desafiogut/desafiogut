@@ -1059,3 +1059,28 @@ Validador adversarial: **REFUTADO na entrega, conteúdo v6 aprovado**. `docs/REG
 ## R14 (append) -- UTAC138 -- EDIÇÃO ESPECIAL RELÂMPAGO, BÓNUS +100, APURAÇÃO INSTANTÂNEA, TOP 10, REGULAMENTO v6.1 (Opus 5.5, 2026-11-18)
 **Decisões R18-138-A..I** (log `_logs/UTAC138_SEG-1_MEDICAO.md`): arte «17 a 30/11» aceite · evento **30/11/2026 19h–20h BRT** · 400 pontos de lance às **28** carteiras de `atividade_utilizadores` (ref `recompensa-teste-v1`, aplicado) · **+100 pontos de lance por Passe Relâmpago** (motivo `bonus-passe-relampago`, risco Gamified Loyalty aceite — DEBT-094) · push + deploy · **AAB v12 adiado** · backend aceita aceite **"3.4"** do APK v11 até ao v12 (DEBT-092) · consolidação on-chain da especial espera a **margem de 65 s** · retry de compra a meio credita o bónus só depois de 2026-11-18T04:00Z · a especial no **cartão padrão** (`CartaoEdicao`) no Início e no Menor Lance Único.
 **Feito:** `ESPECIAL-RELAMPAGO1` no Blob `edicoes-metadata` (arte no bucket `artes-edicoes`; CSP img-src com o Storage do projecto); `_lib/apuracao-especial.mjs` + `GET /resultado-edicao` + cron `scheduled-encerrar-especial` (Top 10 dos menores lances únicos, endereço encurtado, sem e-mails, Blob `edicoes-resultados`); `ResultadosEdicao.jsx` no painel do vencedor; `docs/REGULAMENTO-v6.1.md` (Arts. 6º/7º — **Art. 6º reescrito pelo executor, por rever pelo jurídico: DEBT-093**), gate **3.5**, GUTO no v6.1 byte a byte; PDF/QR v6.1 no Desktop. Validador **APROVADO COM RESSALVAS** (corrigiu margem 3→65 s, e-mails no Top 10, texto «+200», Top 10 contraditório). Backend **1499/1505**, frontend **1346/1346**, mutação **25/25**. Deploy `6afd3105…`, HEAD `e9fff51`. Registo: `_logs/UTAC138_*` · `Desktop/UTAC138-RELATORIO.md`.
+
+## R14 (append) -- UTAC140 -- ESPECIAL ABERTA, RANKING OCULTO AO VIVO, GUTO DE BOAS-VINDAS, TOP 10 COM PASSE, CONFIG DINÂMICA, SAL (Opus 5.5, 2026-11-19/20)
+**Decisões R18-140-A..H** (log `_logs/UTAC140_SEG-1_MEDICAO.md`):
+- **A** manter o fim a 30/11 **20:00 BRT**.
+- **B** posição do ranking ao vivo = **ordem de chegada**.
+- **C** RLS anon só em ESPECIAL-*; sem valor antes da apuração.
+- **D** Top 10 completo sobre a apuração do UTAC138.
+- **E** push + deploy + abrir.
+- **F** RAM abaixo de 1 500 MB.
+- **G** o Top 10 **público mantém os valores**, porque a v12 só os desenha assim.
+- **H** ⛔ **só há DOIS layouts oficiais de edição** (Relâmpago «Dar lance» e Programada «palpite») + a `TabelaLances` com linhas blindadas «🔒». Nunca uma caixa própria; a minha `RankingEspecialOculto` foi publicada e retirada.
+
+**Feito (em produção, `5b4168d`, deploy `6aff97d9…`):**
+- `ESPECIAL-RELAMPAGO1` aberta (`scripts/utac140-abrir-especial.mjs`, com `--reverter`).
+- Supabase `ranking_especial`: anon tem privilégio só em 4 colunas, `valor_oculto` fica NULL até fim + 65 s, RPC `get/registar/revelar_ranking_especial`, Realtime. O anon recebe `new: {}`, medido.
+- `useRankingEspecial` → `TabelaLances`.
+- «A apuração será em:» no cartão.
+- GUTO com o produto e a hora lidos da edição, mais um bloco «ANUNCIADA» antes de abrir.
+- `resultado-edicao?acao=completo` (sessão + Passe + janela) → `Top10EspecialPasse` em Meus Ativos.
+- **Config por edição no Blob** (`rankingAoVivo`, `top10.publico/janelaHoras/exigePasse`, `guto.boasVindas` — `docs/EDICAO-ESPECIAL-CONFIG.md`), sem id fixo no código.
+- **Compromisso on-chain com sal de 32 bytes** (`_lib/compromisso-lance.mjs`). Sem ele, o valor saía por força bruta em 417 ms.
+
+**Provas:** suíte **1362/1362 · 1519/1525**; mutação **18/18**; validador **APROVADO COM RESSALVAS** (sal, config dinâmica e layout não re-validados); SEG6 VERDE.
+
+**Pendências:** selo «Em breve» da tabela vs «Aberta» do cartão (decide o operador); DEBT-098 (lances anteriores ao sal) · DEBT-099 · DEBT-100 (AAB). Registo: `_logs/UTAC140_*` · `Desktop/UTAC140-RELATORIO.md`.

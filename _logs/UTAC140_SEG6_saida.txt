@@ -1,0 +1,28 @@
+# 1.ª corrida — VERMELHO por 2 erros de INSTRUMENTO (lista com a caixa removida por R18-140-H; filtro de testes pelo conteúdo e não pelo caminho — as 4 linhas eram da própria guarda). 2.ª corrida:
+OK  existe desafio-gut/frontend/supabase/migrations/20261119_utac140_ranking_especial.sql
+OK  existe desafio-gut/frontend/supabase/migrations/20261119_utac140b_ranking_especial_dinamico.sql
+OK  existe desafio-gut/frontend/netlify/functions/_lib/ranking-especial.mjs
+OK  existe desafio-gut/frontend/netlify/functions/_lib/especial-config.mjs
+OK  existe desafio-gut/frontend/netlify/functions/_lib/compromisso-lance.mjs
+OK  existe desafio-gut/frontend/src/hooks/useRankingEspecial.js
+OK  existe desafio-gut/frontend/src/components/__tests__/utac140-tabela-especial.test.mjs
+OK  existe desafio-gut/frontend/src/components/meus-ativos/Top10EspecialPasse.jsx
+OK  existe docs/EDICAO-ESPECIAL-CONFIG.md
+OK  existe _logs/UTAC140_SEG4_VALIDADOR.md
+OK  existe _logs/UTAC140_SEG3_MUTACAO.txt
+OK  existe _logs/UTAC140_SUITE.txt
+OK  0 linhas novas com «leilão» (encontradas: 0)
+OK  controlo positivo: com __tests__ incluídos o filtro acha as linhas da guarda (4)
+OK  controlo positivo do filtro de vocabulário
+OK  Regulamento v6.1 intacto
+OK  bónus do Passe Relâmpago intacto
+OK  HEAD = origin/main
+OK  especial ABERTA em produção (em `edicoes`, status aberto)
+OK  termino_em mantido 2026-11-30T23:00Z (20:00 BRT)
+OK  lances-flash blindado (ocultoAteConsolidar)
+OK  Top 10 completo exige sessão (401)
+OK  RPC anon responde sem valores (200)
+OK  anon NÃO lê valor_oculto (HTTP 401)
+OK  disco ≥ 5 GB (16 GB)
+
+SEG6: VERDE
