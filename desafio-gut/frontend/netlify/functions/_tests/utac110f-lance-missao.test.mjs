@@ -134,3 +134,12 @@ test.skip("L6 a missão falha (ok:false) ou LANÇA → o lance continua 201 (fai
   assert.equal(b.status, 201);
   assert.deepEqual(b.corpo.missaoLance, { creditado: false, erro: "excecao" });
 });
+
+// UTAC147-val (SEG4) — o inverso do L1 (em skip): o lance relâmpago aceite já não credita a missão.
+test("V-L1 · UTAC147 (R18-147-C): lance relâmpago 201 ⇒ nenhuma missão creditada e missaoLance:null", async () => {
+  mockEdicao = { id: "RELAMP-1", tipo: "relampago" };
+  const r = await lance();
+  assert.equal(r.status, 201);
+  assert.equal(missao.length, 0, "a missão «1 lance do dia» voltou a creditar");
+  assert.equal(r.corpo.missaoLance, null);
+});

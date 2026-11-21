@@ -537,3 +537,11 @@ test("H5 · não apaga nem reescreve a fila: só deixa de haver dívida (worker 
     "a fila não é tocada: o worker recusa sozinho quando senhas_a_creditar deixa de bater");
   assert.equal(/DROP\s+(TABLE|COLUMN)/i.test(SQLS_CORPO), false, "nada de DDL destrutivo");
 });
+
+// UTAC147-val (SEG4) — o inverso do C1, que ficou em skip: sem isto, religar o bónus da sequência passava a suíte
+// (mutante VM8 do validador: `BONUS_SEQUENCIA_ATIVO = true` SOBREVIVIA).
+test("V-C1 · UTAC147 (R18-147-C): 5 acertos seguidos já NÃO creditam pontos de lance (nem movimento «sequencia»)", async () => {
+  await cincoAcertos();
+  assert.equal(pontosLance(), 0, "o bónus da sequência voltou a creditar");
+  assert.equal(movimentos().filter((m) => m?.motivo === "sequencia").length, 0);
+});

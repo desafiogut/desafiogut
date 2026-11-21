@@ -116,3 +116,12 @@ test("B7 (achado ℹ️1 do SEG4) Supabase PENDURADO → o login responde 200 de
   assert.equal(r.status, 200);
   assert.ok(ms < 3000, `o login demorou ${ms} ms com o Supabase pendurado`);
 });
+
+// UTAC147-val (SEG4) — o inverso do B1 (em skip): o login de uma conta nova já não dá boas-vindas.
+test("V-B1 · UTAC147 (R18-147-C): 1.º login de uma conta nova ⇒ 200 com token e 0 pontos de lance, nenhuma entrada", async () => {
+  const r = await login();
+  assert.equal(r.status, 200);
+  assert.ok(typeof r.corpo.token === "string" && r.corpo.token.length > 20);
+  assert.equal(pontos(END), 0, "as boas-vindas voltaram a creditar");
+  assert.equal(entradas(END).length, 0);
+});

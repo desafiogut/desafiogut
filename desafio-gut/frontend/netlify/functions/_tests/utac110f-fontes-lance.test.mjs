@@ -259,3 +259,15 @@ test.skip("A9 endpoint: um endereço de OUTRA pessoa no corpo é IGNORADO — cr
   assert.equal(r.status, 200);
   assert.deepEqual([pontos(A), pontos(B)], [5, 0]);
 });
+
+// UTAC147-val (SEG4) — o inverso do A7 (em skip): o endpoint continua a responder ao app instalado, mas não credita.
+test("V-A7 · UTAC147 (R18-147-C): login-diario com user-session ⇒ 200 desativado e NADA creditado (2 chamadas)", async () => {
+  const tk = await assinarUserSession(A);
+  for (let i = 0; i < 2; i++) {
+    const r = await login({ token: tk });
+    assert.equal(r.status, 200);
+    assert.deepEqual([r.corpo.creditado, r.corpo.desativado], [false, true]);
+  }
+  assert.equal(pontos(A), 0, "o login diário voltou a creditar");
+  assert.equal(T.linha(A), undefined, "o login diário escreveu no ledger");
+});
