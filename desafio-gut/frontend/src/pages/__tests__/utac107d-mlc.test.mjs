@@ -166,7 +166,8 @@ describe("UTAC107d · Menor Lance Único", () => {
     const label = c.match(/<label\s+htmlFor=\{(\w+)\}[^>]*>\{([^}]+)\}<\/label>/);
     assert.ok(label, "o <label> do lance não está ligado ao campo (htmlFor)");
     assert.equal(label[2].trim(), "rotuloInput", "o rótulo voltou a ser texto cravado");
-    assert.match(c, /const rotuloInput = isProgramado \? "Seu lance \(em centavos\)" : "Seu lance \(em pontos\)";/);
+    // UTAC147 — o lance já não gasta pontos (gasta 1 Passe): o rótulo volta a ser em centavos nos dois ramos.
+    assert.match(c, /const rotuloInput = "Seu lance \(em centavos\)";/);
     assert.match(c, /const placeholderInput = isProgramado \? "Ex: 5 = R\$ 0,05" : "Ex\.: 40";/);
     assert.doesNotMatch(c, />Seu lance \(em centavos\)<\/label>/, "rótulo fixo em centavos (o Relâmpago gasta pontos)");
     const input = c.slice(c.indexOf(label[0])).match(/<input[\s\S]*?\/>/)?.[0] ?? "";

@@ -141,7 +141,7 @@ const CASOS = [
   { nome: "⏳⏳", login: false, lance: false, rodape: "Você ganhou 0 pontos hoje." },
 ];
 for (const k of CASOS) {
-  test(`E · estado ${k.nome}: login ${k.login ? "feito" : "pendente"}, lance ${k.lance ? "feito" : "pendente"}`, async () => {
+  test.skip(`E · estado ${k.nome}: login ${k.login ? "feito" : "pendente"}, lance ${k.lance ? "feito" : "pendente"} [UTAC147 (R18-147-C): as Missões de hoje saíram da Carteira]`, async () => {
     const b = blocoMissoes(await carteiraCom(pontosCom(missoes(k.login, k.lance))));
     assert.match(b, /data-estado="ok"/);
     assert.match(semTags(b), /🎯 Missões de hoje/);
@@ -156,7 +156,7 @@ for (const k of CASOS) {
   });
 }
 
-test("E · BIDIRECCIONAL: cada missão aparece FEITA num estado e PENDENTE noutro (o ecrã não é constante)", async () => {
+test.skip("E · BIDIRECCIONAL: cada missão aparece FEITA num estado e PENDENTE noutro (o ecrã não é constante) [UTAC147 (R18-147-C): as Missões de hoje saíram da Carteira (login/missão saíram do backend)]", async () => {
   const vistos = { login: new Set(), lance: new Set() };
   for (const k of CASOS) {
     const b = blocoMissoes(await carteiraCom(pontosCom(missoes(k.login, k.lance))));
@@ -168,7 +168,7 @@ test("E · BIDIRECCIONAL: cada missão aparece FEITA num estado e PENDENTE noutr
 });
 
 // ═══ N — neutro ════════════════════════════════════════════════════════════════════
-test("N · sem o campo / ilegível / erro do ler-pontos → «—», sem ✓, sem ⏳, sem rodapé (não se inventa)", async () => {
+test.skip("N · sem o campo / ilegível / erro do ler-pontos → «—», sem ✓, sem ⏳, sem rodapé (não se inventa) [UTAC147 (R18-147-C): as Missões de hoje saíram da Carteira (login/missão saíram do backend)]", async () => {
   for (const resp of [pontosCom(undefined), pontosCom(null), pontosCom({ loginFeito: "sim" }), { status: 500, json: {} }]) {
     const b = blocoMissoes(await carteiraCom(resp));
     assert.match(b, /data-estado="neutro"/);
@@ -177,7 +177,7 @@ test("N · sem o campo / ilegível / erro do ler-pontos → «—», sem ✓, se
   }
 });
 
-test("N · sem sessão (authToken null) → nenhum pedido e bloco neutro", async () => {
+test.skip("N · sem sessão (authToken null) → nenhum pedido e bloco neutro [UTAC147 (R18-147-C): as Missões de hoje saíram da Carteira (login/missão saíram do backend)]", async () => {
   definirContexto({ ...CONTEXTO, authToken: null });
   const dup = duploDeFetch(() => pontosCom(missoes(true, true)));
   try {
@@ -191,7 +191,7 @@ test("N · sem sessão (authToken null) → nenhum pedido e bloco neutro", async
 
 // ═══ S — sítio e estrutura ═════════════════════════════════════════════════════════
 // UTAC110j.3 (R18-110j.3-B): os 4 botões passaram para CIMA dos saldos ⇒ a ordem é botões → saldos → missões.
-test("S · dentro do 1.º vidro, DEPOIS dos botões e dos 3 saldos; só visualização (sem controlos)", async () => {
+test.skip("S · dentro do 1.º vidro, DEPOIS dos botões e dos 3 saldos; só visualização (sem controlos) [UTAC147 (R18-147-C): as Missões de hoje saíram da Carteira (login/missão saíram do backend)]", async () => {
   const h = await carteiraCom(pontosCom(missoes(true, false)));
   const vidro = h.indexOf("gut-glass-standard");
   const saldos = h.indexOf('data-saldo="eco-quildo"');
@@ -205,7 +205,7 @@ test("S · dentro do 1.º vidro, DEPOIS dos botões e dos 3 saldos; só visualiz
   assert.doesNotMatch(blocoMissoes(h), /<(button|a|input)\b|role="button"|onclick/i, "o bloco ganhou um controlo");
 });
 
-test("S · os 3 saldos existentes continuam com o mesmo texto (não foram tocados)", async () => {
+test.skip("S · os 3 saldos existentes continuam com o mesmo texto (não foram tocados) [UTAC147 (R18-147-C): as Missões de hoje saíram da Carteira (login/missão saíram do backend)]", async () => {
   const h = await carteiraCom(pontosCom(missoes(true, true)));
   const txt = (nome) => {
     const i = h.indexOf(`data-saldo="${nome}"`);
@@ -231,7 +231,7 @@ const comOpacidade = (hex, a, fundo) => {
 };
 const VIDRO = "#0c1131"; // rgba(13,18,53,.88) sobre o fundo da página (medido no UTAC109h.2)
 
-test("C · feito = amarelo #f5a623 (R18-110f-front-A), pendente = muted; nada de verde no bloco", async () => {
+test.skip("C · feito = amarelo #f5a623 (R18-110f-front-A), pendente = muted; nada de verde no bloco [UTAC147 (R18-147-C): as Missões de hoje saíram da Carteira (login/missão saíram do backend)]", async () => {
   const b = blocoMissoes(await carteiraCom(pontosCom(missoes(true, false))));
   const login = linha(b, "login");
   const lance = linha(b, "lance");
@@ -251,7 +251,7 @@ test("C · contraste WCAG AA dos pares do bloco sobre o vidro (com controlo nega
 });
 
 // ═══ SEG4 — achados do validador adversarial (F1 + sobreviventes V4/V8/V10) ══════════
-test("SEG4/V4 · o texto para leitores de ecrã diz o estado CERTO por linha (feito vs pendente)", async () => {
+test.skip("SEG4/V4 · o texto para leitores de ecrã diz o estado CERTO por linha (feito vs pendente) [UTAC147 (R18-147-C): as Missões de hoje saíram da Carteira (login/missão saíram do backend)]", async () => {
   const b = blocoMissoes(await carteiraCom(pontosCom(missoes(true, false))));
   assert.match(semTags(linha(b, "login")), /Login diário — feito/);
   assert.match(semTags(linha(b, "lance")), /Completar 1 lance — pendente/);
@@ -259,19 +259,19 @@ test("SEG4/V4 · o texto para leitores de ecrã diz o estado CERTO por linha (fe
   assert.doesNotMatch(semTags(linha(b, "lance")), /— feito/);
 });
 
-test("SEG4/V8 · os glifos (✓/⏳) e o 🎯 são decorativos: aria-hidden", async () => {
+test.skip("SEG4/V8 · os glifos (✓/⏳) e o 🎯 são decorativos: aria-hidden [UTAC147 (R18-147-C): as Missões de hoje saíram da Carteira (login/missão saíram do backend)]", async () => {
   const b = blocoMissoes(await carteiraCom(pontosCom(missoes(true, false))));
   assert.match(linha(b, "login"), /<span aria-hidden="true"[^>]*>✓<\/span>/);
   assert.match(linha(b, "lance"), /<span aria-hidden="true"[^>]*>⏳<\/span>/);
   assert.match(b, /<span aria-hidden="true">🎯 <\/span>Missões de hoje/);
 });
 
-test("SEG4/V10 · o rodapé usa o pontosHoje do SERVIDOR (não recalcula no cliente)", async () => {
+test.skip("SEG4/V10 · o rodapé usa o pontosHoje do SERVIDOR (não recalcula no cliente) [UTAC147 (R18-147-C): as Missões de hoje saíram da Carteira (login/missão saíram do backend)]", async () => {
   const b = blocoMissoes(await carteiraCom(pontosCom({ dia: "2026-10-13", loginFeito: true, lanceFeito: false, pontosHoje: 7 })));
   assert.match(semTags(b), /Você ganhou 7 pontos hoje\./);
 });
 
-test("SEG4/F1 · uma releitura FALHADA (após compra) põe as missões em neutro — nada de ✓/⏳ desactualizados", async () => {
+test.skip("SEG4/F1 · uma releitura FALHADA (após compra) põe as missões em neutro — nada de ✓/⏳ desactualizados [UTAC147 (R18-147-C): as Missões de hoje saíram da Carteira (login/missão saíram do backend)]", async () => {
   definirContexto(CONTEXTO);
   const estado = { falhar: false };
   const dup = duploDeFetch((url) => {

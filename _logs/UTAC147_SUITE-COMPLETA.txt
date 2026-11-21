@@ -1,0 +1,3 @@
+frontend: VERMELHO 2 falha(s)
+backend: VERDE 1527/1595 pass
+VEREDITO: VERMELHO

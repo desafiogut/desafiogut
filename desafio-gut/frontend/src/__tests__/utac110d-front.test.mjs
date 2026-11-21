@@ -83,13 +83,13 @@ test("A · os dois Passes: endpoint, nome e benefício certos; tipo só por chav
   // Antes: assert.match(passeDoTipo("relampago").beneficio, /10 pontos \+ 1 lance/);
   // UTAC137 (v6, Arts. 6º/7º) — era /10 pontos de fidelidade \+ 200 pontos de lance/.
   // UTAC138 (v6.1, Art. 7º) — era /^1 ponto de fidelidade \+ 1 ECOQUILDO/ e proibia «pontos de lance». O Relâmpago dá +100.
-  assert.match(passeDoTipo("relampago").beneficio, /^Bônus de 100 pontos de lance \+ 1 ponto de fidelidade \+ 1 ECOQUILDO/);
-  assert.doesNotMatch(passeDoTipo("relampago").beneficio, /200 pontos de lance|10 pontos/);
-  assert.doesNotMatch(passeDoTipo("programado").beneficio, /pontos de lance/, "o Programado não dá pontos de lance (Art. 6º v6.1)");
-  assert.doesNotMatch(passeDoTipo("relampago").beneficio, /1 lance/);
-  // UTAC137 — era /10 pontos \+ 1 palpite/ (o palpite deixou de exigir Passe).
-  assert.match(passeDoTipo("programado").beneficio, /^1 ponto de fidelidade \+ 1 ECOQUILDO/);
-  assert.doesNotMatch(passeDoTipo("programado").beneficio, /palpite|10 pontos/);
+  // UTAC147 (modelo de Passes diretos) — 1 Passe Relâmpago = 1 lance, 1 Passe Programado = 1 palpite; sem pontos de lance.
+  //   Era (UTAC138): Relâmpago /^Bônus de 100 pontos de lance \+ 1 ponto de fidelidade/ e Programado /^1 ponto de fidelidade/.
+  assert.match(passeDoTipo("relampago").beneficio, /^1 lance no Menor Lance Único \+ 1 ponto de fidelidade \+ 1 ECOQUILDO/);
+  assert.match(passeDoTipo("programado").beneficio, /^1 palpite nas Ofertas Programadas \+ 1 ponto de fidelidade \+ 1 ECOQUILDO/);
+  for (const t of ["relampago", "programado"]) {
+    assert.doesNotMatch(passeDoTipo(t).beneficio, /pontos de lance|10 pontos/, `${t}: o Passe já não dá pontos de lance`);
+  }
   for (const t of ["", "pontos", "constructor", "__proto__", "toString", 1, null, undefined, "Relampago"]) {
     assert.equal(passeDoTipo(t), null, `tipo ${String(t)} escolheu um Passe`);
   }
@@ -160,7 +160,7 @@ const bloco = (h, nome) => {
   return h.slice(i, h.indexOf("</div></div>", i) + 12);
 };
 
-test("C · a Carteira mostra os DOIS saldos: pontos de CARTÃO «X / 50» (não o total) e créditos de lance", async () => {
+test.skip("C · a Carteira mostra os DOIS saldos: pontos de CARTÃO «X / 50» (não o total) e créditos de lance [UTAC147: o CardLance e a Carteira deixaram os pontos de lance (1 Passe Relâmpago = 1 lance); ver utac141 (arnês com inventário)]", async () => {
   // `pontos` (total, com bónus) ≠ `pontosCartao` (só compras): um ecrã ligado ao campo errado mostra 37.
   const h = await carteiraCom({ ok: true, pontos: 37, pontosCartao: 30, pontosParaCartao: 50, lance: { creditos: 3, pontos: 120, historico: [] } });
   const fid = semTags(bloco(h, "fidelidade"));
@@ -178,7 +178,7 @@ test("C · a Carteira mostra os DOIS saldos: pontos de CARTÃO «X / 50» (não 
   assert.ok(vidro >= 0 && vidro < h.indexOf("data-saldos-passe"), "os saldos estão fora do vidro");
 });
 
-test("C · BIDIRECCIONAL da barra: 0 pontos → 0 %; ≥ 50 → 100 % (nunca passa do fim); pontos de lance 0 e ilegível", async () => {
+test.skip("C · BIDIRECCIONAL da barra: 0 pontos → 0 %; ≥ 50 → 100 % (nunca passa do fim); pontos de lance 0 e ilegível [UTAC147: o CardLance e a Carteira deixaram os pontos de lance (1 Passe Relâmpago = 1 lance); ver utac141 (arnês com inventário)]", async () => {
   // ⚠️ UTAC110j.5 — ALTERADO (declarado): o lance gasta PONTOS de lance pelo seu valor (backend UTAC110n).
   // Antes: «1 crédito → singular» (Créditos de lance 1 disponível / 0 disponíveis).
   const h0 = await carteiraCom({ ok: true, pontos: 0, pontosCartao: 0, lance: { creditos: 1, pontos: 0, historico: [] } });
@@ -191,7 +191,7 @@ test("C · BIDIRECCIONAL da barra: 0 pontos → 0 %; ≥ 50 → 100 % (nunca pas
   assert.match(semTags(bloco(h60, "pontos-lance")), /Pontos de lance — /);
 });
 
-test("C · erro de leitura → «—» e aviso vermelho (não se inventa 0)", async () => {
+test.skip("C · erro de leitura → «—» e aviso vermelho (não se inventa 0) [UTAC147: o CardLance e a Carteira deixaram os pontos de lance (1 Passe Relâmpago = 1 lance); ver utac141 (arnês com inventário)]", async () => {
   definirContexto(contexto(novoEndereco()));
   const dup = duploDeFetch(() => ({ status: 500, json: {} }));
   let h;
@@ -278,7 +278,7 @@ async function cardLance({ pontos, modalidade = "flash", lerFalha = false, ctx =
 // 400 `sem_creditos_lance`, X → X−1) foram reescritos para PONTOS, com a mesma estrutura e as mesmas invariantes:
 // bidireccional activo/desligado, fail-closed na leitura, releitura depois do lance, 400 com mensagem clara e
 // o ramo Programado independente.
-test("D · BIDIRECCIONAL — com pontos ≥ valor o «Dar lance» fica ACTIVO; com 0, ou valor acima do saldo, DESLIGADO + atalho", async () => {
+test.skip("D · BIDIRECCIONAL — com pontos ≥ valor o «Dar lance» fica ACTIVO; com 0, ou valor acima do saldo, DESLIGADO + atalho [UTAC147: o CardLance e a Carteira deixaram os pontos de lance (1 Passe Relâmpago = 1 lance); ver utac141 (arnês com inventário)]", async () => {
   const com = await cardLance({ pontos: 40 });
   try {
     await com.escrever("37");
@@ -313,7 +313,7 @@ test("D · BIDIRECCIONAL — com pontos ≥ valor o «Dar lance» fica ACTIVO; c
   } finally { sem.fim(); }
 });
 
-test("D · leitura dos pontos a falhar → botão DESLIGADO + erro visível (fail-closed)", async () => {
+test.skip("D · leitura dos pontos a falhar → botão DESLIGADO + erro visível (fail-closed) [UTAC147: o CardLance e a Carteira deixaram os pontos de lance (1 Passe Relâmpago = 1 lance); ver utac141 (arnês com inventário)]", async () => {
   const x = await cardLance({ pontos: 900, lerFalha: true });
   try {
     await x.escrever("5");
@@ -323,7 +323,7 @@ test("D · leitura dos pontos a falhar → botão DESLIGADO + erro visível (fai
   } finally { x.fim(); }
 });
 
-test("D · depois de dar um lance os pontos RELÊEM-SE: X → X − valor, e o ecrã mostra o que o SERVIDOR gastou", async () => {
+test.skip("D · depois de dar um lance os pontos RELÊEM-SE: X → X − valor, e o ecrã mostra o que o SERVIDOR gastou [UTAC147: o CardLance e a Carteira deixaram os pontos de lance (1 Passe Relâmpago = 1 lance); ver utac141 (arnês com inventário)]", async () => {
   const x = await cardLance({ pontos: 50 });
   try {
     await x.escrever("37");
@@ -349,7 +349,7 @@ test("D · depois de dar um lance os pontos RELÊEM-SE: X → X − valor, e o e
   } finally { x.fim(); }
 });
 
-test("D · o servidor recusa por saldo (400 `saldo_pontos_insuficiente`) → mensagem CLARA com os números, e relê", async () => {
+test.skip("D · o servidor recusa por saldo (400 `saldo_pontos_insuficiente`) → mensagem CLARA com os números, e relê [UTAC147: o CardLance e a Carteira deixaram os pontos de lance (1 Passe Relâmpago = 1 lance); ver utac141 (arnês com inventário)]", async () => {
   // Corrida: o ecrã ainda mostra 40 pontos mas o servidor já só tem 3 (gastos noutro aparelho).
   const x = await cardLance({ pontos: 40 });
   try {

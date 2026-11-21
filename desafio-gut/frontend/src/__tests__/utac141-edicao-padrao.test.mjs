@@ -151,19 +151,22 @@ const contexto = (address, extra = {}) => ({
 });
 
 /** Monta o CardLance REAL com o mesmo duplo de servidor do utac110d-front. */
-async function montarLance({ pontos = 40, variante = "cartao", ctx = {} } = {}) {
+async function montarLance({ pontos = 40, passes = 3, variante = "cartao", ctx = {} } = {}) {
   const address = novoEndereco();
   definirContexto(contexto(address, ctx));
-  const estado = { pontos, lances: 0 };
+  // UTAC147 — o lance gasta 1 Passe Relâmpago do inventário (`inventario-passes`); os pontos ficam só no ler-pontos.
+  const estado = { pontos, passes, lances: 0 };
   const dup = duploDeFetch((url, opts) => {
     if (/ler-pontos$/.test(url)) {
       return { status: 200, json: { ok: true, pontos: 0, pontosCartao: 0, lance: { creditos: 0, pontos: estado.pontos, historico: [] } } };
     }
+    if (/inventario-passes/.test(url)) {
+      return { status: 200, json: { ok: true, passesRelampago: estado.passes, passesProgramado: 0 } };
+    }
     if (/auth-lance$/.test(url)) return { status: 200, json: { token: "LANCE-AUTH", ttl: 600 } };
     if (/lance-relampago$/.test(url)) {
-      const v = JSON.parse(opts.body).valorCentavos;
-      estado.pontos -= v; estado.lances += 1;
-      return { status: 201, json: { ok: true, lanceId: `L-${estado.lances}`, pontosLanceConsumidos: v, pontosLanceRestantes: estado.pontos } };
+      estado.passes -= 1; estado.lances += 1;
+      return { status: 201, json: { ok: true, lanceId: `L-${estado.lances}`, passeConsumido: true, passesRelampagoRestantes: estado.passes } };
     }
     return { status: 404, json: {} };
   });
@@ -216,7 +219,7 @@ async function montarLance({ pontos = 40, variante = "cartao", ctx = {} } = {}) 
   return { c, estado, html, escrever, enviar, desabilitado, fim };
 }
 
-test("D · variante EMBUTIDA: sem segundo cartão, sem «🎯 Dar Lance», campo+botão na mesma linha, «em pontos»", async () => {
+test("D · variante EMBUTIDA: sem segundo cartão, sem «🎯 Dar Lance», campo+botão na mesma linha, «em centavos» (UTAC147; era «em pontos»)", async () => {
   const s = await montarLance({ variante: "embutida" });
   try {
     await s.escrever("37");
@@ -226,15 +229,15 @@ test("D · variante EMBUTIDA: sem segundo cartão, sem «🎯 Dar Lance», campo
     assert.equal(t.includes("🎯 Dar Lance"), false, "o sub-card «Dar Lance» continua lá");
     assert.equal(h.includes("Edição: ESPECIAL-RELAMPAGO1"), false, "a barra de carteira do sub-card continua lá");
     assert.equal(t.includes("Lance protegido e sanitizado"), false, "o rodapé do sub-card continua lá");
-    assert.match(t, /Seu lance \(em pontos\)/);
-    assert.equal(/\(em centavos\)/.test(t), false, "o campo ainda fala em centavos");
-    assert.equal(/R\$ 0,05/.test(t), false, "o placeholder ainda fala em R$");
-    assert.match(h, /Ex\.: 40/, "placeholder novo (pontos) ausente");
+    assert.match(t, /Seu lance \(em centavos\)/); // UTAC147 — era «(em pontos)»
+    // UTAC147 — saíram as asserções «o campo não fala em centavos» e «placeholder em pontos (Ex.: 40)»: o rótulo
+    // voltou a centavos (o custo é 1 Passe, não o valor). O placeholder do Relâmpago continua «Ex.: 40».
+    assert.match(h, /Ex\.: 40/, "placeholder do Relâmpago ausente");
     // campo e botão dentro do MESMO formulário (uma linha) — o padrão do «Dar palpite»
     const bloco = h.slice(h.indexOf("data-form-acao"), h.indexOf("</button>"));
     assert.match(bloco, /<input/, "campo fora do formulário");
     assert.match(bloco, /<button/, "botão fora da linha do campo");
-    assert.equal(s.desabilitado(), false, "com 40 pontos um lance de 37 devia estar activo");
+    assert.equal(s.desabilitado(), false, "com 3 Passes Relâmpago um lance devia estar activo (UTAC147)");
   } finally { s.fim(); }
 });
 
@@ -251,7 +254,7 @@ test("D2 · a fonte: a Edição Especial monta o CardLance com variante=\"embuti
   assert.equal(/variante="embutida"/.test(foraDoEspecial), false, "o Relâmpago normal passou a embutido");
 });
 
-test("E · variante CARTÃO (Relâmpago do MLC) não regrediu: cabeçalho próprio mantido, rótulo em pontos", async () => {
+test("E · variante CARTÃO (Relâmpago do MLC) não regrediu: cabeçalho próprio mantido, rótulo em centavos (UTAC147)", async () => {
   const s = await montarLance({ variante: "cartao" });
   try {
     await s.escrever("37");
@@ -259,9 +262,8 @@ test("E · variante CARTÃO (Relâmpago do MLC) não regrediu: cabeçalho própr
     const t = semTags(h);
     assert.equal(h.includes("data-variante-lance=\"embutida\""), false);
     assert.match(t, /🎯 Dar Lance/, "o cabeçalho do Relâmpago desapareceu");
-    assert.match(t, /Seu lance \(em pontos\)/);
-    assert.equal(/\(em centavos\)/.test(t), false);
-    assert.match(t, /37 pontos/, "a pré-visualização do valor não está em pontos");
+    assert.match(t, /Seu lance \(em centavos\)/); // UTAC147 — era «(em pontos)»
+    assert.match(t, /R\$ 0\.37/, "UTAC147: a pré-visualização do valor é em R$ (o custo é 1 Passe)");
   } finally { s.fim(); }
 });
 
@@ -350,7 +352,7 @@ test("H2 · variante embutida DESCONECTADA: nenhum botão de largura toda (a ski
   const trecho = card.slice(inicio, inicio + 4000);
   assert.equal(/width:\s*"100%"/.test(trecho), false, "o CTA da embutida voltou a ocupar a largura toda");
   // e o aviso do limite continua visível (perdeu-se na 1.ª versão da embutida)
-  assert.match(trecho, /Mín 1 ponto · Máx 5 lances\/min · Cooldown 3s/, "o limite de lances desapareceu do ecrã");
+  assert.match(trecho, /Mín R\$ 0,01 · Máx 5 lances\/min · Cooldown 3s/, "o limite de lances desapareceu do ecrã"); // UTAC147
 });
 
 test("H3 · OP: o campo do palpite NÃO fecha enquanto envia (como antes do padrão único)", () => {

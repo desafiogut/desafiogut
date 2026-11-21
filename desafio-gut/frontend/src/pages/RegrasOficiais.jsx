@@ -147,7 +147,7 @@ export default function RegrasOficiais() {
       {/* UTAC110j.5 — sem <section> de propósito: a guarda de cobertura do 110h começa no 1.º <section>. */}
       <GlassCard className={cardCls}>
         <div data-proporcoes="">
-          <h2 style={h2}>Proporções fixas dos pontos de lance</h2>
+          <h2 style={h2}>Proporções fixas do programa</h2>{/* UTAC147 — era «Proporções fixas dos pontos de lance» */}
           <p style={{ ...pArt, color: COR.muted, fontSize: "0.82rem" }}>
             Resumo informativo dos valores do programa. O texto que vale é o Regulamento abaixo.
           </p>

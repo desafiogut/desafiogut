@@ -165,6 +165,21 @@ export function tileCarteiraComMemo(memo, { address, authToken, loading, erro, l
   const est = estadoPasse(memo, { address, authToken, loading, erro, pontosCartao: 0 });
   return est === "carregando" ? null : valorTileCarteira({ address, authToken, loading, erro, lance });
 }
+/**
+ * UTAC147 (decisão do operador — modelo de Passes diretos) — o Início deixa de mostrar PONTOS DE LANCE: os dois tiles
+ * passam a ser «Meus Passes» por tipo (Relâmpago = lances, Programado = palpites). Mesma regra do `valorTilePasses`:
+ * `null` = a carregar; sem conta, erro ou ilegível → «—», nunca um 0 inventado.
+ */
+export function valorTilePasseTipo({ address, carregando, erro, n }) {
+  if (!address) return "—";
+  if (carregando) return null;
+  if (erro || !Number.isSafeInteger(n) || n < 0) return "—";
+  return String(n);
+}
+export function tilePasseTipoComMemo(memo, { address, authToken, carregando, erro, n }) {
+  const est = estadoPasse(memo, { address, authToken, loading: carregando, erro, pontosCartao: 0 });
+  return est === "carregando" ? null : valorTilePasseTipo({ address, carregando, erro, n });
+}
 export function tilePassesComMemo(memo, { address, authToken, carregando, erro, passesRelampago, passesProgramado }) {
   const est = estadoPasse(memo, { address, authToken, loading: carregando, erro, pontosCartao: 0 });
   return est === "carregando" ? null : valorTilePasses({ address, carregando, erro, passesRelampago, passesProgramado });
@@ -197,8 +212,7 @@ export default function Dashboard() {
   // do palpite não entra). NÃO é o `saldoSenhas` (Via A, senhas on-chain) nem o `pontos` total.
   const {
     palpites, // UTAC130 — pontosCartao/pontosParaCartao saíram com o «X / 50» do Início
-    lance: pontosLanceLidos, // UTAC130 — o tile «Carteira» mostra os pontos de lance
-    loading: pontosLoading, erro: pontosErro,
+    // UTAC147 — `lance`/`loading`/`erro` saíram: os tiles passaram a ler o inventário de Passes, não os pontos de lance.
   } = usePontos();
   // UTAC108h.3 — a zona de PALPITE do vidro «🎫 Programada» do Início usa o MESMO hook e as MESMAS
   // regras da aba Ofertas Programadas (uma só verdade sobre quando se pode palpitar).
@@ -290,17 +304,17 @@ export default function Dashboard() {
   const skeletonTile = (id) => (
     <span data-testid={id} aria-hidden="true" className="inline-block animate-pulse rounded-lg bg-white/[0.06] border border-white/5" style={{ width: "4.5rem", height: "1.2em" }} />
   );
-  // Tile 1 «Carteira» — pontos de lance (decisão C2), leva à Carteira. Substitui «Saldo (R$)».
-  const carteiraValor = tileCarteiraComMemo(carteiraMemo.current, { address, authToken, loading: pontosLoading, erro: pontosErro, lance: pontosLanceLidos });
+  // UTAC147 — «Meus Passes»: tile 1 = Passes Relâmpago (1 por lance), tile 2 = Passes Programados (1 por palpite).
+  // Eram «Carteira» (pontos de lance, UTAC130) e «Passe Desafio» (total do inventário). Os dois levam à Carteira.
+  const carteiraValor = tilePasseTipoComMemo(carteiraMemo.current, { address, authToken, carregando: inventario.carregando, erro: inventario.erro, n: inventario.passesRelampago });
   const carteiraStat = {
-    label: "Carteira", value: carteiraValor ?? skeletonTile("carteira-skeleton"),
-    color: COR.gold, icon: "👛", to: "/carteira",
+    label: "Passes Relâmpago", value: carteiraValor ?? skeletonTile("carteira-skeleton"),
+    color: COR.gold, icon: "⚡", to: "/carteira",
   };
-  // Tile 2 «Passe Desafio» — total de Passes no inventário, leva à Carteira (era «X / 50» → Ofertas Programadas).
-  const passesValor = tilePassesComMemo(inventarioMemo.current, { address, authToken, ...inventario });
+  const passesValor = tilePasseTipoComMemo(inventarioMemo.current, { address, authToken, carregando: inventario.carregando, erro: inventario.erro, n: inventario.passesProgramado });
   const passeStat = {
-    label: "Passe Desafio", value: passesValor ?? skeletonTile("passe-skeleton"),
-    color: COR.gold, icon: "🎟️", to: "/carteira",
+    label: "Passes Programados", value: passesValor ?? skeletonTile("passe-skeleton"),
+    color: COR.gold, icon: "🎯", to: "/carteira",
   };
 
   const stats = [

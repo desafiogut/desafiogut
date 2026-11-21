@@ -90,7 +90,8 @@ test("1-B · o ramo Programado do CardLance usa só a mensagem de legado e conti
   // ⚠️ UTAC110j.5 — ALTERADO (declarado): o backend UTAC110n passou a gastar o VALOR do lance em pontos.
   // Asserção antiga: assert.match(c, /Cada lance consome 1 crédito de lance \(Passe Relâmpago\)/);
   // Invariante mantida: o hint diz o que o servidor faz — e o modelo antigo não pode voltar.
-  assert.match(c, /Cada lance gasta o seu valor em pontos de lance \(um lance de 37 gasta 37\)/);
+  // UTAC147 — 1 Passe Relâmpago = 1 lance (era «Cada lance gasta o seu valor em pontos de lance (um lance de 37 gasta 37)»).
+  assert.match(c, /Cada lance usa 1 Passe Relâmpago · menor lance único vence\./);
   assert.doesNotMatch(c, /Cada lance consome 1 crédito/);
 });
 

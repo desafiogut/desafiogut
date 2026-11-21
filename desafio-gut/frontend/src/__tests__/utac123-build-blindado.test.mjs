@@ -122,8 +122,8 @@ const GRADLE = ler("android/app/build.gradle");
 // UTAC129 subiu para 8 (AAB v8) sem actualizar este teste: só o backend foi re-corrido depois do bump.
 // Achado e corrigido no UTAC130. O número tem de acompanhar o AAB entregue.
 // UTAC132 — 9 (AAB v9).
-test("UTAC123/B · versionCode 12 (era 11; AAB v12 — UTAC139)", () => {
-  assert.match(GRADLE, /^\s*versionCode 12\s*$/m);
+test("UTAC123/B · versionCode 13 (HI, UTAC147: o UTAC146 subiu 12→13 — AAB v12.1; era 12 no UTAC139)", () => {
+  assert.match(GRADLE, /^\s*versionCode 13\s*$/m);
 });
 
 test("UTAC123/B · tarefa validarAmbienteProducao corre o guarda sobre os assets do AAB", () => {

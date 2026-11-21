@@ -278,7 +278,9 @@ describe("UTAC138 · a especial no Menor Lance Único (cartão padrão)", () => 
     const c = cartao(html);
     assert.match(c, />ESPECIAL-RELAMPAGO1</);
     assert.match(c, /data-testid="cartao-arte"[^>]*src="https:\/\/exemplo\.supabase\.co\/arte\.jpg"/);
-    assert.match(c, /data-testid="cartao-nome"[^>]*>Fritadeira Quad Fry</);
+    // UTAC147 — a faixa da especial mostra só o tempo: o nome fica no `alt` da arte (era `cartao-nome` na faixa).
+    assert.match(c, /alt="Fritadeira Quad Fry"/);
+    assert.doesNotMatch(c, /data-testid="cartao-nome"/);
     assert.match(c, /data-testid="cartao-tempo"/);
     assert.doesNotMatch(html, /SEM EDIÇÃO/, "o cartão vazio ficou ao lado da especial");
     assert.doesNotMatch(html, /data-stub="card-lance"/, "formulário antes da hora");

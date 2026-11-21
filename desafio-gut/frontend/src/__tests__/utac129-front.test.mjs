@@ -43,7 +43,7 @@ test("C3 domínio morto: nenhum código aponta para https://desafiogut.com (só 
   }
 });
 
-test("C4 (Frente A na UI) o CardLance já não exige nem vende Passe para licitar", () => {
+test.skip("C4 (Frente A na UI) o CardLance já não exige nem vende Passe para licitar [UTAC147: o lance volta a exigir 1 Passe Relâmpago]", () => {
   const c = codigo(ler("components/CardLance.jsx"));
   assert.doesNotMatch(c, /Precisa de 1 Passe/);
   assert.doesNotMatch(c, /semPasseRelampago|useInventarioPasses|semPasses\(/);

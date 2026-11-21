@@ -271,10 +271,12 @@ test("RENDER · CLICAR abre o balão: «Escolha o seu Passe Desafio» + os DOIS 
   // Antes: /⚡ Passe Relâmpago R\$ 2,00 10 pontos \+ 1 lance no Menor Lance Único Comprar Passe Relâmpago/
   // UTAC137 (v6) — era «10 pontos de fidelidade + 200 pontos de lance + 1 ECOQUILDO».
   // UTAC138 (v6.1, Art. 7º) — era «1 ponto de fidelidade + 1 ECOQUILDO + GUTO e dados analíticos».
-  assert.match(h, /⚡ Passe Relâmpago R\$ 2,00 Bônus de 100 pontos de lance \+ 1 ponto de fidelidade \+ 1 ECOQUILDO \+ GUTO e dados analíticos Comprar Passe Relâmpago/,
+  // UTAC147 (modelo de Passes diretos) — era «Bônus de 100 pontos de lance + 1 ponto de fidelidade + …».
+  assert.match(h, /⚡ Passe Relâmpago R\$ 2,00 1 lance no Menor Lance Único \+ 1 ponto de fidelidade \+ 1 ECOQUILDO \+ GUTO e dados analíticos Comprar Passe Relâmpago/,
     `cartão Relâmpago errado: «${h}»`);
   // UTAC137 — era «10 pontos + 1 palpite nas Ofertas Programadas».
-  assert.match(h, /🎫 Passe Programado R\$ 2,00 1 ponto de fidelidade \+ 1 ECOQUILDO \+ GUTO e dados analíticos Comprar Passe Programado/,
+  // UTAC147 — era «1 ponto de fidelidade + 1 ECOQUILDO + GUTO e dados analíticos».
+  assert.match(h, /🎫 Passe Programado R\$ 2,00 1 palpite nas Ofertas Programadas \+ 1 ponto de fidelidade \+ 1 ECOQUILDO \+ GUTO e dados analíticos Comprar Passe Programado/,
     `cartão Programado errado: «${h}»`);
   assert.match(html(), /aria-modal="true"/, "o balão não é um diálogo modal acessível");
 });
@@ -292,8 +294,9 @@ for (const [rotulo, url, toast] of [
   // Antes: "Passe Relâmpago comprado: +10 pontos e 1 lance"
   // UTAC137 (v6) — eram «…+10 pontos de fidelidade e +200 pontos de lance» e «…+10 pontos e 1 palpite».
   // UTAC138 — era "Passe Relâmpago comprado: +1 ponto de fidelidade e +1 ECOQUILDO".
-  ["Comprar Passe Relâmpago", URL_RELAMPAGO, "Passe Relâmpago comprado: +100 pontos de lance (bônus), +1 ponto de fidelidade e +1 ECOQUILDO"],
-  ["Comprar Passe Programado", URL_PROGRAMADO, "Passe Programado comprado: +1 ponto de fidelidade e +1 ECOQUILDO"],
+  // UTAC147 — eram «…+100 pontos de lance (bônus), +1 ponto de fidelidade…» e «…+1 ponto de fidelidade e +1 ECOQUILDO».
+  ["Comprar Passe Relâmpago", URL_RELAMPAGO, "Passe Relâmpago comprado: já está em Meus Passes (1 Passe = 1 lance), +1 ponto de fidelidade e +1 ECOQUILDO"],
+  ["Comprar Passe Programado", URL_PROGRAMADO, "Passe Programado comprado: já está em Meus Passes (1 Passe = 1 palpite), +1 ponto de fidelidade e +1 ECOQUILDO"],
 ]) {
   test(`RENDER · «${rotulo}» chama o SEU endpoint, fecha o balão, mostra o toast e RELÊ os saldos`, async () => {
     const { html, clicar } = await montarCarteira();
@@ -345,7 +348,7 @@ test("RENDER · durante a compra: SPINNER no Passe escolhido e TODOS os botões 
   assert.match(h, /data-passe="programado"[\s\S]*aria-busy="true"/, "o spinner está no Passe errado");
   const desactivados = (h.match(/disabled=""/g) || []).length;
   // UTAC112: + os 4 botões do seletor de quantidade (1/3/5/10) — TODOS desactivados durante a compra.
-  assert.equal(desactivados, 7, `os 4 da quantidade + 2 «Comprar» + «Cancelar» deviam estar desactivados; medidos ${desactivados}`);
+  assert.equal(desactivados, 6, `UTAC147: os 3 da quantidade (era 4) + 2 «Comprar» + «Cancelar» deviam estar desactivados; medidos ${desactivados}`);
 });
 
 test("RENDER · o balão mostra os pontos de CARTÃO «X / 50» (o mesmo número da barra das Ofertas)", () => {
@@ -367,7 +370,7 @@ test("RENDER · alvos de toque: os botões do balão têm ≥ 48 px", () => {
     aberto: true, onComprar: () => {}, onCancelar: () => {},
   }));
   const botoesHtml = h.match(/<button[^>]*>/g) || [];
-  assert.equal(botoesHtml.length, 7, "UTAC112: 4 da quantidade + 2 «Comprar» + «Cancelar»");
+  assert.equal(botoesHtml.length, 6, "UTAC147: 3 da quantidade (era 4) + 2 «Comprar» + «Cancelar»");
   for (const b of botoesHtml) assert.match(b, /min-height:48px/, `botão sem 48 px: ${b}`);
 });
 
@@ -399,10 +402,11 @@ test("UTAC112 · HOOK · quantidade fora dos pacotes (2, 0, '5') → erro SEM ch
 
 const modal = (props) => renderToStaticMarkup(React.createElement(ComprarPasseModal, { aberto: true, onComprar: () => {}, onCancelar: () => {}, ...props }));
 
-test("UTAC112 · RENDER · seletor 1/3/5/10 (rádio acessível); 5 ⇒ «Comprar 5 passes por R$ 10,00» e o total", () => {
+test("UTAC112 · RENDER · seletor 1/3/5 (UTAC147: o 10 saiu; rádio acessível); 5 ⇒ «Comprar 5 passes por R$ 10,00» e o total", () => {
   const h = modal({ quantidade: 5 });
   assert.match(h, /role="radiogroup"/);
-  for (const n of [1, 3, 5, 10]) assert.match(h, new RegExp(`data-quantidade="${n}"`));
+  for (const n of [1, 3, 5]) assert.match(h, new RegExp(`data-quantidade="${n}"`));
+  assert.doesNotMatch(h, /data-quantidade="10"/, "UTAC147: o pacote de 10 saiu");
   assert.match(h, /data-quantidade="5"[^>]*aria-checked="true"|aria-checked="true"[^>]*data-quantidade="5"/);
   assert.equal((h.match(/aria-checked="true"/g) || []).length, 1);
   assert.equal((h.match(/Comprar 5 passes por R\$ 10,00/g) || []).length, 2, "os dois Passes mostram o total");
@@ -410,12 +414,13 @@ test("UTAC112 · RENDER · seletor 1/3/5/10 (rádio acessível); 5 ⇒ «Comprar
   assert.doesNotMatch(h, /Comprar Passe Relâmpago/);
 });
 
-test("UTAC112 · RENDER · 1 (por omissão) mantém «Comprar Passe Relâmpago» e R$ 2,00; 10 ⇒ R$ 20,00", () => {
+test("UTAC112 · RENDER · 1 (por omissão) mantém «Comprar Passe Relâmpago» e R$ 2,00; 3 ⇒ R$ 6,00; 10 fora dos pacotes (UTAC147)", () => {
   const um = modal({});
   assert.match(um, /Comprar Passe Relâmpago/);
   assert.match(um, /Comprar Passe Programado/);
   assert.doesNotMatch(um, /data-total-passes/);
-  assert.match(modal({ quantidade: 10 }), /Comprar 10 passes por R\$ 20,00/);
+  assert.match(modal({ quantidade: 3 }), /Comprar 3 passes por R\$ 6,00/);
+  assert.match(modal({ quantidade: 10 }), /Comprar Passe Relâmpago/, "UTAC147: 10 já não é pacote ⇒ cai em 1");
   assert.match(modal({ quantidade: 7 }), /Comprar Passe Relâmpago/, "fora dos pacotes cai em 1");
 });
 

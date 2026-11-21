@@ -9,7 +9,9 @@ import { usePontos } from "../hooks/usePontos.js";
 import { useEcoQuildo } from "../hooks/useEcoQuildo.js";
 import { useInventarioPasses } from "../hooks/useInventarioPasses.js"; // UTAC120 — inventário de Passes
 import { passeDoTipo, precoTotal } from "../lib/passes.js";
-import { conversoesFeitas, PROPORCOES, VALOR_ECOQUILDO_TEXTO } from "../lib/pontosLance.js"; // UTAC110j.5 — pontos de lance · UTAC137 — valor e conversão do ECOQUILDO
+// UTAC147 (decisão do operador — modelo de Passes diretos): a Carteira deixa de mostrar «⭐ Pontos de lance» e
+// «Missões de hoje» (login/missão saíram do backend). O foco é «Meus Passes». Desligado aqui, num só sítio.
+import { conversoesFeitas, PROPORCOES, VALOR_ECOQUILDO_TEXTO, MOSTRAR_PONTOS_ENGAJAMENTO } from "../lib/pontosLance.js"; // UTAC110j.5 — pontos de lance · UTAC137 — valor e conversão do ECOQUILDO
 import ComprarPasseModal from "../components/ComprarPasseModal.jsx";
 import Toast from "../widgets/toast/Toast.jsx";
 import ComprarFichasModal from "../components/ComprarFichasModal.jsx";
@@ -541,7 +543,7 @@ export default function MinhaCarteira() {
                 </div>
                 {/* UTAC110j.5 (Frente B) — «⚡ Créditos de lance» (110d) passou a «⭐ Pontos de lance»: o lance
                     gasta o SEU VALOR em pontos (UTAC110n). Texto antigo: «⚡ Créditos de lance · N disponíveis». */}
-                <div data-saldo="pontos-lance" style={{
+                {MOSTRAR_PONTOS_ENGAJAMENTO && (<div data-saldo="pontos-lance" style={{
                   padding: "0.65rem 0.75rem", borderRadius: "12px",
                   background: "rgba(245,166,35,0.06)", border: "1px solid rgba(245,166,35,0.25)",
                 }}>
@@ -559,7 +561,7 @@ export default function MinhaCarteira() {
                       {conversao.senhas && "Suas senhas antigas foram convertidas em pontos de lance."}
                     </p>
                   )}
-                </div>
+                </div>)}
                 {/* UTAC110e (Frente D2) — ECOQUILDO: SÓ leitura. Sem botão de compra (Art. 49º: não
                     se compra, não se converte em dinheiro, não se transfere); usa-se no site oficial. */}
                 <div data-saldo="eco-quildo" style={{
@@ -589,7 +591,7 @@ export default function MinhaCarteira() {
 
               {/* UTAC110f-front — «Missões de hoje»: DENTRO do 1.º vidro (Regra 1), a seguir aos 3 saldos (UTAC110j.3:
                   os botões passaram para cima dos saldos). Só visualização (sem botão — não há acção aqui). Os 3 saldos acima NÃO foram tocados. */}
-              <section data-missoes-hoje="" data-estado={estadoMissoes} aria-labelledby="missoes-hoje-titulo" style={{
+              {MOSTRAR_PONTOS_ENGAJAMENTO && (<section data-missoes-hoje="" data-estado={estadoMissoes} aria-labelledby="missoes-hoje-titulo" style={{
                 padding: "0.65rem 0.75rem", borderRadius: "12px", marginBottom: "0.95rem",
                 border: "1px solid rgba(245,166,35,0.25)",
               }}>
@@ -632,7 +634,7 @@ export default function MinhaCarteira() {
                     </p>
                   </>
                 )}
-              </section>
+              </section>)}
 
               {/* UTAC110g.1 (R18-110g.1-2 / decisão D-110g-4) — o botão «Resgatar cartão» MUDOU DE
                   CASA: saiu do vidro do cartão das Ofertas Programadas e passa a viver aqui, a

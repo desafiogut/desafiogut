@@ -7,6 +7,9 @@
 // Só os pontos do PRÓPRIO: um ranking de todos exige endpoint novo (UTAC do Hermes, `_logs/UTAC110n.spec-HERMES.md`).
 // UTAC110j.5 — + as PROPORÇÕES FIXAS (Play), o estado do lance em pontos (CardLance) e as conversões (Carteira).
 
+/** UTAC147 (decisão do operador — modelo de Passes diretos): a UI deixa de mostrar pontos de lance, missões e o bónus de
+ *  sequência (login/missão/sequência saíram do backend; o lance gasta 1 Passe). Interruptor único (Carteira, Meus Ativos). */
+export const MOSTRAR_PONTOS_ENGAJAMENTO = false;
 export const CAMPO_PONTOS = "pontos_lance";
 
 /** As fontes de pontos de lance (Art. 16º), pela ordem do ecrã. Os rótulos casam com `MOTIVOS_PONTOS_LANCE`. */
@@ -64,6 +67,8 @@ export const PROPORCOES = Object.freeze({
   ecoCentavos: 50, //        eco-quildo.mjs CENTAVOS_POR_ECOQUILDO (Art. 21º v6: R$ 0,50; era R$ 1,00)
   ecoPorConversao: 50, //    eco-quildo.mjs ECOQUILDO_POR_CONVERSAO (Art. 23º v6: 50 ECOQUILDO = 1 Passe)
   pontosPorCartao: 50, //    passe-pontos.mjs PONTOS_POR_CARTAO (Art. 8º v6)
+  ecoIndicacaoIndicante: 2, // fontes-lance.mjs ECOQUILDO_INDICACAO_INDICANTE (UTAC147 — Indique e Ganhe)
+  ecoIndicacaoIndicado: 1, //  fontes-lance.mjs ECOQUILDO_INDICACAO_INDICADO
 });
 /** «R$ 0,50» a partir dos centavos de 1 ECOQUILDO (fonte única: `PROPORCOES.ecoCentavos`). */
 export const VALOR_ECOQUILDO_TEXTO = `R$ ${(PROPORCOES.ecoCentavos / 100).toFixed(2).replace(".", ",")}`;
@@ -77,37 +82,34 @@ export const CICLO_LIQUIDO = PROPORCOES.cicloPontos - PROPORCOES.cicloDias;
  * aqui é decidido pela UI. O texto que VINCULA é o Regulamento; isto é o resumo dos números.
  */
 export const PROPORCOES_TEXTO = Object.freeze([
+  // ⛔ UTAC147 (decisão do operador, 2026-11-21 — modelo de Passes diretos): saíram os blocos «Como ganhar pontos de
+  // lance (gratuitos)» (login +5, missão +10, indicação +50, sequência +50, ciclo 225/15 dias), «Como usar os pontos de
+  // lance» (o lance gastava o seu valor) e o bónus de +100 do Passe Relâmpago. Ver o histórico do git (UTAC110j.5/138).
   Object.freeze({
-    id: "ganhar",
-    titulo: "Como ganhar pontos de lance (gratuitos)",
+    id: "participar",
+    titulo: "Como participar",
     linhas: Object.freeze([
-      `Login diário: +${PROPORCOES.login} pontos de lance.`,
-      `Missão do dia (dar 1 lance): +${PROPORCOES.missao} pontos de lance.`,
-      `Indicação convertida: +${PROPORCOES.indicacao} pontos de lance (até ${PROPORCOES.indicacoesPorMes} indicações por mês).`,
-      `Sequência de ${PROPORCOES.acertosSequencia} acertos seguidos: +${PROPORCOES.sequencia} pontos de lance.`,
-      `Ciclo completo de missões: ${PROPORCOES.cicloPontos} pontos de lance em ${PROPORCOES.cicloDias} dias (${PROPORCOES.cicloDias} × ${CICLO_POR_DIA} pontos por dia, já contando o login e a missão diária). Como a missão exige um lance e cada lance gasta o seu valor, com lances de 1 ponto ficam ${CICLO_LIQUIDO} pontos líquidos (com lances maiores, ficam menos).`,
+      "Compre Passes para participar: R$ 2,00 cada, em pacotes de 1, 3 ou 5.",
+      "1 Passe Relâmpago = 1 lance no Menor Lance Único.",
+      "1 Passe Programado = 1 palpite nas Ofertas Programadas.",
+      "Quem vence compra o produto pagando o valor do seu lance em reais, a partir de R$ 0,01 (Art. 12).",
     ]),
   }),
   Object.freeze({
-    id: "usar",
-    titulo: "Como usar os pontos de lance",
+    id: "indique",
+    titulo: "Indique e Ganhe",
     linhas: Object.freeze([
-      "Cada lance gasta o valor do lance em pontos de lance: um lance de 37 gasta 37 pontos.",
-      "Só é possível dar um lance até o saldo de pontos de lance que você tem.",
-      "Quem vence compra o produto pelo valor do seu lance, à razão de 1 ponto = R$ 0,01 (Art. 12).",
+      `Cada indicação confirmada dá ${PROPORCOES.ecoIndicacaoIndicante} ECOQUILDO a quem indica (até ${PROPORCOES.indicacoesPorMes} indicações por mês) e ${PROPORCOES.ecoIndicacaoIndicado} a quem foi indicado.`,
     ]),
   }),
-  // UTAC137 — era «O que o Passe Relâmpago dá: +200 pontos de lance (bônus) · 10 pontos de fidelidade · 1 ECOQUILDO».
   Object.freeze({
     id: "passe",
     titulo: "O que o Passe Desafio dá",
     linhas: Object.freeze([
-      // UTAC138 — era «Não dá pontos de lance: os pontos de lance são 100% gratuitos, ganhos pelo engajamento no app (Art. 6º).»
-      `O Passe Relâmpago dá um bônus de ${PROPORCOES.pontosLancePorPasse} pontos de lance por Passe (Art. 7º); o Passe Programado não dá pontos de lance (Art. 6º).`,
+      "1 Passe Relâmpago = 1 lance; 1 Passe Programado = 1 palpite. O Passe fica guardado em «Meus Passes» até ser usado.",
       `${PROPORCOES.fidelidadePorPasse} ponto de fidelidade; a cada ${PROPORCOES.pontosPorCartao} pontos de fidelidade, 1 cartão colecionável (Arts. 7º e 8º).`,
       `${PROPORCOES.ecoPorPasse} ECOQUILDO.`,
       "Acesso aos dados analíticos e ao GUTO (Art. 7º).",
-      "O Passe é opcional (Art. 3º): o lance gasta só pontos de lance e o palpite não exige Passe.",
     ]),
   }),
   Object.freeze({

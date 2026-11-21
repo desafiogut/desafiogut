@@ -35,7 +35,7 @@ Art. 15. O lance é uma ação estratégica e voluntária. Os pontos de lance ut
 ## CAPÍTULO IV — DA OFERTA PROGRAMADA 
 Art. 16. A Oferta Programada consiste na modalidade em que o usuário utiliza sua capacidade analítica para prever o número total exato de lances realizados em um determinado ciclo. 
 Art. 17. Vence a Oferta Programada apenas 1 (um) palpite: aquele que registrar o número exato ou ficar mais próximo do número real apurado. Em caso de empate na proximidade, o critério de desempate será a ordem cronológica de registro do palpite no sistema. 
-Art. 18. O prêmio correspondente, consistente em produto fornecido pelo patrocinador, é concedido de forma totalmente gratuita ao vencedor da previsão. 
+Art. 18. O produto correspondente, consistente em produto fornecido pelo patrocinador, é concedido de forma totalmente gratuita ao vencedor da previsão. 
 Art. 19. O usuário participante que não obtiver êxito na previsão (perdedor) não perde os valores investidos em passes ou recursos, mantendo integralmente seus pontos de fidelidade, seus saldos de ECOQUILDO e o acesso ativo ao assistente GUTO. 
 Art. 20. A manutenção dos benefícios do usuário em caso de erro na previsão afasta qualquer caracterização da modalidade como aposta financeira, garantindo a natureza puramente de entretenimento e fidelidade. 
 

@@ -28,10 +28,12 @@ import useTrocarPorSenhas from "../hooks/useTrocarPorSenhas.js";
 // (`lance-relampago.mjs`, UTAC110d; o débito em R$ está desligado por `DEBITO_SALDO_LANCE_ATIVO`).
 // O botão passa a depender dos créditos (`ler-pontos` → `lance.creditos`), não do saldo R$.
 // ⚠️ UTAC110j.5: SUPERADO pelo UTAC110n — o lance gasta PONTOS (`lance.pontos`) pelo seu valor; ver abaixo.
-import { usePontos } from "../hooks/usePontos.js";
+// UTAC147 — o lance Relâmpago gasta 1 PASSE RELÂMPAGO do inventário (não pontos): o botão depende dos Passes.
+import { useInventarioPasses } from "../hooks/useInventarioPasses.js";
 // UTAC110j.5 — o lance GASTA o seu valor em pontos de lance (backend UTAC110n). O estado por créditos
 // (`estadoCreditosLance`/`rotuloCreditos` de `lib/passes.js`) deixou de ser usado aqui; fica como legado.
-import { estadoPontosLance, rotuloPontosLance } from "../lib/pontosLance.js";
+// UTAC147 — SUPERADO: o estado do botão passou a ser por PASSES (`estadoPassesLance`, `lib/passes.js`).
+import { estadoPassesLance, rotuloPassesRelampago } from "../lib/passes.js";
 // UTAC141 (SKILL utac-edicoes) — a acção embutida é o formulário CANÓNICO da edição (o mesmo do palpite).
 import FormularioAcao, { ESTILO_ACAO } from "./_formAcaoEdicao.jsx";
 
@@ -81,7 +83,7 @@ export function mensagemSaldoInsuficiente(erroServidor, valorCentavos) {
   const precisa = Number.isSafeInteger(erroServidor?.pontosNecessarios) ? erroServidor.pontosNecessarios : valorCentavos;
   return `Saldo de pontos de lance insuficiente: este lance custa ${precisa} pontos`
     + (tem !== null ? ` e você tem ${tem}` : "")
-    + ". Ganhe pontos grátis com o login diário e a missão do dia (veja na Carteira).";
+    + ". Compre Passes para participar."; // UTAC147 — saiu «Ganhe pontos grátis com o login diário e a missão do dia»
 }
 
 export default function CardLance({
@@ -130,9 +132,9 @@ export default function CardLance({
 
   // UTAC110d-front — créditos de lance do titular (Relâmpago). UTAC110j.5 — passou a ser o SALDO DE PONTOS
   // de lance (`lance.pontos` do `ler-pontos`): é ele que o servidor debita pelo valor do lance.
-  const {
-    lance: pontosLanceLidos, loading: pontosCarregando, erro: pontosErro, refetch: refetchPontosLance,
-  } = usePontos();
+  // UTAC147 — passou a ser o INVENTÁRIO de Passes (`passesRelampago`): é ele que o servidor gasta (1 por lance).
+  const inventario = useInventarioPasses();
+  const refetchPassesLance = inventario.recarregar;
 
   const [valor,             setValor]             = useState("");
   const idCampoLance = useId(); // UTAC107d — liga o <label> ao <input>
@@ -168,9 +170,10 @@ export default function CardLance({
   // R$ no servidor. UTAC110j.5 — o que o bloqueia agora é o SALDO DE PONTOS de lance: o lance custa o
   // seu valor (1 ponto = R$ 0,01, Art. 18º) e só se pode licitar até ao saldo (fail-closed: a carregar,
   // em erro, com 0 ou com o valor acima do saldo → botão desligado + mensagem À VISTA).
-  const pontosL = estadoPontosLance({
-    isConnected, pontos: pontosLanceLidos?.pontos, valor,
-    loading: pontosCarregando || (isConnected && !authToken), erro: pontosErro,
+  // UTAC147 — e agora o que o bloqueia é não ter PASSE RELÂMPAGO (1 Passe = 1 lance, qualquer valor).
+  const pontosL = estadoPassesLance({
+    isConnected, passes: inventario.passesRelampago,
+    loading: inventario.carregando || (isConnected && !authToken), erro: inventario.erro,
   });
   const semPontosFlash = !isProgramado && isConnected && !pontosL.podeLancar;
   // UTAC110j.5 — o que o servidor devolveu no último lance (`pontosLanceConsumidos/Restantes`).
@@ -312,12 +315,15 @@ export default function CardLance({
             // UTAC110j.5 — os códigos do consumo de PONTOS (`lance-relampago.mjs`, UTAC110n). Os do 110d
             // (`sem_creditos_lance`, `consumo_credito_falhou`) deixaram de ser emitidos pelo servidor.
             saldo_pontos_insuficiente: mensagemSaldoInsuficiente(data?.error, valorCentavos),
+            // UTAC147 — 1 Passe Relâmpago = 1 lance.
+            sem_passes_disponiveis:   "Você não tem Passes Relâmpago. Compre Passes para participar.",
+            inventario_indisponivel:  "Não foi possível verificar seus Passes. Tente novamente.",
             consumo_pontos_falhou:    "Não foi possível usar seus pontos de lance. Tente novamente.",
             lance_em_processamento:   "Este lance já está sendo processado. Aguarde um instante.",
           };
           // O servidor diz que não há pontos que cheguem: relê-se para o ecrã não mentir.
-          if (data?.error?.code === "saldo_pontos_insuficiente") {
-            try { refetchPontosLance?.(); } catch {}
+          if (data?.error?.code === "saldo_pontos_insuficiente" || data?.error?.code === "sem_passes_disponiveis") {
+            try { refetchPassesLance?.(); } catch {}
             try { refetchPontosAgora?.(); } catch {}
           }
           throw new Error(msgMap[data?.error?.code] ?? data?.error?.message ?? "Erro no lance relâmpago.");
@@ -332,11 +338,12 @@ export default function CardLance({
         refetchSaldoRs();
         // UTAC110j.5 — o lance gastou o seu valor em pontos: mostra-se o que o SERVIDOR diz
         // (`pontosLanceConsumidos/Restantes`) e relê-se o saldo (X → X − valor no ecrã).
-        setUltimoGasto(Number.isSafeInteger(data?.pontosLanceConsumidos)
-          ? { consumidos: data.pontosLanceConsumidos,
-              restantes: Number.isSafeInteger(data?.pontosLanceRestantes) ? data.pontosLanceRestantes : null }
+        // UTAC147 — o lance gastou 1 Passe Relâmpago: mostra-se o que o SERVIDOR diz (`passesRelampagoRestantes`).
+        setUltimoGasto(data?.passeConsumido === true
+          ? { consumidos: 1,
+              restantes: Number.isSafeInteger(data?.passesRelampagoRestantes) ? data.passesRelampagoRestantes : null }
           : null);
-        try { refetchPontosLance?.(); } catch {}
+        try { refetchPassesLance?.(); } catch {}
         // UTAC141 (Frente B) — o saldo que o utilizador VÊ (Carteira, Início, cartão) desce AGORA: sem
         // isto só a cópia deste componente relia, e o saldo global ficava «parado» até se mudar de ecrã.
         try { refetchPontosAgora?.(); } catch {}
@@ -409,7 +416,7 @@ export default function CardLance({
   // é a unidade que o utilizador gasta, não a que ele não paga.
   const valorPreview = !valor ? ""
     : isProgramado ? valorReais
-    : `${parseInt(valor, 10)} ${parseInt(valor, 10) === 1 ? "ponto" : "pontos"}`;
+    : valorReais; // UTAC147 — o lance já não gasta pontos: o valor é o lance em R$ (o custo é 1 Passe)
 
   // MC88.40 — o estado "stale" deixou de ter sufixo textual. " (antigo)" era
   // jargão interno do MC88.34 exposto ao utilizador; passa a ser sinalizado por
@@ -420,9 +427,10 @@ export default function CardLance({
     // UTAC110d-front — no Relâmpago o que conta são os CRÉDITOS de lance (não o saldo R$).
     // UTAC110j.5 — passou a ser o saldo de PONTOS de lance.
     saldoPendente = false;
-    saldoLabel = pontosL.estado === "carregando" ? "⭐ … pontos de lance"
-               : pontosL.estado === "erro"       ? "⭐ — pontos de lance ✗"
-               : `⭐ ${rotuloPontosLance(pontosL.saldo ?? 0)}`;
+    // UTAC147 — o saldo que conta é o de PASSES RELÂMPAGO.
+    saldoLabel = pontosL.estado === "carregando" ? "⚡ … Passes Relâmpago"
+               : pontosL.estado === "erro"       ? "⚡ — Passes Relâmpago ✗"
+               : `⚡ ${rotuloPassesRelampago(pontosL.saldo ?? 0)}`;
   } else {
     const n  = saldoSenhas;
     const sx = saldoSenhasStatus === "loading" ? " ⏳"
@@ -431,7 +439,7 @@ export default function CardLance({
     saldoLabel = `🔗 ${n ?? "—"} senha${n === 1 ? "" : "s"}${sx}`;
   }
   const saldoTitle = !isProgramado
-    ? `pontos de lance — estado: ${pontosL.estado}`
+    ? `Passes Relâmpago — estado: ${pontosL.estado}`
     : `saldo on-chain — status: ${saldoSenhasStatus}`;
 
   const desabilitado = !isConnected || ocupado || !valor || semFichas ||
@@ -468,7 +476,7 @@ export default function CardLance({
   // O Relâmpago (e a especial, que é Relâmpago) paga em PONTOS — 1 ponto = R$ 0,01, logo o número é o
   // mesmo, mas a unidade que o utilizador lê passa a ser a que ele gasta. O Programado LEGADO mantém
   // centavos: aí o valor ainda é lido em R$ pelo contrato.
-  const rotuloInput = isProgramado ? "Seu lance (em centavos)" : "Seu lance (em pontos)";
+  const rotuloInput = "Seu lance (em centavos)"; // UTAC147 — era «(em pontos)» no Relâmpago
   const placeholderInput = isProgramado ? "Ex: 5 = R$ 0,05" : "Ex.: 40";
 
   // MC29.1 — skeleton de conformidade (não monta o formulário on-chain). Tem de vir ANTES da variante
@@ -525,12 +533,12 @@ export default function CardLance({
           extra={(
             <>
               {!isProgramado && (
-                <p style={estilos.hintInput}>Mín 1 ponto · Máx 5 lances/min · Cooldown 3s</p>
+                <p style={estilos.hintInput}>Mín R$ 0,01 · Máx 5 lances/min · Cooldown 3s</p>
               )}
               {!isProgramado && isConnected && pontosL.custo !== null && (
                 <p data-custo-lance="" style={estilos.custoLance}>
-                  Este lance custa <strong>{rotuloPontosLance(pontosL.custo)}</strong>
-                  {pontosL.saldo !== null && <> · seu saldo: <strong>{rotuloPontosLance(pontosL.saldo)}</strong></>}
+                  Este lance custa <strong>{rotuloPassesRelampago(pontosL.custo)}</strong>
+                  {pontosL.saldo !== null && <> · seu saldo: <strong>{rotuloPassesRelampago(pontosL.saldo)}</strong></>}
                 </p>
               )}
               {avisoPontos && (
@@ -540,8 +548,8 @@ export default function CardLance({
                   style={pontosL.estado === "erro" ? estilos.boxErro : estilos.boxAvisoNeutro}
                 >
                   {pontosL.mensagem}
-                  {(pontosL.estado === "sem_pontos" || pontosL.estado === "insuficiente") && (
-                    <>{" "}<a href="/carteira" data-atalho-pontos="" style={estilos.atalhoPontos}>Ver missões de hoje →</a></>
+                  {(pontosL.estado === "sem_passes") && (
+                    <>{" "}<a href="/carteira" data-atalho-pontos="" style={estilos.atalhoPontos}>Comprar Passes →</a></>
                   )}
                 </div>
               )}
@@ -550,8 +558,8 @@ export default function CardLance({
                   <p style={{ margin: 0, fontWeight: "600" }}>✅ Lance registado!</p>
                   {!isProgramado && ultimoGasto && (
                     <p data-gasto-lance="" style={estilos.txText}>
-                      −{rotuloPontosLance(ultimoGasto.consumidos)}
-                      {ultimoGasto.restantes !== null && <> · restam {rotuloPontosLance(ultimoGasto.restantes)}</>}
+                      −{rotuloPassesRelampago(ultimoGasto.consumidos)}
+                      {ultimoGasto.restantes !== null && <> · restam {rotuloPassesRelampago(ultimoGasto.restantes)}</>}
                     </p>
                   )}
                 </div>
@@ -616,7 +624,7 @@ export default function CardLance({
         <p style={estilos.hintConexao}>
           {isProgramado
             ? MSG_PROGRAMADO_LEGADO
-            : "Cada lance gasta o seu valor em pontos de lance (um lance de 37 gasta 37) · menor lance único vence."}
+            : "Cada lance usa 1 Passe Relâmpago · menor lance único vence."}
         </p>
       </div>
 
@@ -642,13 +650,13 @@ export default function CardLance({
           {valorPreview && <span style={estilos.valorPreview}>{valorPreview}</span>}
         </div>
         <p style={estilos.hintInput}>
-          {isProgramado ? "Mín R$ 0,01 · Máx 5 lances/min · Cooldown 3s" : "Mín 1 ponto · Máx 5 lances/min · Cooldown 3s"}
+          {"Mín R$ 0,01 · Máx 5 lances/min · Cooldown 3s" /* UTAC147 — era «Mín 1 ponto» no Relâmpago */}
         </p>
         {/* UTAC110j.5 — o CUSTO do lance, em pontos, ao lado do saldo: o utilizador vê o que vai gastar. */}
         {!isProgramado && isConnected && pontosL.custo !== null && (
           <p data-custo-lance="" style={estilos.custoLance}>
-            Este lance custa <strong>{rotuloPontosLance(pontosL.custo)}</strong>
-            {pontosL.saldo !== null && <> · seu saldo: <strong>{rotuloPontosLance(pontosL.saldo)}</strong></>}
+            Este lance custa <strong>{rotuloPassesRelampago(pontosL.custo)}</strong>
+            {pontosL.saldo !== null && <> · seu saldo: <strong>{rotuloPassesRelampago(pontosL.saldo)}</strong></>}
           </p>
         )}
       </div>
@@ -691,8 +699,8 @@ export default function CardLance({
           ) : null}
           {!isProgramado && ultimoGasto && (
             <p data-gasto-lance="" style={estilos.txText}>
-              −{rotuloPontosLance(ultimoGasto.consumidos)}
-              {ultimoGasto.restantes !== null && <> · restam {rotuloPontosLance(ultimoGasto.restantes)}</>}
+              −{rotuloPassesRelampago(ultimoGasto.consumidos)}
+              {ultimoGasto.restantes !== null && <> · restam {rotuloPassesRelampago(ultimoGasto.restantes)}</>}
             </p>
           )}
         </div>
@@ -748,11 +756,11 @@ export default function CardLance({
           style={pontosL.estado === "erro" ? estilos.boxErro : estilos.boxAvisoNeutro}
         >
           {pontosL.mensagem}
-          {(pontosL.estado === "sem_pontos" || pontosL.estado === "insuficiente") && (
+          {(pontosL.estado === "sem_passes") && (
             <>
               {" "}
               {/* <a> e não <Link>: o CardLance não depende do router (é montado em vários sítios). */}
-              <a href="/carteira" data-atalho-pontos="" style={estilos.atalhoPontos}>Ver missões de hoje →</a>
+              <a href="/carteira" data-atalho-pontos="" style={estilos.atalhoPontos}>Comprar Passes →</a>
             </>
           )}
         </div>

@@ -133,7 +133,7 @@ test("A · BIDIRECCIONAL — só abre com saldo CONHECIDO ≥ valor; o custo é 
   for (const v of ["1e2", "-5", "3.5", "abc"]) assert.equal(e({ pontos: 40, valor: v }).custo, null, `custo de «${v}»`);
 });
 
-test("A · o CardLance usa o estado em PONTOS (não o de créditos) e trata `saldo_pontos_insuficiente` (fonte)", () => {
+test.skip("A · o CardLance usa o estado em PONTOS (não o de créditos) e trata `saldo_pontos_insuficiente` (fonte) [UTAC147: o CardLance usa o estado em PASSES (estadoPassesLance)]", () => {
   const c = readFileSync(resolve(SRC, "components", "CardLance.jsx"), "utf8")
     .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "").replace(/\{\/\*[\s\S]*?\*\/\}/g, "");
   assert.match(c, /estadoPontosLance\(\{/);
@@ -176,14 +176,14 @@ test("B · SEG5/VM2 — `conversoesFeitas` só conta conversões com delta > 0 (
   assert.deepEqual(pl.conversoesFeitas(null), { creditos: false, senhas: false });
 });
 
-test("B · a Carteira mostra «⭐ Pontos de lance» com o saldo; sem conversão NÃO há nota", async () => {
+test.skip("B · a Carteira mostra «⭐ Pontos de lance» com o saldo; sem conversão NÃO há nota [UTAC147: os pontos de lance saíram da UI (Carteira, CardLance, Regras Oficiais) — 1 Passe = 1 lance]", async () => {
   const h = await carteiraCom({ creditos: 0, pontos: 245, historico: [mov("passe-relampago", 200), mov("login", 5)] });
   assert.match(semTags(card(h)), /⭐ Pontos de lance 245 Cada lance gasta o seu valor/);
   assert.doesNotMatch(h, /data-nota-conversao/, "nota de conversão a quem não foi convertido");
   assert.doesNotMatch(semTags(h), /Créditos de lance/);
 });
 
-test("B · BIDIRECCIONAL da nota: créditos convertidos → nota dos créditos; senhas → nota das senhas", async () => {
+test.skip("B · BIDIRECCIONAL da nota: créditos convertidos → nota dos créditos; senhas → nota das senhas [UTAC147: os pontos de lance saíram da UI (Carteira, CardLance, Regras Oficiais) — 1 Passe = 1 lance]", async () => {
   const hc = await carteiraCom({ creditos: 0, pontos: 400, historico: [mov("conversao-creditos", 400)] });
   assert.match(semTags(card(hc)), /Seus créditos de lance antigos foram convertidos em pontos de lance\./);
   assert.doesNotMatch(semTags(card(hc)), /senhas antigas/);
@@ -193,7 +193,7 @@ test("B · BIDIRECCIONAL da nota: créditos convertidos → nota dos créditos; 
 });
 
 // ═══ C — Regras Oficiais ════════════════════════════════════════════════════════════
-test("C · as Regras Oficiais publicam as proporções fixas NO APP, antes do 1.º capítulo", () => {
+test.skip("C · as Regras Oficiais publicam as proporções fixas NO APP, antes do 1.º capítulo [UTAC147: os pontos de lance saíram da UI (Carteira, CardLance, Regras Oficiais) — 1 Passe = 1 lance]", () => {
   const h = html(React.createElement(RegrasOficiais));
   const i = h.indexOf("data-proporcoes");
   assert.ok(i > 0 && i < h.indexOf("<section"), "o bloco das proporções não está antes do Regulamento");

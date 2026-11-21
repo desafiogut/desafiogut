@@ -48,7 +48,7 @@ let definirPontos = null;
 let chamadasPontos = null;
 let definirInventario = null; // UTAC130
 let estadoPasse = null;
-let tileCarteiraComMemo = null, tilePassesComMemo = null; // UTAC130 (⚠️1 do validador)
+let tileCarteiraComMemo = null, tilePassesComMemo = null, tilePasseTipoComMemo = null; // UTAC130 (⚠️1 do validador) · UTAC147
 // UTAC108h.2 — a separação das edições não-ativas nas duas prateleiras (função pura).
 let prateleirasDeEdicoes = null;
 // UTAC109f
@@ -89,7 +89,7 @@ before(async () => {
   ({ definirInventario } = await vite.ssrLoadModule(`${STUBS}/useInventarioPasses.js`));
   // react-router-dom é CJS: carregado pelo node, que é o que o Vite externaliza em SSR.
   ({ MemoryRouter } = await vite.ssrLoadModule("/src/__tests__/_ponte-ssr.mjs"));
-  ({ default: Pagina, estadoPasse, prateleirasDeEdicoes, tileCarteiraComMemo, tilePassesComMemo } = await vite.ssrLoadModule("/src/pages/Dashboard.jsx"));
+  ({ default: Pagina, estadoPasse, prateleirasDeEdicoes, tileCarteiraComMemo, tilePassesComMemo, tilePasseTipoComMemo } = await vite.ssrLoadModule("/src/pages/Dashboard.jsx"));
   ({ definirEmBreve } = await vite.ssrLoadModule(`${STUBS}/leilaoLock.js`));
   ({ getEstadoEdicao } = await vite.ssrLoadModule("/src/utils/edicao.js"));
 });
@@ -198,14 +198,14 @@ describe("MC94.2/MC94.3.1 · Dashboard — a edição especial NO SLOT", () => {
     assert.match(t, /⚡ Relâmpago/, "o título do vidro da família");
     assert.match(t, /ESPECIAL-AIRFRYER/, "o id da edição na pílula do topo");
     assert.doesNotMatch(t, /🎯 Edição Ativa/, "o slot continuava a dizer 'Edição Ativa' com a especial lá dentro");
-    assert.match(t, /Passe Desafio/, "os tiles desapareceram da página");
+    assert.match(t, /Passes Programados/, "os tiles desapareceram da página"); // UTAC147 — era «Passe Desafio»
     assert.match(t, /Acesso Rápido/, "os atalhos desapareceram da página");
   });
 
   test("a especial fica DENTRO do slot — depois dos tiles, antes do 'Acesso Rápido'", () => {
     const html = renderizar({ agendadas: { "ESPECIAL-AIRFRYER": especial(Date.now() + 5 * H) } });
     const iEsp = html.indexOf("data-slot=\"edicao-especial\"");
-    const iPasse = html.indexOf("Passe Desafio");
+    const iPasse = html.indexOf("Passes Programados"); // UTAC147 — era «Passe Desafio»
     assert.ok(iEsp >= 0 && iPasse >= 0 && iPasse < iEsp, `ordem errada: tiles=${iPasse} slot=${iEsp}`);
     // e ANTES de "Outras Edições"/"Acesso Rápido" (não é uma secção de topo)
     const iRapido = html.indexOf("Acesso Rápido");
@@ -231,7 +231,7 @@ describe("MC94.2/MC94.3.1 · Dashboard — a edição especial NO SLOT", () => {
     assert.equal(dentroDoSlot(html), false, "apareceu um card especial sem haver especial");
     const t = texto(html);
     // UTAC108h.3 — o Início passou a mostrar os DOIS vidros por família (saiu o «🎯 Edição Ativa»).
-    for (const s of ["⚡ Relâmpago", "🎫 Programada", "Passe Desafio", "Acesso Rápido"]) assert.match(t, new RegExp(s));
+    for (const s of ["⚡ Relâmpago", "🎫 Programada", "Passes Programados", "Acesso Rápido"]) assert.match(t, new RegExp(s)); // UTAC147
     assert.doesNotMatch(t, /🎁 Edição especial/);
   });
 
@@ -287,7 +287,8 @@ describe("MC94.2/MC94.3.1 · Dashboard — a edição especial NO SLOT", () => {
     assert.equal((html.match(/data-testid="cartao-edicao"/g) || []).length, 2,
       "a especial criou também um vidro de família (ficaria duas vezes no ecrã)");
     // Contagem directa: a especial tem de aparecer UMA vez em todo o ecrã.
-    const vezes = (texto(html).match(/Air Fryer/g) || []).length;
+    // UTAC147 — o nome saiu da faixa da especial (fica só no `alt` da arte): conta-se a arte, não o texto.
+    const vezes = (html.match(/alt="Air Fryer"/g) || []).length;
     assert.equal(vezes, 1, `a especial apareceu ${vezes} vezes no ecrã`);
   });
 
@@ -313,40 +314,34 @@ describe("UTAC107c · Início — Passe Desafio, destino e remoções", () => {
     return botoes.find((b) => texto(b).includes(rotulo)) ?? null;
   }
 
-  // UTAC130 (Frente B, decisões do operador) — os 4 tiles passam a: «Carteira» (pontos de lance) · «Passe Desafio»
-  // (TOTAL do inventário) · «Lances Únicos» · «Total de Lances». Os dois primeiros levam à Carteira. Substitui os
-  // testes do UTAC107c que fixavam «Saldo (R$)» e o «X / 50» de cartão (o desenho mudou por decisão do operador).
-  test("UTAC130 · ordem: Carteira, Passe Desafio, Lances Únicos, Total de Lances — e «Saldo (R$)» saiu", () => {
+  // ⛔ UTAC147 (decisão do operador, 2026-11-21 — modelo de Passes diretos): o Início deixa de mostrar PONTOS DE LANCE.
+  // Os dois primeiros tiles passam a «Meus Passes» por tipo: «Passes Relâmpago» (1 por lance) e «Passes Programados»
+  // (1 por palpite), ambos para a Carteira. Substitui os testes do UTAC130 («Carteira» = pontos de lance · «Passe Desafio»
+  // = total do inventário), que ficam no histórico do git. As guardas de skeleton/«—»/memo mantêm-se, com os rótulos novos.
+  test("UTAC147 · ordem: Passes Relâmpago, Passes Programados, Lances Únicos, Total de Lances — sem pontos de lance nem R$", () => {
     definirResultadoOficial(null);
     definirPontos({ pontos: 14, pontosCartao: 12, lance: { pontos: 55, movimentos: [] } });
     definirInventario({ passesRelampago: 2, passesProgramado: 1 });
     const html = renderizar(COM_SESSAO);
     const t = texto(html);
-    assert.doesNotMatch(t, /\bSenhas\b/, "o tile «Senhas» continua no Início");
     assert.doesNotMatch(t, /Saldo \(R\$\)/, "o tile «Saldo (R$)» continua no Início");
-    assert.doesNotMatch(texto(tile(html, "Carteira") ?? ""), /R\$/, "o tile «Carteira» mostra reais");
-    const ordem = ["Carteira", "Passe Desafio", "Lances Únicos", "Total de Lances"].map((r) => t.indexOf(r));
+    assert.doesNotMatch(t, /\b55 pts\b|pontos de lance/i, "o Início ainda mostra pontos de lance");
+    const ordem = ["Passes Relâmpago", "Passes Programados", "Lances Únicos", "Total de Lances"].map((r) => t.indexOf(r));
     assert.ok(ordem.every((i) => i >= 0), `faltam tiles: ${ordem}`);
     assert.deepEqual([...ordem].sort((a, b) => a - b), ordem, "a ordem dos 4 tiles mudou");
   });
 
-  test("UTAC130 · «Carteira» mostra os PONTOS DE LANCE (não o total de fidelidade, nem o cartão)", () => {
+  test("UTAC147 · cada tile mostra o SEU tipo de Passe (não a soma, nem os pontos)", () => {
     definirPontos({ pontos: 14, pontosCartao: 12, lance: { pontos: 55, movimentos: [] } });
-    const b = tile(renderizar(COM_SESSAO), "Carteira");
-    assert.ok(texto(b).includes("55 pts"), `esperava «55 pts»; o tile diz: «${texto(b)}»`);
-    assert.ok(!/\b14\b|\b12\b/.test(texto(b)), "o tile mostra pontos de fidelidade/cartão em vez dos de lance");
-  });
-
-  test("UTAC130 · «Passe Desafio» mostra o TOTAL do inventário (Relâmpago + Programado), não o «X / 50»", () => {
-    definirPontos({ pontos: 14, pontosCartao: 12, pontosParaCartao: 50 });
     definirInventario({ passesRelampago: 2, passesProgramado: 3 });
-    const b = tile(renderizar({ ...COM_SESSAO, saldoSenhas: 7, saldoSenhasStatus: "ok" }), "Passe Desafio");
-    assert.match(texto(b), /\b5\b/, `esperava 5 (2 + 3); o tile diz: «${texto(b)}»`);
-    assert.doesNotMatch(texto(b), /\/ 50/, "o tile ainda mostra os pontos de cartão");
-    assert.ok(!/\b7\b/.test(texto(b)), "o tile mostra as SENHAS on-chain (Via A)");
+    const html = renderizar({ ...COM_SESSAO, saldoSenhas: 7, saldoSenhasStatus: "ok" });
+    const r = texto(tile(html, "Passes Relâmpago")), g = texto(tile(html, "Passes Programados"));
+    assert.match(r, /\b2\b/, `Relâmpago devia dizer 2: «${r}»`);
+    assert.match(g, /\b3\b/, `Programados devia dizer 3: «${g}»`);
+    for (const x of [r, g]) assert.ok(!/\b5\b|\b55\b|\b14\b|\b7\b/.test(x), `o tile mostra soma/pontos/senhas: «${x}»`);
   });
 
-  test("UTAC130 · os tiles «Carteira» e «Passe Desafio» levam à Carteira", async () => {
+  test("UTAC147 · os dois tiles de Passes levam à Carteira", async () => {
     const { readFileSync } = await import("node:fs");
     const fonte = readFileSync(caminho(AQUI, "../Dashboard.jsx"), "utf8");
     for (const nome of ["carteiraStat", "passeStat"]) {
@@ -357,74 +352,53 @@ describe("UTAC107c · Início — Passe Desafio, destino e remoções", () => {
     assert.match(fonte, /\n\s*carteiraStat,\s*\r?\n\s*passeStat,\s*\r?\n/, "os dois tiles não abrem a lista `stats`");
   });
 
-  test("UTAC130 · a carregar: skeleton nos dois tiles, nunca um 0 prematuro", () => {
-    definirPontos({ loading: true });
+  test("UTAC147 · a carregar: skeleton nos dois tiles, nunca um 0 prematuro", () => {
     definirInventario({ carregando: true });
     const html = renderizar(COM_SESSAO);
-    assert.match(tile(html, "Carteira"), /data-testid="carteira-skeleton"/, "a Carteira mostrou um número enquanto carregava");
-    assert.match(tile(html, "Passe Desafio"), /data-testid="passe-skeleton"/, "o Passe mostrou um número enquanto carregava");
+    assert.match(tile(html, "Passes Relâmpago"), /data-testid="carteira-skeleton"/, "Relâmpago mostrou um número enquanto carregava");
+    assert.match(tile(html, "Passes Programados"), /data-testid="passe-skeleton"/, "Programados mostrou um número enquanto carregava");
   });
 
-  test("UTAC130 · sessão ainda a cunhar o token: os DOIS tiles ficam em skeleton (mesmo com o inventário dito lido)", () => {
-    definirPontos({ loading: false, lance: { pontos: 7, movimentos: [] } });
-    definirInventario({ carregando: false, passesRelampago: 3, passesProgramado: 0 }); // ⚠️2: explícito, sem herdar estado
+  test("UTAC147 · sessão ainda a cunhar o token: os DOIS tiles ficam em skeleton (mesmo com o inventário dito lido)", () => {
+    definirInventario({ carregando: false, passesRelampago: 3, passesProgramado: 0 });
     const html = renderizar({ ...COM_SESSAO, authToken: null });
-    assert.match(tile(html, "Carteira"), /data-testid="carteira-skeleton"/, "a Carteira mostrou um valor antes do token chegar");
-    assert.match(tile(html, "Passe Desafio"), /data-testid="passe-skeleton"/, "o Passe mostrou um valor antes do token chegar");
+    assert.match(tile(html, "Passes Relâmpago"), /data-testid="carteira-skeleton"/);
+    assert.match(tile(html, "Passes Programados"), /data-testid="passe-skeleton"/);
   });
 
-  // UTAC130 — achado ⚠️1 do validador: a janela de UM render em que o token acabou de chegar (ou a conta mudou) e o
-  // hook ainda não voltou a pedir. Sequência de renders com o MESMO memo (o SSR cria um memo novo por render, por isso
-  // a sequência prova-se nas funções puras que o Dashboard usa).
-  test("UTAC130 · ⚠️1: token a chegar com o hook ainda «lido 0/0» ⇒ skeleton, nunca «0» falso; depois do pedido ⇒ número", () => {
+  test("UTAC147 · ⚠️1 (UTAC130): token a chegar com o hook ainda «lido 0» ⇒ skeleton, nunca «0» falso; depois do pedido ⇒ número", () => {
     const memo = { chave: null, pendente: false };
     const A = "0xaaaa000000000000000000000000000000000001";
-    assert.equal(tilePassesComMemo(memo, { address: A, authToken: null, carregando: false, erro: "", passesRelampago: 0, passesProgramado: 0 }), null, "sem token: skeleton");
-    assert.equal(tilePassesComMemo(memo, { address: A, authToken: "t1", carregando: false, erro: "", passesRelampago: 0, passesProgramado: 0 }), null, "o «0» falso apareceu no render em que o token chegou");
-    assert.equal(tilePassesComMemo(memo, { address: A, authToken: "t1", carregando: true, erro: "", passesRelampago: 0, passesProgramado: 0 }), null);
-    assert.equal(tilePassesComMemo(memo, { address: A, authToken: "t1", carregando: false, erro: "", passesRelampago: 2, passesProgramado: 1 }), "3");
-    // troca de conta: o total da conta anterior não pode aparecer
+    assert.equal(tilePasseTipoComMemo(memo, { address: A, authToken: null, carregando: false, erro: "", n: 0 }), null, "sem token: skeleton");
+    assert.equal(tilePasseTipoComMemo(memo, { address: A, authToken: "t1", carregando: false, erro: "", n: 0 }), null, "o «0» falso apareceu no render em que o token chegou");
+    assert.equal(tilePasseTipoComMemo(memo, { address: A, authToken: "t1", carregando: true, erro: "", n: 0 }), null);
+    assert.equal(tilePasseTipoComMemo(memo, { address: A, authToken: "t1", carregando: false, erro: "", n: 2 }), "2");
     const B = "0xbbbb000000000000000000000000000000000002";
-    assert.equal(tilePassesComMemo(memo, { address: B, authToken: "t2", carregando: false, erro: "", passesRelampago: 2, passesProgramado: 1 }), null, "mostrou o total da conta anterior");
-    const m2 = { chave: null, pendente: false };
-    assert.equal(tileCarteiraComMemo(m2, { address: A, authToken: null, loading: false, erro: "", lance: null }), null);
-    assert.equal(tileCarteiraComMemo(m2, { address: A, authToken: "t1", loading: false, erro: "", lance: { pontos: 9 } }), null, "a Carteira mostrou pontos antes do pedido do par novo");
-    tileCarteiraComMemo(m2, { address: A, authToken: "t1", loading: true, erro: "", lance: null });
-    assert.equal(tileCarteiraComMemo(m2, { address: A, authToken: "t1", loading: false, erro: "", lance: { pontos: 9 } }), "9 pts");
+    assert.equal(tilePasseTipoComMemo(memo, { address: B, authToken: "t2", carregando: false, erro: "", n: 2 }), null, "mostrou o valor da conta anterior");
   });
 
-  test("UTAC130 · erro ou campo ilegível: «—», nunca um 0 falso", () => {
-    definirPontos({ erro: "falhou", lance: null });
-    definirInventario({ erro: "falhou" });
+  test("UTAC147 · erro ou campo ilegível: «—», nunca um 0 falso", () => {
+    definirInventario({ erro: "falhou", passesRelampago: 4, passesProgramado: 1 });
     const html = renderizar(COM_SESSAO);
-    for (const r of ["Carteira", "Passe Desafio"]) {
+    for (const r of ["Passes Relâmpago", "Passes Programados"]) {
       const b = tile(html, r);
       assert.match(texto(b), /—/, `${r}: o erro devia mostrar «—»`);
       assert.doesNotMatch(b, /-skeleton/, `${r}: o erro ficou preso no skeleton`);
     }
-    definirPontos({ lance: null });
-    assert.match(texto(tile(renderizar(COM_SESSAO), "Carteira")), /—/, "lance ilegível virou número");
-    definirPontos({ erro: "falhou", lance: { pontos: 9, movimentos: [] } });
-    definirInventario({ erro: "falhou", passesRelampago: 4, passesProgramado: 1 });
-    const h2 = renderizar(COM_SESSAO);
-    assert.match(texto(tile(h2, "Carteira")), /—/, "com erro, a Carteira mostrou o número (ramo erro ignorado)");
-    assert.match(texto(tile(h2, "Passe Desafio")), /—/, "com erro, o Passe mostrou o número (ramo erro ignorado)");
   });
 
-  test("UTAC130 · vazio (lido 0/0 e 0 pontos): «0» e «0 pts»", () => {
-    definirPontos({ lance: { pontos: 0, movimentos: [] } });
+  test("UTAC147 · vazio (lido 0 e 0): «0» nos dois", () => {
     definirInventario({ passesRelampago: 0, passesProgramado: 0 });
     const html = renderizar(COM_SESSAO);
-    assert.match(texto(tile(html, "Passe Desafio")), /\b0\b/);
-    assert.match(texto(tile(html, "Carteira")), /0 pts/);
+    assert.match(texto(tile(html, "Passes Relâmpago")), /\b0\b/);
+    assert.match(texto(tile(html, "Passes Programados")), /\b0\b/);
   });
 
-  test("UTAC130 · sem conta: «—» nos dois tiles", () => {
-    definirPontos({ lance: { pontos: 9, movimentos: [] } });
+  test("UTAC147 · sem conta: «—» nos dois tiles", () => {
     definirInventario({ passesRelampago: 4 });
     const html = renderizar({ address: null, authToken: null });
-    assert.match(texto(tile(html, "Carteira")), /—/);
-    assert.match(texto(tile(html, "Passe Desafio")), /—/);
+    assert.match(texto(tile(html, "Passes Relâmpago")), /—/);
+    assert.match(texto(tile(html, "Passes Programados")), /—/);
   });
 
   test("os KPIs «Lances Únicos» e «Total de Lances» FICAM (R18-A do UTAC107c)", () => {
@@ -592,31 +566,33 @@ describe("UTAC109f · Início — ordem final e pendências do 109e", () => {
       `ordem: ${JSON.stringify(Object.fromEntries(marcas.map((m, k) => [m, pos[k]])))}`);
   });
 
-  test("os 4 glass pequenos: Carteira · Passe Desafio · Lances Únicos · Total de Lances (por esta ordem — UTAC130)", () => {
+  test("os 4 glass pequenos: Passes Relâmpago · Passes Programados · Lances Únicos · Total de Lances (por esta ordem — UTAC147; era UTAC130)", () => {
     definirPontos({}); definirResultadoOficial(null);
     const html = renderizar();
     const ini = html.indexOf("Lances Únicos"), fim = html.indexOf(">⚡ Relâmpago<");
     const rotulos = (html.slice(html.lastIndexOf("<section", ini), fim).match(/<button[\s\S]*?<\/button>/g) || []).map(texto);
     assert.equal(rotulos.length, 4, JSON.stringify(rotulos));
-    ["Carteira", "Passe Desafio", "Lances Únicos", "Total de Lances"].forEach((r, k) => assert.ok(rotulos[k].includes(r), `${k}: ${rotulos[k]}`));
+    ["Passes Relâmpago", "Passes Programados", "Lances Únicos", "Total de Lances"].forEach((r, k) => assert.ok(rotulos[k].includes(r), `${k}: ${rotulos[k]}`));
   });
 
   // ⚠️2 do validador (109f): sem esta guarda, mudar o destino/cor de um tile passava a suíte. Os blocos do
   // `passeStat`/`stats` e do render dos KPIs têm de ser BYTE-IGUAIS ao baseline `731ec28` (fins de linha normalizados).
   // UTAC130 — os DADOS dos tiles mudaram por decisão do operador (Carteira = pontos de lance; Passe = inventário):
   // nova linha de base do bloco de dados = UTAC130. O RENDER dos 4 tiles continua byte-igual ao `731ec28`.
-  test("os 4 glass pequenos: dados = baseline UTAC130, render BYTE-IGUAL ao 731ec28, Carteira e Passe levam à Carteira", async () => {
+  // UTAC147 — os DADOS mudaram outra vez por decisão do operador (Passes Relâmpago / Passes Programados): nova linha de
+  // base do bloco de dados = UTAC147 (sha abaixo). O RENDER dos 4 tiles continua byte-igual ao `731ec28`.
+  test("os 4 glass pequenos: dados = baseline UTAC147, render BYTE-IGUAL ao 731ec28, os dois tiles de Passes levam à Carteira", async () => {
     const { readFileSync } = await import("node:fs");
     const { createHash } = await import("node:crypto");
     const s = readFileSync(caminho(AQUI, "../Dashboard.jsx"), "utf8").replace(/\r\n/g, "\n");
     const bloco = (a, b) => { const i = s.indexOf(a), j = s.indexOf(b); assert.ok(i > 0 && j > i, `bloco ${a}`); return s.slice(i, j); };
     const sha = (t) => createHash("sha256").update(t).digest("hex");
     assert.equal(sha(bloco("  const carteiraStat = {", "  const cardPad")),
-      "c76cc1c0352167a0219f60e69cc0f4f5fc293399dec4f3ba9fe129df68f60afe", "os dados dos 4 tiles mudaram");
+      "47d68ad59297caa3b3859e6feefc2ef5d22763c552f1a7b061117099bfe6b438", "os dados dos 4 tiles mudaram");
     assert.equal(sha(bloco("      {/* ── KPIs ── */}", "      {/* ── UTAC108h.3")),
       "0b037a7abb13b9db6272de47aadddafdc98da2121615d967d11f51a3ce68db69", "o render dos 4 tiles mudou");
     assert.doesNotMatch(s, /label: "Saldo \(R\$\)"/, "o KPI «Saldo (R$)» voltou ao Início (UTAC130)");
-    assert.match(bloco("  const carteiraStat = {", "  const cardPad"), /label: "Carteira"[\s\S]*?to: "\/carteira"/, "o tile «Carteira» não leva à Carteira");
+    assert.match(bloco("  const carteiraStat = {", "  const cardPad"), /label: "Passes Relâmpago"[\s\S]*?to: "\/carteira"/, "o tile «Passes Relâmpago» não leva à Carteira");
   });
 
   test("glass final: dentro de vidro, aviso honesto (LACUNA), sem dados inventados, sem 🏆 nem «ver todos»", () => {
