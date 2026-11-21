@@ -1,0 +1,45 @@
+schema: utac/1
+name: UTAC147
+title: "Modelo de Passes diretos (1 Passe = 1 ação), limpeza dos pontos de engajamento e deploy web"
+type: produto
+baseline: 9108312
+motivo: >-
+  O operador mudou a lógica central: o utilizador compra 1/3/5 Passes (R$ 2,00 cada); 1 Passe Relâmpago
+  = 1 lance; 1 Passe Programado = 1 palpite. Os pontos de login/missão/sequência saem e só fica o Indique e Ganhe.
+  Risco Google Play assumido pela gestão.
+frentes:
+  - id: A
+    nome: Backend — fontes de pontos e consumo de Passe
+    entrega: [netlify/functions/_lib/fontes-lance.mjs, login-diario.mjs, _lib/pontuacao-store.mjs (sequência),
+              lance-relampago.mjs (consumirPasse obrigatório), registar-palpite.mjs (consumirPasse obrigatório)]
+  - id: B
+    nome: Regulamento e textos
+    entrega: [docs/REGULAMENTO-v6.2.md (Art. 18 prêmio→produto), src/i18n/pt.js]
+  - id: C
+    nome: Edição Especial — faixa só com «A apuração será em:» + cronómetro
+    entrega: [src/components/edicao-especial/CardEdicaoEspecial.jsx, src/components/CartaoEdicao.jsx (prop)]
+  - id: D
+    nome: UI — Carteira/Início sem Pontos de Lance; Meus Passes; «custa 1 Passe Relâmpago»
+    entrega: [src/pages/Dashboard.jsx, carteira, CardLance]
+  - id: E
+    nome: Testes + deploy web
+    entrega: [testes ajustados, suíte, netlify deploy --prod --build]
+autoriza:
+  - editar backend, frontend e o Markdown do Regulamento
+  - correr testes
+  - netlify deploy --prod --build (foreground)
+  - SELECT em produção (Supabase)
+proibe:
+  - gerar AAB
+  - alterar o Play Billing (validar-compra-google.mjs, creditarPasseGoogle) — R18-147-A (operador, 2026-11-21)
+  - alterar a Oferta Programada (mantém os 50 ECOQUILDO)
+  - git add -A
+  - migração SQL sem autorização (ST3)
+dependencias:
+  - inventário de Passes (UTAC120, public.passes_inventario + RPC passes_consumir/devolver)
+regras_activas: [E, T, G, L, S, A, P, AU, ST, HI]
+stop_conditions_extra: [ST3, ST5, ST6]
+ressalvas:
+  - "HI5: tempo máximo de 1,5 h"
+  - "A14: RAM livre ≥ 1500 MB antes da suíte"
+  - foco no site (PWA)

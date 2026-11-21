@@ -57,7 +57,7 @@ test("B0 a constante é a da decisão do operador (literal, não a própria cons
   assert.equal(F.PONTOS_BOAS_VINDAS, 50);
 });
 
-test("B1 (positivo) 1.º login de uma conta nova → 200 com token E +50 pontos de lance, motivo boas-vindas", async () => {
+test.skip("B1 (positivo) 1.º login de uma conta nova → 200 com token E +50 pontos de lance, motivo boas-vindas [UTAC147 (R18-147-C): o bónus de boas-vindas saiu]", async () => {
   const r = await login();
   assert.equal(r.status, 200);
   assert.ok(typeof r.corpo.token === "string" && r.corpo.token.length > 20);
@@ -67,20 +67,20 @@ test("B1 (positivo) 1.º login de uma conta nova → 200 com token E +50 pontos 
   assert.equal(entradas(END)[0].delta, 50);
 });
 
-test("B2 (idempotência) relogar 3× → continua 50, uma só entrada", async () => {
+test.skip("B2 (idempotência) relogar 3× → continua 50, uma só entrada [UTAC147 (R18-147-C): o bónus de boas-vindas saiu]", async () => {
   await login(); await login(); await login();
   assert.equal(pontos(END), 50);
   assert.equal(entradas(END).length, 1);
 });
 
-test("B3 (concorrência) 10 logins em paralelo → uma só entrada de +50", async () => {
+test.skip("B3 (concorrência) 10 logins em paralelo → uma só entrada de +50 [UTAC147 (R18-147-C): o bónus de boas-vindas saiu]", async () => {
   const rs = await Promise.all(Array.from({ length: 10 }, () => login()));
   assert.ok(rs.every((r) => r.status === 200), "algum login falhou");
   assert.equal(entradas(END).length, 1);
   assert.equal(pontos(END), 50);
 });
 
-test("B4 (soma, não substitui) conta que já tinha pontos recebe +50 por cima, uma vez", async () => {
+test.skip("B4 (soma, não substitui) conta que já tinha pontos recebe +50 por cima, uma vez [UTAC147 (R18-147-C): o bónus de boas-vindas saiu]", async () => {
   await F.creditarLoginDiario(END);       // +5
   await login();
   assert.equal(pontos(END), 55);
@@ -98,7 +98,7 @@ test("B5 (negativo) assinatura de OUTRA carteira → 401 e nenhum bónus", async
   assert.equal(pontos(END), 0);
 });
 
-test("B6 (fail-soft) com a base de dados em baixo o LOGIN continua 200 — o bónus fica para o próximo login", async () => {
+test.skip("B6 (fail-soft) com a base de dados em baixo o LOGIN continua 200 — o bónus fica para o próximo login [UTAC147 (R18-147-C): o bónus de boas-vindas saiu]", async () => {
   falharDb = true;
   const r = await login();
   assert.equal(r.status, 200);

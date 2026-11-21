@@ -25,7 +25,14 @@ const fakeStore = {
   },
   async list() { return { blobs: [...mem.keys()].map((key) => ({ key })) }; },
   async delete(k) { mem.delete(k); },
+  async set(k, v, opt = {}) { if (opt.onlyIfNew && mem.has(k)) return { modified: false }; mem.set(k, String(v)); return { modified: true, etag: '"e"' }; },
 };
+// UTAC147 — o relâmpago (normal ou especial) gasta 1 Passe Relâmpago do inventário; `chamadasConsumoCredito` passa a
+// contar esse consumo (a invariante destes testes é «1 unidade de pagamento por lance aceite, 0 nos recusados»).
+mock.module("../_lib/passes-inventario.mjs", { namedExports: {
+  consumirPasse: async () => { chamadasConsumoCredito += 1; return { ok: true, restantes: 9 }; },
+  devolverPasse: async () => ({ ok: true }),
+} });
 
 mock.module("@netlify/blobs", { namedExports: { getStore: () => fakeStore } });
 mock.module("../_lib/jwt.mjs", { namedExports: { verificarLanceAuth: async () => ({ endereco: TEST_ADDR }) } });
@@ -133,7 +140,7 @@ test("especial dentro da janela: 201, consome 1 CRÉDITO de lance e NÃO senha",
   // 1.ª versão media, e teria falhado num caso correcto.
   assert.ok(!data.senhaConsumida, "não pode haver consumo de senha na especial");
   assert.equal(chamadasDebitoRs, 0, "o débito R$ está atrás da flag desligada");
-  assert.equal(chamadasConsumoCredito, 1, "a especial consome 1 crédito de lance");
+  assert.equal(chamadasConsumoCredito, 1, "a especial consome 1 Passe Relâmpago (UTAC147)");
   assert.equal(chamadasSaldoOnChain, 0, "sem senha: não há leitura on-chain de senhas");
   assert.equal(chamadasCompromete, 1);
   assert.equal(chamadasAddLance, 1);

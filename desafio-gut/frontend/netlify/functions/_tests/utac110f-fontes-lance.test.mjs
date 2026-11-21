@@ -53,7 +53,7 @@ test("D2 constantes do operador: login 5 · missão 10 · indicação 50 · limi
 });
 
 // ── Frente A — login diário ──────────────────────────────────────────────────────────────────────
-test("A1 login: 1.º do dia +5 · 2.º do mesmo dia 0 · dia seguinte +5 (bidireccional)", async () => {
+test.skip("A1 login: 1.º do dia +5 · 2.º do mesmo dia 0 · dia seguinte +5 (bidireccional) [UTAC147 (R18-147-C): os créditos de login diário e da missão saíram]", async () => {
   const r1 = await F.creditarLoginDiario(A, D("2026-10-13T12:00:00Z"));
   assert.deepEqual([r1.ok, r1.creditado, r1.pontosLance], [true, true, 5]);
   const r2 = await F.creditarLoginDiario(A, D("2026-10-13T23:30:00Z"));
@@ -64,7 +64,7 @@ test("A1 login: 1.º do dia +5 · 2.º do mesmo dia 0 · dia seguinte +5 (bidire
     [["login", 5, "login:2026-10-13"], ["login", 5, "login:2026-10-14"]]);
 });
 
-test("A2 login: a fronteira é a de Manaus — 03:59Z e 04:01Z do MESMO dia UTC são 2 dias (2 créditos)", async () => {
+test.skip("A2 login: a fronteira é a de Manaus — 03:59Z e 04:01Z do MESMO dia UTC são 2 dias (2 créditos) [UTAC147 (R18-147-C): os créditos de login diário e da missão saíram]", async () => {
   await F.creditarLoginDiario(A, D("2026-10-13T03:59:00Z"));
   await F.creditarLoginDiario(A, D("2026-10-13T04:01:00Z"));
   assert.equal(pontos(A), 10);
@@ -74,7 +74,7 @@ test("A2 login: a fronteira é a de Manaus — 03:59Z e 04:01Z do MESMO dia UTC 
   assert.equal(pontos(B), 5);
 });
 
-test("A3 login: 5 logins EM PARALELO no mesmo dia → UM só crédito (CAS + ref diária)", async () => {
+test.skip("A3 login: 5 logins EM PARALELO no mesmo dia → UM só crédito (CAS + ref diária) [UTAC147 (R18-147-C): os créditos de login diário e da missão saíram]", async () => {
   const agora = D("2026-10-13T15:00:00Z");
   const rs = await Promise.all(Array.from({ length: 5 }, () => F.creditarLoginDiario(A, agora)));
   assert.equal(rs.filter((r) => r.ok && r.creditado).length, 1, "exactamente 1 crédito");
@@ -83,7 +83,7 @@ test("A3 login: 5 logins EM PARALELO no mesmo dia → UM só crédito (CAS + ref
   assert.equal(hist(A).filter((h) => h.ref === "login:2026-10-13").length, 1);
 });
 
-test("A4 login: um escritor concorrente entre a leitura e a escrita é respeitado (CAS relê)", async () => {
+test.skip("A4 login: um escritor concorrente entre a leitura e a escrita é respeitado (CAS relê) [UTAC147 (R18-147-C): os créditos de login diário e da missão saíram]", async () => {
   await L.creditarCreditoLance(A, "passe-relampago:k1"); // linha existe com 1 crédito
   T.g.antesDeActualizar = (tab) => { const l = tab[0]; l.creditos_lance = 2; l.atualizado_em = "outro";
     l.historico_lance = [...l.historico_lance, { ref: "passe-relampago:k2", campo: "creditos_lance", delta: 1 }]; };
@@ -95,7 +95,7 @@ test("A4 login: um escritor concorrente entre a leitura e a escrita é respeitad
   assert.ok(l.historico_lance.some((h) => h.ref === "passe-relampago:k2"));
 });
 
-test("A5 login: erro do banco → ok:false (nunca finge que creditou)", async () => {
+test.skip("A5 login: erro do banco → ok:false (nunca finge que creditou) [UTAC147 (R18-147-C): os créditos de login diário e da missão saíram]", async () => {
   T.g.falhar = { op: "select" };
   const r = await F.creditarLoginDiario(A, D("2026-10-13T15:00:00Z"));
   assert.equal(r.ok, false);
@@ -120,7 +120,7 @@ test("A6 endpoint: sem token 401 · token lance-auth 401 · GET 405 · pausado 5
   assert.equal(pontos(A), 0, "nenhum destes caminhos credita");
 });
 
-test("A7 endpoint: user-session → 200 +5; repetir → 200 jaCreditado (endereço SÓ do token)", async () => {
+test.skip("A7 endpoint: user-session → 200 +5; repetir → 200 jaCreditado (endereço SÓ do token) [UTAC147 (R18-147-C): os créditos de login diário e da missão saíram]", async () => {
   const tk = await assinarUserSession(A);
   const r1 = await login({ token: tk });
   assert.equal(r1.status, 200);
@@ -131,14 +131,14 @@ test("A7 endpoint: user-session → 200 +5; repetir → 200 jaCreditado (endere�
   assert.equal(T.linha(B), undefined, "ninguém mais foi creditado");
 });
 
-test("A8 endpoint: falha do banco → 502 credito_falhou", async () => {
+test.skip("A8 endpoint: falha do banco → 502 credito_falhou [UTAC147 (R18-147-C): os créditos de login diário e da missão saíram]", async () => {
   T.g.falhar = { op: "select" };
   const r = await login({ token: await assinarUserSession(A) });
   assert.deepEqual([r.status, r.corpo?.error?.code], [502, "credito_falhou"]);
 });
 
 // ── Frente C — missão «1 lance» (a função; a integração no lance vive em utac110f-lance-missao) ───
-test("C1 missão: 1.º lance do dia +10 · 2.º do mesmo dia 0 · dia seguinte +10", async () => {
+test.skip("C1 missão: 1.º lance do dia +10 · 2.º do mesmo dia 0 · dia seguinte +10 [UTAC147 (R18-147-C): os créditos de login diário e da missão saíram]", async () => {
   const r1 = await F.creditarMissaoLance(A, D("2026-10-13T12:00:00Z"));
   const r2 = await F.creditarMissaoLance(A, D("2026-10-13T20:00:00Z"));
   const r3 = await F.creditarMissaoLance(A, D("2026-10-14T12:00:00Z"));
@@ -148,14 +148,14 @@ test("C1 missão: 1.º lance do dia +10 · 2.º do mesmo dia 0 · dia seguinte +
     [["missao", "missao-lance:2026-10-13"], ["missao", "missao-lance:2026-10-14"]]);
 });
 
-test("C2 missão: 5 lances em paralelo no mesmo dia → UM crédito de +10", async () => {
+test.skip("C2 missão: 5 lances em paralelo no mesmo dia → UM crédito de +10 [UTAC147 (R18-147-C): os créditos de login diário e da missão saíram]", async () => {
   const agora = D("2026-10-13T15:00:00Z");
   const rs = await Promise.all(Array.from({ length: 5 }, () => F.creditarMissaoLance(A, agora)));
   assert.equal(rs.filter((r) => r.creditado).length, 1);
   assert.equal(pontos(A), 10);
 });
 
-test("C3 login e missão são INDEPENDENTES no mesmo dia (5 + 10 = 15); estadoMissoesHoje lê o histórico", async () => {
+test.skip("C3 login e missão são INDEPENDENTES no mesmo dia (5 + 10 = 15); estadoMissoesHoje lê o histórico [UTAC147 (R18-147-C): os créditos de login diário e da missão saíram]", async () => {
   const agora = D("2026-10-13T15:00:00Z");
   assert.deepEqual(await F.estadoMissoesHoje(A, agora), { dia: "2026-10-13", loginFeito: false, lanceFeito: false });
   await F.creditarLoginDiario(A, agora);
@@ -167,7 +167,7 @@ test("C3 login e missão são INDEPENDENTES no mesmo dia (5 + 10 = 15); estadoMi
     { dia: "2026-10-14", loginFeito: false, lanceFeito: false }, "o dia seguinte começa limpo");
 });
 
-test("C4 as fontes NUNCA mexem nos créditos de lance nem nos pontos de fidelidade", async () => {
+test.skip("C4 as fontes NUNCA mexem nos créditos de lance nem nos pontos de fidelidade [UTAC147 (R18-147-C): os créditos de login diário e da missão saíram]", async () => {
   await L.creditarCreditoLance(A, "passe-relampago:k1");
   const agora = D("2026-10-13T15:00:00Z");
   await F.creditarLoginDiario(A, agora);
@@ -250,7 +250,7 @@ test("B7 o limite conta SÓ indicações FEITAS — o bónus de indicado (`indic
   assert.equal(pontos(A), 550);
 });
 
-test("A9 endpoint: um endereço de OUTRA pessoa no corpo é IGNORADO — credita só o titular do token (anti-IDOR)", async () => {
+test.skip("A9 endpoint: um endereço de OUTRA pessoa no corpo é IGNORADO — credita só o titular do token (anti-IDOR) [UTAC147 (R18-147-C): os créditos de login diário e da missão saíram]", async () => {
   const req = new Request("https://x/.netlify/functions/login-diario", {
     method: "POST", body: JSON.stringify({ endereco: B, address: B }),
     headers: { "content-type": "application/json", authorization: `Bearer ${await assinarUserSession(A)}` },

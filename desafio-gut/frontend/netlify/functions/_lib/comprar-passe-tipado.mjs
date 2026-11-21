@@ -49,6 +49,7 @@ import {
   ECOQUILDO_POR_PASSE,
 } from "./eco-quildo.mjs";
 import { converterEcoEmPassesSeguro } from "./conversao-eco-passe.mjs";
+import { creditarPasse } from "./passes-inventario.mjs"; // UTAC147 — o Passe comprado por PIX/saldo vai para o inventário
 import {
   creditarPontosLance, reverterMovimentoLance, lerLedgerLance,
   PONTOS_LANCE_BONUS_PASSE_RELAMPAGO, MOTIVO_BONUS_PASSE_RELAMPAGO,
@@ -77,7 +78,8 @@ const IDEMPOTENCY_RE = /^[A-Za-z0-9._:-]{8,180}$/;
 // vem do RECIBO (o utilizador escolhe-a no ecrã da Google — «Multi-quantity», R18-112-A), logo aceita-se
 // qualquer inteiro de 1 a MAX_QUANTIDADE_GOOGLE. Os benefícios multiplicam-se DENTRO da mesma `ref`: um só
 // movimento de N× em cada ledger, o que mantém a idempotência e a reversão por `ref` exactamente como em 1×.
-export const QUANTIDADES_PASSE = Object.freeze([1, 3, 5, 10]);
+// UTAC147 (decisão do operador): no PIX/saldo os pacotes são 1, 3 ou 5 Passes (o 10 saiu). A Google não usa esta lista.
+export const QUANTIDADES_PASSE = Object.freeze([1, 3, 5]);
 export const MAX_QUANTIDADE_GOOGLE = 100;
 const quantidadeGoogleValida = (q) => Number.isSafeInteger(q) && q >= 1 && q <= MAX_QUANTIDADE_GOOGLE;
 
@@ -111,11 +113,15 @@ function quantidadeJaCreditada(reg, ref) {
 }
 
 /** Contexto de um tipo de Passe (o que a cadeia precisa de saber do tipo). */
-function contexto(tipoPasse, quantidade = 1) {
+function contexto(tipoPasse, quantidade = 1, { bonusLance = true } = {}) {
   return {
     tipoPasse,
     quantidade,
     ehRelampago: tipoPasse === "relampago",
+    // UTAC147 (R18-147-C) — o bónus de +100 pontos de lance por Passe Relâmpago (UTAC138) SAIU do PIX/saldo.
+    // Por omissão continua ligado: a cadeia é partilhada com o Play Billing (`creditarPasseGoogle`), que este UTAC
+    // NÃO altera (R18-147-A, «não mude a parte do play billing»). Só `comprarPasseTipado` passa `bonusLance:false`.
+    comBonusLance: tipoPasse === "relampago" && bonusLance !== false,
     nome: `comprar-passe-${tipoPasse}`,
     // `MOTIVOS_EMISSAO` não tem um motivo genérico «compra»: o do ECOQUILDO é o tipo do Passe.
     motivoEco: `passe-${tipoPasse}`,
@@ -164,7 +170,7 @@ async function completarPendentes(ctxPedido, endereco, ref, st) {
   // nunca a do retry: o que falta completa-se na mesma proporção.
   const ctx = { ...ctxPedido, quantidade: quantidadeJaCreditada(st.reg, ref) };
   // UTAC138 (R18-138-I) — bónus em falta de uma compra Relâmpago feita depois do corte. Idempotente pela `ref`.
-  if (ctx.ehRelampago && bonusDevidoNoRetry(st.reg, ref)) {
+  if (ctx.comBonusLance && bonusDevidoNoRetry(st.reg, ref)) {
     let led;
     try { led = await lerLedgerLance(endereco); } catch { return { ok: false, etapa: "lance", code: "ERRO_DB" }; }
     if (!temRef(led.historico, ref)) {
@@ -198,7 +204,7 @@ async function creditarBeneficios(ctx, endereco, ref) {
   // UTAC138 — bónus de pontos de lance (só Relâmpago). Sem ele o Passe Relâmpago não foi entregue:
   // desfaz o ponto de fidelidade (o pagamento é do chamador) — o mesmo padrão do UTAC110n.
   let pontosLance;
-  if (ctx.ehRelampago) {
+  if (ctx.comBonusLance) {
     let c;
     try { c = await creditarBonusLanceDoPasse(endereco, ref, ctx.quantidade); }
     catch { c = { ok: false, code: "ERRO_DB" }; }
@@ -226,7 +232,7 @@ async function desfazerCompra(ctx, endereco, ref, reembolsar) {
   const revEco = await reverterEcoQuildo(endereco, ref).catch(() => ({ ok: false, code: "ERRO_DB" }));
   // UTAC138 — o bónus de pontos de lance (só Relâmpago) também se desfaz.
   let revLance = { ok: true, revertido: false };
-  if (ctx.ehRelampago) revLance = await reverterMovimentoLance(endereco, ref).catch(() => ({ ok: false, code: "ERRO_DB" }));
+  if (ctx.comBonusLance) revLance = await reverterMovimentoLance(endereco, ref).catch(() => ({ ok: false, code: "ERRO_DB" }));
   const revPontos = await reverterMovimento(endereco, ref).catch(() => ({ ok: false, code: "ERRO_DB" }));
   const reembolsado = await reembolsar();
   if (!(revEco.ok && revLance.ok && revPontos.ok)) {
@@ -237,7 +243,7 @@ async function desfazerCompra(ctx, endereco, ref, reembolsar) {
   return {
     reembolsado,
     ecoDesfeito: revEco.ok === true && revEco.revertido === true,
-    ...(ctx.ehRelampago ? { lanceDesfeito: revLance.ok === true && revLance.revertido === true } : {}),
+    ...(ctx.comBonusLance ? { lanceDesfeito: revLance.ok === true && revLance.revertido === true } : {}),
     pontosDesfeitos: revPontos.ok === true && revPontos.revertido === true,
   };
 }
@@ -247,7 +253,7 @@ async function desfazerCompra(ctx, endereco, ref, reembolsar) {
 const camposLegadoRelampago = (ctx) => (ctx.ehRelampago ? { creditosLance: 0 } : {});
 
 /** UTAC138 — na 1.ª creditação do Relâmpago: o bónus creditado e o saldo de pontos de lance resultante. */
-const camposBonusRelampago = (ctx, cred) => (ctx.ehRelampago
+const camposBonusRelampago = (ctx, cred) => (ctx.comBonusLance
   ? { bonusPontosLance: PONTOS_LANCE_BONUS_PASSE_RELAMPAGO * ctx.quantidade, pontosLance: cred.pontosLance }
   : {});
 
@@ -269,7 +275,8 @@ async function respostaIdempotente(ctx, endereco, ref, st) {
 /** Handler da compra de um Passe tipado por SALDO R$ (`tipoPasse` ∈ TIPOS_PASSE, fixado pelo endpoint). */
 export async function comprarPasseTipado(req, tipoPasse) {
   if (!TIPOS_PASSE.includes(tipoPasse)) throw new Error(`tipo de Passe desconhecido: ${tipoPasse}`);
-  let ctx = contexto(tipoPasse);
+  // UTAC147 — PIX/saldo sem o bónus de pontos de lance (ver `contexto`).
+  let ctx = contexto(tipoPasse, 1, { bonusLance: false });
 
   if (req.method !== "POST") return jsonError(405, "metodo_invalido", "use POST", { allowed: ["POST"] });
   const rl = await aplicarRateLimit(req, ctx.nome, 5);
@@ -290,12 +297,12 @@ export async function comprarPasseTipado(req, tipoPasse) {
   if (!idempotencyKey) return jsonError(400, "idempotencyKey_invalida", "envie { idempotencyKey } (8–180 chars [A-Za-z0-9._:-])");
   const ref = refPasse(tipoPasse, idempotencyKey);
 
-  // UTAC112 — pacote de 1, 3, 5 ou 10 Passes (ausente = 1, o comportamento de sempre). SEM coerção.
+  // UTAC112 — pacote de Passes (ausente = 1, o comportamento de sempre). SEM coerção. UTAC147: 1, 3 ou 5.
   const quantidade = body?.quantidade === undefined ? 1 : body.quantidade;
   if (!QUANTIDADES_PASSE.includes(quantidade)) {
     return jsonError(400, "quantidade_invalida", `quantidade tem de ser ${QUANTIDADES_PASSE.join(", ")}`);
   }
-  ctx = contexto(tipoPasse, quantidade);
+  ctx = contexto(tipoPasse, quantidade, { bonusLance: false });
   const valorCentavos = VALOR_PASSE_CENTAVOS * quantidade;
 
   let st;
@@ -347,8 +354,23 @@ export async function comprarPasseTipado(req, tipoPasse) {
       { motivo: cred.code, ...desfeito });
   }
 
+  // ── UTAC147 (decisão do operador, R18-147-B) — o Passe comprado por PIX/saldo vai para o INVENTÁRIO ────────────
+  // (`passes_inventario`), que é o que o lance (1 Passe Relâmpago) e o palpite (1 Passe Programado) consomem. Antes
+  // só o Play Billing e a conversão de ECOQUILDO o creditavam: quem comprava no site ficava sem Passe para usar.
+  // Só o vencedor da `ref` chega aqui (`creditarPontos` é CAS por `ref`: o perdedor de um duplo clique foi reembolsado
+  // acima) ⇒ N Passes por compra, uma vez. Se o inventário falhar, a compra inteira desfaz-se e o R$ volta.
+  const inv = await creditarPasse({ endereco, tipo: tipoPasse, quantidade })
+    .catch(() => ({ ok: false, code: "inventario_indisponivel" }));
+  if (!inv.ok) {
+    const desfeito = await desfazerCompra(ctx, endereco, ref, reembolsar);
+    captureSecurityAlert(`${ctx.nome}_inventario_falhou`, { code: inv.code ?? null }, "warning").catch(() => {});
+    return jsonError(502, "creditar_passes_falhou", "não foi possível guardar os Passes — o valor foi devolvido",
+      { motivo: inv.code ?? null, ...desfeito });
+  }
+
   return jsonResponse({
     ok: true, idempotent: false, tipo: tipoPasse, quantidade, pontosFidelidade: cred.pontos,
+    passesRelampago: inv.passesRelampago ?? null, passesProgramado: inv.passesProgramado ?? null, // UTAC147
     ...camposLegadoRelampago(ctx),
     ...camposBonusRelampago(ctx, cred),
     ecoQuildo: cred.ecoQuildo,

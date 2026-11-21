@@ -22,10 +22,10 @@ import { registarAtividade } from "./_lib/atividade-utilizadores.mjs";
 import { registerAndCheck } from "./_lib/sybil-check.mjs";
 import { respostaPreflight } from "./_lib/cors.mjs";
 import { mascararEndereco } from "./_lib/validate.mjs"; // UTAC110h.4 (DEBT-031)
-import { creditarBoasVindas } from "./_lib/fontes-lance.mjs"; // UTAC129 — boas-vindas (Art. 16º, I)
+// UTAC147 (R18-147-C) — o bónus de boas-vindas (UTAC129, `creditarBoasVindas`) saiu: modelo de Passes diretos.
 
 const TTL_USER_SESSION = 24 * 60 * 60; // 24h
-const TIMEOUT_BOAS_VINDAS_MS = 1500;    // UTAC129 — teto para o crédito das boas-vindas não atrasar o login
+// UTAC147 — saiu `TIMEOUT_BOAS_VINDAS_MS` (1500 ms, teto do crédito das boas-vindas do UTAC129).
 
 export default async (req) => {
   // MC88.12 — preflight CORS do APK. Tem de ser a primeira coisa: o OPTIONS não
@@ -125,14 +125,7 @@ export default async (req) => {
   // já está assinado; uma falha aqui só adia o bónus para o próximo login.
   // Achado ℹ️1 do validador (SEG4): com o Supabase pendurado o login ficava à espera sem limite ⇒ teto de
   // TIMEOUT_BOAS_VINDAS_MS. Se estourar, o login segue; o crédito é idempotente e repete no próximo login.
-  let temporizador;
-  const limite = new Promise((resolve) => {
-    temporizador = setTimeout(() => resolve({ ok: false, code: "TIMEOUT" }), TIMEOUT_BOAS_VINDAS_MS);
-  });
-  const boasVindas = await Promise.race([creditarBoasVindas(endereco), limite])
-    .catch((err) => ({ ok: false, code: `excecao:${err?.message}` }));
-  clearTimeout(temporizador);
-  if (!boasVindas?.ok) console.warn("[auth-user] boas-vindas não creditadas (não-fatal):", boasVindas?.code);
+  // ⛔ UTAC147 (R18-147-C) — o crédito de boas-vindas SAIU (o bloco acima fica como histórico). Nada é creditado no login.
 
   console.info("[auth-user] sessão emitida", { endereco: mascararEndereco(endereco), visitorId: visitorId ? "presente" : "ausente" }); // UTAC110h.4 (DEBT-031)
   return jsonResponse({ token, ttl: TTL_USER_SESSION });

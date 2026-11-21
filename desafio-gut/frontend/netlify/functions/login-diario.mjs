@@ -1,3 +1,6 @@
+// ⛔ UTAC147 (R18-147-C) — o login diário JÁ NÃO CREDITA pontos (modelo de Passes diretos). O endpoint fica
+//    para não partir clientes instalados (o app chama-o uma vez por sessão): responde 200 com `creditado:false`
+//    e `desativado:true`, sem tocar no ledger.
 // POST /.netlify/functions/login-diario — UTAC110f (Frente A). Login diário: +5 pontos de lance, 1× por
 // dia de Manaus (R18-110f-1/-4). O frontend chama-o uma vez por sessão; repetir é inofensivo — o crédito é
 // idempotente pela `ref` diária no ledger (`_lib/fontes-lance.mjs`).
@@ -12,7 +15,7 @@ import { jsonResponse, jsonError } from "./_lib/validate.mjs";
 import { verificarUserSession } from "./_lib/jwt.mjs";
 import { respostaPreflight } from "./_lib/cors.mjs";
 import { sistemaPausado, lerEstadoSistema } from "./_lib/system-state.mjs";
-import { creditarLoginDiario, diaManaus } from "./_lib/fontes-lance.mjs";
+import { diaManaus } from "./_lib/fontes-lance.mjs"; // UTAC147 — `creditarLoginDiario` saiu
 
 async function titular(req) {
   const h = req.headers.get("authorization") || "";
@@ -37,17 +40,13 @@ export default async (req) => {
   const t = await titular(req);
   if (t.erro) return jsonError(401, t.erro, "Authorization: Bearer *** válido obrigatório");
 
-  const agora = new Date();
-  let r;
-  try { r = await creditarLoginDiario(t.endereco, agora); }
-  catch { r = { ok: false, code: "ERRO_DB" }; }
-  if (!r.ok) return jsonError(502, "credito_falhou", "não foi possível creditar o login diário", { motivo: r.code });
-
+  // UTAC147 — sem crédito. Era: `creditarLoginDiario(t.endereco, agora)` (+5 pontos de lance por dia de Manaus).
   return jsonResponse({
     ok: true,
-    creditado: r.creditado,
-    jaCreditado: !r.creditado,
-    pontosLance: r.pontosLance,
-    dia: diaManaus(agora),
+    creditado: false,
+    jaCreditado: false,
+    desativado: true,
+    pontosLance: null,
+    dia: diaManaus(new Date()),
   });
 };

@@ -92,24 +92,27 @@ const fonte = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
 // UTAC142.1 (R18-142.1-A) — o lance NUNCA exige Passe; só na EDIÇÃO ESPECIAL, e depois de o lance existir, quem tem
 // Passe gasta 1 a cada N lances (`passeACadaLances`). A guarda: o consumo vive só em `_lib/passe-a-cada-lances.mjs`,
 // chamado só no ramo da especial, e o lance nunca responde `sem_passes_disponiveis`. Comportamento: utac142-especial-passe.
-test("UTAC120→UTAC129→UTAC142.1 · o LANCE não exige Passe; o consumo a cada N lances é só da especial", () => {
+// UTAC147 (decisão do operador, 2026-11-21 — modelo de Passes diretos) — INVERTIDO de novo: 1 Passe Relâmpago = 1 lance e
+// 1 Passe Programado = 1 palpite. O texto anterior (UTAC129/142.1: «o lance não exige Passe»; UTAC136: «o palpite é
+// gratuito») ficou no histórico do git. Comportamento no handler real: utac147-passes-diretos.test.mjs.
+test("UTAC147 · o LANCE exige e consome 1 Passe Relâmpago ANTES de persistir; sem pontos nem «a cada N»", () => {
   const src = fonte("../lance-relampago.mjs");
   const codigo = src.split("\n").filter((l) => !/^\s*\/\//.test(l)).join("\n"); // sem comentários
-  assert.doesNotMatch(codigo, /consumirPasse\(/, "o lance voltou a chamar consumirPasse directamente");
-  assert.doesNotMatch(codigo, /"sem_passes_disponiveis"/, "o lance voltou a exigir Passe");
-  assert.match(codigo, /const aCada = EDICAO_ESPECIAL_RE\.test\(edicaoId\) \? configDaEspecial\(meta\)\.passeACadaLances : 0;/);
-  assert.ok(codigo.indexOf("contarLanceEConsumirPasse({") > codigo.indexOf("registro.key = await addLance(edicaoId, registro)"),
-    "o Passe só se gasta depois de o lance existir");
+  assert.match(codigo, /consumirPasse\(\{ endereco, tipo: "relampago" \}\)/, "o lance deixou de consumir o Passe Relâmpago");
+  assert.match(codigo, /"sem_passes_disponiveis"/, "o lance deixou de recusar quem não tem Passe");
+  assert.ok(codigo.indexOf("consumirPasse({") < codigo.indexOf("registro.key = await addLance(edicaoId, registro)"),
+    "o Passe tem de ser gasto antes de o lance ser gravado (e devolvido se falhar)");
+  assert.doesNotMatch(codigo, /consumirPontosLance\(/, "o lance voltou a gastar pontos de lance");
+  assert.doesNotMatch(codigo, /contarLanceEConsumirPasse\(/, "voltou o «1 Passe a cada N lances»");
+  assert.doesNotMatch(codigo, /creditarMissaoLance\(/, "voltou a missão do lance");
 });
 
-// UTAC136 — Regulamento v6.0: o palpite é GRATUITO. O teste do UTAC120 («o PALPITE consome 1 Passe
-// Programado e devolve o Passe se não registar») foi invertido.
-test("UTAC136 · (era UTAC120: o PALPITE consome 1 Passe) o palpite NÃO consome nem devolve Passe", () => {
+test("UTAC147 · o PALPITE consome 1 Passe Programado e devolve-o se não registar AGORA", () => {
   const src = fonte("../registar-palpite.mjs").replace(/\/\/.*$/gm, "");
-  assert.doesNotMatch(src, /consumirPasse\(/, "o palpite voltou a consumir Passe");
-  assert.doesNotMatch(src, /devolverPasse\(/);
-  assert.doesNotMatch(src, /passes-inventario/, "o palpite voltou a importar o inventário");
-  assert.doesNotMatch(src, /"sem_passes_disponiveis"/);
+  assert.match(src, /consumirPasse\(\{ endereco: t\.endereco, tipo: "programado" \}\)/, "o palpite deixou de consumir Passe");
+  assert.match(src, /devolverPasse\(/, "o palpite deixou de devolver o Passe");
+  assert.match(src, /if \(!r\.ok \|\| !r\.criado\) await devolver\(\);/, "falha/repetição tem de devolver o Passe");
+  assert.match(src, /"sem_passes_disponiveis"/);
 });
 
 test("UTAC120 · a COMPRA credita o inventário depois de creditar os benefícios", () => {

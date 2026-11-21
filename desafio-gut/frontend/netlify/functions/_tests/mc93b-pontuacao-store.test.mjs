@@ -189,7 +189,7 @@ test("fechar a mesma rodada duas vezes não duplica nem soma (idempotente)", asy
   assert.equal(db.rankings.find((r) => r.endereco === A).pontos_totais, 4);
 });
 
-test("refechar NÃO apaga os pontos do bónus já ganho", async () => {
+test.skip("refechar NÃO apaga os pontos do bónus já ganho [UTAC147 (R18-147-C): o bónus de pontos de lance da sequência saiu]", async () => {
   // Defeito real encontrado na validação: `pontos_totais` era reposto com os
   // pontos da rodada e os +5 do bónus desapareciam, ficando `bonus_emitido`
   // a true — o participante perdia pontos por se refechar a edição.
@@ -277,7 +277,7 @@ test("ranking: linha sem pontos_totais NÃO chega ao 1.º lugar", () => {
 
 // ── bónus: um por ciclo, e é DIREITO, não saldo ──────────────────────────────
 
-test("cinco ciclos seguidos com acerto dão UM bónus, pelo fluxo real", async () => {
+test.skip("cinco ciclos seguidos com acerto dão UM bónus, pelo fluxo real [UTAC147 (R18-147-C): o bónus de pontos de lance da sequência saiu]", async () => {
   // O bónus tem de ser alcançável SEM o chamador passar histórico nenhum —
   // era exactamente esse o defeito: a integração nunca o passava e o bónus
   // era inalcançável em produção.
@@ -310,7 +310,7 @@ test("uma rodada FALHADA parte a sequência e adia o bónus", async () => {
 // ⚠️ UTAC110n (R18-110j.4b-4): este teste fixava «o bónus é um DIREITO por liquidar» — 20 senhas em
 // `senhas_a_creditar`, à espera do worker on-chain. O bónus passou a ser PAGO na hora em +50 pontos de
 // lance (Art. 16º). A garantia que fica é a oposta e mais simples: não há dívida nenhuma.
-test("o bónus é pago em 50 PONTOS DE LANCE — não fica dívida de senhas", async () => {
+test.skip("o bónus é pago em 50 PONTOS DE LANCE — não fica dívida de senhas [UTAC147 (R18-147-C): o bónus de pontos de lance da sequência saiu]", async () => {
   for (const c of ["R-1", "R-2", "R-3", "R-4", "R-5"]) await registrarPontuacaoRodada(c, rodada(A, B));
   const linha = db.rankings.find((r) => r.ciclo_id === "R-5" && r.endereco === A);
   assert.equal(linha.senhas_a_creditar, 0, "a dívida de senhas deixou de ser escrita");
@@ -351,7 +351,7 @@ test("feedback: rodada falhada NÃO conta para a sequência", async () => {
   assert.equal(f.sequenciaAtual, 0, "a última rodada foi falhada → corrente a zero");
 });
 
-test("feedback reflecte o bónus JÁ emitido e o direito por liquidar", async () => {
+test.skip("feedback reflecte o bónus JÁ emitido e o direito por liquidar [UTAC147 (R18-147-C): o bónus de pontos de lance da sequência saiu]", async () => {
   for (const c of ["R-1", "R-2", "R-3", "R-4", "R-5"]) await registrarPontuacaoRodada(c, rodada(A, B));
   const f = await lerFeedback("R-5", A);
   assert.equal(f.bonusEmitido, true, "quem já ganhou tem de o ver");
@@ -415,7 +415,7 @@ test("repontuar NÃO apaga a liquidação já feita (evita pagamento duplo)", as
     "apagar liquidado_em faria a dívida parecer em aberto e pagar-se outra vez");
 });
 
-test("duas consolidações EM PARALELO do mesmo ciclo dão UM só bónus", async () => {
+test.skip("duas consolidações EM PARALELO do mesmo ciclo dão UM só bónus [UTAC147 (R18-147-C): o bónus de pontos de lance da sequência saiu]", async () => {
   // A validação independente mediu isto: com read-then-write, as duas chamadas
   // liam `bonus_emitido: false`, ambas gravavam 20 senhas e ambas enfileiravam
   // — o livro-razão dizia 20 e a fila mandava creditar 40. O compare-and-set
@@ -449,7 +449,7 @@ test("endereços são normalizados para minúsculas (o CHECK do SQL exige)", asy
 
 // ── O bónus repetia-se para sempre (achado da 2ª validação independente) ─────
 
-test("depois de UM bónus, os ciclos seguintes NÃO concedem outro", async () => {
+test.skip("depois de UM bónus, os ciclos seguintes NÃO concedem outro [UTAC147 (R18-147-C): o bónus de pontos de lance da sequência saiu]", async () => {
   // DEFEITO MEDIDO: `detectarConsecutivos().bonus` é cumulativo sobre todo o
   // histórico e nunca decresce; a guarda `bonus_emitido` é POR CICLO. Cada
   // ciclo novo nascia com a bandeira a false e concedia OUTRO bónus.
@@ -469,7 +469,7 @@ test("depois de UM bónus, os ciclos seguintes NÃO concedem outro", async () =>
   assert.equal(comBonus[0].ciclo_id, "R-5");
 });
 
-test("uma SEGUNDA sequência de 5 concede um segundo bónus (e só um)", async () => {
+test.skip("uma SEGUNDA sequência de 5 concede um segundo bónus (e só um) [UTAC147 (R18-147-C): o bónus de pontos de lance da sequência saiu]", async () => {
   // O contrapeso não pode ser tão forte que trave o que é devido.
   for (const c of ["R-1", "R-2", "R-3", "R-4", "R-5"]) await registrarPontuacaoRodada(c, rodada(A, B));
   await registrarPontuacaoRodada("R-6", [lance(A, 50), lance(B, 50)]);   // parte a corrente
@@ -479,7 +479,7 @@ test("uma SEGUNDA sequência de 5 concede um segundo bónus (e só um)", async (
   assert.equal(creditosLance.length, 2, "o 6.º acerto da 2.ª corrida não paga outra vez");
 });
 
-test("refechar um ciclo com bónus não concede um bónus extra", async () => {
+test.skip("refechar um ciclo com bónus não concede um bónus extra [UTAC147 (R18-147-C): o bónus de pontos de lance da sequência saiu]", async () => {
   for (const c of ["R-1", "R-2", "R-3", "R-4", "R-5"]) await registrarPontuacaoRodada(c, rodada(A, B));
   await registrarPontuacaoRodada("R-5", rodada(A, B));
   await registrarPontuacaoRodada("R-5", rodada(A, B));

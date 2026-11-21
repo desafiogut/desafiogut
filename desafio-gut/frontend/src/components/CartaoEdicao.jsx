@@ -80,7 +80,11 @@ const acaoValida = (acao) => typeof acao === "string" && Object.hasOwn(ACOES, ac
 export default function CartaoEdicao({
   id, estado, produto, arteUrl, tempo, acao,
   vazio = false, titulo, mensagemVazio: mensagemDada, ajudaVazio: ajudaDada,
-  isMobile = false, children, style, ...rest
+  isMobile = false, children, style,
+  // UTAC147 (decisão do operador) — a faixa escura da Edição Especial mostra SÓ o tempo («A apuração será em: …»),
+  // sem o nome do produto. Opcional e desligado por omissão: as outras edições ficam iguais (os 2 layouts oficiais).
+  semNomeNaFaixa = false,
+  ...rest
 }) {
   const nome = produto || "Produto patrocinado"; // UTAC110j.4 — v5.1: o produto é patrocinado (Cotas, Arts. 12º/24º); era «Prêmio a anunciar»
   const formato = isMobile ? "1 / 1" : "16 / 9";
@@ -150,10 +154,10 @@ export default function CartaoEdicao({
                 12,5rem (200 px): abaixo disso o tempo desce de linha e o nome fica com a largura toda. */}
             <div data-testid="cartao-faixa" style={{
               position: "absolute", left: 0, right: 0, bottom: 0, display: "flex", flexWrap: "wrap", alignItems: "center",
-              justifyContent: "space-between", gap: "0.35rem 0.6rem", padding: "0.6rem 0.75rem", background: "rgba(5,8,24,0.86)",
+              justifyContent: semNomeNaFaixa ? "center" : "space-between", gap: "0.35rem 0.6rem", padding: "0.6rem 0.75rem", background: "rgba(5,8,24,0.86)",
             }}>
-              <span data-testid="cartao-nome" style={{ color: COR.gold, fontWeight: 800, flex: "1 1 12.5rem", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nome}</span>
-              {tempo && <span data-testid="cartao-tempo" style={{ ...tempoEstilo, fontSize: "1.15rem", flex: "0 1 auto", minWidth: 0, textAlign: "right", lineHeight: 1.15 }}>{tempo}</span>}
+              {!semNomeNaFaixa && <span data-testid="cartao-nome" style={{ color: COR.gold, fontWeight: 800, flex: "1 1 12.5rem", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nome}</span>}
+              {tempo && <span data-testid="cartao-tempo" style={{ ...tempoEstilo, fontSize: "1.15rem", flex: "0 1 auto", minWidth: 0, textAlign: semNomeNaFaixa ? "center" : "right", lineHeight: 1.15 }}>{tempo}</span>}
             </div>
           </>
         )}

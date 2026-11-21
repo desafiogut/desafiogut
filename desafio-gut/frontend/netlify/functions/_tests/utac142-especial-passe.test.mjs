@@ -128,7 +128,7 @@ const contagem = () => {
   return { lances: minhas.length, passesConsumidos: minhas.filter((l) => l.passe).length };
 };
 
-test("C1 · os lances 1 e 2 gastam SÓ pontos; o 3.º gasta também 1 Passe Relâmpago", async () => {
+test.skip("C1 · os lances 1 e 2 gastam SÓ pontos; o 3.º gasta também 1 Passe Relâmpago [UTAC147: «1 Passe a cada N lances» saiu — todo o lance gasta 1 Passe Relâmpago]", async () => {
   const r1 = await lance(1); const r2 = await lance(2);
   assert.equal(r1.status, 201); assert.equal(r2.status, 201);
   assert.equal(consumos(), 0, "gastou Passe antes do 3.º lance");
@@ -141,7 +141,7 @@ test("C1 · os lances 1 e 2 gastam SÓ pontos; o 3.º gasta também 1 Passe Rel�
   assert.equal(mockPontos, 100 - 6, "os pontos são sempre o valor do lance");
 });
 
-test("C2 · a cada 3: nove lances gastam exactamente 3 Passes (no 3.º, 6.º e 9.º)", async () => {
+test.skip("C2 · a cada 3: nove lances gastam exactamente 3 Passes (no 3.º, 6.º e 9.º) [UTAC147: «1 Passe a cada N lances» saiu — todo o lance gasta 1 Passe Relâmpago]", async () => {
   const quando = [];
   for (let i = 1; i <= 9; i++) { const r = await lance(i); assert.equal(r.status, 201); if (r.corpo.passeConsumido) quando.push(i); }
   assert.deepEqual(quando, [3, 6, 9]);
@@ -150,7 +150,7 @@ test("C2 · a cada 3: nove lances gastam exactamente 3 Passes (no 3.º, 6.º e 9
   assert.deepEqual(contagem().passesConsumidos, 3);
 });
 
-test("C3 · SEM Passe: todos os lances passam só com pontos (o Passe é opcional, nunca bloqueia)", async () => {
+test.skip("C3 · SEM Passe: todos os lances passam só com pontos (o Passe é opcional, nunca bloqueia) [UTAC147: «1 Passe a cada N lances» saiu — todo o lance gasta 1 Passe Relâmpago]", async () => {
   passes = 0;
   for (let i = 1; i <= 4; i++) {
     const r = await lance(i);
@@ -161,13 +161,13 @@ test("C3 · SEM Passe: todos os lances passam só com pontos (o Passe é opciona
   assert.equal(contagem().passesConsumidos, 0);
 });
 
-test("C4 · inventário em baixo no 3.º lance: o lance passa (fail-soft), nenhum Passe gasto", async () => {
+test.skip("C4 · inventário em baixo no 3.º lance: o lance passa (fail-soft), nenhum Passe gasto [UTAC147: «1 Passe a cada N lances» saiu — todo o lance gasta 1 Passe Relâmpago]", async () => {
   inventarioEmBaixo = true;
   for (let i = 1; i <= 3; i++) assert.equal((await lance(i)).status, 201);
   assert.equal(passes, 5);
 });
 
-test("C5 · nunca há devolução: o Passe só se gasta DEPOIS de o lance existir (blindagem a falhar ⇒ nem conta nem gasta)", async () => {
+test.skip("C5 · nunca há devolução: o Passe só se gasta DEPOIS de o lance existir (blindagem a falhar ⇒ nem conta nem gasta) [UTAC147: «1 Passe a cada N lances» saiu — todo o lance gasta 1 Passe Relâmpago]", async () => {
   await lance(1); await lance(2);
   falharBlindagem = true;
   const r = await lance(3);
@@ -177,14 +177,14 @@ test("C5 · nunca há devolução: o Passe só se gasta DEPOIS de o lance existi
   assert.equal(contagem().lances, 2, "um lance falhado não pode contar");
 });
 
-test("C6 · BIDIRECCIONAL: o Relâmpago normal não conta nem toca no inventário", async () => {
+test.skip("C6 · BIDIRECCIONAL: o Relâmpago normal não conta nem toca no inventário [UTAC147: todo o lance relâmpago gasta 1 Passe do inventário]", async () => {
   mockEdicao = { id: "RELAMP-1", tipo: "relampago" };
   for (let i = 1; i <= 3; i++) assert.equal((await lance(i, { edicaoId: "RELAMP-1" })).status, 201);
   assert.deepEqual(chamadas, []);
   assert.equal(linhas.size, 0, "o Relâmpago normal registou na contagem da especial");
 });
 
-test("C7 · dinâmico: `passeACadaLances: 2` gasta no 2.º e 4.º; `0` desliga", async () => {
+test.skip("C7 · dinâmico: `passeACadaLances: 2` gasta no 2.º e 4.º; `0` desliga [UTAC147: «1 Passe a cada N lances» saiu — todo o lance gasta 1 Passe Relâmpago]", async () => {
   mockEdicao = especial({ passeACadaLances: 2 });
   const quando = [];
   for (let i = 1; i <= 4; i++) { const r = await lance(i); if (r.corpo.passeConsumido) quando.push(i); }
@@ -194,7 +194,7 @@ test("C7 · dinâmico: `passeACadaLances: 2` gasta no 2.º e 4.º; `0` desliga",
   assert.equal(consumos(), 0);
 });
 
-test("C8 · idempotência: a MESMA idempotencyKey repetida não conta um 2.º lance", async () => {
+test.skip("C8 · idempotência: a MESMA idempotencyKey repetida não conta um 2.º lance [UTAC147: «1 Passe a cada N lances» saiu — todo o lance gasta 1 Passe Relâmpago]", async () => {
   const k = "0x" + "ab".repeat(16);
   assert.equal((await lance(5, { idempotencyKey: k })).status, 201);
   store("lance-idem").m.clear?.();
@@ -203,7 +203,7 @@ test("C8 · idempotência: a MESMA idempotencyKey repetida não conta um 2.º la
   assert.equal(contagem().lances, 1);
 });
 
-test("C9 · CONCORRÊNCIA: 6 lances em paralelo ⇒ contagem 6 (sem números repetidos) e exactamente 2 Passes gastos", async () => {
+test.skip("C9 · CONCORRÊNCIA: 6 lances em paralelo ⇒ contagem 6 (sem números repetidos) e exactamente 2 Passes gastos [UTAC147: «1 Passe a cada N lances» saiu — todo o lance gasta 1 Passe Relâmpago]", async () => {
   const rs = await Promise.all([1, 2, 3, 4, 5, 6].map((v) => lance(v)));
   assert.equal(rs.filter((r) => r.status === 201).length, 6);
   assert.equal(contagem().lances, 6);

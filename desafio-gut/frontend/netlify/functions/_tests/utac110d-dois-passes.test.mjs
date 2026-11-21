@@ -239,23 +239,21 @@ test("A8 reverter: devolve o crédito e remove a entrada (o retry volta a consum
 // O Passe passou a dar +200 PONTOS DE LANCE e a NÃO dar crédito — o crédito deixou de ser moeda.
 // ⚠️ UTAC136 (Regulamento v6.0, Arts. 6º/7º): +1 ponto de fidelidade e NENHUM ponto de lance.
 // ⚠️ UTAC138 (R18-138-D, Art. 7º v6.1): o Relâmpago volta a dar +100 pontos de lance (motivo «bonus-passe-relampago»).
-test("B1 Passe Relâmpago: 201, −R$ 2,00, +1 ponto (compra), +100 pontos de lance (UTAC138), 0 créditos", async () => {
+// ⚠️ UTAC147 (R18-147-C): no PIX/saldo o bónus de +100 SAIU; o Passe vai para o inventário (ver utac147-passes-diretos).
+test("B1 Passe Relâmpago: 201, −R$ 2,00, +1 ponto (compra), SEM pontos de lance (UTAC147), 0 créditos", async () => {
   const r = await comprar(hRelampago);
   assert.equal(r.status, 201, JSON.stringify(r.corpo));
   assert.equal(r.corpo.tipo, "relampago");
   assert.equal(r.corpo.pontosFidelidade, 1);
-  assert.equal(r.corpo.bonusPontosLance, 100, "UTAC138: a resposta anuncia o bónus");
-  assert.equal(r.corpo.pontosLance, 100, "UTAC138: saldo de pontos de lance depois do bónus");
+  assert.equal("bonusPontosLance" in r.corpo, false, "UTAC147: a resposta já não anuncia bónus");
   assert.equal(r.corpo.creditosLance, 0, "o crédito legado já não é creditado");
   assert.equal(saldo(), 300);
   assert.equal(linha().pontos, 1);
   assert.equal(linha().historico[0].tipo, "compra");
   assert.equal(linha().historico[0].ref, `passe-relampago:${K(1)}`);
   assert.equal(linha().creditos_lance ?? 0, 0);
-  assert.equal(linha().pontos_lance, 100, "Art. 7º v6.1: o Passe Relâmpago dá +100 pontos de lance");
-  assert.equal(linha().historico_lance.length, 1, "um só movimento no ledger de lance");
-  assert.equal(linha().historico_lance[0].motivo, "bonus-passe-relampago");
-  assert.equal(linha().historico_lance[0].ref, `passe-relampago:${K(1)}`);
+  assert.equal(linha().pontos_lance ?? 0, 0, "UTAC147: o PIX já não credita pontos de lance");
+  assert.deepEqual(linha().historico_lance ?? [], [], "nenhum movimento no ledger de lance");
 });
 
 test("B2 Passe Programado: 201, −R$ 2,00, +1 ponto (UTAC136); NÃO mexe no ledger de lance", async () => {
@@ -277,7 +275,7 @@ test("B3 os dois Passes são SEPARADOS: a mesma chave nos dois endpoints são 2 
   assert.equal(saldo(), 100);
   assert.equal(linha().pontos, 2);
   assert.equal(linha().creditos_lance ?? 0, 0, "nenhum dos dois dá crédito (o crédito deixou de existir)");
-  assert.equal(linha().pontos_lance, 100, "UTAC138: só o Relâmpago dá pontos de lance (+100)");
+  assert.equal(linha().pontos_lance ?? 0, 0, "UTAC147: nenhum dos dois dá pontos de lance no PIX");
 });
 
 test("B4 idempotência: repetir a MESMA chave → 200, cobra UMA vez, credita UMA vez", async () => {
@@ -286,7 +284,7 @@ test("B4 idempotência: repetir a MESMA chave → 200, cobra UMA vez, credita UM
   assert.equal(r2.status, 200); assert.equal(r2.corpo.idempotent, true);
   assert.equal(saldo(), 300);
   assert.equal(linha().pontos, 1, "1 ponto, uma só vez");
-  assert.equal(linha().pontos_lance, 100, "UTAC138: o bónus entra uma só vez");
+  assert.equal(linha().pontos_lance ?? 0, 0, "UTAC147: sem bónus no PIX");
 });
 
 test("B5 concorrência: 5 cliques simultâneos com a mesma chave → cobra 1×, credita 1×", async () => {
@@ -295,8 +293,7 @@ test("B5 concorrência: 5 cliques simultâneos com a mesma chave → cobra 1×, 
   assert.ok(rs.every((r) => r.status === 201 || r.status === 200));
   assert.equal(saldo(), 300);
   assert.equal(linha().pontos, 1, "uma compra, um ponto");
-  assert.equal(linha().pontos_lance, 100, "UTAC138: 5 cliques, um só bónus");
-  assert.equal(linha().historico_lance.length, 1);
+  assert.equal(linha().pontos_lance ?? 0, 0, "UTAC147: sem bónus no PIX");
 });
 
 test("B6 sem saldo: 402 e NADA creditado", async () => {
@@ -317,7 +314,7 @@ test("B7 auth bidireccional: sem token 401; token lance-auth (propósito errado)
 // existe (Art. 6º v6); passam a provar que nada no ledger de lance é escrito e que o retry não o «completa».
 // UTAC138: o bónus voltou ⇒ o B8 volta a provar a falha do ledger de lance (padrão do 110n): 502,
 // o ponto de fidelidade desfeito, os R$ 2,00 devolvidos e NADA no ledger de lance nem no ECOQUILDO.
-test("B8 (UTAC138) falha no bónus de pontos de lance ⇒ 502, ponto desfeito, R$ devolvido, nada creditado", async () => {
+test.skip("B8 (UTAC138) falha no bónus de pontos de lance ⇒ 502, ponto desfeito, R$ devolvido, nada creditado [UTAC147 (R18-147-C): o PIX/saldo já não dá o bónus de pontos de lance do Passe Relâmpago (o ramo Google não é tocado)]", async () => {
   S.g.falhar.pontos = { op: "update", code: "XX000", se: (st) => "historico_lance" in (st.dados ?? {}) };
   const r = await comprar(hRelampago);
   assert.equal(r.status, 502, JSON.stringify(r.corpo));
@@ -349,7 +346,7 @@ test("B9 (UTAC136/138) compra Relâmpago com o ponto já creditado → o retry c
 });
 
 // UTAC138 (R18-138-I, achado E4 do validador): compra A MEIO feita DEPOIS do corte ⇒ o retry credita o bónus em falta.
-test("B9b (UTAC138) compra Relâmpago a meio DEPOIS do corte → o retry credita os +100 em falta (1×), sem cobrar", async () => {
+test.skip("B9b (UTAC138) compra Relâmpago a meio DEPOIS do corte → o retry credita os +100 em falta (1×), sem cobrar [UTAC147 (R18-147-C): o PIX/saldo já não dá o bónus de pontos de lance do Passe Relâmpago (o ramo Google não é tocado)]", async () => {
   const { CORTE_BONUS_RETRY_ISO } = await import("../_lib/comprar-passe-tipado.mjs");
   assert.equal(CORTE_BONUS_RETRY_ISO, "2026-11-18T04:00:00.000Z");
   await P.creditarPontos(A, 1, "compra", `passe-relampago:${K(1)}`);
@@ -388,8 +385,8 @@ test("B11 ler-pontos devolve os DOIS ledgers (e mantém os campos antigos)", asy
   assert.equal(c.fidelidade.total, 1);
   assert.equal(c.fidelidade.historico.length, 1);
   assert.equal(c.lance.creditos, 0, "o lance já não dá nem gasta créditos");
-  assert.equal(c.lance.pontos, 103, "UTAC138: os 3 do login + os 100 do bónus do Passe Relâmpago");
-  assert.equal(c.lance.historico.length, 2);
+  assert.equal(c.lance.pontos, 3, "UTAC147: só os 3 semeados (o PIX já não dá o bónus de +100)");
+  assert.equal(c.lance.historico.length, 1);
 });
 
 // ── UTAC112 — compra múltipla por saldo R$ (PWA): pacotes 1, 3, 5, 10 ─────────────────────────────
@@ -404,15 +401,15 @@ async function comprarN(handler, quantidade, key = K(112)) {
 }
 const ecoA = () => S.tabelas.eco_quildo.find((l) => l.endereco === A);
 
-test("UTAC112 P1: 5 Passes Relâmpago ⇒ debita R$ 10,00 · +5 fidelidade · +500 pontos de lance (UTAC138) · +5 ECOQUILDO", async () => {
+test("UTAC112 P1: 5 Passes Relâmpago ⇒ debita R$ 10,00 · +5 fidelidade · sem pontos de lance (UTAC147) · +5 ECOQUILDO", async () => {
   S.tabelas.saldo_rs.find((l) => l.cliente_id === A).payload.centavos = 1500;
   const r = await comprarN(hRelampago, 5);
   assert.equal(r.status, 201, JSON.stringify(r.corpo));
   assert.equal(r.corpo.quantidade, 5);
   assert.equal(saldo(), 500);
   assert.equal(linha().pontos, 5);
-  assert.equal(linha().pontos_lance, 500, "UTAC138: +100 × 5 num só movimento");
-  assert.equal(r.corpo.bonusPontosLance, 500);
+  assert.equal(linha().pontos_lance ?? 0, 0, "UTAC147: sem bónus no PIX");
+  assert.equal("bonusPontosLance" in r.corpo, false);
   assert.equal(ecoA().saldo, 5);
   assert.equal(S.tabelas.eco_quildo_lastro[0].total_emitido, 5);
 });
@@ -439,8 +436,8 @@ test("UTAC112 P3: saldo insuficiente para o pacote ⇒ 402 com o total, NADA deb
   assert.equal(linha()?.pontos ?? 0, 0);
 });
 
-test("UTAC112 P4: só 1, 3, 5 ou 10 — o resto é 400 sem tocar no saldo; ausente = 1 (contrato antigo)", async () => {
-  for (const [i, q] of [0, 2, 4, 11, -1, 1.5, "5", null, true].entries()) {
+test("UTAC112 P4 (UTAC147: só 1, 3 ou 5) — o resto, incl. 10, é 400 sem tocar no saldo; ausente = 1 (contrato antigo)", async () => {
+  for (const [i, q] of [0, 2, 4, 10, 11, -1, 1.5, "5", null, true].entries()) {
     const r = await comprarN(hRelampago, q, K(`inv-${i}`));
     assert.equal(r.status, 400, `quantidade ${JSON.stringify(q)}`);
     assert.equal(r.corpo.error?.code ?? r.corpo.code, "quantidade_invalida");
@@ -452,18 +449,18 @@ test("UTAC112 P4: só 1, 3, 5 ou 10 — o resto é 400 sem tocar no saldo; ausen
   assert.equal(saldo(), 300);
 });
 
-test("UTAC112 P5: compra de 10 a MEIO (ECOQUILDO falhou) ⇒ o retry completa 10 ECOQUILDO, sem cobrar de novo", async () => {
-  S.tabelas.saldo_rs.find((l) => l.cliente_id === A).payload.centavos = 2500;
+test("UTAC112 P5: compra de 5 a MEIO (ECOQUILDO falhou) ⇒ o retry completa 5 ECOQUILDO (UTAC147: o 10 saiu), sem cobrar de novo", async () => {
+  S.tabelas.saldo_rs.find((l) => l.cliente_id === A).payload.centavos = 1500;
   const lastroOriginal = S.tabelas.eco_quildo_lastro.splice(0); // sem lastro ⇒ o ECOQUILDO é revertido
-  const r1 = await comprarN(hRelampago, 10);
+  const r1 = await comprarN(hRelampago, 5);
   assert.equal(r1.status, 502);
-  assert.equal(saldo(), 2500, "tudo desfeito e reembolsado");
+  assert.equal(saldo(), 1500, "tudo desfeito e reembolsado");
   S.tabelas.eco_quildo_lastro.push(...lastroOriginal);
-  const r2 = await comprarN(hRelampago, 10);
+  const r2 = await comprarN(hRelampago, 5);
   assert.equal(r2.status, 201);
   assert.equal(saldo(), 500);
-  assert.equal(linha().pontos, 10);
-  assert.equal(ecoA().saldo, 10);
+  assert.equal(linha().pontos, 5);
+  assert.equal(ecoA().saldo, 5);
 });
 
 test("UTAC112 P6: creditarPasseGoogle recusa quantidade fora de 1..100 (0, 101, fracção, texto) sem creditar", async () => {
@@ -495,8 +492,68 @@ test("UTAC112 P7 (achado 1 do validador): compra de 5 A MEIO completada por um r
   assert.equal(r.status, 200, JSON.stringify(r.corpo));
   assert.equal(r.corpo.quantidade, 5, "a resposta diz a quantidade JÁ creditada, não a do retry");
   assert.equal(linha().pontos, 5);
-  assert.equal(linha().pontos_lance, 500, "UTAC138: o retry completa o bónus × 5 (a quantidade já creditada), não × 1");
+  assert.equal(linha().pontos_lance ?? 0, 0, "UTAC147: o PIX já não credita o bónus, nem no retry");
   assert.equal(ecoA().saldo, 5);
   assert.equal(S.tabelas.eco_quildo_lastro[0].total_emitido, 5);
   assert.equal(saldo(), 500, "completar não cobra");
+});
+
+// ── UTAC147 (R18-147-B) — a compra por PIX/saldo GUARDA os Passes no inventário (o que o lance e o palpite gastam) ──
+// O cliente destes testes não tem `rpc` (o inventário caía no stock em memória); aqui liga-se o duplo das RPCs.
+const comInventario = () => { S.g.passesIniciais = { relampago: 0, programado: 0 }; cliente = { ...cliente, rpc: S.cliente.rpc }; };
+const inv = () => S.tabelas.passes_inventario.find((l) => l.endereco === A) ?? { passes_relampago: 0, passes_programado: 0 };
+
+test("UTAC147 I1 · Passe Relâmpago por PIX ⇒ +1 Passe Relâmpago no inventário; Programado ⇒ +1 Programado", async () => {
+  comInventario();
+  const r = await comprar(hRelampago);
+  assert.equal(r.status, 201, JSON.stringify(r.corpo));
+  assert.equal(r.corpo.passesRelampago, 1);
+  assert.equal((await comprar(hProgramado)).status, 201);
+  assert.deepEqual([inv().passes_relampago, inv().passes_programado], [1, 1]);
+});
+
+test("UTAC147 I2 · pacote de 5 por PIX ⇒ +5 no inventário, R$ 10,00 debitados", async () => {
+  comInventario();
+  S.tabelas.saldo_rs.find((l) => l.cliente_id === A).payload.centavos = 1500;
+  const r = await comprarN(hRelampago, 5);
+  assert.equal(r.status, 201, JSON.stringify(r.corpo));
+  assert.equal(inv().passes_relampago, 5);
+  assert.equal(saldo(), 500);
+});
+
+test("UTAC147 I3 · idempotência e concorrência: 5 cliques com a MESMA chave ⇒ 1 Passe no inventário, cobra 1×", async () => {
+  comInventario();
+  const rs = await Promise.all(Array.from({ length: 5 }, () => comprar(hRelampago)));
+  assert.equal(rs.filter((x) => x.status === 201).length, 1, rs.map((x) => x.status).join(","));
+  assert.equal(inv().passes_relampago, 1, "um só Passe guardado");
+  assert.equal(saldo(), 300, "cobrado uma vez");
+  assert.equal((await comprar(hRelampago)).status, 200, "repetir a chave depois não credita outra vez");
+  assert.equal(inv().passes_relampago, 1);
+});
+
+test("UTAC147 I4 · o inventário falha ⇒ 502 creditar_passes_falhou, R$ devolvido, ponto e ECOQUILDO desfeitos", async () => {
+  comInventario();
+  const rpcReal = cliente.rpc;
+  cliente = { ...cliente, rpc: async (n, p) => (n === "passes_creditar" ? { data: null, error: { code: "XX000" } } : rpcReal(n, p)) };
+  const r = await comprar(hRelampago);
+  assert.equal(r.status, 502, JSON.stringify(r.corpo));
+  assert.equal(r.corpo.error.code, "creditar_passes_falhou");
+  assert.equal(r.corpo.error.reembolsado, true);
+  assert.equal(saldo(), 500, "os R$ 2,00 voltaram");
+  assert.equal(linha()?.pontos ?? 0, 0, "o ponto de fidelidade foi desfeito");
+  // e o retry, já sem falha, compra normalmente (a `ref` saiu do histórico ⇒ é uma compra nova)
+  cliente = { ...cliente, rpc: rpcReal };
+  const r2 = await comprar(hRelampago);
+  assert.equal(r2.status, 201, JSON.stringify(r2.corpo));
+  assert.equal(inv().passes_relampago, 1);
+});
+
+test("UTAC147 I5 · o Play Billing não foi tocado: creditarPasseGoogle mantém o bónus e não credita o inventário aqui", async () => {
+  const src = (await import("node:fs")).readFileSync(new URL("../_lib/comprar-passe-tipado.mjs", import.meta.url), "utf8");
+  const google = src.slice(src.indexOf("export async function creditarPasseGoogle"));
+  assert.doesNotMatch(google, /creditarPasse\(/, "o ramo Google não credita o inventário nesta lib (fá-lo o validar-compra-google)");
+  assert.doesNotMatch(google, /bonusLance: false/, "o ramo Google continua com o bónus por omissão (R18-147-A)");
+  const pix = src.slice(src.indexOf("export async function comprarPasseTipado"), src.indexOf("export async function creditarPasseGoogle"));
+  assert.ok(pix.indexOf("creditarBeneficios(ctx, endereco, ref)") < pix.indexOf("creditarPasse({ endereco, tipo: tipoPasse, quantidade })"),
+    "o inventário é creditado depois de a `ref` ganhar a compra (CAS dos pontos)");
 });

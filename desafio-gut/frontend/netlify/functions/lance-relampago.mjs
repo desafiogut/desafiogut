@@ -4,7 +4,8 @@
 //
 // Resposta 200: { ..., idempotent: true }    — lance já processado (idempotência)
 // Resposta 201: { ok, lanceId, ... }          — lance novo criado
-// Resposta 400: saldo_insuficiente | params_invalidos | saldo_pontos_insuficiente (UTAC110n)
+// Resposta 400: saldo_insuficiente | params_invalidos | sem_passes_disponiveis (UTAC147: 1 Passe Relâmpago = 1 lance)
+//               (`saldo_pontos_insuficiente` do UTAC110n deixou de existir: o lance já não gasta pontos)
 //               (o código `sem_creditos_lance` do UTAC110d deixou de existir: o lance gasta PONTOS)
 // Resposta 401: token_ausente | token_expirado | token_invalido
 // Resposta 403: endereco_nao_corresponde
@@ -31,18 +32,15 @@ import { buscarEdicao } from "./_lib/edicoes-core.mjs"; // MC91.11 — tipo da e
 import { verificarJanelaLance, EDICAO_ESPECIAL_RE } from "./_lib/edicao-janela.mjs"; // MC94.1 — janela
 import { registrarConsumoSenha, BLOB_SENHAS_CONSUMO } from "./_lib/senhas-programado.mjs"; // MC91.11 — ledger
 // UTAC140 — keccak256/AbiCoder passaram para _lib/compromisso-lance.mjs (compromisso com sal).
-import { consumirPontosLance, reverterMovimentoLance } from "./_lib/ledger-lance.mjs"; // UTAC110n (era UTAC110d)
-// UTAC138-SEG4 — o valor do bónus do Passe Relâmpago na mensagem do 400. Import de NAMESPACE de propósito: 5 suítes
-// fazem mock.module do ledger-lance só com as funções, e um import nomeado de uma constante partia-as no link.
-import * as LEDGER_LANCE from "./_lib/ledger-lance.mjs";
-import { creditarMissaoLance, PONTOS_MISSAO_LANCE } from "./_lib/fontes-lance.mjs"; // UTAC110f — missão «1 lance do dia»
+// UTAC147 — saíram os imports do ledger de pontos (`consumirPontosLance`/`reverterMovimentoLance`, UTAC110n): o lance não gasta pontos.
+// UTAC147 (R18-147-C) — a missão «1 lance do dia» (+10, UTAC110f) saiu.
+import { consumirPasse, devolverPasse } from "./_lib/passes-inventario.mjs"; // UTAC147 — 1 Passe Relâmpago = 1 lance
 import { respostaPreflight } from "./_lib/cors.mjs";
 import { mascararEndereco } from "./_lib/validate.mjs"; // UTAC110h.4 (DEBT-031)
 import { registarNoRankingEspecial } from "./_lib/ranking-especial.mjs"; // UTAC140 — ranking ao vivo da especial
 import { novoSal, hashCompromisso } from "./_lib/compromisso-lance.mjs"; // UTAC140 — compromisso com sal
 import { configDaEspecial } from "./_lib/especial-config.mjs"; // UTAC140b — `rankingAoVivo` vem da edição
-// UTAC145 — o consumo do Passe a cada N lances passou para a RPC `registar_lance_passe` (já não se chama consumirPasse aqui)
-import { contarLanceEConsumirPasse } from "./_lib/passe-a-cada-lances.mjs"; // UTAC142.1 · UTAC145 (contagem no Postgres)
+// UTAC147 — «1 Passe a cada N lances» da especial (UTAC142.1/145, `contarLanceEConsumirPasse`) saiu: todo o lance gasta 1 Passe.
 import { formatarNome } from "./_lib/nome-exibicao.mjs"; // UTAC142.2 — o nome é reduzido na origem
 
 const LANCE_MIN_CENTAVOS = 1;
@@ -209,7 +207,22 @@ export default async (req) => {
 
   const ehProgramado = tipoEdicao === "programado";
   const lanceId = randomUUID();
-  let refConsumoPontos = null; // UTAC110n — preenchido só quando o lance gasta pontos de lance
+  let passeConsumido = false;  // UTAC147 — true quando o inventário já pagou 1 Passe Relâmpago por este lance
+  let chaveTrava = null;       // UTAC147 — trava `trava:<idempotencyKey>` no Blob lance-idem (mesma chave ⇒ 1 só Passe)
+  let storeTrava = null;
+  // Desfaz o pagamento de um lance que não chegou a existir: o Passe volta e a trava sai (um retry com a mesma
+  // chave volta a poder tentar). Best-effort: uma falha fica no log; nunca cria Passes (devolve só o que gastou).
+  const desfazerPagamento = async () => {
+    if (passeConsumido) {
+      const dev = await devolverPasse({ endereco, tipo: "relampago" }).catch(() => ({ ok: false }));
+      if (!dev.ok) console.error("[lance-relampago] devolver o Passe Relâmpago falhou");
+      passeConsumido = false;
+    }
+    if (storeTrava && chaveTrava) {
+      try { await storeTrava.delete(chaveTrava); } catch { console.warn("[lance-relampago] libertar a trava falhou"); }
+      chaveTrava = null;
+    }
+  };
 
 
   // ── 6. Consumo do pagamento (programado = senha; flash = saldo R$) ────────
@@ -249,40 +262,48 @@ export default async (req) => {
       },
     };
   } else if (!DEBITO_SALDO_LANCE_ATIVO) {
-    // 6c'. UTAC110n (R18-110j.4b-1) — Flash (e desconhecido): gasta PONTOS DE LANCE pelo VALOR do
-    // próprio lance (Art. 18º: 1 ponto = R$ 0,01 ⇒ centavos = pontos). Não toca no saldo R$, nos
-    // pontos de fidelidade nem nos créditos legados. O Passe deixou de ser condição para licitar.
-    // SEG4 W5/V1 (110d, mantido): com `idempotencyKey`, a ref deriva DELA — dois pedidos concorrentes
-    // com a mesma chave tentam o MESMO débito e o 2.º recebe `criado:false` (409, sem 2.º débito).
-    refConsumoPontos = idempotencyKey ? `lance:${idempotencyKey}` : `lance:${lanceId}`;
-    // UTAC129 (Frente A, R18-129-3) — o lance JÁ NÃO consome Passe Relâmpago do inventário (UTAC120
-    // tinha posto aqui `consumirPasse` + 400 `sem_passes_disponiveis`). Motivo medido (UTAC128, furo F1):
-    // a missão «Completar 1 lance» (+10, mais abaixo) só é creditada depois do lance, logo o Passe pago
-    // tornava a via gratuita impossível. O lance gasta SÓ os pontos de lance do seu valor (UTAC110n).
-    // O Passe continua a dar os +200 pontos de lance na compra (atalho, não condição).
-    // Os ramos de devolução do Passe saíram com a trava (achado MA2 do validador do UTAC129: armados, criavam Passes).
-    let consumo;
-    try { consumo = await consumirPontosLance(endereco, valorCentavos, refConsumoPontos); }
-    catch { consumo = { ok: false, code: "ERRO_DB" }; }
-    if (!consumo.ok) {
-      if (consumo.code === "PONTOS_LANCE_INSUFICIENTES") {
-        return jsonError(400, "saldo_pontos_insuficiente",
-          `Saldo de pontos de lance insuficiente: o lance de ${valorCentavos} pontos precisa de ${valorCentavos} pontos e você tem ${consumo.pontos ?? 0}. `
-          // UTAC138-SEG4 — dizia «… e o Passe Relâmpago dá +200.» (valor do UTAC110n; 0 no UTAC136; +100 no v6.1).
-          + `Os pontos de lance são gratuitos (login diário, missão do dia, indicação e sequência de 5 acertos) e o Passe Relâmpago dá +${LEDGER_LANCE.PONTOS_LANCE_BONUS_PASSE_RELAMPAGO}.`,
-          { pontosLance: consumo.pontos ?? 0, pontosNecessarios: valorCentavos });
+    // 6c'. UTAC147 (decisão do operador, 2026-11-21 — modelo de Passes diretos): **1 Passe Relâmpago = 1 lance**,
+    // em qualquer edição relâmpago (normal ou especial). O lance já NÃO gasta pontos de lance (UTAC110n) — o débito
+    // de pontos é ignorado — e sem Passe é recusado. `consumirPasse` é atómico no Postgres (`passes_consumir`: só
+    // desconta com stock ⇒ o saldo nunca fica negativo, ST6).
+    // Idempotência (era a `ref` `lance:<idempotencyKey>` no ledger de pontos, SEG4 W5/V1 do 110d): dois pedidos
+    // concorrentes com a MESMA chave tentam criar a MESMA trava com `onlyIfNew`; só um a cria, o outro recebe 409
+    // e não gasta Passe. Sem trava confirmada (etag vazio = 403/5xx no @netlify/blobs) → fail-closed, sem gastar.
+    if (idempotencyKey) {
+      storeTrava = abrirStore(BLOB_IDEM);
+      if (!storeTrava) return jsonError(503, "store_indisponivel", "não foi possível reservar o lance; tente de novo");
+      let w;
+      try {
+        w = await storeTrava.set(`trava:${idempotencyKey}`,
+          JSON.stringify({ endereco, lanceId, em: new Date().toISOString() }), { onlyIfNew: true });
+      } catch { w = null; }
+      if (w && w.modified === false) {
+        return jsonError(409, "lance_em_processamento", "este lance já está a ser processado (mesma idempotencyKey)");
       }
-      return jsonError(502, "consumo_pontos_falhou", "não foi possível gastar os pontos de lance", { motivo: consumo.code });
+      if (!w || typeof w.etag !== "string" || w.etag === "") {
+        return jsonError(503, "store_indisponivel", "não foi possível reservar o lance; tente de novo");
+      }
+      chaveTrava = `trava:${idempotencyKey}`;
     }
-    if (consumo.criado === false) {
-      refConsumoPontos = null; // o consumo é do outro pedido — nunca o devolver daqui
-      return jsonError(409, "lance_em_processamento", "este lance já está a ser processado (mesma idempotencyKey)");
+    const passe = await consumirPasse({ endereco, tipo: "relampago" })
+      .catch(() => ({ ok: false, code: "inventario_indisponivel" }));
+    if (!passe.ok) {
+      await desfazerPagamento(); // só liberta a trava: nenhum Passe foi gasto
+      if (passe.code === "sem_passes") {
+        return jsonError(400, "sem_passes_disponiveis",
+          "Precisa de 1 Passe Relâmpago para dar este lance. Compre Passes para participar.",
+          { passesRelampago: 0 });
+      }
+      return jsonError(502, "inventario_indisponivel",
+        "não foi possível verificar os seus Passes; tente de novo", { motivo: passe.code });
     }
+    passeConsumido = true;
     debito = {
       ok: true,
       resultado: {
         saldoAntesCentavos: null, saldoDepoisCentavos: null,
-        pontosLanceGastos: valorCentavos, pontosLanceRestantes: consumo.pontos,
+        passeConsumido: true,
+        passesRelampagoRestantes: Number.isInteger(passe.restantes) ? passe.restantes : null,
       },
     };
   } else {
@@ -328,11 +349,8 @@ export default async (req) => {
     } catch (err) {
       // Em mainnet a falha é FATAL: não gravar lance sem o commitment correspondente.
       console.error("[lance-relampago] blindagem (commit/KPB) falhou:", err?.message);
-      // UTAC110n (era UTAC110d) — o lance não foi registado ⇒ os pontos gastos voltam (reversão integral).
-      if (refConsumoPontos) {
-        const rev = await reverterMovimentoLance(endereco, refConsumoPontos).catch(() => ({ ok: false }));
-        if (!rev.ok) console.error("[lance-relampago] devolver os pontos de lance falhou");
-      }
+      // UTAC147 — o lance não foi registado ⇒ o Passe volta e a trava sai (era: os pontos voltavam, UTAC110n).
+      await desfazerPagamento();
       return jsonError(502, "blindagem_falhou", "não foi possível registar o lance blindado");
     }
   } else {
@@ -370,11 +388,8 @@ export default async (req) => {
       }
     }
     if (!gravou) {
-      // Sem persistência não há lance: devolve-se o que foi gasto (pontos, ou o crédito legado).
-      if (refConsumoPontos) {
-        const rev = await reverterMovimentoLance(endereco, refConsumoPontos).catch(() => ({ ok: false }));
-        if (!rev.ok) console.error("[lance-relampago] devolver os pontos de lance falhou");
-      }
+      // Sem persistência não há lance: devolve-se o que foi gasto (UTAC147: o Passe; antes, os pontos).
+      await desfazerPagamento();
       return jsonError(502, "persistencia_falhou", "não foi possível registar o lance — nada foi cobrado");
     }
   }
@@ -391,34 +406,9 @@ export default async (req) => {
     else console.warn("[lance-relampago] ranking especial falhou (não-fatal):", r.code);
   }
 
-  // ── 7a''. UTAC142.1 (decisão do operador) — na especial o lance gasta SÓ pontos; quem tem Passe Relâmpago gasta 1
-  // a cada N lances (`passeACadaLances` no Blob; omissão 3; 0 desliga). Sem Passe, o lance passa na mesma. Corre
-  // DEPOIS de o lance existir ⇒ nada a devolver. FAIL-SOFT: nunca recusa nem desfaz um lance aceite.
-  let consumoPasse = { passeConsumido: false, passesRelampagoRestantes: null };
-  const aCada = EDICAO_ESPECIAL_RE.test(edicaoId) ? configDaEspecial(meta).passeACadaLances : 0;
-  if (aCada > 0) {
-    // UTAC145 — contagem e consumo numa transacção do Postgres, por `lanceId` (repetir não conta 2×; ℹ️3 do SEG4).
-    const c = await contarLanceEConsumirPasse({ lanceId, edicaoId, endereco, aCada })
-      .catch(() => ({ ok: false, passeConsumido: false, code: "excecao" }));
-    if (!c.ok) console.warn("[lance-relampago] contagem do Passe falhou (não-fatal):", c.code);
-    consumoPasse = { passeConsumido: c.passeConsumido === true, passesRelampagoRestantes: c.passesRelampagoRestantes ?? null };
-  }
+  // ── 7a''. UTAC147 — o bloco «1 Passe a cada N lances» da especial (UTAC142.1/145) SAIU: o Passe já foi gasto no §6c'.
 
-  // ── 7b. UTAC110f — missão «Completar 1 lance» (+10 pontos de lance, 1× por dia de Manaus) ─────
-  // Creditada AQUI, pelo servidor, depois de o lance existir — não há endpoint público que a reclame
-  // (decisão do operador no SEG-1). Só o MLC (relâmpago): o programado não conta. FAIL-SOFT: uma falha
-  // na missão nunca desfaz nem bloqueia o lance; a `ref` diária garante um só crédito por dia.
-  let missaoLance = null;
-  if (!ehProgramado) {
-    try {
-      const m = await creditarMissaoLance(endereco);
-      missaoLance = m.ok ? { creditado: m.creditado } : { creditado: false, erro: m.code };
-      if (!m.ok) console.warn("[lance-relampago] missão do lance falhou (não-fatal):", m.code);
-    } catch (err) {
-      missaoLance = { creditado: false, erro: "excecao" };
-      console.warn("[lance-relampago] missão do lance falhou (não-fatal):", err?.message);
-    }
-  }
+  // ── 7b. UTAC147 (R18-147-C) — a missão «Completar 1 lance» (+10 pontos de lance) SAIU.
 
   // ── 8. Persistir chave de idempotência ────────────────────────────────────
   if (idempotencyKey) {
@@ -456,16 +446,11 @@ export default async (req) => {
     saldoOnChain: debito.resultado.saldoOnChain ?? null,
     creditoLanceConsumido: false,        // LEGADO (110d) — mantido para não partir clientes antigos
     creditosLanceRestantes: null,        // LEGADO (110d) — o lance já não gasta créditos
-    pontosLanceConsumidos: debito.resultado.pontosLanceGastos ?? null, // UTAC110n
-    passeConsumido: consumoPasse.passeConsumido,                     // UTAC142.1 — gasto neste lance (a cada N)
-    passesRelampagoRestantes: consumoPasse.passesRelampagoRestantes, // UTAC142.1
-    // ⚠️ O +10 da missão do dia é creditado DEPOIS do débito (:7b). Devolver o saldo do momento do
-    // débito dava 63 quando o utilizador passa a ter 73 — achado ⚠️2 do validador SEG8. O campo
-    // responde pelo estado no FIM do pedido, que é o que o ecrã mostra.
-    pontosLanceRestantes: debito.resultado.pontosLanceRestantes == null
-      ? null
-      : debito.resultado.pontosLanceRestantes + (missaoLance?.creditado ? PONTOS_MISSAO_LANCE : 0),
-    missaoLance, // UTAC110f — null no programado; {creditado} no relâmpago
+    pontosLanceConsumidos: null, // UTAC147 — o lance já não gasta pontos (campo mantido para clientes antigos)
+    passeConsumido: debito.resultado.passeConsumido === true,                    // UTAC147 — 1 Passe Relâmpago por lance
+    passesRelampagoRestantes: debito.resultado.passesRelampagoRestantes ?? null, // UTAC147
+    pontosLanceRestantes: null, // UTAC147 — sem pontos no lance (era o saldo depois do débito + missão)
+    missaoLance: null,          // UTAC147 — a missão saiu
     processadoEm: registro.processadoEm,
     commitmentHash: registro.commitmentHash ?? null,
   }, 201);

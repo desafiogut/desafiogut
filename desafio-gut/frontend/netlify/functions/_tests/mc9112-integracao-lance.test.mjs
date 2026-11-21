@@ -42,7 +42,32 @@ const fakeStore = {
   },
   async list() { return { blobs: [...mem.keys()].map((key) => ({ key })) }; },
   async delete(k) { mem.delete(k); },
+  // UTAC147 — a trava do lance usa `set(k, v, { onlyIfNew: true })`. Como o real: chave existente ⇒ 412 ⇒
+  // `{ modified:false }`; escrita feita ⇒ etag NÃO vazio; falha (5xx) ⇒ etag "" (simulada por `falharTrava`).
+  async set(k, v, opt = {}) {
+    if (falharTrava) return { modified: true, etag: "" };
+    if (opt.onlyIfNew && mem.has(k)) return { modified: false };
+    mem.set(k, String(v)); return { modified: true, etag: `"e${mem.size}"` };
+  },
 };
+let falharTrava = false;
+
+// UTAC147 — inventário de Passes (duplo com a semântica das RPCs: consumir só com stock, atómico).
+let mockPassesRelampago = 3;
+let chamadasConsumoPasse = 0;
+let chamadasDevolucaoPasse = 0;
+mock.module("../_lib/passes-inventario.mjs", {
+  namedExports: {
+    consumirPasse: async ({ tipo }) => {
+      chamadasConsumoPasse += 1;
+      if (tipo !== "relampago") return { ok: false, code: "tipo_invalido" };
+      if (mockPassesRelampago < 1) return { ok: false, code: "sem_passes" };
+      mockPassesRelampago -= 1;
+      return { ok: true, restantes: mockPassesRelampago };
+    },
+    devolverPasse: async () => { chamadasDevolucaoPasse += 1; mockPassesRelampago += 1; return { ok: true }; },
+  },
+});
 
 mock.module("@netlify/blobs", { namedExports: { getStore: () => fakeStore } });
 mock.module("../_lib/jwt.mjs", { namedExports: { verificarLanceAuth: async () => ({ endereco: TEST_ADDR }) } });
@@ -121,6 +146,7 @@ function zerar() {
   mockCreditos = 0; mockPontosLance = 300; ultimoValorConsumido = 0;
   chamadasConsumoCredito = 0; chamadasReversao = 0; refsConsumidas = []; falharCompromete = false;
   falharSetJSON = false;
+  falharTrava = false; mockPassesRelampago = 3; chamadasConsumoPasse = 0; chamadasDevolucaoPasse = 0;
 }
 
 const bodyLance = (edicaoId = "PROG-1", valorCentavos = 50) => ({
@@ -162,10 +188,10 @@ test("PROGRAMADO sem senhas on-chain: 400 senhas_insuficientes, sem debito, sem 
   assert.equal(consumo, null, "nenhum consumo registrado");
 });
 
-// UTAC110n (R18-110j.4b-1) — o relampago gasta PONTOS DE LANCE pelo VALOR do lance. Antes (UTAC110d,
-// R18-110d-3) consumia 1 CRÉDITO de lance e debitava 0 R$. A invariante mantem-se: ha um custo cobrado
-// ANTES do registo, e nunca se consome senha.
-test("RELAMPAGO: gasta 37 pontos de lance (o valor do lance), NAO debita R$ e NAO consome senha", async () => {
+// ── UTAC147 (decisão do operador, 2026-11-21 — modelo de Passes diretos): 1 Passe Relâmpago = 1 lance ─────────────
+// Antes (UTAC110n) o relâmpago gastava PONTOS DE LANCE pelo valor do lance; esses testes foram reescritos para a regra
+// nova. A invariante mantém-se: há um custo cobrado ANTES do registo, devolvido se o lance não existir, e nunca senha.
+test("RELAMPAGO: gasta 1 Passe Relâmpago (qualquer valor), NAO gasta pontos, NAO debita R$ e NAO consome senha", async () => {
   zerar();
   mockEdicao = { id: "R-1", tipo: "relampago" };
   const resp = await handler(fakeReq(bodyLance("R-1", 37)));
@@ -173,101 +199,117 @@ test("RELAMPAGO: gasta 37 pontos de lance (o valor do lance), NAO debita R$ e NA
   const data = await resp.json();
   assert.equal(data.modo, "relampago");
   assert.equal(data.senhaConsumida, false);
-  assert.equal(data.saldoRsAntesCentavos, null);
-  assert.equal(data.saldoRsDepoisCentavos, null);
   assert.equal(chamadasDebitoRs, 0, "relampago NAO debita saldo R$ (flag desligada)");
-  assert.equal(chamadasConsumoCredito, 1, "relampago passa pelo ledger de lance uma vez");
-  assert.equal(ultimoValorConsumido, 37, "o valor debitado É o valor do lance (centavos = pontos)");
-  assert.equal(mockPontosLance, 263, "300 - 37");
-  assert.equal(data.pontosLanceConsumidos, 37);
-  // ⚠️ 273, não 263: o +10 da missão do dia é creditado DEPOIS do débito, e o campo responde pelo
-  // estado no FIM do pedido (achado ⚠️2 do validador SEG8).
-  assert.equal(data.pontosLanceRestantes, 273);
-  assert.equal(data.creditoLanceConsumido, false, "LEGADO: nenhum credito e consumido");
-  assert.equal(mockCreditos, 0, "os creditos nunca sao tocados");
+  assert.equal(chamadasConsumoPasse, 1, "1 Passe por lance");
+  assert.equal(mockPassesRelampago, 2, "3 - 1");
+  assert.equal(chamadasConsumoCredito, 0, "o lance já NÃO gasta pontos de lance");
+  assert.equal(mockPontosLance, 300, "os pontos ficam intactos");
+  assert.equal(data.passeConsumido, true);
+  assert.equal(data.passesRelampagoRestantes, 2);
+  assert.equal(data.pontosLanceConsumidos, null);
+  assert.equal(data.missaoLance, null, "a missão saiu");
   assert.equal(chamadasCompromete, 1);
-  const consumo = await fakeStore.get(`senhas-programado-consumo:${TEST_ADDR}`, { type: "json" });
-  assert.equal(consumo, null, "relampago NAO consome senha");
 });
 
-test("RELAMPAGO sem pontos de lance: 400 saldo_pontos_insuficiente, sem blindagem nem gravacao", async () => {
+test("RELAMPAGO sem Passe: 400 sem_passes_disponiveis, sem blindagem nem gravacao, nada gasto", async () => {
   zerar();
   mockEdicao = { id: "R-1", tipo: "relampago" };
-  mockPontosLance = 10; // tem 10, o lance pede 50
+  mockPassesRelampago = 0;
   const resp = await handler(fakeReq(bodyLance("R-1", 50)));
   assert.equal(resp.status, 400);
   const data = await resp.json();
-  // Antes do 110n o codigo era `sem_creditos_lance` (credito); agora o saldo e de PONTOS.
-  assert.equal(data.error.code, "saldo_pontos_insuficiente");
-  assert.match(data.error.message, /pontos de lance/i);
-  assert.equal(data.error.detalhes?.pontosLance ?? data.error.pontosLance ?? 10, 10);
-  assert.equal(chamadasCompromete, 0, "sem saldo nao ha blindagem");
+  assert.equal(data.error.code, "sem_passes_disponiveis");
+  assert.match(data.error.message, /Passe Relâmpago/);
+  assert.equal(chamadasCompromete, 0);
   assert.equal(chamadasAddLance, 0);
-  assert.equal(chamadasDebitoRs, 0, "a falta de pontos NAO cai para o debito R$");
-  assert.equal(mockPontosLance, 10, "o saldo fica intacto");
+  assert.equal(chamadasDebitoRs, 0, "a falta de Passe NAO cai para o debito R$");
+  assert.equal(mockPassesRelampago, 0, "o inventário nunca fica negativo");
+  assert.equal(chamadasConsumoCredito, 0, "a falta de Passe NAO cai para os pontos");
 });
 
-test("UTAC110n: a blindagem falha -> 502 e os pontos gastos VOLTAM", async () => {
+test("UTAC147: a blindagem falha -> 502 e o Passe VOLTA", async () => {
   zerar();
   mockEdicao = { id: "R-1", tipo: "relampago" };
   falharCompromete = true;
   const resp = await handler(fakeReq(bodyLance("R-1", 50)));
   assert.equal(resp.status, 502);
-  assert.equal(chamadasConsumoCredito, 1);
-  assert.equal(chamadasReversao, 1, "os pontos têm de ser devolvidos");
-  assert.equal(mockPontosLance, 300, "saldo de volta ao valor inicial");
+  assert.equal(chamadasConsumoPasse, 1);
+  assert.equal(chamadasDevolucaoPasse, 1, "o Passe tem de ser devolvido");
+  assert.equal(mockPassesRelampago, 3, "inventário de volta ao valor inicial");
 });
 
-test("UTAC110n (SEG4 V1): 2 lances sem chave gastam 2 valores distintos", async () => {
+test("UTAC147: 2 lances sem chave gastam 2 Passes", async () => {
   zerar();
   mockEdicao = { id: "R-1", tipo: "relampago" };
   assert.equal((await handler(fakeReq(bodyLance("R-1", 50)))).status, 201);
   assert.equal((await handler(fakeReq(bodyLance("R-1", 51)))).status, 201);
-  assert.equal(mockPontosLance, 199, "300 - 50 - 51");
-  assert.equal(new Set(refsConsumidas).size, 2);
+  assert.equal(mockPassesRelampago, 1, "3 - 1 - 1");
 });
 
-test("UTAC110n (SEG4 W5): mesma idempotencyKey ja consumida -> 409, sem 2.o debito nem 2.o lance", async () => {
+test("UTAC147 (concorrência, T4): 10 pedidos SIMULTÂNEOS com a MESMA idempotencyKey -> 1 lance, 1 Passe, os outros 409", async () => {
   zerar();
   mockEdicao = { id: "R-1", tipo: "relampago" };
-  refsConsumidas.push("lance:chave-x"); // o outro pedido concorrente ja consumiu
+  const rs = await Promise.all(Array.from({ length: 10 },
+    () => handler(fakeReq({ ...bodyLance("R-1", 50), idempotencyKey: "chave-paralela" }))));
+  const st = rs.map((r) => r.status);
+  assert.equal(st.filter((x) => x === 201).length, 1, st.join(","));
+  assert.ok(st.every((x) => x === 201 || x === 409 || x === 200), st.join(","));
+  assert.equal(chamadasConsumoPasse, 1, "um só Passe gasto");
+  assert.equal(mockPassesRelampago, 2);
+  assert.equal(chamadasAddLance, 1, "um só lance gravado");
+});
+
+test("UTAC147: mesma idempotencyKey ja reservada por outro pedido -> 409, sem gastar Passe nem gravar", async () => {
+  zerar();
+  mockEdicao = { id: "R-1", tipo: "relampago" };
+  mem.set("trava:chave-x", "{}"); // o outro pedido concorrente já reservou esta chave
   const resp = await handler(fakeReq({ ...bodyLance("R-1", 50), idempotencyKey: "chave-x" }));
   assert.equal(resp.status, 409);
   assert.equal((await resp.json()).error.code, "lance_em_processamento");
-  assert.equal(mockPontosLance, 300);
+  assert.equal(chamadasConsumoPasse, 0);
   assert.equal(chamadasAddLance, 0);
-  assert.equal(chamadasReversao, 0, "nunca devolve o consumo do outro pedido");
+  assert.equal(chamadasDevolucaoPasse, 0, "nunca devolve o Passe do outro pedido");
 });
 
-test("edicao sem metadata (R-1 sintetica): tratada como relampago (gasta pontos)", async () => {
+test("UTAC147: a trava não se confirma (Blob 5xx, etag vazio) -> 503 fail-closed, nada gasto", async () => {
+  zerar();
+  mockEdicao = { id: "R-1", tipo: "relampago" };
+  falharTrava = true;
+  const resp = await handler(fakeReq({ ...bodyLance("R-1", 50), idempotencyKey: "chave-y" }));
+  assert.equal(resp.status, 503);
+  assert.equal(chamadasConsumoPasse, 0);
+  assert.equal(chamadasAddLance, 0);
+});
+
+test("edicao sem metadata (R-1 sintetica): tratada como relampago (gasta 1 Passe)", async () => {
   zerar();
   mockEdicao = null; // sem metadata persistida
   const resp = await handler(fakeReq(bodyLance("R-1", 10)));
   assert.equal(resp.status, 201);
   const data = await resp.json();
   assert.equal(data.modo, "relampago");
-  assert.equal(chamadasConsumoCredito, 1);
-  assert.equal(ultimoValorConsumido, 10);
+  assert.equal(chamadasConsumoPasse, 1);
   assert.equal(chamadasDebitoRs, 0);
 });
 
-// UTAC110n — achado ⚠️1 do validador SEG8. ANTES: fora de mainnet, a falha de persistência era
-// «não-fatal» e o endpoint respondia 201 `ok:true` — com o custo a ser o VALOR DO LANCE, isso queimava
-// pontos em silêncio (medido: saldo 73, 37 gastos, `lances guardados: null`).
-test("LEGADO (fora de mainnet): persistencia falha -> 502 e os pontos gastos VOLTAM", async () => {
+test("LEGADO (fora de mainnet): persistencia falha -> 502, o Passe VOLTA e a trava sai (o retry com a mesma chave passa)", async () => {
   zerar();
   const anterior = process.env.NETWORK_STAGE;
   process.env.NETWORK_STAGE = "sepolia";
   try {
     mockEdicao = { id: "R-1", tipo: "relampago" };
     falharSetJSON = true;
-    const resp = await handler(fakeReq(bodyLance("R-1", 40)));
+    const resp = await handler(fakeReq({ ...bodyLance("R-1", 40), idempotencyKey: "chave-retry" }));
     assert.equal(resp.status, 502, "o lance nao foi registado: nao pode dizer ok");
     assert.equal((await resp.json()).error.code, "persistencia_falhou");
-    assert.equal(chamadasConsumoCredito, 1, "chegou a consumir");
-    assert.equal(chamadasReversao, 1, "e devolveu");
-    assert.equal(mockPontosLance, 300, "saldo de volta ao valor inicial (nada cobrado)");
-    assert.equal(mem.has("R-1"), false, "nada gravado");
+    assert.equal(chamadasConsumoPasse, 1, "chegou a consumir");
+    assert.equal(chamadasDevolucaoPasse, 1, "e devolveu");
+    assert.equal(mockPassesRelampago, 3, "inventário de volta ao valor inicial (nada cobrado)");
+    assert.equal(mem.has("trava:chave-retry"), false, "a trava foi libertada");
+    falharSetJSON = false;
+    const r2 = await handler(fakeReq({ ...bodyLance("R-1", 40), idempotencyKey: "chave-retry" }));
+    assert.equal(r2.status, 201, "o retry com a mesma chave regista o lance");
+    assert.equal(mockPassesRelampago, 2);
   } finally {
     process.env.NETWORK_STAGE = anterior;
   }
@@ -281,8 +323,8 @@ test("LEGADO (fora de mainnet): com o Blob a funcionar, grava e responde 201", a
     mockEdicao = { id: "R-1", tipo: "relampago" };
     const resp = await handler(fakeReq(bodyLance("R-1", 40)));
     assert.equal(resp.status, 201);
-    assert.equal(chamadasReversao, 0, "nao reverte o que foi gravado");
-    assert.equal(mockPontosLance, 260, "300 - 40");
+    assert.equal(chamadasDevolucaoPasse, 0, "nao devolve o que foi gravado");
+    assert.equal(mockPassesRelampago, 2, "3 - 1");
   } finally {
     process.env.NETWORK_STAGE = anterior;
   }

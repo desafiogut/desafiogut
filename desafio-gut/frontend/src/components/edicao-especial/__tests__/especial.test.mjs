@@ -247,11 +247,13 @@ describe("MC94.2 · CardEdicaoEspecial — os quatro estados no ecrã", () => {
   });
   // UTAC138 (operador: «a edição precisa entrar no padrão que já temos, não ter um próprio») — era «a hora mostrada é a de Brasília» (linha
   // da janela do layout próprio, que saiu). Agora prova-se que a especial É o cartão padrão das edições.
-  test("UTAC138 · a especial é o cartão PADRÃO (CartaoEdicao): topo id + estado, arte larga, faixa nome + tempo; sem layout próprio", () => {
+  // UTAC147 (decisão do operador) — a faixa escura da especial mostra SÓ o tempo: o nome do produto saiu da faixa
+  // (continua no `alt` da arte, para leitores de ecrã). Era: `cartao-nome` com «Air Fryer» na faixa.
+  test("UTAC138/147 · a especial é o cartão PADRÃO (CartaoEdicao): topo id + estado, arte larga, faixa SÓ com o tempo; sem layout próprio", () => {
     const html = render(Card, props(INICIO - 3_600_000));
     assert.match(html, /data-testid="cartao-edicao"/);
-    assert.match(html, /data-testid="cartao-arte"/);
-    assert.match(html, /data-testid="cartao-nome"[^>]*>Air Fryer</);
+    assert.match(html, /data-testid="cartao-arte"[^>]*alt="Air Fryer"|alt="Air Fryer"[^>]*data-testid="cartao-arte"/);
+    assert.doesNotMatch(html, /data-testid="cartao-nome"/, "UTAC147: sem o nome do produto na faixa da especial");
     assert.match(html, /data-testid="cartao-tempo"[^>]*>01:00:00</);
     assert.match(html, />ESPECIAL-AIRFRYER</, "o id da edição na pílula do topo, como nas outras");
     assert.doesNotMatch(html, /role="timer"/, "sem o cronómetro grande do layout próprio");

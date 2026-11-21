@@ -81,7 +81,7 @@ async function lance(edicaoId = "RELAMP-1", extra) {
   return { status: r.status, corpo: await r.json() };
 }
 
-test("L1 lance relâmpago bem-sucedido → missão +10 com a ref do DIA de Manaus; resposta diz creditado", async () => {
+test.skip("L1 lance relâmpago bem-sucedido → missão +10 com a ref do DIA de Manaus; resposta diz creditado [UTAC147 (R18-147-C): a missão «1 lance do dia» saiu]", async () => {
   mockEdicao = { id: "RELAMP-1", tipo: "relampago" };
   const r = await lance();
   assert.equal(r.status, 201);
@@ -90,7 +90,7 @@ test("L1 lance relâmpago bem-sucedido → missão +10 com a ref do DIA de Manau
   assert.deepEqual(r.corpo.missaoLance, { creditado: true });
 });
 
-test("L2 2.º lance do mesmo dia → a missão não volta a creditar (creditado:false); o lance continua 201", async () => {
+test.skip("L2 2.º lance do mesmo dia → a missão não volta a creditar (creditado:false); o lance continua 201 [UTAC147 (R18-147-C): a missão «1 lance do dia» saiu]", async () => {
   mockEdicao = { id: "RELAMP-1", tipo: "relampago" };
   await lance();
   const r = await lance("RELAMP-1", { valorCentavos: 38 });
@@ -107,7 +107,7 @@ test("L3 lance PROGRAMADO não conta para a missão (missaoLance:null, 0 chamada
   assert.equal(missao.length, 0);
 });
 
-test("L4 lance RECUSADO (sem créditos) → nenhuma missão", async () => {
+test.skip("L4 lance RECUSADO (sem créditos) → nenhuma missão [UTAC147 (R18-147-C): a missão «1 lance do dia» saiu]", async () => {
   mockEdicao = { id: "RELAMP-1", tipo: "relampago" };
   mockPontos = 0;
   const r = await lance();
@@ -123,7 +123,7 @@ test("L5 blindagem falha (lance NÃO registado) → nenhuma missão", async () =
   assert.equal(missao.length, 0, "a missão só corre depois de o lance existir");
 });
 
-test("L6 a missão falha (ok:false) ou LANÇA → o lance continua 201 (fail-soft)", async () => {
+test.skip("L6 a missão falha (ok:false) ou LANÇA → o lance continua 201 (fail-soft) [UTAC147 (R18-147-C): a missão «1 lance do dia» saiu]", async () => {
   mockEdicao = { id: "RELAMP-1", tipo: "relampago" };
   modoMissao = "falha";
   const a = await lance();

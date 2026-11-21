@@ -397,7 +397,8 @@ test("C1 Passe Relâmpago: 201 com +1 ponto, +100 pontos de lance (UTAC138), +1 
   assert.equal(pLinha().pontos, 1);
   assert.equal(pLinha().creditos_lance, 0, "o crédito legado já não é creditado");
   // UTAC136 tirou os pontos de lance (era 200); o UTAC138 (R18-138-D, Art. 7º v6.1) repôs +100.
-  assert.equal(Number(pLinha().pontos_lance ?? 0), 100, "Art. 7º v6.1: o Passe Relâmpago dá +100 pontos de lance");
+  // UTAC147 (R18-147-C): o PIX/saldo já não dá o bónus de +100 pontos de lance.
+  assert.equal(Number(pLinha().pontos_lance ?? 0), 0, "UTAC147: sem bónus de pontos de lance no PIX");
 });
 
 test("C2 Passe Programado: 201 com +1 ponto (UTAC136) +1 ECOQUILDO (motivo próprio) e SEM crédito de lance", async () => {
@@ -433,7 +434,7 @@ test("C4 se o ECOQUILDO falhar, a compra é DESFEITA por inteiro (pontos, crédi
   assert.deepEqual(pLinha().historico_lance, []);
   // UTAC138 — o bónus de +100 pontos de lance do Relâmpago também é desfeito (e a resposta di-lo).
   assert.equal(Number(pLinha().pontos_lance ?? 0), 0, "o bónus de pontos de lance foi desfeito");
-  assert.equal(r.corpo.error.lanceDesfeito, true);
+  assert.equal("lanceDesfeito" in r.corpo.error, false, "UTAC147: no PIX não há bónus a desfazer");
   assert.equal(ecoLinha(), undefined, "nenhum ECOQUILDO ficou");
   assert.deepEqual([lastro().total_emitido, lastro().reserva_rs_centavos], [0, 0], "o lastro não foi tocado");
   // e o retry (já sem falha) compra normalmente — nada ficou a meio

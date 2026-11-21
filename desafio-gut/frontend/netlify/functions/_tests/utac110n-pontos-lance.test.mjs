@@ -107,7 +107,7 @@ test("A4 · reversão devolve os pontos: o retry volta a poder gastar", async ()
   assert.equal(pontosLance(), 60);
 });
 
-test("A5 · cadeia do lance: 200 pontos − 37 do lance + 10 da missão do dia = 173", async () => {
+test.skip("A5 · cadeia do lance: 200 pontos − 37 do lance + 10 da missão do dia = 173 [UTAC147 (R18-147-C): o lance já não gasta pontos de lance e login/missão saíram]", async () => {
   await semearPontos(A, 200);
   await L.consumirPontosLance(A, 37, "lance:cadeia");
   const m = await F.creditarMissaoLance(A);
@@ -142,7 +142,7 @@ async function comprar({ key = "idem-110n-1", token } = {}) {
 // UTAC136 — Regulamento v6.0, Art. 6º: o Passe NÃO concede pontos de lance. Os B1/B2 abaixo afirmavam
 // o contrário (+200, UTAC110n); foram invertidos, com o texto antigo no nome entre parênteses.
 // UTAC138 (R18-138-D, Art. 7º v6.1): o UTAC136 tirou os 200; o UTAC138 repôs +100 com motivo próprio.
-test("B1 · (era 200 no 110n, 0 no UTAC136) comprar o Passe Relâmpago credita +100 pontos de lance (UTAC138)", async () => {
+test.skip("B1 · (era 200 no 110n, 0 no UTAC136) comprar o Passe Relâmpago credita +100 pontos de lance (UTAC138) [UTAC147 (R18-147-C): o lance já não gasta pontos de lance e login/missão saíram]", async () => {
   const { status, corpo } = await comprar({ key: "idem-110n-passe-1" });
   assert.equal(status, 201, JSON.stringify(corpo));
   assert.equal(corpo.pontosLance, 100, "a resposta anuncia o saldo de pontos de lance");
@@ -156,7 +156,7 @@ test("B1 · (era 200 no 110n, 0 no UTAC136) comprar o Passe Relâmpago credita +
   assert.equal(movimentos().filter((h) => h.motivo === "bonus-passe-relampago").length, 1, "um movimento com o motivo novo");
 });
 
-test("B2 · idempotência do Passe: repetir a chave não repete o bónus (UTAC138)", async () => {
+test.skip("B2 · idempotência do Passe: repetir a chave não repete o bónus (UTAC138) [UTAC147 (R18-147-C): o lance já não gasta pontos de lance e login/missão saíram]", async () => {
   await comprar({ key: "idem-110n-passe-2" });
   const { status, corpo } = await comprar({ key: "idem-110n-passe-2" });
   assert.equal(status, 200);
@@ -205,7 +205,7 @@ async function cincoAcertos() {
   }
 }
 
-test("C1 · 5 acertos seguidos creditam 50 pontos de lance, motivo sequencia, com ref por ciclo", async () => {
+test.skip("C1 · 5 acertos seguidos creditam 50 pontos de lance, motivo sequencia, com ref por ciclo [UTAC147 (R18-147-C): o lance já não gasta pontos de lance e login/missão saíram]", async () => {
   await cincoAcertos();
   assert.equal(pontosLance(), PS.PONTOS_LANCE_BONUS_SEQUENCIA);
   assert.equal(PS.PONTOS_LANCE_BONUS_SEQUENCIA, 50);
@@ -216,14 +216,14 @@ test("C1 · 5 acertos seguidos creditam 50 pontos de lance, motivo sequencia, co
   assert.equal(mov.ref, "sequencia:R-5", "a ref é do ciclo em que o bónus fechou");
 });
 
-test("C2 · o bónus NÃO enfileira senhas on-chain (a coluna fica a 0)", async () => {
+test.skip("C2 · o bónus NÃO enfileira senhas on-chain (a coluna fica a 0) [UTAC147 (R18-147-C): o lance já não gasta pontos de lance e login/missão saíram]", async () => {
   await cincoAcertos();
   const rank = S.tabelas.rankings_ciclo.find((l) => l.ciclo_id === "R-5" && l.endereco === A);
   assert.equal(rank.bonus_emitido, true);
   assert.equal(Number(rank.senhas_a_creditar ?? 0), 0, "senhas_a_creditar deixou de ser escrita");
 });
 
-test("C3 · 1 bónus por ciclo: reconsolidar o mesmo ciclo não paga outros 50", async () => {
+test.skip("C3 · 1 bónus por ciclo: reconsolidar o mesmo ciclo não paga outros 50 [UTAC147 (R18-147-C): o lance já não gasta pontos de lance e login/missão saíram]", async () => {
   await cincoAcertos();
   assert.equal(pontosLance(), 50);
   await PS.registrarPontuacaoRodada("R-5", rodadaAcerto(A, 105));
@@ -231,14 +231,14 @@ test("C3 · 1 bónus por ciclo: reconsolidar o mesmo ciclo não paga outros 50",
   assert.equal(pontosLance(), 50, "continua um só bónus");
 });
 
-test("C4 · anti-cumulativa (MC93-C): ciclos seguintes com derrotas não voltam a pagar", async () => {
+test.skip("C4 · anti-cumulativa (MC93-C): ciclos seguintes com derrotas não voltam a pagar [UTAC147 (R18-147-C): o lance já não gasta pontos de lance e login/missão saíram]", async () => {
   await cincoAcertos();
   assert.equal(pontosLance(), 50);
   for (let i = 6; i <= 15; i++) await PS.registrarPontuacaoRodada(`R-${i}`, rodadaFalha(A));
   assert.equal(pontosLance(), 50, "a sequência já paga não volta a pagar em cada ciclo novo");
 });
 
-test("C5 · se o crédito falhar, a reclamação é LIBERTADA e o retry paga (não se perde o bónus)", async () => {
+test.skip("C5 · se o crédito falhar, a reclamação é LIBERTADA e o retry paga (não se perde o bónus) [UTAC147 (R18-147-C): o lance já não gasta pontos de lance e login/missão saíram]", async () => {
   await semearPontos(A, 0 + 1); // garante que a linha existe (o UPDATE é o caminho exercitado)
   for (let i = 1; i <= 4; i++) await PS.registrarPontuacaoRodada(`R-${i}`, rodadaAcerto(A, 100 + i));
   assert.equal(pontosLance(), 1, "só o valor semeado");
@@ -264,7 +264,7 @@ test("D1 · o ciclo: alvo 225 · 15 pontos/dia · 15 dias (15×15 = 225 ≥ 225)
   assert.ok(F.DIAS_CICLO_MISSOES * F.PONTOS_DIA_MISSOES >= F.PONTOS_CICLO_MISSOES);
 });
 
-test("D2 · um utilizador que SÓ faz missões chega ao alvo em 15 dias (sem Passe)", async () => {
+test.skip("D2 · um utilizador que SÓ faz missões chega ao alvo em 15 dias (sem Passe) [UTAC147 (R18-147-C): o lance já não gasta pontos de lance e login/missão saíram]", async () => {
   const base = Date.parse("2026-11-01T12:00:00Z");
   for (let d = 0; d < F.DIAS_CICLO_MISSOES; d++) {
     const agora = new Date(base + d * 24 * 3600 * 1000);
@@ -296,7 +296,7 @@ test("D3 · o progresso do ciclo não conta o bónus do Passe nem o gasto do lan
 // ser lido como se fosse líquido.
 // UTAC110n.1 (decisão do operador): 14 dias davam 196 LÍQUIDOS — abaixo dos 200. Passou a 15 dias ⇒
 // 210 líquidos, que é o que o teste agora exige: o ciclo tem de fechar TAMBÉM no líquido.
-test("D2b · o ciclo é BRUTO: com 1 lance de 1 ponto/dia, 15 dias dão 210 líquidos (≥ 200)", async () => {
+test.skip("D2b · o ciclo é BRUTO: com 1 lance de 1 ponto/dia, 15 dias dão 210 líquidos (≥ 200) [UTAC147 (R18-147-C): o lance já não gasta pontos de lance e login/missão saíram]", async () => {
   const base = Date.parse("2026-12-01T12:00:00Z");
   for (let d = 0; d < F.DIAS_CICLO_MISSOES; d++) {
     const agora = new Date(base + d * 24 * 3600 * 1000);

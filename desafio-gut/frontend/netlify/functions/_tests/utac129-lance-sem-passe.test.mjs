@@ -86,7 +86,7 @@ async function lance(valor, extra) {
   return { status: r.status, corpo: await r.json() };
 }
 
-test("A1 (positivo) sem NENHUM Passe e com 5 pontos grátis → lance de 1 ponto aceite, missão +10 creditada", async () => {
+test.skip("A1 (positivo) sem NENHUM Passe e com 5 pontos grátis → lance de 1 ponto aceite, missão +10 creditada [UTAC147: o lance volta a exigir 1 Passe Relâmpago (inverte a R18-129-3)]", async () => {
   mockPontos = 5; // = 1 login diário
   const r = await lance(1);
   assert.equal(r.status, 201, `esperava 201, veio ${r.status} ${JSON.stringify(r.corpo)}`);
@@ -95,7 +95,7 @@ test("A1 (positivo) sem NENHUM Passe e com 5 pontos grátis → lance de 1 ponto
   assert.equal(mockPontos, 5 - 1 + 10, "gasta o valor do lance e recebe a missão");
 });
 
-test("A2 (o furo F1 fechado) o lance NUNCA toca no inventário de Passes", async () => {
+test.skip("A2 (o furo F1 fechado) o lance NUNCA toca no inventário de Passes [UTAC147: o lance volta a exigir 1 Passe Relâmpago (inverte a R18-129-3)]", async () => {
   mockPontos = 50;
   const r = await lance(7);
   assert.equal(r.status, 201);
@@ -103,7 +103,7 @@ test("A2 (o furo F1 fechado) o lance NUNCA toca no inventário de Passes", async
   assert.notEqual(r.corpo?.error?.code, "sem_passes_disponiveis");
 });
 
-test("A3 (negativo) pontos insuficientes → 400 saldo_pontos_insuficiente, sem missão e sem inventário", async () => {
+test.skip("A3 (negativo) pontos insuficientes → 400 saldo_pontos_insuficiente, sem missão e sem inventário [UTAC147: o lance volta a exigir 1 Passe Relâmpago (inverte a R18-129-3)]", async () => {
   mockPontos = 3;
   const r = await lance(10);
   assert.equal(r.status, 400);
@@ -126,12 +126,12 @@ test("A4 (entrada inválida) lance de 0 → recusado com erro visível, sem déb
 
 // UTAC136 — a R18-129-3 («o palpite continua a consumir 1 Passe Programado») foi SUBSTITUÍDA pelo
 // Regulamento v6.0 (palpite gratuito). A guarda inverte-se; o comportamento é provado em utac136-palpite-gratis.
-test("A5 (UTAC136, substitui R18-129-3) o PALPITE já NÃO consome Passe — fonte vigiada", () => {
+test.skip("A5 (UTAC136, substitui R18-129-3) o PALPITE já NÃO consome Passe — fonte vigiada [UTAC147: o palpite volta a gastar 1 Passe Programado (inverte o UTAC136)]", () => {
   const src = readFileSync(new URL("../registar-palpite.mjs", import.meta.url), "utf8").replace(/\/\/.*$/gm, "");
   assert.doesNotMatch(src, /consumirPasse\(/);
 });
 
-test("A6 (achado MA2 do SEG4) a falha da blindagem devolve os PONTOS e nunca cria Passe", async () => {
+test.skip("A6 (achado MA2 do SEG4) a falha da blindagem devolve os PONTOS e nunca cria Passe [UTAC147: o lance volta a exigir 1 Passe Relâmpago (inverte a R18-129-3)]", async () => {
   mockPontos = 50;
   falharBlindagem = true;
   const r = await lance(7);

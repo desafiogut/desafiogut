@@ -43,6 +43,9 @@ const T_RANKINGS   = "rankings_ciclo";
  * `reclamarBonus`), logo o sweeper não tem nada de novo para apanhar.
  */
 export const PONTOS_LANCE_BONUS_SEQUENCIA = 50;
+/** ⛔ UTAC147 (R18-147-C) — o bónus de pontos de lance da sequência de 5 acertos SAIU (modelo de Passes diretos).
+ *  Desligado ⇒ nem se reclama o bónus nem se credita. A pontuação do ciclo continua a ser gravada. */
+export const BONUS_SEQUENCIA_ATIVO = false;
 /** Tipo de tarefa da fila on-chain — LEGADO (110n). Mantido só porque o worker e os testes o importam. */
 export const TIPO_TAREFA_BONUS = "creditar-senhas-bonus";
 /** Ref do crédito de pontos do bónus: UMA por ciclo (a idempotência do ledger faz o resto). */
@@ -201,7 +204,7 @@ export async function registrarPontuacaoRodada(cicloId, lances) {
     // R$ 40), inclusive em edições com zero acertos.
     // A comparação certa é contra o que JÁ FOI concedido ao participante, em
     // todos os ciclos.
-    if (!jaTemBonus && sequencia.bonus > jaConcedidos) {
+    if (BONUS_SEQUENCIA_ATIVO && !jaTemBonus && sequencia.bonus > jaConcedidos) {
       const ganhou = await reclamarBonus(ciclo, endereco, v.pontos, supabase);
       if (ganhou) {
         bonusRegistados += 1;

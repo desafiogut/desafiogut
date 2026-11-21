@@ -10,6 +10,7 @@
 // 200 { ok, idempotent:true,  palpite }   já tinha palpitado nesta edição (nada mudou)
 // 400 edicaoId_invalido|valor_invalido · 401 token_ausente|token_invalido
 // 404 edicao_inexistente · 405 metodo_invalido · 409 sem_passe (nunca comprou um Passe)
+// 400 sem_passes_disponiveis (UTAC147: 1 Passe Programado = 1 palpite) · 502 inventario_indisponivel
 // 503 sistema_pausado|store_indisponivel
 //
 // Padrão herdado POR LEITURA de `comprar-passe-pontos.mjs` (Bearer → endereco; códigos de erro
@@ -21,8 +22,11 @@ import { respostaPreflight } from "./_lib/cors.mjs";
 import { sistemaPausado, lerEstadoSistema } from "./_lib/system-state.mjs";
 import { buscarEdicao } from "./_lib/edicoes-core.mjs";
 import { registarPalpite } from "./_lib/passe-pontos.mjs";
-// UTAC136 — Regulamento v6.0: o palpite é GRATUITO (bónus de engajamento). O consumo de 1 Passe
-// Programado do inventário (UTAC120, R18-129-3) saiu; `passes-inventario.mjs` deixa de ser usado aqui.
+// UTAC136 — Regulamento v6.0: o palpite era GRATUITO (bónus de engajamento).
+// ⛔ UTAC147 (decisão do operador, 2026-11-21 — modelo de Passes diretos): **1 Passe Programado = 1 palpite**.
+// Volta o consumo do inventário (o padrão do UTAC120): consome antes de registar e DEVOLVE quando o registo
+// falha ou é idempotente (já tinha palpitado) — o efeito líquido é sempre 1 Passe por palpite registado.
+import { consumirPasse, devolverPasse } from "./_lib/passes-inventario.mjs";
 
 async function titular(req) {
   const h = req.headers.get("authorization") || "";
@@ -77,11 +81,27 @@ export default async (req) => {
     return jsonError(409, "edicao_nao_aberta", `a edição está "${edicao.status}" — o palpite só abre enquanto decorre`);
   }
 
-  // UTAC136 — sem consumo de Passe (Regulamento v6.0). Até aqui (UTAC120) o palpite consumia 1 Passe
-  // Programado do inventário e devolvia-o quando o registo falhava ou era idempotente.
+  // UTAC147 — paga-se com 1 Passe Programado (atómico no Postgres: só desconta com stock ⇒ nunca negativo).
+  const passe = await consumirPasse({ endereco: t.endereco, tipo: "programado" })
+    .catch(() => ({ ok: false, code: "inventario_indisponivel" }));
+  if (!passe.ok) {
+    if (passe.code === "sem_passes") {
+      return jsonError(400, "sem_passes_disponiveis",
+        "Precisa de 1 Passe Programado para palpitar. Compre Passes para participar.", { passesProgramado: 0 });
+    }
+    return jsonError(502, "inventario_indisponivel", "não foi possível verificar os seus Passes; tente de novo", { motivo: passe.code });
+  }
+  // O Passe volta quando o palpite não foi registado AGORA (falha ou repetição). Best-effort: uma falha fica no log.
+  const devolver = async () => {
+    const d = await devolverPasse({ endereco: t.endereco, tipo: "programado" }).catch(() => ({ ok: false }));
+    if (!d.ok) console.error("[registar-palpite] devolver o Passe Programado falhou");
+  };
+
   let r;
   try { r = await registarPalpite(t.endereco, edicaoId, valor); }
-  catch { return jsonError(503, "store_indisponivel", "não foi possível registar o palpite"); }
+  catch { await devolver(); return jsonError(503, "store_indisponivel", "não foi possível registar o palpite"); }
+
+  if (!r.ok || !r.criado) await devolver();
 
   if (!r.ok) {
     // `SEM_PASSE` = FK para public.pontos (endereço sem linha de pontos). Qualquer login cria a linha
@@ -100,6 +120,7 @@ export default async (req) => {
 
   const palpite = { edicaoId: r.palpite.edicao_id, valor: r.palpite.valor, criadoEm: r.palpite.criado_em };
   return r.criado
-    ? jsonResponse({ ok: true, idempotent: false, palpite }, 201)
-    : jsonResponse({ ok: true, idempotent: true, palpite }, 200);
+    ? jsonResponse({ ok: true, idempotent: false, palpite, passeConsumido: true,
+        passesProgramadoRestantes: Number.isInteger(passe.restantes) ? passe.restantes : null }, 201)
+    : jsonResponse({ ok: true, idempotent: true, palpite, passeConsumido: false }, 200);
 };

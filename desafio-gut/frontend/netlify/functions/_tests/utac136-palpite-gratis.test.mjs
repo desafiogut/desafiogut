@@ -57,7 +57,7 @@ const post = (corpo) => registarPalpite(new Request("https://x/registar-palpite"
 
 beforeEach(() => { cliente = novoDuplo(); EDICAO = { id: "PROG-7", tipo: "programado", status: "aberto" }; });
 
-test("(a) inventário a ZERO ⇒ 201: o palpite é gratuito e não toca no inventário", async () => {
+test.skip("(a) inventário a ZERO ⇒ 201: o palpite é gratuito e não toca no inventário [UTAC147: o palpite volta a gastar 1 Passe Programado (inverte o UTAC136)]", async () => {
   const r = await post({ edicaoId: "PROG-7", valor: 120 });
   const b = await r.json();
   assert.equal(r.status, 201, JSON.stringify(b));
@@ -67,7 +67,7 @@ test("(a) inventário a ZERO ⇒ 201: o palpite é gratuito e não toca no inven
   assert.equal(S.tabelas.passes_inventario.length, 0, "nem sequer cria a linha do inventário");
 });
 
-test("(b) o mesmo palpite repetido ⇒ 200 idempotente, continua sem tocar no inventário", async () => {
+test.skip("(b) o mesmo palpite repetido ⇒ 200 idempotente, continua sem tocar no inventário [UTAC147: o palpite volta a gastar 1 Passe Programado (inverte o UTAC136)]", async () => {
   await post({ edicaoId: "PROG-7", valor: 120 });
   const r = await post({ edicaoId: "PROG-7", valor: 999 });
   assert.equal(r.status, 200);

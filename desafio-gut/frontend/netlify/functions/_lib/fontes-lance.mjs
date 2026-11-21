@@ -1,5 +1,10 @@
 // _lib/fontes-lance.mjs — UTAC110f. As FONTES de pontos de lance (Art. 16º II, III e IV).
 //
+// ⛔ UTAC147 (decisão do operador, 2026-11-21 — modelo de Passes diretos, 1 Passe = 1 ação): os créditos de
+//    LOGIN DIÁRIO, MISSÃO e BOAS-VINDAS SAÍRAM (R18-147-C). Só a INDICAÇÃO continua a creditar (pontos + ECOQUILDO).
+//    O lance passou a gastar 1 Passe Relâmpago, não pontos. As constantes e as leituras PURAS ficam (histórico
+//    dos ledgers e testes do v6.1); nada aqui credita login, missão ou boas-vindas.
+//
 //   • Login diário ....... +5  (R18-110f-1) — 1× por dia de Manaus.
 //   • Missão «1 lance» ... +10 (R18-110f-3) — 1× por dia de Manaus, creditada pelo SERVIDOR no lance.
 //   • Indicação .......... +50 ao indicante e +50 ao indicado (R18-110f-2).
@@ -85,35 +90,9 @@ export function diaManaus(agora = new Date()) {
 export const refLoginDiario = (dia) => `login:${dia}`;
 export const refMissaoLance = (dia) => `missao-lance:${dia}`;
 
-async function creditarDoDia(endereco, quantidade, motivo, ref) {
-  const r = await creditarPontosLance(endereco, quantidade, motivo, ref);
-  if (!r.ok) return { ok: false, code: r.code };
-  return { ok: true, creditado: r.criado === true, pontosLance: r.pontos };
-}
-
-/** +5 pontos de lance no 1.º login do dia de Manaus. Repetir no mesmo dia → `creditado:false`. */
-export function creditarLoginDiario(endereco, agora = new Date()) {
-  const dia = diaManaus(agora);
-  if (!dia) return Promise.resolve({ ok: false, code: "DATA_INVALIDA" });
-  return creditarDoDia(endereco, PONTOS_LOGIN_DIARIO, "login", refLoginDiario(dia));
-}
-
-/**
- * UTAC129 (Frente B, R18-129-1) — +50 pontos de lance de boas-vindas (Art. 16º, I), UMA vez por conta.
- * Idempotente pela `ref` fixa `boas-vindas` no histórico do ledger (CAS em `ledger-lance.mjs`): relogar,
- * repetir o pedido ou dois logins em paralelo nunca creditam duas vezes. Contas que já existiam antes
- * do UTAC129 recebem-no no próximo login (uma vez), porque a regra é «uma vez por conta».
- */
-export function creditarBoasVindas(endereco) {
-  return creditarDoDia(endereco, PONTOS_BOAS_VINDAS, "boas-vindas", REF_BOAS_VINDAS);
-}
-
-/** +10 pontos de lance no 1.º lance do dia de Manaus. Chamado pelo servidor, depois de o lance existir. */
-export function creditarMissaoLance(endereco, agora = new Date()) {
-  const dia = diaManaus(agora);
-  if (!dia) return Promise.resolve({ ok: false, code: "DATA_INVALIDA" });
-  return creditarDoDia(endereco, PONTOS_MISSAO_LANCE, "missao", refMissaoLance(dia));
-}
+// UTAC147 (R18-147-C) — saíram `creditarLoginDiario`, `creditarBoasVindas` e `creditarMissaoLance` (e o
+// auxiliar `creditarDoDia`). Era: +5 no 1.º login do dia, +50 de boas-vindas (1× por conta) e +10 no 1.º lance
+// do dia, todos idempotentes pela `ref` no ledger. Ver o histórico do git (UTAC110f/UTAC129).
 
 /**
  * Estado das fontes diárias de hoje a partir do registo **JÁ LIDO** (`lerPontos`, `select("*")`).

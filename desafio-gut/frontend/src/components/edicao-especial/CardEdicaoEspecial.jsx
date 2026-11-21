@@ -142,6 +142,7 @@ export default function CardEdicaoEspecial({
         produto={produto}
         arteUrl={edicao.imagem_url || undefined}
         tempo={tempo}
+        semNomeNaFaixa /* UTAC147 — a faixa da especial mostra só «A apuração será em: [cronómetro]» */
         isMobile={isMobile}
       >
         {abaixo}

@@ -243,9 +243,10 @@ test("USO · comprar o Passe Relâmpago com 49 ECOQUILDO no saldo ⇒ o 50.º co
   assert.equal(c.pontosFidelidade, 1, "a resposta traz os pontos da COMPRA (lidos antes da conversão)");
   assert.equal(pts().pontos, 2, "no ledger: 1 da compra + 1 do Passe convertido");
   assert.equal(c.ecoQuildo, 0, "o saldo devolvido é o de depois da conversão");
-  assert.equal(c.bonusPontosLance, 100);
-  assert.equal(Number(pts().pontos_lance ?? 0), 100, "Art. 7º v6.1: o Passe Relâmpago dá +100 pontos de lance");
-  assert.equal((await L.lerLedgerLance(A)).pontos, 100, "o Passe CONVERTIDO (Programado) não dá pontos de lance");
+  // UTAC147 (R18-147-C): o PIX/saldo já não dá o bónus de +100 pontos de lance.
+  assert.equal("bonusPontosLance" in c, false);
+  assert.equal(Number(pts().pontos_lance ?? 0), 0, "UTAC147: sem bónus no PIX");
+  assert.equal((await L.lerLedgerLance(A)).pontos, 0, "o Passe CONVERTIDO (Programado) não dá pontos de lance");
   assert.equal(programados(), 1);
 });
 
