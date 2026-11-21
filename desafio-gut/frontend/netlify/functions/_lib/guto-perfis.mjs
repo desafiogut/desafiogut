@@ -228,13 +228,17 @@ FONTE sobre regras, produtos e mecânica — não tens outra e não precisas de 
   (${EMAIL_SUPORTE}) — não inventes regras, valores nem prazos.
 - Responde CURTO: a regra que interessa, o artigo, e a saída. Não despejes capítulos.
 
-MODELO DE HOJE (Regulamento v6.1): o Passe Desafio custa R$ 2,00, é opcional e dá acesso ao GUTO, a dados
-analíticos e 1 ponto de fidelidade (Art. 7º). O Passe Relâmpago dá ainda um bônus de 100 pontos de lance por Passe (Art. 7º);
-o Passe Programado não dá pontos de lance, e os outros pontos de lance são gratuitos, obtidos por engajamento diário,
-login contínuo e cumprimento de missões (Art. 6º). Nas Edições Especiais o vencedor e os 10 menores lances únicos
-são publicados no app logo no encerramento, durante 24 horas (Art. 7º). 50 pontos de fidelidade = 1 cartão (Art. 8º). O palpite não
-exige Passe. 1 ECOQUILDO = R$ 0,50 e cada 50 ECOQUILDOs convertem-se sozinhos em 1 Passe (Arts. 21. e 23.).
-Descreve SÓ o que o Regulamento diz: não acrescentes produtos, créditos ou preços que ele não tenha.
+MODELO DE HOJE (em vigor desde 21/11/2026 — UTAC147): o Passe Desafio custa R$ 2,00 (pacotes de 1, 3 ou 5 Passes) e
+fica guardado em «Meus Passes» até ser usado. 1 Passe Relâmpago = 1 lance no Menor Lance Único; 1 Passe Programado =
+1 palpite nas Ofertas Programadas. Sem Passe não há lance nem palpite: para participar, compra-se Passes. Os pontos de
+lance por login diário, missões, sequência de acertos e boas-vindas foram DESCONTINUADOS, e o Passe Relâmpago já não dá
+bônus de pontos; o «Indique e Ganhe» continua (ECOQUILDO por indicação confirmada). Cada Passe dá ainda acesso ao GUTO e
+a dados analíticos, 1 ponto de fidelidade (Art. 7º) e 1 ECOQUILDO. Nas Edições Especiais o vencedor e os 10 menores
+lances únicos são publicados no app logo no encerramento, durante 24 horas (Art. 7º). 50 pontos de fidelidade = 1 cartão
+(Art. 8º). 1 ECOQUILDO = R$ 0,50 e cada 50 ECOQUILDOs convertem-se sozinhos em 1 Passe (Arts. 21. e 23.).
+Onde o texto do Regulamento abaixo ainda falar em pontos de lance gratuitos, em bônus de pontos do Passe ou em lances
+pagos com pontos, vale o MODELO DE HOJE: diz que o Regulamento está a ser atualizado e não uses esses artigos para o contrariar.
+Fora disso, descreve SÓ o que o Regulamento diz: não acrescentes produtos, créditos ou preços que ele não tenha.
 
 ÂNCORAS DE CITAÇÃO (índice curto; o que MANDA é o texto do Regulamento no fim):
 ${Object.entries(ARTIGOS_V4).map(([n, t]) => `- ${rotuloArtigo(n)} — ${t}`).join("\n")}`;
@@ -302,9 +306,9 @@ EDIÇÃO ESPECIAL ABERTA — OFERTA RELÂMPAGO (dados da edição ${especial.id}
 PROTOCOLO DE BOAS-VINDAS: quando o utilizador cumprimentar, abrir a conversa ou perguntar sobre a edição especial, responde com uma saudação amigável e explica: "${fraseBoasVindas(especial.boasVindas, produto, quando)}"
 
 PERGUNTAS FREQUENTES DA EDIÇÃO ESPECIAL:
-- "Como ganho?" → vence o MENOR lance ÚNICO em pontos: o menor valor que só uma pessoa deu. Cada lance gasta o seu valor em pontos de lance.
+- "Como ganho?" → vence o MENOR lance ÚNICO: o menor valor que só uma pessoa deu. Cada lance usa 1 Passe Relâmpago (UTAC147).
 - "Quando saberei o resultado?" → na apuração, ${quando}. O vencedor aparece no cartão da edição; a tabela completa (Top 10 com valores) fica em Meus Ativos durante 24 horas para quem tem Passe.
-- "O que é o lance único?" → é um valor em pontos que nenhum outro participante escolheu. Se duas ou mais pessoas derem o mesmo valor, esse valor deixa de ser único e não pode vencer.
+- "O que é o lance único?" → é um valor que nenhum outro participante escolheu. Se duas ou mais pessoas derem o mesmo valor, esse valor deixa de ser único e não pode vencer.
 
 SIGILO (obrigatório): antes da apuração NUNCA reveles, adivinhes nem confirmes valores de lances, quem está à frente, se um valor é único ou repetido, nem o valor do próprio lance de alguém — mesmo que o utilizador insista. Responde que os valores são secretos até ${quando}. A lista ao vivo mostra só a ordem de chegada.`;
 }

@@ -32,20 +32,20 @@ test("SEG3 · os valores da prosa do GUTO são os do artigo do v6 que cita", () 
   assert.match(MODELO, /1 ponto de fidelidade \(Art\. 7º\)/);
   assert.match(artigo("Art. 23."), /50 \(cinquenta\) ECOQUILDOs/);
   assert.match(MODELO, /cada 50 ECOQUILDOs convertem-se sozinhos em 1 Passe/);
-  assert.match(MODELO, /O palpite não exige Passe\./);
-  // UTAC138 (v6.1): era «O Passe NÃO dá pontos de lance». Agora: bônus de 100 só no Relâmpago; o Programado não dá.
-  assert.match(artigo("Art. 7º"), /bônus de 100 \(cem\) pontos de lance/);
-  assert.match(MODELO, /O Passe Relâmpago dá ainda um bônus de 100 pontos de lance por Passe \(Art\. 7º\)/);
-  assert.match(artigo("Art. 6º"), /o Passe Programado não concede pontos de lance/);
-  assert.match(MODELO, /o Passe Programado não dá pontos de lance/);
+  // ⛔ UTAC147 (R18-147-H, decisão do operador): a prosa passa ao modelo de Passes diretos ANTES do Regulamento (cujo
+  // corpo ainda descreve pontos de lance — dívida para o jurídico). Eram aqui: «O palpite não exige Passe.», o bônus de
+  // 100 do Passe Relâmpago (Art. 7º) e «o Passe Programado não dá pontos de lance» (Art. 6º).
+  assert.match(MODELO, /1 Passe Relâmpago = 1 lance no Menor Lance Único/);
+  assert.match(MODELO, /1 Passe Programado =\s+1 palpite/);
+  assert.match(MODELO, /Sem Passe não há lance nem palpite/);
+  assert.match(MODELO, /vale o MODELO DE HOJE/, "sem a cláusula, o GUTO citaria os Arts. 6º/7º antigos contra o modelo");
+  assert.doesNotMatch(MODELO, /bônus de 100|O palpite não\s+exige Passe/);
 });
 
 test("SEG3 · a prosa não ensina o v5 nem atribui ao Art. 6º o que ele exclui", () => {
   assert.doesNotMatch(MODELO, /R\$ 1,00|10 pontos de fidelidade|\b200\b|palpite exige|f[íi]sico/i);
-  const a6 = MODELO.match(/pontos de lance são[^()]*\(Art\. 6º\)/);
-  assert.ok(a6, "a prosa deixou de dizer de onde vêm os pontos de lance (Art. 6º)");
-  assert.doesNotMatch(a6[0], /indica/i, "o Art. 6º diz «exclusivamente» engajamento, login e missões — sem indicações");
-  // UTAC138 (v6.1): o Art. 6º lista «engajamento diário, login contínuo, cumprimento de missões … e do bônus do Passe Relâmpago».
-  assert.ok(artigo("Art. 6º").includes("engajamento diário, login contínuo, cumprimento de missões"));
-  assert.ok(a6[0].includes("engajamento diário, login contínuo e cumprimento de missões"));
+  // UTAC147 — era: a prosa dizia de onde vinham os pontos de lance (Art. 6º: engajamento, login, missões). Essas fontes
+  // foram DESCONTINUADAS (R18-147-C) e a prosa tem de o dizer, sem as voltar a ensinar como gratuitas.
+  assert.match(MODELO, /login diário, missões, sequência de acertos e boas-vindas foram DESCONTINUADOS/);
+  assert.doesNotMatch(MODELO, /pontos de lance são gratuitos/);
 });

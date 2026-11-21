@@ -3,3 +3,4 @@ M2 sem trava de idempotência: ℹ fail 2 · restauro md5 IDENTICO
 M3 palpite não devolve o Passe na repetição: ℹ fail 2 · restauro md5 IDENTICO
 M4 PIX não credita o inventário: ℹ fail 5 · restauro md5 IDENTICO
 M5 lance não devolve o Passe se a blindagem falhar: ℹ fail 2 · restauro md5 IDENTICO
+M6 GUTO sem a cláusula: ℹ fail 1 · restauro md5 IDENTICO
