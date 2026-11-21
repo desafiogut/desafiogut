@@ -54,7 +54,14 @@ const MENSAGEM_409 = Object.freeze({
   edicao_nao_programada: "Só se palpita em edições Programadas",
   sem_passe: "Sua conta ainda não está pronta. Entre de novo e tente outra vez",
 });
+// UTAC147-val (SEG4) — no modelo de Passes diretos o servidor exige 1 Passe Programado por palpite e responde
+// 400 `sem_passes_disponiveis` / 502 `inventario_indisponivel`. Sem isto o ecrã dizia «Palpite inválido».
+const MENSAGEM_PASSES = Object.freeze({
+  sem_passes_disponiveis: "Você não tem Passes Programados. Compre Passes para participar: cada palpite usa 1 Passe Programado",
+  inventario_indisponivel: "Não foi possível verificar seus Passes. Tente novamente",
+});
 export function mensagemErroPalpite(status, codigo) {
+  if (Object.hasOwn(MENSAGEM_PASSES, codigo ?? "")) return MENSAGEM_PASSES[codigo];
   if (status === 401) return "Sessão expirada";
   if (status === 409) return MENSAGEM_409[codigo] ?? "Esta edição não aceita palpites agora";
   if (status === 404) return "Essa edição não existe";

@@ -71,3 +71,20 @@ test("P7 · Regulamento v6.1: Art. 18 diz «produto» (não «prêmio»), igual 
   assert.doesNotMatch(art(reg), /prêmio/);
   assert.equal(art(guto), art(reg), "a cópia do GUTO divergiu no Art. 18");
 });
+
+// UTAC147-val (SEG4) — o servidor passou a exigir 1 Passe Programado por palpite (`registar-palpite.mjs`, 400
+// `sem_passes_disponiveis`). O ecrã do palpite traduzia qualquer 400 por «Palpite inválido».
+test("V5 · palpite sem Passe Programado (400 sem_passes_disponiveis) ⇒ mensagem de compra, não «Palpite inválido»", async () => {
+  const { mensagemErroPalpite } = await import("../lib/palpite.js");
+  const m = mensagemErroPalpite(400, "sem_passes_disponiveis");
+  assert.notEqual(m, "Palpite inválido");
+  assert.match(m, /Passes? Programados?/);
+  assert.match(m, /Compre Passes/);
+  assert.match(mensagemErroPalpite(502, "inventario_indisponivel"), /verificar seus Passes/);
+  // bidireccional: os outros 400 continuam «Palpite inválido» e o `sem_passe` (FK) continua sem pedir Passe
+  assert.equal(mensagemErroPalpite(400, "valor_invalido"), "Palpite inválido");
+  assert.doesNotMatch(mensagemErroPalpite(400, "sem_passe"), /passe/i);
+  // a chave chega mesmo do servidor com este nome
+  const back = ler("../../netlify/functions/registar-palpite.mjs");
+  assert.match(back, /jsonError\(400, "sem_passes_disponiveis"/);
+});
