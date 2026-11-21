@@ -278,7 +278,16 @@ export default async (req) => {
           JSON.stringify({ endereco, lanceId, em: new Date().toISOString() }), { onlyIfNew: true });
       } catch { w = null; }
       if (w && w.modified === false) {
-        return jsonError(409, "lance_em_processamento", "este lance já está a ser processado (mesma idempotencyKey)");
+        // UTAC147-val (SEG4) — o @netlify/blobs REPETE sozinho um PUT cuja resposta se perdeu (rede/5xx, `fetchAndRetry`).
+        // Se a 1.ª tentativa já tinha gravado, a repetição recebe 412 ⇒ `modified:false` para a NOSSA própria trava.
+        // Sem isto, o pedido respondia 409 e a trava ficava órfã para sempre (a chave do CardLance é determinística:
+        // aquele valor nunca mais se podia licitar). A trava é nossa sse guarda o `lanceId` deste pedido (UUID novo).
+        let dono = null;
+        try { dono = await storeTrava.get(`trava:${idempotencyKey}`, { type: "json" }); } catch { dono = null; }
+        if (dono?.lanceId !== lanceId) {
+          return jsonError(409, "lance_em_processamento", "este lance já está a ser processado (mesma idempotencyKey)");
+        }
+        w = { modified: true, etag: "trava-propria" }; // confirmada pela leitura (consistência forte)
       }
       if (!w || typeof w.etag !== "string" || w.etag === "") {
         return jsonError(503, "store_indisponivel", "não foi possível reservar o lance; tente de novo");
