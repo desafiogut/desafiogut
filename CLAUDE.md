@@ -1084,3 +1084,26 @@ Validador adversarial: **REFUTADO na entrega, conteúdo v6 aprovado**. `docs/REG
 **Provas:** suíte **1362/1362 · 1519/1525**; mutação **18/18**; validador **APROVADO COM RESSALVAS** (sal, config dinâmica e layout não re-validados); SEG6 VERDE.
 
 **Pendências:** selo «Em breve» da tabela vs «Aberta» do cartão (decide o operador); DEBT-098 (lances anteriores ao sal) · DEBT-099 · DEBT-100 (AAB). Registo: `_logs/UTAC140_*` · `Desktop/UTAC140-RELATORIO.md`.
+
+## R14 (append) -- UTAC147 -- MODELO DE PASSES DIRETOS (1 PASSE = 1 LANCE/PALPITE), PONTOS DE ENGAJAMENTO REMOVIDOS, DEPLOY WEB (Opus 5.5, 2026-11-21)
+**Decisões R18-147-A..H:**
+- **A:** Play Billing intocado.
+- **B:** a compra PIX passa a creditar `passes_inventario`. Antes não creditava: medido, só 2 Passes Relâmpago em produção.
+- **C:** saem login, missão, sequência, boas-vindas e o +100 no PIX; fica a indicação.
+- **D:** o deploy leva o UTAC146.
+- **E/G:** RAM libertada a fechar Edge, WhatsApp e Widgets.
+- **F:** continuar para lá da HI5.
+- **H:** deploy + GUTO corrigido; Regulamento, gate e Art. 10 como risco assumido.
+
+**Feito:**
+- `lance-relampago` consome 1 Passe Relâmpago, com trava `onlyIfNew` por idempotencyKey e o Passe devolvido se o lance falhar.
+- `registar-palpite` consome 1 Passe Programado, devolvido em falha ou repetição.
+- `comprar-passe-tipado` (só PIX) credita o inventário; pacotes 1/3/5.
+- UI: CardLance por Passes, tiles do Início «Passes Relâmpago/Programados», Carteira sem pontos nem missões (`MOSTRAR_PONTOS_ENGAJAMENTO=false`), faixa da especial só com o tempo.
+- Art. 18: «produto».
+
+**Provas:** suíte **1367/1397 · 1535/1603**; validador **APROVADO COM RESSALVAS**, com 3 correcções integradas.
+
+**Publicação:** deploy **`6b0214c7`**, **sem push**.
+
+⚠️ **Pendências:** DEBT-102 (Regulamento + aviso de 30 dias do Art. 10), 103 (gate 3.5), 104 (Meus Ativos), 105 (APK v12.1 no modelo antigo), 106. Relatório: `Desktop/UTAC147-RELATORIO.md`.
