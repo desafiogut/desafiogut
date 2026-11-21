@@ -25,7 +25,7 @@ export const TAMANHO_GUTO_GATE = 96;
 // UTAC110h.1 (R18-110h.1-B) — "2.0" (v4) -> "3.0" (v5): quem aceitou o v4 volta a ver o gate.
 // Tem de ser igual a VERSAO_GATE de netlify/functions/_lib/consentimento.mjs (há teste).
 export const CHAVE_CONSENTIMENTO  = "gut_consentimento";
-export const VERSAO_CONSENTIMENTO = "3.5"; // 2026-11-17 (UTAC138): gate no Regulamento v6.1 (bônus de 100 pontos de lance do Passe Relâmpago, Arts. 6º/7º), igual ao VERSAO_GATE do backend — todos reaceitam. Anterior, «3.4»: 2026-11-13 (UTAC137, R18-137-1): gate no Regulamento v6.0, igual ao VERSAO_GATE do backend — todos reaceitam. Anterior, «3.3»: 2026-10-18 (UTAC110m.2): acompanha o VERSAO_GATE do backend — o Regulamento mudou de texto e a frente C reduziu uma promessa (ECOQUILDO fora do app); Art. 39º exige aviso prévio (DEBT-066).
+export const VERSAO_CONSENTIMENTO = "3.6"; // 2026-11-21 (UTAC148): gate no Regulamento v7 (o Passe é o título de participação — 1 Passe Relâmpago = 1 lance, 1 Passe Programado = 1 palpite; sem pontos de lance; vencedor do palpite = 50 ECOQUILDOs), igual ao VERSAO_GATE do backend — todos reaceitam. Anterior, «3.5»: 2026-11-17 (UTAC138): gate no Regulamento v6.1 (bônus de 100 pontos de lance do Passe Relâmpago, Arts. 6º/7º), igual ao VERSAO_GATE do backend — todos reaceitam. Anterior, «3.4»: 2026-11-13 (UTAC137, R18-137-1): gate no Regulamento v6.0, igual ao VERSAO_GATE do backend — todos reaceitam. Anterior, «3.3»: 2026-10-18 (UTAC110m.2): acompanha o VERSAO_GATE do backend — o Regulamento mudou de texto e a frente C reduziu uma promessa (ECOQUILDO fora do app); Art. 39º exige aviso prévio (DEBT-066).
 
 export default function TermosConsentimento({ onAceitar }) {
   const [lido,       setLido]       = useState(false);
@@ -86,7 +86,7 @@ export default function TermosConsentimento({ onAceitar }) {
         <details style={estilos.regulamento}>
           <summary style={estilos.botaoExpandir}>📖 Ler o resumo do regulamento</summary>
           <div style={estilos.scrollBox}>
-          <h3 style={estilos.secaoTitulo}>Regulamento Oficial v6.1 — Resumo</h3>
+          <h3 style={estilos.secaoTitulo}>Regulamento Oficial v7 — Resumo</h3>
 
           {/* UTAC138 — v6.1 (docs/REGULAMENTO-v6.1.md): mudaram os artigos seis e sete (bônus de 100 pontos de lance do Passe
               Relâmpago; apuração instantânea das Edições Especiais). Os restantes parágrafos são iguais no v6.0 e no v6.1.
@@ -103,19 +103,19 @@ export default function TermosConsentimento({ onAceitar }) {
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 3º</strong> — A aquisição do Passe Desafio é estritamente opcional, não constituindo requisito obrigatório para a navegação básica, cadastro ou obtenção gratuita de pontos de engajamento na plataforma.
+            <strong style={estilos.artLabel}>Art. 3º</strong> — O download, o cadastro e a navegação básica no aplicativo são gratuitos. A participação nas ofertas — o lance na Oferta Relâmpago e o palpite na Oferta Programada — exige a aquisição prévia do Passe Desafio correspondente.
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 5º</strong> — O Passe Desafio é um produto digital comercializado pelo valor fixo de R$ 2,00 (dois reais), concedendo acesso a recursos avançados de suporte e engajamento.
+            <strong style={estilos.artLabel}>Art. 5º</strong> — O Passe Desafio é um produto digital comercializado pelo valor fixo de R$ 2,00 (dois reais) por unidade e constitui o título de participação nas ofertas do aplicativo: 1 (um) Passe Relâmpago dá direito a 1 (um) lance na Oferta Relâmpago e 1 (um) Passe Programado dá direito a 1 (um) palpite na Oferta Programada.
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 6º</strong> — Em estrita conformidade com as diretrizes da Google Play para programas de fidelidade (Gamified Loyalty), o Passe Programado não concede pontos de lance. Os pontos utilizados para realizar os lances são gratuitos, obtidos por meio de engajamento diário, login contínuo, cumprimento de missões no aplicativo e do bônus do Passe Relâmpago previsto no Art. 7º.
+            <strong style={estilos.artLabel}>Art. 6º</strong> — Os Passes adquiridos ficam guardados no perfil do usuário até serem utilizados, sendo cada Passe consumido por uma única participação na modalidade correspondente. Sem Passe disponível não é possível registrar lance nem palpite.
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 7º</strong> — O Passe Desafio confere ao usuário o acesso ao assistente virtual de inteligência estratégica GUTO, dados analíticos de mercado e 1 (um) ponto de fidelidade ao sistema. O Passe Relâmpago concede, adicionalmente, um bônus de 100 (cem) pontos de lance por unidade adquirida, creditado no momento da compra. Nas Edições Especiais da Oferta Relâmpago, a apuração é instantânea: no horário de encerramento da edição o sistema apura automaticamente o menor lance único e publica no aplicativo, durante 24 (vinte e quatro) horas, o vencedor e os 10 (dez) menores lances únicos.
+            <strong style={estilos.artLabel}>Art. 7º</strong> — O Passe Desafio confere ao usuário o acesso ao assistente virtual de inteligência estratégica GUTO, dados analíticos de mercado e 1 (um) ponto de fidelidade ao sistema, destinado ao Cartão Colecionável previsto no Art. 8º. Nas Edições Especiais da Oferta Relâmpago, a apuração é instantânea: no horário de encerramento da edição o sistema apura automaticamente o menor lance único e publica no aplicativo, durante 24 (vinte e quatro) horas, o vencedor e os 10 (dez) menores lances únicos.
           </p>
 
           <p style={estilos.artigo}>
@@ -128,6 +128,11 @@ export default function TermosConsentimento({ onAceitar }) {
 
           <p style={estilos.artigo}>
             <strong style={estilos.artLabel}>Art. 17.</strong> — Vence a Oferta Programada apenas 1 (um) palpite: aquele que registrar o número exato ou ficar mais próximo do número real apurado. Em caso de empate na proximidade, o critério de desempate será a ordem cronológica de registro do palpite no sistema.
+          </p>
+
+          {/* UTAC148 — Art. 18 do v7 (o vencedor do palpite recebe 50 ECOQUILDOs). */}
+          <p style={estilos.artigo}>
+            <strong style={estilos.artLabel}>Art. 18.</strong> — O vencedor da previsão recebe 50 (cinquenta) ECOQUILDOs, creditados no seu perfil no momento da apuração, aplicando-se o disposto no Art. 23.
           </p>
 
           <p style={estilos.artigo}>
@@ -178,7 +183,8 @@ export default function TermosConsentimento({ onAceitar }) {
           <label style={estilos.label}>
             <input type="checkbox" checked={termos} onChange={(e) => setTermos(e.target.checked)} style={estilos.checkbox} />
             {/* UTAC138 — era «… concede 1 ponto de fidelidade, sem pontos de lance (Arts. 3º, 5º, 6º e 7º) …» (v6.0). */}
-            <span>Aceito os Termos de Participação: o Passe Desafio de R$ 2,00 é opcional e concede 1 ponto de fidelidade; o Passe Relâmpago concede ainda um bônus de 100 pontos de lance (Arts. 3º, 5º, 6º e 7º), e a Oferta Relâmpago é baseada em habilidade — vence o menor valor único de lance (Art. 11.).</span>
+            {/* UTAC148 — era «… o Passe Desafio de R$ 2,00 é opcional e concede 1 ponto de fidelidade; o Passe Relâmpago concede ainda um bônus de 100 pontos de lance (Arts. 3º, 5º, 6º e 7º) …» (v6.1). */}
+            <span>Aceito os Termos de Participação: o Passe Desafio custa R$ 2,00 e é o título de participação — 1 Passe Relâmpago = 1 lance e 1 Passe Programado = 1 palpite, sem Passe não há participação (Arts. 3º, 5º e 6º); cada Passe concede 1 ponto de fidelidade (Art. 7º), e a Oferta Relâmpago é baseada em habilidade — vence o menor valor único de lance (Art. 11.).</span>
           </label>
 
           <label style={estilos.label}>

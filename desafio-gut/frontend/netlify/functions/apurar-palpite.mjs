@@ -42,10 +42,14 @@ export default async (req) => {
     if (r.code === "EDICAO_INVALIDA") return jsonError(400, "edicaoId_invalido", "edicaoId inválido");
     if (r.code === "VALOR_INVALIDO") return jsonError(400, "valor_invalido", "valorReal inválido");
     if (r.code === "PONTOS_INSUFICIENTES") return jsonError(502, "credito_falhou", "crédito do bónus recusado");
+    if (r.code === "LASTRO_FALHOU" || String(r.code).startsWith("ECO_")) {
+      return jsonError(502, "credito_eco_falhou", "não foi possível creditar os 50 ECOQUILDO do vencedor — nada foi pago", { motivo: r.code });
+    }
     return jsonError(503, "apuracao_falhou", "não foi possível apurar", { motivo: r.code });
   }
 
   return jsonResponse({
     ok: true, total: r.total, vencedor: r.vencedor, pontosCreditados: r.pontosCreditados,
+    ecoQuildoCreditado: r.ecoQuildoCreditado ?? 0, // UTAC148 (R18-148-A, Art. 18 v7): 50 ECOQUILDO ao vencedor
   });
 };

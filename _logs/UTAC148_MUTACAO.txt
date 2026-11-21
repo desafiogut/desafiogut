@@ -1,0 +1,4 @@
+M1 vencedor sem ECOQUILDO: ℹ fail 2 · restauro md5 IDENTICO
+M2 lastro falhado não reverte: ℹ fail 1 · restauro md5 IDENTICO
+M3 50 → 5 ECOQUILDO: ℹ fail 2 · restauro md5 IDENTICO
+M4 gate sem legado 3.5: ℹ fail 1 · restauro md5 IDENTICO

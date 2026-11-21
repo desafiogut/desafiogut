@@ -164,15 +164,18 @@ REGRA DE LINGUAGEM (obrigatória):
 // utilizados para realizar os lances são 100% gratuitos».
 export const ARTIGOS_V4 = {
   "1":  "operado pela Associação Recreativa dos Nordestinos no Amazonas, nome fantasia Grupo União e Trabalho (GUT)",
-  "3":  "A aquisição do Passe Desafio é estritamente opcional",
-  "5":  "O Passe Desafio é um produto digital comercializado pelo valor fixo de R$ 2,00 (dois reais)",
-  "6":  "o Passe Programado não concede pontos de lance. Os pontos utilizados para realizar os lances são gratuitos",
-  "7":  "O Passe Relâmpago concede, adicionalmente, um bônus de 100 (cem) pontos de lance por unidade adquirida, creditado no momento da compra.",
+  // UTAC148 — âncoras do Regulamento v7 (Arts. 3º, 5º, 6º, 7º, 12, 15 e 18 mudaram).
+  "3":  "A participação nas ofertas — o lance na Oferta Relâmpago e o palpite na Oferta Programada — exige a aquisição prévia do Passe Desafio correspondente.",
+  "5":  "1 (um) Passe Relâmpago dá direito a 1 (um) lance na Oferta Relâmpago e 1 (um) Passe Programado dá direito a 1 (um) palpite na Oferta Programada.",
+  "6":  "Sem Passe disponível não é possível registrar lance nem palpite.",
+  "7":  "O Passe Desafio confere ao usuário o acesso ao assistente virtual de inteligência estratégica GUTO, dados analíticos de mercado e 1 (um) ponto de fidelidade ao sistema",
   "8":  "a cada 50 pontos de fidelidade acumulados, o sistema credita automaticamente 1 Cartão Digital ao perfil do usuário.",
   "11": "A Oferta Relâmpago configura modalidade de e-commerce baseada em habilidade, estratégia e menor valor único de lance",
-  "12": "(onde 1 ponto equivale a R$ 0,01)",
+  "12": "pagando o valor do seu lance, expresso em reais (R$)",
+  "15": "O Passe Relâmpago é consumido no momento do registro do lance, não sendo devolvido em caso de derrota.",
   "16": "prever o número total exato de lances realizados em um determinado ciclo.",
   "17": "Vence a Oferta Programada apenas 1 (um) palpite",
+  "18": "O vencedor da previsão recebe 50 (cinquenta) ECOQUILDOs, creditados no seu perfil no momento da apuração",
   "21": "1 ECOQUILDO equivalente a R$ 0,50 (cinquenta centavos)",
   "23": "A cada 50 (cinquenta) ECOQUILDOs acumulados pelo usuário na plataforma, o sistema efetuará a conversão automática e imediata desse montante em 1 (um) Passe Desafio digital.",
   "24": "o usuário indicante recebe 2 ECOQUILDOs e o usuário indicado recebe 1 ECOQUILDO",
@@ -228,17 +231,18 @@ FONTE sobre regras, produtos e mecânica — não tens outra e não precisas de 
   (${EMAIL_SUPORTE}) — não inventes regras, valores nem prazos.
 - Responde CURTO: a regra que interessa, o artigo, e a saída. Não despejes capítulos.
 
-MODELO DE HOJE (em vigor desde 21/11/2026 — UTAC147): o Passe Desafio custa R$ 2,00 (pacotes de 1, 3 ou 5 Passes) e
-fica guardado em «Meus Passes» até ser usado. 1 Passe Relâmpago = 1 lance no Menor Lance Único; 1 Passe Programado =
-1 palpite nas Ofertas Programadas. Sem Passe não há lance nem palpite: para participar, compra-se Passes. Os pontos de
-lance por login diário, missões, sequência de acertos e boas-vindas foram DESCONTINUADOS, e o Passe Relâmpago já não dá
-bônus de pontos; o «Indique e Ganhe» continua (ECOQUILDO por indicação confirmada). Cada Passe dá ainda acesso ao GUTO e
-a dados analíticos, 1 ponto de fidelidade (Art. 7º) e 1 ECOQUILDO. Nas Edições Especiais o vencedor e os 10 menores
-lances únicos são publicados no app logo no encerramento, durante 24 horas (Art. 7º). 50 pontos de fidelidade = 1 cartão
-(Art. 8º). 1 ECOQUILDO = R$ 0,50 e cada 50 ECOQUILDOs convertem-se sozinhos em 1 Passe (Arts. 21. e 23.).
-Onde o texto do Regulamento abaixo ainda falar em pontos de lance gratuitos, em bônus de pontos do Passe ou em lances
-pagos com pontos, vale o MODELO DE HOJE: diz que o Regulamento está a ser atualizado e não uses esses artigos para o contrariar.
-Fora disso, descreve SÓ o que o Regulamento diz: não acrescentes produtos, créditos ou preços que ele não tenha.
+MODELO DE HOJE (Regulamento v7 — UTAC148): o download, o cadastro e a navegação são gratuitos, mas participar exige
+Passe (Art. 3º). O Passe Desafio custa R$ 2,00 por unidade (pacotes de 1, 3 ou 5) e é o título de participação: 1 Passe
+Relâmpago = 1 lance na Oferta Relâmpago e 1 Passe Programado = 1 palpite na Oferta Programada (Art. 5º). Os Passes ficam
+guardados no perfil até serem usados; sem Passe não há lance nem palpite (Art. 6º). Cada Passe dá ainda acesso ao GUTO, a
+dados analíticos e 1 ponto de fidelidade (Art. 7º); 50 pontos de fidelidade = 1 cartão (Art. 8º). O lance é em reais (R$)
+(Art. 12) e o Passe Relâmpago é consumido no registo do lance, sem devolução em caso de derrota (Art. 15). O vencedor do
+palpite recebe 50 ECOQUILDOs (Art. 18). NÃO existem pontos de lance, nem pontos por login, missões, sequência de acertos ou
+boas-vindas, nem bônus de pontos no Passe — se alguém perguntar, diz que essas regras foram descontinuadas. Nas Edições
+Especiais o vencedor e os 10 menores lances únicos são publicados no app logo no encerramento, durante 24 horas (Art. 7º).
+1 ECOQUILDO = R$ 0,50 e cada 50 ECOQUILDOs convertem-se sozinhos em 1 Passe (Arts. 21. e 23.). Indique e Ganhe: 2 ECOQUILDOs
+para quem indica e 1 para quem é indicado (Art. 24.).
+Descreve SÓ o que o Regulamento diz: não acrescentes produtos, créditos ou preços que ele não tenha.
 
 ÂNCORAS DE CITAÇÃO (índice curto; o que MANDA é o texto do Regulamento no fim):
 ${Object.entries(ARTIGOS_V4).map(([n, t]) => `- ${rotuloArtigo(n)} — ${t}`).join("\n")}`;

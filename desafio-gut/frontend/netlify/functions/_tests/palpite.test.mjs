@@ -88,6 +88,23 @@ mock.module("../_lib/supabase-client.mjs", {
   },
 });
 
+// UTAC148 (R18-148-A, Art. 18 v7) — o vencedor recebe também 50 ECOQUILDO. Duplo da lib do ECOQUILDO (idempotente por
+// ref, como a real) e da conversão (preguiçosa), para estes testes continuarem a medir os PONTOS do palpite.
+const ECO = new Map(); // ref → { endereco, valor }
+let LASTRO = 0, FALHAR_LASTRO = false, CONVERSOES = 0;
+mock.module("../_lib/eco-quildo.mjs", { namedExports: {
+  creditarEcoQuildo: async (endereco, valor, motivo, ref) => {
+    if (ECO.has(ref)) return { ok: true, criado: false };
+    ECO.set(ref, { endereco, valor, motivo }); return { ok: true, criado: true };
+  },
+  reverterEcoQuildo: async (endereco, ref) => ({ ok: true, revertido: ECO.delete(ref) }),
+  registarEmissaoNoLastro: async (v) => (FALHAR_LASTRO ? { ok: false, code: "ERRO_DB" } : ((LASTRO += v), { ok: true })),
+  reverterEmissaoNoLastro: async (v) => { LASTRO -= v; return { ok: true }; },
+} });
+mock.module("../_lib/conversao-eco-passe.mjs", { namedExports: {
+  converterEcoEmPassesSeguro: async () => { CONVERSOES += 1; return { ok: true, convertidos: 1 }; },
+} });
+
 const {
   PONTOS_POR_PALPITE_CERTO, registarPalpite, lerPalpite, lerPalpites, apurarPalpite, getPontos,
   pontosDeCompra, podeResgatarCartaoComCompra, podeResgatarCartao, edicaoApurada,
@@ -353,4 +370,38 @@ test("B2 · se a MARCAÇÃO falhar, o crédito do bónus é DESFEITO (a edição
   assert.equal(await getPontos(A), 2, "a edição paga UMA só vez (+2), nunca 4");
   assert.equal(await getPontos(B), 0);
   assert.equal(await edicaoApurada(ED), true, "agora sim a edição está apurada");
+});
+
+// ── UTAC148 (R18-148-A, Art. 18 do Regulamento v7): 50 ECOQUILDO ao vencedor do palpite ──────────────────────
+test("UTAC148 · o vencedor recebe 50 ECOQUILDO (motivo palpite-certo, ref da edição), com lastro e conversão", async () => {
+  ECO.clear(); LASTRO = 0; CONVERSOES = 0; FALHAR_LASTRO = false;
+  semear([A, B]);
+  await registarPalpite(A, ED, 100); await registarPalpite(B, ED, 140);
+  const r = await apurarPalpite(ED, 120);
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.equal(r.vencedor.endereco, A);
+  assert.equal(r.ecoQuildoCreditado, 50);
+  assert.deepEqual(ECO.get(`eco-palpite-certo:${ED}`), { endereco: A, valor: 50, motivo: "palpite-certo" });
+  assert.equal(ECO.size, 1, "só o vencedor recebe ECOQUILDO");
+  assert.equal(LASTRO, 50, "a emissão entrou no lastro (Art. 21)");
+  assert.equal(CONVERSOES, 1, "≥ 50 ECOQUILDO ⇒ conversão em Passe (Art. 23)");
+  const r2 = await apurarPalpite(ED, 120);
+  assert.equal(r2.vencedor, null, "a 2.ª apuração não paga ninguém");
+  assert.equal(LASTRO, 50);
+});
+
+test("UTAC148 · o lastro falha ⇒ apuração falha, NADA fica pago (nem ECOQUILDO nem os +2 pontos) e o retry paga uma vez", async () => {
+  ECO.clear(); LASTRO = 0; CONVERSOES = 0; FALHAR_LASTRO = true;
+  semear([A]);
+  await registarPalpite(A, ED, 100);
+  const r = await apurarPalpite(ED, 120);
+  assert.equal(r.ok, false);
+  assert.equal(r.code, "LASTRO_FALHOU");
+  assert.equal(ECO.size, 0, "o ECOQUILDO sem lastro foi revertido");
+  assert.equal(pontosDe(A).pontos, 0, "os +2 recém-criados foram desfeitos");
+  FALHAR_LASTRO = false;
+  const r2 = await apurarPalpite(ED, 120);
+  assert.equal(r2.ok, true, JSON.stringify(r2));
+  assert.equal(LASTRO, 50);
+  assert.equal(pontosDe(A).pontos, PONTOS_POR_PALPITE_CERTO);
 });

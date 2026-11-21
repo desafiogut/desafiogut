@@ -55,7 +55,7 @@ test("A/Art. 17º (v5.1): descreve o Passe pago e os pontos de lance como benef�
 
 test("A/v5.1: a versão subiu nos dois ficheiros e o gate de aceite acompanhou", () => {
   // UTAC137: o GUTO passou ao v6.0 — a versão 5.1 só se verifica na transcrição histórica.
-  assert.match(GUTO, /Versão 6\.1/, "GUTO: a fonte do GUTO declara a versão 6.1 (UTAC138; era 6.0)");
+  assert.match(GUTO, /Versão 7/, "GUTO: a fonte do GUTO declara a versão 7 (UTAC148; era 6.1)");
   for (const [nome, src] of [["v5", V5]]) {
     assert.match(src, /Versão 5\.1 · Vigente a partir de 02 de novembro de 2026/, `${nome}: versão do corpo`);
     assert.doesNotMatch(src, /Versão 5\.0 · Vigente/, `${nome}: a 5.0 não pode ficar no corpo`);
@@ -68,7 +68,7 @@ test("A/v5.1: a versão subiu nos dois ficheiros e o gate de aceite acompanhou",
   };
   // UTAC137: a invariante FONTE passou a ser corpo(GUTO) == docs/REGULAMENTO-v6.1.md (era corpo(v5) == corpo(GUTO)).
   void corpo;
-  const V6 = ler("../../../../../docs/REGULAMENTO-v6.1.md");
+  const V6 = ler("../../../../../docs/REGULAMENTO-v7.md");
   assert.equal(GUTO.replace(/\r\n/g, "\n").slice(GUTO.replace(/\r\n/g, "\n").indexOf("\n---\n\n") + 6), V6.replace(/\r\n/g, "\n"),
     "o corpo do GUTO tem de ser o v6 byte a byte");
   // Gate: subir a versão do Regulamento obriga a re-aceitar (o código diz isso em comentário e faz isso).
@@ -78,7 +78,7 @@ test("A/v5.1: a versão subiu nos dois ficheiros e o gate de aceite acompanhou",
   const f = FRONT.match(/VERSAO_CONSENTIMENTO = "([^"]+)"/)?.[1];
   assert.equal(g, f, "gate do backend e do frontend têm de ter a mesma versão");
   assert.notEqual(g, "3.0", "a versão 3.0 era a do Regulamento 5.0 — tem de subir com o texto");
-  assert.equal(g, "3.5", "UTAC138: o gate subiu para 3.5 com o Regulamento v6.1 (era 3.4, UTAC137)");
+  assert.equal(g, "3.6", "UTAC148: o gate subiu para 3.6 com o Regulamento v7 (era 3.5, UTAC138)");
 });
 
 // ──────────────────── FRENTE B/C — Data Safety (o bloqueante) ────────────────────

@@ -88,7 +88,8 @@ test("as 4 caixas marcadas ligam o botão; aceitar grava a versão do termo com 
   // Valor anterior desta asserção: "3.2" (E-3, Política revista).
   // UTAC137 (R18-137-1): 3.3 → 3.4 com o Regulamento v6.0.
   // UTAC138: 3.4 → 3.5 com o Regulamento v6.1.
-  assert.equal(salvo.versao, "3.5", "controlo: a versão vigente hoje é a do Regulamento v6.1 (UTAC138)");
+  // UTAC148: 3.5 → 3.6 com o Regulamento v7.
+  assert.equal(salvo.versao, "3.6", "controlo: a versão vigente hoje é a do Regulamento v7 (UTAC148)");
   assert.deepEqual(salvo.aceitos, { lido: true, maiores: true, termos: true, privacidade: true });
 });
 

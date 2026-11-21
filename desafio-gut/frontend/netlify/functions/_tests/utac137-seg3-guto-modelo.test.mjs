@@ -12,7 +12,8 @@ import { REGRA_REGULAMENTO } from "../_lib/guto-perfis.mjs";
 
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "..");
 // UTAC138 — a prosa passou ao v6.1 (Arts. 6º/7º com o bônus do Passe Relâmpago); a fonte da comparação acompanha.
-const V6 = readFileSync(resolve(RAIZ, "docs", "REGULAMENTO-v6.1.md"), "utf8").replace(/\r\n/g, "\n");
+// UTAC148 — a prosa passou ao v7; a fonte da comparação acompanha (era o v6.1).
+const V6 = readFileSync(resolve(RAIZ, "docs", "REGULAMENTO-v7.md"), "utf8").replace(/\r\n/g, "\n");
 const norm = (s) => s.replace(/\s+/g, " ").trim();
 const artigo = (rot) => norm((V6.split("\n").find((l) => l.startsWith(`${rot} `)) || "").slice(rot.length));
 const ini = REGRA_REGULAMENTO.indexOf("MODELO DE HOJE");
@@ -35,17 +36,20 @@ test("SEG3 · os valores da prosa do GUTO são os do artigo do v6 que cita", () 
   // ⛔ UTAC147 (R18-147-H, decisão do operador): a prosa passa ao modelo de Passes diretos ANTES do Regulamento (cujo
   // corpo ainda descreve pontos de lance — dívida para o jurídico). Eram aqui: «O palpite não exige Passe.», o bônus de
   // 100 do Passe Relâmpago (Art. 7º) e «o Passe Programado não dá pontos de lance» (Art. 6º).
-  assert.match(MODELO, /1 Passe Relâmpago = 1 lance no Menor Lance Único/);
-  assert.match(MODELO, /1 Passe Programado =\s+1 palpite/);
-  assert.match(MODELO, /Sem Passe não há lance nem palpite/);
-  assert.match(MODELO, /vale o MODELO DE HOJE/, "sem a cláusula, o GUTO citaria os Arts. 6º/7º antigos contra o modelo");
-  assert.doesNotMatch(MODELO, /bônus de 100|O palpite não\s+exige Passe/);
+  // ⛔ UTAC148 — o Regulamento v7 já descreve o modelo de Passes: a cláusula «vale o MODELO DE HOJE» saiu e a prosa
+  // cita os artigos do v7 (Arts. 3º, 5º, 6º, 12, 15 e 18).
+  assert.match(MODELO, /1 Passe\s+Relâmpago = 1 lance na Oferta Relâmpago e 1 Passe Programado = 1 palpite na Oferta Programada \(Art\. 5º\)/);
+  assert.match(MODELO, /sem Passe não há lance nem palpite \(Art\. 6º\)/);
+  assert.match(artigo("Art. 18."), /50 \(cinquenta\) ECOQUILDOs/);
+  assert.match(MODELO, /O vencedor do\s+palpite recebe 50 ECOQUILDOs \(Art\. 18\)/);
+  assert.doesNotMatch(MODELO, /bônus de 100|O palpite não\s+exige Passe|vale o MODELO DE HOJE/);
 });
 
 test("SEG3 · a prosa não ensina o v5 nem atribui ao Art. 6º o que ele exclui", () => {
   assert.doesNotMatch(MODELO, /R\$ 1,00|10 pontos de fidelidade|\b200\b|palpite exige|f[íi]sico/i);
   // UTAC147 — era: a prosa dizia de onde vinham os pontos de lance (Art. 6º: engajamento, login, missões). Essas fontes
   // foram DESCONTINUADAS (R18-147-C) e a prosa tem de o dizer, sem as voltar a ensinar como gratuitas.
-  assert.match(MODELO, /login diário, missões, sequência de acertos e boas-vindas foram DESCONTINUADOS/);
+  // UTAC148 — o GUTO tem de negar os pontos de lance e as fontes retiradas (o v7 já não as prevê).
+  assert.match(MODELO, /NÃO existem pontos de lance, nem pontos por login, missões, sequência de acertos ou\s+boas-vindas/);
   assert.doesNotMatch(MODELO, /pontos de lance são gratuitos/);
 });

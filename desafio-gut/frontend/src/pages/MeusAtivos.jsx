@@ -12,8 +12,7 @@ import { useFeedback } from "../hooks/useFeedback.js";
 // UTAC110j.4b (Frente B, só-UI) — o painel do motor MC93 (`PainelTorneio`, que fica no código) deu lugar ao
 // progresso PESSOAL dos pontos de lance (Art. 16º), lido do `ler-pontos` pelo `usePontos`.
 import { usePontos } from "../hooks/usePontos.js";
-import PainelPontosLance from "../components/meus-ativos/PainelPontosLance.jsx";
-import ProgressoBonus from "../components/meus-ativos/ProgressoBonus.jsx";
+// UTAC148 — `PainelPontosLance` e `ProgressoBonus` deixaram de ser desenhados aqui (pontos de lance e bónus de sequência retirados).
 // UTAC110j.5 (Frente D) — o «🎟️ Bônus de senhas» (`EstadoBonus`, MC93 — fica no código) deu lugar a
 // `BonusSequenciaPontos` (abaixo): desde o UTAC110n o bónus de 5 acertos é pago em +50 PONTOS de lance.
 import { PROPORCOES } from "../lib/pontosLance.js";
@@ -239,38 +238,11 @@ export default function MeusAtivos() {
         gap: isMobile ? "0.75rem" : "1rem",
         marginBottom: sectionGap,
       }}>
-        <PainelPontosLance
-          temSessao={temSessao}
-          carregando={pontosCarregando}
-          erro={pontos.erro || null}
-          lance={pontos.lance}
-          isMobile={isMobile}
-        />
-        {/* ⚠️ As QUATRO secções pessoais recebem o MESMO estado de sessão. A
-            primeira versão só passava os dados a duas, e em produção um utilizador
-            anónimo lia "0 / 5 acertos seguidos · Faltam 5 acertos" e "Nenhum bónus
-            conquistado neste ciclo" — afirmações sobre alguém que a app não
-            identificou. A segunda corrigiu três das quatro, e a quarta continuou a
-            dizer-lhe "Ainda não há lances seus nesta edição.". São precisas DUAS
-            rondas de validação independente para uma lição ser aplicada a todos os
-            sítios onde se aplica. */}
-        <ProgressoBonus
-          temSessao={temSessao}
-          carregando={feedbackCarregando}
-          erro={feedback.erro}
-          sequenciaAtual={feedback.feedback?.sequenciaAtual}
-          acertosParaBonus={ACERTOS_PARA_BONUS}
-          isMobile={isMobile}
-          t={t}
-        />
-        {/* UTAC110j.5 — era <EstadoBonus … senhasACreditar … /> («🎟️ Bônus de senhas»). */}
-        <BonusSequenciaPontos
-          temSessao={temSessao}
-          carregando={feedbackCarregando}
-          erro={feedback.erro}
-          bonusEmitido={feedback.feedback?.bonusEmitido ?? false}
-          isMobile={isMobile}
-        />
+        {/* ⛔ UTAC148 (Frente C — modelo de Passes diretos): saíram desta grelha «⭐ Seus pontos de lance»
+            (<PainelPontosLance>), «🎯 Progresso para o bônus» (<ProgressoBonus>) e «🎁 Bônus de sequência»
+            (<BonusSequenciaPontos>): os pontos de lance e o bónus de sequência foram retirados no UTAC147 (R18-147-C)
+            e o Regulamento v7 já não os prevê. Fica a secção pessoal que continua verdadeira (o feedback dos lances).
+            Os componentes ficam no repositório (histórico/testes próprios), sem render. */}
         <FeedbackLance
           temSessao={temSessao}
           lances={lances}

@@ -46,7 +46,8 @@ export const refConversao = (k) => `eco-conversao:${k}`;
 export const ECOQUILDO_POR_PASSE = 1;
 
 /** Motivos que EMITEM ECOQUILDO. Fechado: nenhum outro motivo pode creditar (Art. 48º/51º). */
-export const MOTIVOS_EMISSAO = Object.freeze(["passe-relampago", "passe-programado", "boas-vindas", "indicacao"]);
+// UTAC148 (R18-148-A, Art. 18 do Regulamento v7): «palpite-certo» — 50 ECOQUILDO ao vencedor da Oferta Programada.
+export const MOTIVOS_EMISSAO = Object.freeze(["passe-relampago", "passe-programado", "boas-vindas", "indicacao", "palpite-certo"]);
 
 /** Motivo único do USO (site oficial). A circulação é restrita (Art. 49º) — não há outros destinos. */
 export const MOTIVO_USO = "uso-site";

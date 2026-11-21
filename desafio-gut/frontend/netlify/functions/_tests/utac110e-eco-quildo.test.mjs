@@ -159,7 +159,8 @@ const comprar = (handler, key = K(1)) => pedir(handler, { corpo: { idempotencyKe
 test("A1 constantes: 1 ECOQUILDO = R$ 0,50 = 50 centavos (UTAC136; era R$ 1,00 = 100); 1 por Passe; motivos fechados", () => {
   assert.equal(E.CENTAVOS_POR_ECOQUILDO, 50, "Art. 21º v6 (era 100, Art. 47º v5)");
   assert.equal(E.ECOQUILDO_POR_PASSE, 1, "R18-110e-1");
-  assert.deepEqual([...E.MOTIVOS_EMISSAO], ["passe-relampago", "passe-programado", "boas-vindas", "indicacao"]);
+  // UTAC148 (R18-148-A, Art. 18 v7): + «palpite-certo» (50 ECOQUILDO ao vencedor do palpite).
+  assert.deepEqual([...E.MOTIVOS_EMISSAO], ["passe-relampago", "passe-programado", "boas-vindas", "indicacao", "palpite-certo"]);
   assert.equal(E.MOTIVO_USO, "uso-site");
   assert.equal(E.refUso("abc"), "eco-uso:abc");
   assert.equal(E.refCreditoAdmin("abc"), "eco-admin:abc");

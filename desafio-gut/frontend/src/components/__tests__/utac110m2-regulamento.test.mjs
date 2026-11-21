@@ -103,12 +103,13 @@ test("D: Arts. 57º e 69º dão o DPO como canal de LGPD, e o Gmail fica como su
 // ─────────────────────────── A INVARIANTE (corpo(v5) == corpo(GUTO)) ───────────────────────────
 // UTAC137 — a invariante passou a ser corpo(GUTO) == docs/REGULAMENTO-v6.1.md (era corpo(v5) == corpo(GUTO), UTAC110k.1).
 test("INVARIANTE: corpo(GUTO) é o v6 byte a byte (e o .mjs diz o mesmo)", () => {
-  const V6 = ler("../../../../../docs/REGULAMENTO-v6.1.md");
+  const V6 = ler("../../../../../docs/REGULAMENTO-v7.md"); // UTAC148 (era o v6.1)
   assert.equal(GUTO.slice(GUTO.indexOf("\n---\n\n") + 6), V6, "o corpo do GUTO tem de ser o v6 — invariante do UTAC137");
   // O .mjs é o runtime do GUTO: tem de conter as frases do v6, senão o assistente responde o antigo.
   for (const frase of [
-    "o Passe Programado não concede pontos de lance", // UTAC138 (v6.1): era «o Passe não concede…»
-    "bônus de 100 (cem) pontos de lance por unidade adquirida",
+    // UTAC148 (v7) — eram «o Passe Programado não concede pontos de lance» e o bônus de 100 (v6.1).
+    "1 (um) Passe Relâmpago dá direito a 1 (um) lance na Oferta Relâmpago",
+    "O vencedor da previsão recebe 50 (cinquenta) ECOQUILDOs",
     "1 ECOQUILDO equivalente a R$ 0,50 (cinquenta centavos)",
     "Encarregado de Proteção de Dados (DPO) encontram-se disponíveis no e-mail: dpo@grupouniaoetrabalho.com.br",
   ]) assert.ok(MJS.includes(frase), `guto-regulamento.mjs: falta «${frase.slice(0, 50)}…»`);

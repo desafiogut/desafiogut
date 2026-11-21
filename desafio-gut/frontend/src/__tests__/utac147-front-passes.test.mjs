@@ -63,12 +63,12 @@ test("P6 · Regras Oficiais: resumo em Passes, sem login/missão/sequência nem 
   assert.doesNotMatch(tudo, /Login diário|Missão do dia|Sequência de|pontos de lance/i);
 });
 
-test("P7 · Regulamento v6.1: Art. 18 diz «produto» (não «prêmio»), igual nas cópias do GUTO", () => {
-  const reg = ler("../../../../docs/REGULAMENTO-v6.1.md");
+test("P7 · Regulamento v7 (UTAC148): Art. 18 = 50 ECOQUILDOs ao vencedor (sem «prêmio» nem produto físico), igual na cópia do GUTO", () => {
+  const reg = ler("../../../../docs/REGULAMENTO-v7.md");
   const guto = ler("../../../../docs/GUTO-REGULAMENTO.md");
   const art = (t) => t.split("\n").find((l) => l.startsWith("Art. 18."));
-  assert.match(art(reg), /^Art\. 18\. O produto correspondente/);
-  assert.doesNotMatch(art(reg), /prêmio/);
+  assert.match(art(reg), /^Art\. 18\. O vencedor da previsão recebe 50 \(cinquenta\) ECOQUILDOs/);
+  assert.doesNotMatch(art(reg), /prêmio|produto/);
   assert.equal(art(guto), art(reg), "a cópia do GUTO divergiu no Art. 18");
 });
 

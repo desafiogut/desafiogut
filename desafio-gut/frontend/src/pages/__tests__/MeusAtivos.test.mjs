@@ -139,10 +139,15 @@ describe("MC94 · MeusAtivos — HARD GATE 5: nada regride", () => {
 // ───────────────────────────────────────────────────────────────────────────
 describe("MC94 · MeusAtivos — as secções novas estão na página", () => {
   // UTAC110j.4b (declarado): o «painel-torneio» (motor MC93) deu lugar ao «pontos-lance» (progresso pessoal).
-  test("as cinco secções renderizam (pontos de lance no lugar do painel do motor MC93)", () => {
+  // UTAC148 (Frente C): os painéis «pontos-lance», «progresso-bonus» e «estado-bonus» SAÍRAM (pontos de lance e bónus
+  // de sequência retirados no UTAC147). Ficam o feedback dos lances e o ranking — e os três não podem voltar.
+  test("as secções que ficam renderizam; pontos de lance e bónus de sequência NÃO (UTAC148)", () => {
     const html = renderizar();
+    for (const fora of ["pontos-lance", "progresso-bonus", "estado-bonus"]) {
+      assert.doesNotMatch(html, new RegExp(`data-secao="${fora}"`), `a secção "${fora}" voltou à página`);
+    }
+    assert.doesNotMatch(texto(html), /pontos de lance|Progresso para o bônus|Bônus de sequência|login de hoje/i);
     for (const secao of [
-      "pontos-lance", "progresso-bonus", "estado-bonus",
       "feedback-lance", "ranking-ciclo",
     ]) {
       assert.match(html, new RegExp(`data-secao="${secao}"`),
@@ -154,14 +159,14 @@ describe("MC94 · MeusAtivos — as secções novas estão na página", () => {
 
   test("a ordem é a planeada: torneio ANTES do histórico", () => {
     const html = renderizar();
-    const iTorneio = html.indexOf('data-secao="pontos-lance"'); // UTAC110j.4b
+    const iTorneio = html.indexOf('data-secao="feedback-lance"'); // UTAC148 (era «pontos-lance», UTAC110j.4b)
     const iFiltro  = html.indexOf("Filtrar");
     assert.ok(iTorneio !== -1 && iFiltro !== -1, "faltam âncoras para comparar");
     assert.ok(iTorneio < iFiltro,
       "as secções do torneio ficaram DEPOIS dos filtros/histórico");
   });
 
-  test("com sessão e dados, mostra posição, pontos e senhas a creditar", () => {
+  test.skip("com sessão e dados, mostra posição, pontos e senhas a creditar [UTAC148 (Frente C): os painéis de pontos de lance e de bónus de sequência saíram de Meus Ativos]", () => {
     const t = texto(renderizar({
       contexto: { address: "0xaaaa", isConnected: true, authToken: "tok", lances: LANCES },
       hooks: {
@@ -333,7 +338,7 @@ describe("MC94 · MeusAtivos — cablagem: os dados chegam às secções", () =>
     assert.doesNotMatch(texto(corpo), /R\$ 1,00/, "mostrou o lance de outra pessoa como sendo do utilizador");
   });
 
-  test("`erro` do feedback chega às TRÊS secções pessoais — e só a essas", () => {
+  test.skip("`erro` do feedback chega às TRÊS secções pessoais — e só a essas [UTAC148 (Frente C): os painéis de pontos de lance e de bónus de sequência saíram de Meus Ativos]", () => {
     // ⚠️ V22/V23/V24: a primeira versão passava os dados às três secções mas o
     // `erro` só a uma. As outras duas mostravam o estado "sem dados", isto é,
     // zeros — que é pior do que um aviso, porque o utilizador acredita neles.
@@ -358,7 +363,7 @@ describe("MC94 · MeusAtivos — cablagem: os dados chegam às secções", () =>
       "o erro do feedback contaminou o ranking, que é um endpoint independente e público");
   });
 
-  test("`carregando` do feedback chega às três secções pessoais", () => {
+  test.skip("`carregando` do feedback chega às três secções pessoais [UTAC148 (Frente C): os painéis de pontos de lance e de bónus de sequência saíram de Meus Ativos]", () => {
     const html = renderizar({
       contexto: { address: EU, authToken: "tok", isConnected: true },
       hooks: { feedback: { feedback: null, carregando: true, erro: null, semSessao: false } },
@@ -370,7 +375,7 @@ describe("MC94 · MeusAtivos — cablagem: os dados chegam às secções", () =>
     }
   });
 
-  test("`semSessao` chega às três: um anónimo não lê factos sobre si próprio", () => {
+  test.skip("`semSessao` chega às três: um anónimo não lê factos sobre si próprio [UTAC148 (Frente C): os painéis de pontos de lance e de bónus de sequência saíram de Meus Ativos]", () => {
     const html = renderizar({
       contexto: { address: null, authToken: null, isConnected: false },
       hooks: { feedback: { feedback: null, carregando: false, erro: null, semSessao: true } },
@@ -385,7 +390,7 @@ describe("MC94 · MeusAtivos — cablagem: os dados chegam às secções", () =>
     assert.doesNotMatch(t, /Nenhum bônus conquistado/i, "afirma a ausência de bónus de alguém que não identificou");
   });
 
-  test("os campos do feedback chegam ao sítio certo, cada um ao seu", () => {
+  test.skip("os campos do feedback chegam ao sítio certo, cada um ao seu [UTAC148 (Frente C): os painéis de pontos de lance e de bónus de sequência saíram de Meus Ativos]", () => {
     // Números distintos e improváveis, para que um campo trocado por outro salte.
     const html = renderizar({
       contexto: { address: EU, authToken: "tok", isConnected: true },
@@ -415,7 +420,7 @@ describe("MC94 · MeusAtivos — cablagem: os dados chegam às secções", () =>
     assert.match(html.slice(html.indexOf('data-secao="estado-bonus"')), /^[^]*?data-estado="com-bonus"/);
   });
 
-  test("⚠️ as secções NÃO se contradizem quando a sequência está completa", () => {
+  test.skip("⚠️ as secções NÃO se contradizem quando a sequência está completa [UTAC148 (Frente C): os painéis de pontos de lance e de bónus de sequência saíram de Meus Ativos]", () => {
     // ⚠️ Achado da validação independente: com 5/5 o ProgressoBonus declarava
     // "bónus conquistado!" a partir de uma conta LOCAL, enquanto o EstadoBonus
     // lia `bonusEmitido: false` do livro-razão e escrevia "Nenhum bónus
@@ -444,7 +449,7 @@ describe("MC94 · MeusAtivos — cablagem: os dados chegam às secções", () =>
   // o «🎟️ Bônus de senhas» (`EstadoBonus`, senhas a creditar/liquidar) saiu da página.
   // Antes: /Já creditadas/ (senhas liquidadas pela coordenação). Os pontos são creditados no fecho do ciclo —
   // não há fase «a creditar»; a invariante (não prometer de novo) mantém-se.
-  test("com bónus já LIQUIDADO, a página não promete creditar outra vez", () => {
+  test.skip("com bónus já LIQUIDADO, a página não promete creditar outra vez [UTAC148 (Frente C): os painéis de pontos de lance e de bónus de sequência saíram de Meus Ativos]", () => {
     const t = texto(renderizar({
       contexto: { address: EU, authToken: "tok", isConnected: true },
       hooks: {
@@ -492,7 +497,7 @@ describe("MC94 · MeusAtivos — a página não fala de quem não conhece", () =
       contexto: { address: null, authToken: null, isConnected: false, lances: LANCES_DE_TODOS },
       hooks: { feedback: { feedback: null, carregando: false, erro: null, semSessao: true } },
     });
-    for (const secao of ["pontos-lance", "progresso-bonus", "estado-bonus", "feedback-lance"]) { // UTAC110j.4b
+    for (const secao of ["feedback-lance"]) { // UTAC148 — as outras três secções pessoais saíram
       const t = dentro(html, secao);
       assert.match(t, /Entre na sua conta/i, `"${secao}" não convida a entrar`);
     }
@@ -516,7 +521,7 @@ describe("MC94 · MeusAtivos — a página não fala de quem não conhece", () =
       contexto: { address: EU, authToken: null, isConnected: true, lances: LANCES_DE_TODOS },
       hooks: { feedback: { feedback: null, carregando: false, erro: null, semSessao: true } },
     });
-    for (const secao of ["progresso-bonus", "estado-bonus"]) { // UTAC110j.4b: o painel-torneio saiu
+    for (const secao of []) { // UTAC148 — «progresso-bonus» e «estado-bonus» saíram; o resto do teste continua a valer
       const t = dentro(html, secao);
       assert.doesNotMatch(t, /Entre na sua conta/i,
         `"${secao}" manda entrar na conta quem já entrou`);
@@ -529,7 +534,7 @@ describe("MC94 · MeusAtivos — a página não fala de quem não conhece", () =
       "a página inteira ainda manda entrar quem já entrou");
   });
 
-  test("o token chega: a página passa a mostrar os dados, sem passar por 'entre na conta'", () => {
+  test.skip("o token chega: a página passa a mostrar os dados, sem passar por 'entre na conta' [UTAC148 (Frente C): os painéis de pontos de lance e de bónus de sequência saíram de Meus Ativos]", () => {
     const html = renderizar({
       contexto: { address: EU, authToken: "tok", isConnected: true, lances: LANCES_DE_TODOS },
       hooks: {
@@ -585,14 +590,14 @@ describe("UTAC110j.4b · MeusAtivos — o painel dos pontos de lance recebe os d
     assert.ok(chamadasPontos() >= 1, "a página não chamou o `usePontos`");
   });
 
-  test("com dados: o saldo e os ganhos por fonte chegam ao painel", () => {
+  test.skip("com dados: o saldo e os ganhos por fonte chegam ao painel [UTAC148 (Frente C): os painéis de pontos de lance e de bónus de sequência saíram de Meus Ativos]", () => {
     const p = painel(renderizar({ contexto: { address: EU, authToken: "tok", isConnected: true }, pontos: { lance: LANCE } }));
     assert.match(p, /data-testid="pontos-lance-saldo"[^>]*>73</, "o saldo não chega ao painel");
     assert.match(texto(p), /Indicação \+50/);
     assert.match(texto(p), /Login diário \+5/);
   });
 
-  test("«Últimos movimentos» mostra no máximo 5 (V15 do validador SEG4)", () => {
+  test.skip("«Últimos movimentos» mostra no máximo 5 (V15 do validador SEG4) [UTAC148 (Frente C): os painéis de pontos de lance e de bónus de sequência saíram de Meus Ativos]", () => {
     const movimentos = Array.from({ length: 7 }, (_, i) => {
       const data = `2026-10-${String(10 + i).padStart(2, "0")}T15:00:00Z`;
       return { data, t: Date.parse(data), motivo: "login", delta: 5 };
@@ -602,7 +607,7 @@ describe("UTAC110j.4b · MeusAtivos — o painel dos pontos de lance recebe os d
     assert.equal(ult.slice(0, ult.indexOf("</ul>")).split("<li").length - 1, 5);
   });
 
-  test("o `erro` do `usePontos` chega ao painel (e não contamina o ranking)", () => {
+  test.skip("o `erro` do `usePontos` chega ao painel (e não contamina o ranking) [UTAC148 (Frente C): os painéis de pontos de lance e de bónus de sequência saíram de Meus Ativos]", () => {
     const html = renderizar({ contexto: { address: EU, authToken: "tok", isConnected: true },
       pontos: { erro: "Não foi possível carregar os pontos", lance: LANCE } });
     assert.match(painel(html), /data-estado="erro"/);
@@ -610,19 +615,19 @@ describe("UTAC110j.4b · MeusAtivos — o painel dos pontos de lance recebe os d
     assert.doesNotMatch(html.slice(i, i + html.slice(i).indexOf("</section>")), /data-estado="erro"/);
   });
 
-  test("o `loading` chega ao painel, sem números inventados", () => {
+  test.skip("o `loading` chega ao painel, sem números inventados [UTAC148 (Frente C): os painéis de pontos de lance e de bónus de sequência saíram de Meus Ativos]", () => {
     const p = painel(renderizar({ contexto: { address: EU, authToken: "tok", isConnected: true }, pontos: { loading: true, lance: LANCE } }));
     assert.match(p, /data-estado="carregando"/);
     assert.doesNotMatch(p, />73</);
   });
 
-  test("⛔ ANÓNIMO: mesmo que o hook traga dados, o painel não mostra números", () => {
+  test.skip("⛔ ANÓNIMO: mesmo que o hook traga dados, o painel não mostra números [UTAC148 (Frente C): os painéis de pontos de lance e de bónus de sequência saíram de Meus Ativos]", () => {
     const p = painel(renderizar({ contexto: { address: null, authToken: null, isConnected: false }, pontos: { lance: LANCE } }));
     assert.match(p, /data-estado="sem-sessao"/);
     assert.doesNotMatch(texto(p), /73|\+50/);
   });
 
-  test("⛔ JANELA DO TOKEN: com sessão e sem token, o painel diz «carregando», não «entre na conta»", () => {
+  test.skip("⛔ JANELA DO TOKEN: com sessão e sem token, o painel diz «carregando», não «entre na conta» [UTAC148 (Frente C): os painéis de pontos de lance e de bónus de sequência saíram de Meus Ativos]", () => {
     const p = texto(painel(renderizar({ contexto: { address: EU, authToken: null, isConnected: true } })));
     assert.match(p, /carregando/i);
     assert.doesNotMatch(p, /Entre na sua conta/i);

@@ -98,22 +98,25 @@ function citacoes(src) {
 const V4 = ler("../../docs/REGULAMENTO-v4.md");
 const V5 = ler("../../docs/REGULAMENTO-v5.md");
 // UTAC137 — a UI e o gate passaram a citar o Regulamento **v6.0** (o v5 fica lido só como histórico).
-const V6 = ler("../../docs/REGULAMENTO-v6.1.md");
+// UTAC148 — as citações da UI passam ao v7 (era o v6.1).
+const V6 = ler("../../docs/REGULAMENTO-v7.md");
 /** Linha do artigo N do v6 («Art. 1º …» / «Art. 10. …»), ou null. */
 const artigoV6 = (n) => V6.match(new RegExp("^Art\\. " + n + "(?:º|\\.) .*", "m"));
 /** UTAC137 — palavras-chave por artigo do v6 (cada uma consta do PRÓPRIO artigo — verificado no teste). */
 const EXIGIDO_V6 = {
   "1":  ["Associação", "Grupo União e Trabalho", "dropshipping"],
   "2":  ["18", "maiores"],
-  "3":  ["opcional"],
-  "5":  ["Passe Desafio", "R$ 2,00"],
-  "6":  ["pontos de lance", "gratuitos"],
-  // UTAC138 (v6.1): o Art. 6º remete para o bônus do Passe Relâmpago do Art. 7º — «Passe Relâmpago» é assunto do 7º.
-  "7":  ["ponto de fidelidade", "GUTO", "dados analíticos", "Passe Relâmpago"],
+  // UTAC148 (v7): Art. 3º participação exige Passe; Art. 5º 1 Passe = 1 lance/palpite; Art. 6º sem Passe não há
+  // participação; Art. 7º sem bônus de pontos; Art. 12 lance em reais; Art. 18 = 50 ECOQUILDOs.
+  "3":  ["Passe", "gratuitos"],
+  "5":  ["Passe Desafio", "R$ 2,00", "Passe Relâmpago", "palpite"],
+  "6":  ["Passe", "lance", "palpite"],
+  "7":  ["ponto de fidelidade", "GUTO", "dados analíticos"],
   "8":  ["50", "cartão"],
   "11": ["habilidade", "menor valor único de lance"],
-  "12": ["1 ponto", "R$ 0,01"],
+  "12": ["reais", "lance"],
   "17": ["palpite"],
+  "18": ["ECOQUILDO", "palpite", "previsão"],
   "21": ["ECOQUILDO", "R$ 0,50"],
   "23": ["ECOQUILDOs", "Passe Desafio"],
   "25": ["Google"],

@@ -22,6 +22,8 @@ import { EDICAO_ID_RE } from "./edicoes-core.mjs";
 // UTAC106g — store dos pedidos de resgate do cartão (`public.resgates`). Sem ciclo: `resgates.mjs`
 // só importa `supabase-client.mjs`.
 import { criarResgate, lerResgatePorChave } from "./resgates.mjs";
+// UTAC148 (R18-148-A) — o vencedor do palpite recebe 50 ECOQUILDO (Art. 18 v7). Sem ciclo: eco-quildo só importa o cliente.
+import { creditarEcoQuildo, reverterEcoQuildo, registarEmissaoNoLastro } from "./eco-quildo.mjs";
 
 // ── Constantes de negócio (a REGRA vive aqui, nunca como número mágico no endpoint) ──
 export const PONTOS_POR_PASSE = 1;
@@ -172,6 +174,10 @@ const FK_VIOLATION = "23503";
 
 /** `ref` do crédito do bónus: UMA por edição ⇒ re-apurar NÃO credita duas vezes (idempotência por `ref`). */
 export const refBonusPalpite = (edicaoId) => `palpite-certo:${edicaoId}`;
+/** UTAC148 (R18-148-A, Art. 18 v7) — ECOQUILDO do vencedor do palpite. Ref própria por edição (idempotente). */
+export const ECOQUILDO_POR_PALPITE_CERTO = 50;
+export const MOTIVO_ECO_PALPITE_CERTO = "palpite-certo";
+export const refEcoPalpiteCerto = (edicaoId) => `eco-palpite-certo:${edicaoId}`;
 
 const edicaoValida = (id) => typeof id === "string" && EDICAO_ID_RE.test(id);
 
@@ -276,7 +282,7 @@ export async function apurarPalpite(edicaoId, valorReal) {
     .order("criado_em", { ascending: true }).order("id", { ascending: true });
   if (error) return { ok: false, code: "ERRO_DB" };
   const porApurar = Array.isArray(data) ? data : [];
-  if (porApurar.length === 0) return { ok: true, total: 0, vencedor: null, pontosCreditados: 0 };
+  if (porApurar.length === 0) return { ok: true, total: 0, vencedor: null, pontosCreditados: 0, ecoQuildoCreditado: 0 };
 
   let vencedor = porApurar[0];
   for (const p of porApurar) {
@@ -289,6 +295,24 @@ export async function apurarPalpite(edicaoId, valorReal) {
   );
   if (!credito.ok) return { ok: false, code: credito.code };
 
+  // ── UTAC148 (R18-148-A, Art. 18 v7) — 50 ECOQUILDO ao vencedor, TAMBÉM antes da marcação (mesma doutrina do
+  // crédito acima: sem a marcação, repetir a apuração tem de poder completar). Idempotente pela ref da edição.
+  // ECOQUILDO sem lastro em R$ não existe (Art. 21): se o lastro falhar, a emissão é revertida e a apuração falha.
+  const eco = await creditarEcoQuildo(vencedor.endereco, ECOQUILDO_POR_PALPITE_CERTO, MOTIVO_ECO_PALPITE_CERTO, refEcoPalpiteCerto(edicaoId))
+    .catch(() => ({ ok: false, code: "ERRO_DB" }));
+  const desfazerPontosRecemCriados = async () => {
+    if (credito.criado === true) await reverterMovimento(vencedor.endereco, refBonusPalpite(edicaoId)).catch(() => {});
+  };
+  if (!eco.ok) { await desfazerPontosRecemCriados(); return { ok: false, code: `ECO_${eco.code ?? "ERRO_DB"}` }; }
+  if (eco.criado === true) {
+    const lastro = await registarEmissaoNoLastro(ECOQUILDO_POR_PALPITE_CERTO).catch(() => ({ ok: false, code: "ERRO_DB" }));
+    if (!lastro.ok) {
+      await reverterEcoQuildo(vencedor.endereco, refEcoPalpiteCerto(edicaoId)).catch(() => {});
+      await desfazerPontosRecemCriados();
+      return { ok: false, code: "LASTRO_FALHOU" };
+    }
+  }
+
   // ⚠️ UTAC106g (facet do B2, medido pelo validador adversarial na 2.ª ronda): se a MARCAÇÃO falhar,
   // o crédito TEM de ser DESFEITO. Sem a marcação, o guarda `edicaoApurada()` fica falso (nenhum
   // palpite com `apurado:true`) e uma 2.ª apuração voltaria a pagar +2 a OUTRO endereço — a mesma
@@ -297,6 +321,14 @@ export async function apurarPalpite(edicaoId, valorReal) {
   const desfazerCredito = async () => {
     if (credito.criado === true) {
       await reverterMovimento(vencedor.endereco, refBonusPalpite(edicaoId));
+    }
+    // UTAC148 — o ECOQUILDO recém-emitido também se desfaz (e o seu lastro), senão uma 2.ª apuração pagaria outro vencedor.
+    if (eco.criado === true) {
+      const rev = await reverterEcoQuildo(vencedor.endereco, refEcoPalpiteCerto(edicaoId)).catch(() => ({ ok: false }));
+      if (rev.ok && rev.revertido) {
+        const { reverterEmissaoNoLastro } = await import("./eco-quildo.mjs");
+        await reverterEmissaoNoLastro(ECOQUILDO_POR_PALPITE_CERTO).catch(() => {});
+      }
     }
     return { ok: false, code: "ERRO_DB" };
   };
@@ -311,11 +343,19 @@ export async function apurarPalpite(edicaoId, valorReal) {
     .update({ apurado: true, resultado: "mais_proximo" }).eq("id", vencedor.id);
   if (e2) return desfazerCredito();
 
+  // UTAC148 — com o ECOQUILDO novo, ≥ 50 converte-se em Passe (Art. 23). Fail-soft e import preguiçoso (ciclo:
+  // conversao-eco-passe importa este módulo). Uma falha aqui não desfaz a apuração: converte no próximo crédito.
+  if (eco.criado === true) {
+    const { converterEcoEmPassesSeguro } = await import("./conversao-eco-passe.mjs");
+    await converterEcoEmPassesSeguro(vencedor.endereco, "palpite-certo");
+  }
+
   return {
     ok: true,
     total: porApurar.length,
     vencedor: { endereco: vencedor.endereco, valor: vencedor.valor },
     pontosCreditados: PONTOS_POR_PALPITE_CERTO,
+    ecoQuildoCreditado: ECOQUILDO_POR_PALPITE_CERTO, // UTAC148 (Art. 18 v7)
   };
 }
 

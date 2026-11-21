@@ -1,0 +1,20 @@
+schema: utac/1
+name: UTAC148
+title: "Fecho total: Regulamento v7 + gate 3.6, GUTO, limpeza de UI, push e AAB v13"
+type: publicacao
+baseline: 41de5d6
+motivo: >-
+  O modelo 1 Passe = 1 Ação está em produção (UTAC147) mas Regulamento v6.1, gate 3.5, Meus Ativos e o APK v12.1
+  continuam no modelo de pontos (DEBT-102..105). Fechar as dívidas e entregar o AAB v13.
+frentes:
+  - {id: A, nome: Regulamento v7 + PDF/QR + gate 3.6, entrega: [docs/REGULAMENTO-v7.md, Desktop/REGULAMENTO-DesafioGUT-v7.pdf, TermosConsentimento.jsx, _lib/consentimento.mjs]}
+  - {id: B, nome: GUTO no v7, entrega: [_lib/guto-regulamento.mjs, docs/GUTO-REGULAMENTO.md, _lib/guto-perfis.mjs]}
+  - {id: C, nome: UI sem pontos de lance nem bónus de sequência, entrega: [MeusAtivos.jsx, MinhaCarteira.jsx, testes]}
+  - {id: D, nome: push origin/main + remover worktree do validador, entrega: [git push, git worktree remove]}
+  - {id: E, nome: AAB v13, entrega: [build.gradle, suíte, Desktop/DesafioGUT-v13/DesafioGUT-v13.aab, link GoFile]}
+autoriza: [editar Regulamento/gate/GUTO/frontend/build.gradle, git push origin main, remover o worktree do validador, build:apk + bundleRelease, upload GoFile do AAB]
+proibe: [alterar o Play Billing, reverter 1 Passe = 1 Ação, git add -A, npm run build para o APK]
+dependencias: [UTAC147 em produção (6b0214c7)]
+regras_activas: [E, T, G, L, S, A, P, AU, ST, HI]
+stop_conditions_extra: [ST3, ST10]
+ressalvas: ["HI5: 2,5 h", "A14: RAM ≥ 1500 MB antes do build", "Privy: operador liga «Return user data in an identity token»"]
