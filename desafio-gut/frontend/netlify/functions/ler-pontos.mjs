@@ -21,6 +21,7 @@ import { respostaPreflight } from "./_lib/cors.mjs";
 import { sistemaPausado, lerEstadoSistema } from "./_lib/system-state.mjs";
 import { lerPontos, lerPalpites, pontosDeCompra, PONTOS_POR_CARTAO } from "./_lib/passe-pontos.mjs";
 import { missoesDoRegisto, indicacoesDoMes, PONTOS_LOGIN_DIARIO, PONTOS_MISSAO_LANCE } from "./_lib/fontes-lance.mjs";
+import { lerEcoQuildo } from "./_lib/eco-quildo.mjs"; // UTAC148 — contador de indicações (pagas em ECOQUILDO)
 
 // UTAC110f-front — as «Missões de hoje» da Carteira. FAIL-SOFT: se a leitura falhar, `missoesHoje: null` e o resto
 // da resposta segue igual (as missões nunca derrubam os pontos). `pontosHoje` = só as missões do dia (R18-110f-front-B):
@@ -41,9 +42,12 @@ function missoesDeHoje(registo) {
 
 // UTAC110h.3 (P1/DEBT-028) — contador de indicações do mês para o painel «Indique e Ganhe».
 // FAIL-SOFT (`null`): um erro aqui nunca derruba a leitura dos pontos.
-function indicacoesDeMes(registo) {
+// UTAC148 — conta também as indicações pagas em ECOQUILDO (a indicação já não dá pontos de lance): +1 leitura, fail-soft.
+async function indicacoesDeMes(registo, endereco) {
   try {
-    return indicacoesDoMes(registo);
+    let eco = [];
+    try { eco = (await lerEcoQuildo(endereco)).historico; } catch { return null; }
+    return indicacoesDoMes(registo, new Date(), eco);
   } catch {
     return null;
   }
@@ -87,7 +91,7 @@ export default async (req) => {
   // do cartão usam `pontosCartao`. Sem isto, 48 de compra + 2 de bónus = 50 desbloqueava o cartão.
   const pontosCartao = pontosDeCompra(registo);
   const missoesHoje = missoesDeHoje(registo);
-  const indicacoesMes = indicacoesDeMes(registo);
+  const indicacoesMes = await indicacoesDeMes(registo, t.endereco);
   return jsonResponse({
     ok: true,
     pontos,

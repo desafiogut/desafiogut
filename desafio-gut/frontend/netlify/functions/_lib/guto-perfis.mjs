@@ -267,7 +267,7 @@ export function quandoApuracao(terminoIso) {
 
 /** Texto por omissão do UTAC140 (com {produto} e {apuracao}); a edição pode trazer o seu (`guto.boasVindas`). */
 export const BOAS_VINDAS_PADRAO =
-  "Estamos na Edição Especial Relâmpago! Dê o seu menor lance único em pontos. O valor é secreto até {apuracao}, quando apuraremos o vencedor. O produto em disputa é {produto}. Bons lances!";
+  "Estamos na Edição Especial Relâmpago! Dê o seu menor lance único — cada lance usa 1 Passe Relâmpago. O valor é secreto até {apuracao}, quando apuraremos o vencedor. O produto em disputa é {produto}. Bons lances!";
 
 /** UTAC140b — preenche {produto}/{apuracao}; aspas duplas viram simples (o texto vai entre aspas no prompt). */
 export function fraseBoasVindas(modelo, produto, quando) {
@@ -460,10 +460,10 @@ export const respostasPorPerfil = {
   // ECOQUILDO_INDICACAO_INDICANTE / ECOQUILDO_INDICACAO_INDICADO (teste `utac110h2-guto-eco.test.mjs`).
   // Regra de redacção: escrever SEMPRE «+N pontos de lance» por extenso — os verificadores varrem `+N`.
   indique_e_ganhe: {
-    visitante: () => "Indique e Ganhe é para membros! Crie a sua conta e, por cada amigo que se cadastrar com o seu código, você ganha +50 pontos de lance e +2 ECOQUILDO (e o seu amigo ganha +50 pontos de lance e +1 ECOQUILDO). 😊",
-    comum: (p) => `Aqui está o seu Indique e Ganhe! 🎁 Compartilhe o seu link: por cada amigo que criar a conta com o seu código, você ganha +50 pontos de lance e +2 ECOQUILDO na hora (e o seu amigo ganha +50 pontos de lance e +1 ECOQUILDO), até 10 indicações por mês. Código: ${g(p.codigo)}.`,
-    corporativo: (p) => `Indique e Ganhe — código ${g(p.codigo)}. Por cada indicado que crie a conta com o seu código: +50 pontos de lance e +2 ECOQUILDO para si, +50 pontos de lance e +1 ECOQUILDO para o indicado, creditados no cadastro (até 10 indicações creditadas por mês). Indicados: ${g(p.total_indicados, "0")}; convertidos: ${g(p.total_convertidos, "0")}.`,
-    admin: (p) => `Indique e Ganhe — código ${g(p.codigo)}. Indicados: ${g(p.total_indicados, "0")}; convertidos: ${g(p.total_convertidos, "0")}. Recompensa: +50 pontos de lance e +2 ECOQUILDO ao indicante, +50 pontos de lance e +1 ECOQUILDO ao indicado (até 10 por mês por indicante).`,
+    visitante: () => "Indique e Ganhe é para membros! Crie a sua conta e, por cada amigo que se cadastrar com o seu código, você ganha +2 ECOQUILDO (e o seu amigo ganha +1 ECOQUILDO). 😊",
+    comum: (p) => `Aqui está o seu Indique e Ganhe! 🎁 Compartilhe o seu link: por cada amigo que criar a conta com o seu código, você ganha +2 ECOQUILDO na hora (e o seu amigo ganha +1 ECOQUILDO), até 10 indicações por mês. Código: ${g(p.codigo)}.`,
+    corporativo: (p) => `Indique e Ganhe — código ${g(p.codigo)}. Por cada indicado que crie a conta com o seu código: +2 ECOQUILDO para si, +1 ECOQUILDO para o indicado, creditados no cadastro (até 10 indicações creditadas por mês). Indicados: ${g(p.total_indicados, "0")}; convertidos: ${g(p.total_convertidos, "0")}.`,
+    admin: (p) => `Indique e Ganhe — código ${g(p.codigo)}. Indicados: ${g(p.total_indicados, "0")}; convertidos: ${g(p.total_convertidos, "0")}. Recompensa: +2 ECOQUILDO ao indicante, +1 ECOQUILDO ao indicado (até 10 por mês por indicante).`,
   },
 
   // MC15.8.1 ITEM 8 — relatório de indicações (admin-only; sem emoji, formato relatório).

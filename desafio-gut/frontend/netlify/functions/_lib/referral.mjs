@@ -178,9 +178,10 @@ export function mensagemInducao(contador, primeiroNome) {
   const n = Number(contador || 0);
   if (n <= 1) {
     const quem = primeiroNome ? `O teu amigo ${primeiroNome}` : "Um amigo teu";
-    return `Parabéns! ${quem} entrou no DESAFIOGUT. +50 pontos de lance e +2 ECOQUILDO creditados!`;
+    return `Parabéns! ${quem} entrou no DESAFIOGUT. +2 ECOQUILDO creditados!`;
   }
-  return `${n} amigos teus entraram hoje no DESAFIOGUT! +${n * 50} pontos de lance e +${n * 2} ECOQUILDO creditados.`;
+  // UTAC148 (R18-148-D): a indicação já não dá pontos de lance (era «+${n * 50} pontos de lance e …»).
+  return `${n} amigos teus entraram hoje no DESAFIOGUT! +${n * 2} ECOQUILDO creditados.`;
 }
 
 /**

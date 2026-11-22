@@ -53,16 +53,16 @@ const formato = (h) => h
 describe("UTAC109e · a acção é a única diferença", () => {
   test("os textos da acção são os decididos (pt-BR), um par por família", () => {
     assert.deepEqual(JSON.parse(JSON.stringify(ACOES)), {
-      lance: { botao: "Dar lance", rotulo: "Seu lance (em pontos)" },
+      lance: { botao: "Dar lance", rotulo: "Seu lance (em centavos)" }, // UTAC148 (era «em pontos»)
       palpite: { botao: "Dar palpite", rotulo: "Seu palpite (nº de lances)" },
     });
     assert.ok(Object.isFrozen(ACOES) && Object.isFrozen(ACOES.lance) && Object.isFrozen(ACOES.palpite), "a tabela de acções tem de ser imutável");
   });
 
-  test("A · vazio: o lance mostra «Dar lance» + «(em pontos)»; nunca «Dar palpite»", () => {
+  test("A · vazio: o lance mostra «Dar lance» + «(em centavos)» (UTAC148); nunca «Dar palpite»", () => {
     const h = r({ ...VAZIO, acao: "lance" });
     assert.match(h, /data-acao="lance"/);
-    assert.match(h, /<label[^>]*for="lance-sem-edicao"[^>]*>Seu lance \(em pontos\)<\/label>/);
+    assert.match(h, /<label[^>]*for="lance-sem-edicao"[^>]*>Seu lance \(em centavos\)<\/label>/);
     assert.match(h, /<input[^>]*id="lance-sem-edicao"[^>]*type="number"[^>]*disabled=""/);
     assert.match(h, /<button[^>]*disabled=""[^>]*>Dar lance<\/button>/);
     assert.doesNotMatch(h, /Dar palpite|nº de lances/);

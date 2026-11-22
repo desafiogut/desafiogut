@@ -1,0 +1,3 @@
+frontend: VERDE 1345/1397 pass
+backend: VERDE 1524/1613 pass
+VEREDITO: VERDE

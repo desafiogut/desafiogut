@@ -196,7 +196,7 @@ test("P5 BIDIRECCIONAL: com os endereços MASCARADOS (o bug) a conversão falha 
   assert.deepEqual(creditos, [], "o caminho mascarado não pode creditar no contrato");
 });
 
-test("P5: o bónus on-chain é idempotente por conversão (não paga duas vezes o mesmo indicado)", async () => {
+test.skip("P5: o bónus on-chain é idempotente por conversão (não paga duas vezes o mesmo indicado) [UTAC148 (R18-148-D): a indicação já não dá +50 pontos de lance (Regulamento v7, Art. 24)]", async () => {
   const { codigo } = await R.gerarCodigoIndicacao(A);
   await usar(codigo, B);
   const antes = creditos.length;

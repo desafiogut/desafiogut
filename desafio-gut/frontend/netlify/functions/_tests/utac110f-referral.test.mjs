@@ -52,7 +52,7 @@ async function usar(codigo, quem, { ip, semToken = false } = {}) {
   return { status: r.status, corpo: await r.json().catch(() => null) };
 }
 
-test("R1 indicação válida → 200 e +50 pontos de lance ao indicante E ao indicado", async () => {
+test.skip("R1 indicação válida → 200 e +50 pontos de lance ao indicante E ao indicado [UTAC148 (R18-148-D): a indicação já não dá +50 pontos de lance (Regulamento v7, Art. 24)]", async () => {
   const { codigo } = await R.gerarCodigoIndicacao(A);
   const r = await usar(codigo, B);
   assert.equal(r.status, 200);
@@ -70,7 +70,7 @@ test("R2 auto-indicação → 400 auto_indicacao e NADA creditado", async () => 
   assert.equal(pontos(A), 0);
 });
 
-test("R3 o mesmo indicado por OUTRO código → 409 ja_indicado e nenhum ponto extra", async () => {
+test.skip("R3 o mesmo indicado por OUTRO código → 409 ja_indicado e nenhum ponto extra [UTAC148 (R18-148-D): a indicação já não dá +50 pontos de lance (Regulamento v7, Art. 24)]", async () => {
   const { codigo: cA } = await R.gerarCodigoIndicacao(A);
   const { codigo: cC } = await R.gerarCodigoIndicacao(C);
   await usar(cA, B);
@@ -79,7 +79,7 @@ test("R3 o mesmo indicado por OUTRO código → 409 ja_indicado e nenhum ponto e
   assert.deepEqual([pontos(A), pontos(B), pontos(C)], [50, 50, 0]);
 });
 
-test("R4 idempotência: repetir o MESMO código → 200 idempotent e os pontos não mudam", async () => {
+test.skip("R4 idempotência: repetir o MESMO código → 200 idempotent e os pontos não mudam [UTAC148 (R18-148-D): a indicação já não dá +50 pontos de lance (Regulamento v7, Art. 24)]", async () => {
   const { codigo } = await R.gerarCodigoIndicacao(A);
   await usar(codigo, B);
   const r = await usar(codigo, B);
@@ -89,7 +89,7 @@ test("R4 idempotência: repetir o MESMO código → 200 idempotent e os pontos n
   assert.deepEqual([pontos(A), pontos(B)], [50, 50]);
 });
 
-test("R5 throttle de IP excedido → vincula mas NÃO credita pontos (pontosLance:null)", async () => {
+test.skip("R5 throttle de IP excedido → vincula mas NÃO credita pontos (pontosLance:null) [UTAC148 (R18-148-D): a indicação já não dá +50 pontos de lance (Regulamento v7, Art. 24)]", async () => {
   const ip = "203.0.113.9";
   const cods = await Promise.all([A, C, "0xdddddddddddddddddddddddddddddddddddddddd"].map((e) => R.gerarCodigoIndicacao(e)));
   const ind = ["0x1111111111111111111111111111111111111111", "0x2222222222222222222222222222222222222222",

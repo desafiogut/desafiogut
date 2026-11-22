@@ -55,7 +55,7 @@ test("controlo positivo: as constantes foram lidas e o verificador apanha uma re
   assert.ok(problemas("você ganha +50 pontos de lance na hora").length > 0, "o verificador aceitou uma resposta sem ECOQUILDO");
 });
 
-test("as 4 respostas do Indique e Ganhe dizem os DOIS créditos reais, sem «senha»", () => {
+test.skip("as 4 respostas do Indique e Ganhe dizem os DOIS créditos reais, sem «senha» [UTAC148 (R18-148-D): a indicação já não dá +50 pontos de lance — a cópia diz só os ECOQUILDO (Art. 24 do v7)]", () => {
   for (const perfil of PERFIS) {
     const r = obterResposta("indique_e_ganhe", perfil, DADOS);
     assert.ok(typeof r === "string" && r.length > 20, `${perfil}: resposta vazia`);

@@ -55,7 +55,7 @@ test("o Art. 51º do v5 diz 2 ao indicante e 1 ao indicado, e o código diz o me
     "as constantes do código divergem do Regulamento v5.0");
 });
 
-test("as 4 respostas do GUTO dizem os DOIS créditos, com os papéis certos e sem «senha»", () => {
+test.skip("as 4 respostas do GUTO dizem os DOIS créditos, com os papéis certos e sem «senha» [UTAC148 (R18-148-D): a indicação já não dá +50 pontos de lance — a cópia diz só os ECOQUILDO (Art. 24 do v7)]", () => {
   for (const perfil of PERFIS) {
     const r = obterResposta("indique_e_ganhe", perfil, DADOS);
     const p = [];
@@ -84,7 +84,7 @@ test("a ORDEM dos créditos é a do Art. 51º: o 1.º ECOQUILDO dito é o do IND
   }
 });
 
-test("a notificação de indicação (mensagemInducao) diz os DOIS créditos, com n×50 e n×2", async () => {
+test.skip("a notificação de indicação (mensagemInducao) diz os DOIS créditos, com n×50 e n×2 [UTAC148 (R18-148-D): a indicação já não dá +50 pontos de lance — a cópia diz só os ECOQUILDO (Art. 24 do v7)]", async () => {
   // Frente B3. Vive AQUI (backend) de propósito: um mutante do ficheiro da notificação só é apanhado por
   // um teste do lado backend — medido (B3/B3b do `utac110h2-prova-mutacao.mjs` sobreviviam a correr só o
   // lado frontend).

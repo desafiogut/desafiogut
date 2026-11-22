@@ -31,7 +31,7 @@
 // nunca fica sem lastro em R$ (Art. 50º): se o lastro falhar, as emissões daquele passo são revertidas.
 
 import { creditarPontosLance, lerLedgerLance } from "./ledger-lance.mjs";
-import { creditarEcoQuildo, registarEmissaoNoLastro, reverterEcoQuildo } from "./eco-quildo.mjs";
+import { creditarEcoQuildo, registarEmissaoNoLastro, reverterEcoQuildo, lerEcoQuildo } from "./eco-quildo.mjs";
 import { captureSecurityAlert } from "./sentry-server.mjs";
 import { mascararEndereco } from "./validate.mjs"; // UTAC110h.4 (DEBT-031)
 
@@ -152,12 +152,22 @@ export async function estadoMissoesHoje(endereco, agora = new Date()) {
  * (padrão do `missoesDoRegisto`, do UTAC110g).
  * @returns {{mes:string|null, creditadas:number, limite:number}}
  */
-export function indicacoesDoMes(registo, agora = new Date()) {
+export function indicacoesDoMes(registo, agora = new Date(), ecoHistorico = []) {
+  // UTAC148 (R18-148-D) — desde que a indicação deixou de dar pontos de lance, as indicações pagas vivem no histórico do
+  // ECOQUILDO (`eco-indicacao:<indicado>`); as anteriores, no ledger de pontos (`indicacao:<indicado>`). Conta-se a UNIÃO
+  // por indicado, no mês UTC — a mesma conta para o limite do servidor e para o contador do painel.
   const mes = mesUTC(agora.toISOString());
   const historico = Array.isArray(registo?.historico_lance) ? registo.historico_lance : [];
-  const creditadas = historico.filter((h) => h?.motivo === "indicacao"
-    && String(h?.ref ?? "").startsWith("indicacao:") && mesUTC(h?.data) === mes).length;
-  return { mes, creditadas, limite: LIMITE_INDICACOES_MES };
+  const indicados = new Set();
+  for (const h of historico) {
+    const ref = String(h?.ref ?? "");
+    if (h?.motivo === "indicacao" && ref.startsWith("indicacao:") && mesUTC(h?.data) === mes) indicados.add(ref.slice(10));
+  }
+  for (const h of (Array.isArray(ecoHistorico) ? ecoHistorico : [])) {
+    const ref = String(h?.ref ?? "");
+    if (h?.motivo === MOTIVO_ECO_INDICACAO && ref.startsWith("eco-indicacao:") && mesUTC(h?.data) === mes) indicados.add(ref.slice(14));
+  }
+  return { mes, creditadas: indicados.size, limite: LIMITE_INDICACOES_MES };
 }
 
 /** Mês (UTC, `AAAA-MM`) — o MESMO recorte do limite mensal de `_lib/referral.mjs`. */
@@ -241,32 +251,33 @@ export async function creditarIndicacao(indicante, indicado, agora = new Date())
   const b = String(indicado ?? "").toLowerCase();
   if (a && a === b) return { ok: false, code: "AUTO_INDICACAO" };
 
+  // ⛔ UTAC148 (R18-148-D, Regulamento v7: «não existem pontos de lance»; Art. 24 = 2 ECOQUILDO ao indicante e 1 ao
+  // indicado) — a indicação JÁ NÃO credita os +50 pontos de lance (era `creditarPontosLance(..., "indicacao", ref)` aos
+  // dois). Fica só o ECOQUILDO. O LIMITE MENSAL (10) conta agora as indicações do mês já pagas em ECOQUILDO
+  // (`eco-indicacao:<indicado>`) E as do ledger de pontos anteriores a este UTAC (`indicacao:<indicado>`), sem repetir o
+  // mesmo indicado — senão o mês da transição abria uma janela de excesso.
   let indicanteRes;
-  let historicoA;
-  try { ({ historico: historicoA } = await lerLedgerLance(a)); }
-  catch { historicoA = null; }
-  if (historicoA === null) {
+  let historicoA = null;
+  let ecoA = null;
+  try { ({ historico: historicoA } = await lerLedgerLance(a)); } catch { historicoA = null; }
+  try { ecoA = (await lerEcoQuildo(a)).historico; } catch { ecoA = null; }
+  if (historicoA === null || ecoA === null) {
     indicanteRes = { ok: false, code: "ERRO_DB" };
   } else {
-    const ref = `indicacao:${b}`;
-    const jaCreditado = historicoA.some((h) => h?.ref === ref);
-    // UTAC110h.3 (P1/DEBT-028) — a MESMA função que alimenta o contador da UI (`indicacoesDoMes`, PURA):
-    // fonte única para o limite mensal, para o painel e para o servidor não poderem divergir.
-    const noMes = indicacoesDoMes({ historico_lance: historicoA }, agora).creditadas;
-    if (!jaCreditado && noMes >= LIMITE_INDICACOES_MES) {
-      indicanteRes = { ok: true, creditado: false, code: "LIMITE_MENSAL" };
-    } else {
-      const r = await creditarPontosLance(a, PONTOS_INDICACAO, "indicacao", ref);
-      indicanteRes = r.ok ? { ok: true, creditado: r.criado === true, pontosLance: r.pontos } : { ok: false, code: r.code };
-    }
+    const jaPago = historicoA.some((h) => h?.ref === `indicacao:${b}`) || ecoA.some((h) => h?.ref === refEcoIndicacao(b));
+    // a MESMA função que alimenta o contador do painel (`ler-pontos`): os dois sítios não podem divergir.
+    const noMes = indicacoesDoMes({ historico_lance: historicoA }, agora, ecoA).creditadas;
+    indicanteRes = (!jaPago && noMes >= LIMITE_INDICACOES_MES)
+      ? { ok: true, creditado: false, code: "LIMITE_MENSAL" }
+      : { ok: true };
   }
+  const indicadoRes = { ok: true };
 
-  const r = await creditarPontosLance(b, PONTOS_INDICACAO, "indicacao", REF_INDICACAO_RECEBIDA);
-  const indicadoRes = r.ok ? { ok: true, creditado: r.criado === true, pontosLance: r.pontos } : { ok: false, code: r.code };
-
-  // UTAC110h.2 — ECOQUILDO do Art. 51º, em paralelo com os pontos (R18-110h.2-1/-2). Fail-soft para com
-  // os pontos: `ok` continua a depender SÓ dos pontos de lance (contrato anterior intacto, GATE 4).
   const ecoQuildo = await creditarEcoQuildoDaIndicacao(a, b, indicanteRes);
-
-  return { ok: indicanteRes.ok && indicadoRes.ok, indicante: indicanteRes, indicado: indicadoRes, ecoQuildo };
+  // `creditado` passa a dizer se o ECOQUILDO desta indicação foi emitido AGORA (era: se os pontos foram creditados).
+  const resIndicante = indicanteRes.ok && indicanteRes.code !== "LIMITE_MENSAL"
+    ? { ok: ecoQuildo.indicante?.ok === true, creditado: ecoQuildo.indicante?.creditado === true, ...(ecoQuildo.indicante?.code ? { code: ecoQuildo.indicante.code } : {}) }
+    : indicanteRes;
+  const resIndicado = { ok: ecoQuildo.indicado?.ok === true, creditado: ecoQuildo.indicado?.creditado === true, ...(ecoQuildo.indicado?.code ? { code: ecoQuildo.indicado.code } : {}) };
+  return { ok: resIndicante.ok && resIndicado.ok, indicante: resIndicante, indicado: resIndicado, ecoQuildo };
 }

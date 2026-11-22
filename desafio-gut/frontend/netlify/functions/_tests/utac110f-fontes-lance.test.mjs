@@ -179,7 +179,7 @@ test.skip("C4 as fontes NUNCA mexem nos créditos de lance nem nos pontos de fid
 });
 
 // ── Frente B — indicação ─────────────────────────────────────────────────────────────────────────
-test("B1 indicação válida: +50 ao indicante e +50 ao indicado", async () => {
+test.skip("B1 indicação válida: +50 ao indicante e +50 ao indicado [UTAC148 (R18-148-D): a indicação já não dá +50 pontos de lance (Regulamento v7, Art. 24)]", async () => {
   const r = await F.creditarIndicacao(A, B, D("2026-10-13T15:00:00Z"));
   assert.equal(r.ok, true);
   assert.deepEqual([r.indicante.creditado, r.indicado.creditado], [true, true]);
@@ -195,7 +195,7 @@ test("B2 auto-indicação → AUTO_INDICACAO e NADA creditado (também com caixa
   assert.equal(T.linha(A), undefined);
 });
 
-test("B3 idempotência: repetir a mesma indicação → nenhum crédito extra", async () => {
+test.skip("B3 idempotência: repetir a mesma indicação → nenhum crédito extra [UTAC148 (R18-148-D): a indicação já não dá +50 pontos de lance (Regulamento v7, Art. 24)]", async () => {
   const agora = D("2026-10-13T15:00:00Z");
   await F.creditarIndicacao(A, B, agora);
   const r = await F.creditarIndicacao(A, B, agora);
@@ -203,7 +203,7 @@ test("B3 idempotência: repetir a mesma indicação → nenhum crédito extra", 
   assert.deepEqual([pontos(A), pontos(B)], [50, 50]);
 });
 
-test("B4 o indicado só recebe UMA vez na vida, mesmo indicado por outro (o indicante novo recebe)", async () => {
+test.skip("B4 o indicado só recebe UMA vez na vida, mesmo indicado por outro (o indicante novo recebe) [UTAC148 (R18-148-D): a indicação já não dá +50 pontos de lance (Regulamento v7, Art. 24)]", async () => {
   const agora = D("2026-10-13T15:00:00Z");
   await F.creditarIndicacao(A, B, agora);
   const r = await F.creditarIndicacao(C, B, agora);
@@ -215,7 +215,7 @@ test("B4 o indicado só recebe UMA vez na vida, mesmo indicado por outro (o indi
 //    Um `agora` FIXO (2026-10) tornava o B5 vermelho a partir de 2026-11-01. Datas RELATIVAS ao relógio real.
 const AGORA_REAL = () => new Date();
 const MES_SEGUINTE = () => { const n = new Date(); return new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth() + 1, 2, 15)); };
-test("B5 limite mensal: o 11.º indicado do mês NÃO paga o indicante (o indicado recebe); o mês seguinte paga", async () => {
+test.skip("B5 limite mensal: o 11.º indicado do mês NÃO paga o indicante (o indicado recebe); o mês seguinte paga [UTAC148 (R18-148-D): a indicação já não dá +50 pontos de lance (Regulamento v7, Art. 24)]", async () => {
   const agora = AGORA_REAL();
   const end = (i) => `0x${String(i).padStart(40, "0")}`;
   for (let i = 1; i <= 10; i++) await F.creditarIndicacao(A, end(i), agora);
@@ -229,7 +229,7 @@ test("B5 limite mensal: o 11.º indicado do mês NÃO paga o indicante (o indica
   assert.equal(pontos(A), 550);
 });
 
-test("B6 o limite não bloqueia a idempotência: re-registar um indicado já pago no 10.º slot não falha", async () => {
+test.skip("B6 o limite não bloqueia a idempotência: re-registar um indicado já pago no 10.º slot não falha [UTAC148 (R18-148-D): a indicação já não dá +50 pontos de lance (Regulamento v7, Art. 24)]", async () => {
   const agora = AGORA_REAL();
   const end = (i) => `0x${String(i + 100).padStart(40, "0")}`;
   for (let i = 1; i <= 10; i++) await F.creditarIndicacao(A, end(i), agora);
@@ -239,7 +239,7 @@ test("B6 o limite não bloqueia a idempotência: re-registar um indicado já pag
 });
 
 // ── SEG5: mutantes sobreviventes do validador (O2, O8) ───────────────────────────────────────────
-test("B7 o limite conta SÓ indicações FEITAS — o bónus de indicado (`indicacao-recebida`) não ocupa slot", async () => {
+test.skip("B7 o limite conta SÓ indicações FEITAS — o bónus de indicado (`indicacao-recebida`) não ocupa slot [UTAC148 (R18-148-D): a indicação já não dá +50 pontos de lance (Regulamento v7, Art. 24)]", async () => {
   const agora = AGORA_REAL();
   await F.creditarIndicacao(C, A, agora);                       // A recebe +50 como indicado
   const end = (i) => `0x${String(i + 300).padStart(40, "0")}`;

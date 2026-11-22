@@ -100,7 +100,7 @@ export default function PainelIndicacao({ isMobile: isMobileProp }) {
 
   async function compartilhar() {
     if (!linkConvite) return;
-    const texto = `🎯 Te convido para o DesafioGUT! Use meu código ${dados.codigo}: você ganha +50 pontos de lance e +1 ECOQUILDO, e eu ganho +50 pontos e +2 ECOQUILDO.`;
+    const texto = `🎯 Te convido para o DesafioGUT! Use meu código ${dados.codigo}: você ganha +1 ECOQUILDO, e eu ganho +2 ECOQUILDO.`;
     try {
       if (typeof navigator !== "undefined" && navigator.share) {
         await navigator.share({ title: "DesafioGUT — Indique e Ganhe", text: texto, url: linkConvite });
@@ -176,7 +176,7 @@ export default function PainelIndicacao({ isMobile: isMobileProp }) {
 
       <p style={{ margin: "0 0 1rem", fontSize: isMobile ? "0.85rem" : "0.9rem", color: COR.text, lineHeight: 1.5 }}>
         Quando um amigo cria a conta com o seu código, você ganha
-        <strong style={{ color: COR.primary }}> +50 pontos de lance e +2 ECOQUILDO </strong>
+        <strong style={{ color: COR.primary }}> +2 ECOQUILDO </strong>
         (e ele ganha +50 pontos e +1 ECOQUILDO). Compartilhe e cresça com a gente.
       </p>
 
@@ -240,7 +240,7 @@ export default function PainelIndicacao({ isMobile: isMobileProp }) {
             🎁 Recompensa por indicação
           </div>
           <div style={{ fontSize: isMobile ? "0.82rem" : "0.78rem", fontWeight: 800, color: COR.gold, lineHeight: 1.35 }}>
-            +50 pontos de lance e +2 ECOQUILDO
+            +2 ECOQUILDO
           </div>
           {dados.indicacoesMes && (
             <div style={{ fontSize: "0.68rem", color: COR.muted, marginTop: "0.25rem" }}>

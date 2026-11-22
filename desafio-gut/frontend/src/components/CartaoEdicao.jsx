@@ -22,7 +22,8 @@ import CarrosselGUTO, { SLIDES } from "./CarrosselGUTO.jsx";
 export const ACOES = Object.freeze({
   // UTAC141 — «em pontos»: o lance do Relâmpago gasta PONTOS de lance pelo seu valor (1 ponto = R$ 0,01,
   // Art. 18º). Dizer «centavos» no campo fazia o utilizador ler a unidade errada em todo o app.
-  lance: Object.freeze({ botao: "Dar lance", rotulo: "Seu lance (em pontos)" }),
+  // UTAC148 (SEG4 ⚠️3, Art. 12 do v7 — o lance é em reais): era «Seu lance (em pontos)».
+  lance: Object.freeze({ botao: "Dar lance", rotulo: "Seu lance (em centavos)" }),
   palpite: Object.freeze({ botao: "Dar palpite", rotulo: "Seu palpite (nº de lances)" }),
 });
 

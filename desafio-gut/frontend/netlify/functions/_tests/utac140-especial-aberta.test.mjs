@@ -238,7 +238,7 @@ test("D4 completo depois de fim + 24 h ⇒ 410; antes do fim ⇒ pronto:false se
 
 test("C1 bloco do GUTO: produto da edição, hora de Brasília, FAQ e sigilo; sem «leilão» nem «sorte»", () => {
   const b = G.blocoEdicaoEspecial({ id: ID, produto: "Fritadeira Elétrica Sem Óleo Quad Fry 4,2 L Elgin", termino_em: "2026-11-30T23:00:00.000Z" });
-  assert.match(b, /Estamos na Edição Especial Relâmpago! Dê o seu menor lance único em pontos\. O valor é secreto até 30\/11 às 20h, quando apuraremos o vencedor\. O produto em disputa é Fritadeira Elétrica Sem Óleo Quad Fry 4,2 L Elgin\./);
+  assert.match(b, /Estamos na Edição Especial Relâmpago! Dê o seu menor lance único — cada lance usa 1 Passe Relâmpago\. O valor é secreto até 30\/11 às 20h, quando apuraremos o vencedor\. O produto em disputa é Fritadeira Elétrica Sem Óleo Quad Fry 4,2 L Elgin\./);
   for (const p of ["Como ganho?", "Quando saberei o resultado?", "O que é o lance único?"]) assert.ok(b.includes(p), `FAQ: ${p}`);
   assert.match(b, /NUNCA reveles/);
   assert.equal(/leil[aã]o|sorte/i.test(b), false);
