@@ -91,13 +91,17 @@ mock.module("../_lib/supabase-client.mjs", {
 // UTAC148 (R18-148-A, Art. 18 v7) — o vencedor recebe também 50 ECOQUILDO. Duplo da lib do ECOQUILDO (idempotente por
 // ref, como a real) e da conversão (preguiçosa), para estes testes continuarem a medir os PONTOS do palpite.
 const ECO = new Map(); // ref → { endereco, valor }
-let LASTRO = 0, FALHAR_LASTRO = false, CONVERSOES = 0;
+let LASTRO = 0, FALHAR_LASTRO = false, CONVERSOES = 0, FALHAR_REVERSAO = false;
+const ALERTAS = []; // UTAC148-val
+mock.module("../_lib/sentry-server.mjs", { namedExports: {
+  captureSecurityAlert: async (nome, dados) => { ALERTAS.push({ nome, dados }); },
+} });
 mock.module("../_lib/eco-quildo.mjs", { namedExports: {
   creditarEcoQuildo: async (endereco, valor, motivo, ref) => {
     if (ECO.has(ref)) return { ok: true, criado: false };
     ECO.set(ref, { endereco, valor, motivo }); return { ok: true, criado: true };
   },
-  reverterEcoQuildo: async (endereco, ref) => ({ ok: true, revertido: ECO.delete(ref) }),
+  reverterEcoQuildo: async (endereco, ref) => (FALHAR_REVERSAO ? { ok: false, code: "ERRO_DB" } : { ok: true, revertido: ECO.delete(ref) }),
   registarEmissaoNoLastro: async (v) => (FALHAR_LASTRO ? { ok: false, code: "ERRO_DB" } : ((LASTRO += v), { ok: true })),
   reverterEmissaoNoLastro: async (v) => { LASTRO -= v; return { ok: true }; },
 } });
@@ -404,4 +408,47 @@ test("UTAC148 · o lastro falha ⇒ apuração falha, NADA fica pago (nem ECOQUI
   assert.equal(r2.ok, true, JSON.stringify(r2));
   assert.equal(LASTRO, 50);
   assert.equal(pontosDe(A).pontos, PONTOS_POR_PALPITE_CERTO);
+});
+
+// ── UTAC148-val (SEG4) — casos que a suíte do UTAC148 não media ─────────────────────────────────────────
+test("UTAC148-val · a MARCAÇÃO falha ⇒ o ECOQUILDO e o lastro recém-criados são desfeitos; o retry paga UMA vez", async () => {
+  ECO.clear(); LASTRO = 0; CONVERSOES = 0; FALHAR_LASTRO = false; FALHAR_REVERSAO = false;
+  semear([A, B]);
+  await registarPalpite(A, ED, 100); await registarPalpite(B, ED, 500);
+  FALHAR_MARCACAO = true;
+  const r1 = await apurarPalpite(ED, 100);
+  FALHAR_MARCACAO = false;
+  assert.equal(r1.ok, false);
+  assert.equal(ECO.size, 0, "o ECOQUILDO de uma edição por marcar ficou emitido");
+  assert.equal(LASTRO, 0, "o lastro da emissão desfeita não foi revertido");
+  assert.equal(CONVERSOES, 0, "converteu ECOQUILDO de uma apuração falhada");
+  const r2 = await apurarPalpite(ED, 100);
+  assert.equal(r2.ok, true, JSON.stringify(r2));
+  assert.equal(ECO.size, 1); assert.equal(LASTRO, 50);
+});
+
+test("UTAC148-val · CORRIDA: duas apurações em paralelo pagam 50 ECOQUILDO e o lastro UMA só vez", async () => {
+  ECO.clear(); LASTRO = 0; CONVERSOES = 0; FALHAR_LASTRO = false; FALHAR_REVERSAO = false;
+  semear([A, B]);
+  await registarPalpite(A, ED, 100); await registarPalpite(B, ED, 500);
+  const [r1, r2] = await Promise.all([apurarPalpite(ED, 100), apurarPalpite(ED, 100)]);
+  assert.ok(r1.ok || r2.ok, JSON.stringify([r1, r2]));
+  assert.equal(ECO.size, 1, "a corrida emitiu ECOQUILDO duas vezes");
+  assert.equal(LASTRO, 50, "a corrida registou o lastro duas vezes");
+  assert.ok(CONVERSOES <= 1, "a corrida converteu duas vezes");
+  assert.equal(await getPontos(A), PONTOS_POR_PALPITE_CERTO);
+});
+
+test("UTAC148-val · lastro E reversão falham ⇒ a apuração falha e há ALERTA (ECOQUILDO sem lastro não fica em silêncio)", async () => {
+  ECO.clear(); LASTRO = 0; CONVERSOES = 0; ALERTAS.length = 0; FALHAR_LASTRO = true; FALHAR_REVERSAO = true;
+  semear([A]);
+  await registarPalpite(A, ED, 100);
+  const r = await apurarPalpite(ED, 120);
+  FALHAR_LASTRO = false; FALHAR_REVERSAO = false;
+  assert.equal(r.ok, false);
+  assert.equal(r.code, "LASTRO_FALHOU");
+  assert.equal(r.ecoDesfeito, false);
+  assert.equal(ALERTAS.length, 1, "a reversão falhada do ECOQUILDO não gerou alerta");
+  assert.equal(ALERTAS[0].nome, "apurar_palpite_reversao_eco_falhou");
+  assert.equal(ALERTAS[0].dados.fase, "lastro");
 });

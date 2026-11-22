@@ -272,6 +272,14 @@ export async function registarPalpite(endereco, edicaoId, valor) {
  * (re-apurar é idempotente). Sem palpites por apurar → `vencedor:null` e ninguém é creditado.
  * @returns {Promise<{ok:true,total:number,vencedor:object|null,pontosCreditados:number}|{ok:false,code:string}>}
  */
+/** UTAC148-val — alerta (fail-soft, import preguiçoso) quando a reversão do ECOQUILDO do vencedor falha. */
+async function alertarReversaoEcoFalhou(fase, edicaoId, code) {
+  try {
+    const { captureSecurityAlert } = await import("./sentry-server.mjs");
+    await captureSecurityAlert("apurar_palpite_reversao_eco_falhou", { fase, edicaoId, code: code ?? null }, "error");
+  } catch { /* o alerta nunca parte a apuração */ }
+}
+
 export async function apurarPalpite(edicaoId, valorReal) {
   if (!edicaoValida(edicaoId)) return { ok: false, code: "EDICAO_INVALIDA" };
   if (!Number.isInteger(valorReal) || valorReal < 0) return { ok: false, code: "VALOR_INVALIDO" };
@@ -307,9 +315,12 @@ export async function apurarPalpite(edicaoId, valorReal) {
   if (eco.criado === true) {
     const lastro = await registarEmissaoNoLastro(ECOQUILDO_POR_PALPITE_CERTO).catch(() => ({ ok: false, code: "ERRO_DB" }));
     if (!lastro.ok) {
-      await reverterEcoQuildo(vencedor.endereco, refEcoPalpiteCerto(edicaoId)).catch(() => {});
+      const rev = await reverterEcoQuildo(vencedor.endereco, refEcoPalpiteCerto(edicaoId)).catch(() => ({ ok: false, code: "ERRO_DB" }));
+      // UTAC148-val: como em comprar-passe-tipado/creditar-eco-quildo — reversão falhada = ECOQUILDO SEM lastro, e um retry
+      // (criado:false) já não regista o lastro. Não pode ficar em silêncio.
+      if (!(rev.ok && rev.revertido)) await alertarReversaoEcoFalhou("lastro", edicaoId, rev.code);
       await desfazerPontosRecemCriados();
-      return { ok: false, code: "LASTRO_FALHOU" };
+      return { ok: false, code: "LASTRO_FALHOU", ecoDesfeito: rev.ok === true && rev.revertido === true };
     }
   }
 
@@ -328,6 +339,8 @@ export async function apurarPalpite(edicaoId, valorReal) {
       if (rev.ok && rev.revertido) {
         const { reverterEmissaoNoLastro } = await import("./eco-quildo.mjs");
         await reverterEmissaoNoLastro(ECOQUILDO_POR_PALPITE_CERTO).catch(() => {});
+      } else if (!rev.ok) {
+        await alertarReversaoEcoFalhou("marcacao", edicaoId, rev.code); // UTAC148-val: 50 ECOQUILDO ficaram com a edição por marcar
       }
     }
     return { ok: false, code: "ERRO_DB" };
