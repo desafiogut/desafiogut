@@ -1107,3 +1107,24 @@ Validador adversarial: **REFUTADO na entrega, conteúdo v6 aprovado**. `docs/REG
 **Publicação:** deploy **`6b0214c7`**, **sem push**.
 
 ⚠️ **Pendências:** DEBT-102 (Regulamento + aviso de 30 dias do Art. 10), 103 (gate 3.5), 104 (Meus Ativos), 105 (APK v12.1 no modelo antigo), 106. Relatório: `Desktop/UTAC147-RELATORIO.md`.
+
+## R14 (append) -- UTAC148 -- REGULAMENTO v7 + GATE 3.6, GUTO v7, UI SEM PONTOS, INDICAÇÃO SÓ ECOQUILDO, 50 ECOQUILDO AO VENCEDOR DO PALPITE, AAB v13 (Opus 5.5, 2026-11-21)
+**Decisões R18-148-A..E:**
+- **A:** o vencedor do palpite recebe 50 ECOQUILDO. Motivo `palpite-certo`, ref `eco-palpite-certo:<edição>`, com lastro; a falha desfaz tudo.
+- **B:** versionCode **14** / 1.3.0. O 13 foi o v12.1.
+- **C:** o backend aceita 3.4 e 3.5 até o v13 ser aprovado (DEBT-108).
+- **D:** a indicação já não dá +50 pontos de lance (Art. 24: 2/1 ECOQUILDO). O limite mensal conta ECOQUILDO + ledger antigo (`indicacoesDoMes`, fonte única).
+- **E:** publicar o v7 com os riscos jurídicos registados (DEBT-107).
+
+**Feito:**
+- `docs/REGULAMENTO-v7.md` (Arts. 3/5/6/7/12/15/18) + PDF/QR no Desktop (`REGULAMENTO-DesafioGUT-v7.pdf`, 1136 palavras = .md).
+- Gate **3.6**.
+- GUTO: as 3 cópias do v7 byte a byte, mais âncoras e prosa.
+- Meus Ativos sem pontos de lance nem bónus de sequência.
+- `RegrasOficiais`: a versão aceita «VERSÃO 7».
+
+**Provas:** suíte **1345/1397 · 1524/1613**; mutação 4/4; validador **APROVADO COM RESSALVAS** (`604c31e` integrado como `a46d0be`).
+
+**AAB v13:** `Desktop/DesafioGUT-v13/DesafioGUT-v13.aab`, SHA-256 `0197176b…cec8`, certificado igual ao do v12.1.
+
+**Push** para origin/main = auto-deploy (UTAC146+147+148). Worktree do validador do UTAC147 removido; o `node_modules` ficou intacto.
