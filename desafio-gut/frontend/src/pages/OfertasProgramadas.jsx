@@ -263,6 +263,10 @@ export default function OfertasProgramadas() {
                   prazoTimestamp={Number.isNaN(fim) ? undefined : Math.floor(fim / 1000)}
                   encerrado={tabelaPalpites?.revelado === true}
                   selo={est ? { texto: est.badge, cor: est.cor } : undefined}
+                  // UTAC151-val (SEG4 ⚠️1) — «Prazo:» e selo pelo estado DA EDIÇÃO (como a `TabelaPalpites` do UTAC149):
+                  // a especial mostra o prazo com o EM BREVE ligado; sem edição, nem selo nem prazo.
+                  mostrarPrazo={est ? est.timer == null : false}
+                  semSelo={!est}
                 />
               </section>
             );

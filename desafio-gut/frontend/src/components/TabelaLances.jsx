@@ -69,6 +69,13 @@ export default function TabelaLances({
   // desaparecia — o `encerrado` da R-1 significa «os valores já são públicos», o da especial não.
   ocultosPermanentes = false,
   variante = "lance", // UTAC151 — "lance" (omissão, Relâmpago) | "palpite" (especial Programada)
+  // UTAC151-val (SEG4 ⚠️1) — o estado da tabela da OP vem de `estadoEdicaoProgramada` (UTAC149: a especial lê as SUAS
+  // datas, não o EM_BREVE_MODE), mas o «Prazo:» e o selo de omissão daqui saem do `getEstadoEdicao({id})` (trava global).
+  // Resultado medido: a ESPECIAL-PALPITE1 perdeu o «Prazo: <termino_em>» e a OP sem edição ganhou «🕒 Em breve» (e,
+  // com a trava desligada, «🟢 Ativo» + «Prazo: —» sem edição nenhuma). Quem tem o estado certo diz-o aqui.
+  // Omissões (`undefined`/`false`) = exactamente o comportamento anterior (a Relâmpago não passa estas props).
+  mostrarPrazo, // boolean opcional: substitui `est.timer == null`
+  semSelo = false, // true: não desenha o selo (OP sem edição — como a `TabelaPalpites` antiga)
 }) {
   const v = VARIANTES_TABELA[variante] ?? VARIANTES_TABELA.lance;
   const isMobile = useIsMobile();
@@ -161,14 +168,16 @@ export default function TabelaLances({
           justifyContent: isMobile ? "space-between" : "flex-end",
           flexWrap: "wrap",
         }}>
-          {est.timer == null && (
+          {(typeof mostrarPrazo === "boolean" ? mostrarPrazo : est.timer == null) && (
             <span style={{ fontSize: isMobile ? "0.7rem" : "0.78rem", color: "#6b7db8" }}>
               Prazo: {prazoFormatado}
             </span>
           )}
+          {!semSelo && (
           <span style={{ ...estilos.statusBadge, background: selo?.cor ?? est.cor }}>
             {selo?.texto ?? est.badge}
           </span>
+          )}
           {/* Este aviso NÃO segue a fonte única de propósito: ele espelha a regra
               de DIVULGAÇÃO (valores só aparecem depois do fim), que continua
               amarrada ao `encerrado` on-chain — ver MobileList/DesktopTable
