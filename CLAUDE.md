@@ -1144,3 +1144,14 @@ Validador adversarial: **REFUTADO na entrega, conteúdo v6 aprovado**. `docs/REG
 - validador e browser por fazer.
 
 Registo: `_logs/UTAC151_*` · `_logs/UTAC151-RELATORIO.md`.
+
+## R14 (append) -- UTAC151 (SEG4 + fecho) -- VALIDADOR, NOME DO PALPITE ANTIGO, PUSH, AAB v16 (Opus 5.5, 2026-11-26)
+Validador adversarial: **APROVADO COM RESSALVAS**. ⚠️1: a tabela da OP perdera o «Prazo:» da especial (o prazo vinha do `getEstadoEdicao`, que segue o EM_BREVE). Foi corrigido pelo validador com as props `mostrarPrazo`/`semSelo` da `TabelaLances` (`840f01a`, relatório `43a2f53`). Na matriz de 1152 casos, a Relâmpago dá um HTML idêntico byte a byte.
+
+Fecho, com autorização do operador:
+- UPDATE do palpite antigo → «Novo P.», por ligação exacta pelo endereço inteiro;
+- push `8a73c24..8abdd5a`;
+- deploy `6b088e2f`;
+- **AAB v16** `Desktop/DesafioGUT-v16/DesafioGUT-v16.aab`, versionCode 16 / 1.5.1, SHA-256 `e5d1725e…81cc`, certificado = v15, GoFile `gofile.io/d/9CyWabbe`.
+
+Por fazer: push de `c74672b`/`840f01a`/`43a2f53`+; DEBT-116 (b, f–h).
