@@ -21,3 +21,8 @@ Baseline `85d1cd6` (main = origin/main + o fecho UTAC150.2, sem push).
 3. **«Seu palpite: N lances» é o único sítio onde o titular vê o próprio palpite** (a tabela mostra 🔒 a todos, sem marcar a linha dele). Tirá-lo do cartão sem o pôr noutro lado apaga essa informação. No MLC o equivalente (`LanceStatusBadge`) fica **entre o cartão e a tabela**. ⇒ **decisão do operador**.
 
 ## Veredicto: **AJUSTAR** — perguntar R18-151-A/B/C antes do SEG0.
+
+## Decisões do operador (R18, 2026-11-26) — veredicto AJUSTAR resolvido
+- **R18-151-A — «Autorizar backend mínimo»**: migração `palpites.nome_exibicao` + `registar-palpite` guarda «PrimeiroNome I.» do nome verificado (identity token do Privy, UTAC146) + `ler-palpites` devolve o nome. Palpites antigos ficam com endereço curto.
+- **R18-151-B — «TabelaLances + props»**: variante opcional na `TabelaLances` (omissão = Relâmpago inalterada); a `TabelaPalpites` local sai.
+- **R18-151-C — «Tirar do cartão, pôr entre cartão e tabela»**: OP = cartão → «Seu palpite: N lances» → tabela; «Resultado no fim da edição.» sai; no Início sai de dentro do cartão (fica a pílula «COM PALPITE»).

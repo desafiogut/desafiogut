@@ -1128,3 +1128,19 @@ Validador adversarial: **REFUTADO na entrega, conteúdo v6 aprovado**. `docs/REG
 **AAB v13:** `Desktop/DesafioGUT-v13/DesafioGUT-v13.aab`, SHA-256 `0197176b…cec8`, certificado igual ao do v12.1.
 
 **Push** para origin/main = auto-deploy (UTAC146+147+148). Worktree do validador do UTAC147 removido; o `node_modules` ficou intacto.
+
+## R14 (append) -- UTAC151 -- ESPECIAL PROGRAMADA: TABELA DE PALPITES (TabelaLances) ABAIXO DO CARTÃO, «PrimeiroNome I.», «Seu palpite» FORA DO CARTÃO (Opus 5.5, 2026-11-26)
+**Decisões R18-151-A..C:**
+- **A:** backend mínimo, apesar do enunciado. Migração `palpites.nome_exibicao`, aplicada em produção. O `registar-palpite` guarda só «PrimeiroNome I.» do identity token do Privy, verificado contra a carteira da sessão; o body é ignorado. O `ler-palpites` devolve `nomeExibicao`.
+- **B:** a `TabelaLances` ganha `variante="palpite"` (rótulos, «N lances», ordem do servidor, sem leitura on-chain). Sem a variante, a Relâmpago fica inalterada. A `TabelaPalpites` local do UTAC109g saiu.
+- **C:** na OP a ordem passa a cartão → «Seu palpite: N lances» → tabela. «Resultado no fim da edição.» saiu. No Início fica só a pílula «COM PALPITE».
+
+**Provas:** suíte backend 1539/1628 VERDE; frontend 1374/1427 com 1 falha de DNS pré-existente (`mc9952`). Mutação 4/4. Commit `5251a5a`, sem push. Deploy `6b088433` (bundle `index-Bg5NHT-V.js`).
+
+⚠️ **Pendências (DEBT-116):**
+- os palpites antigos ficam sem nome;
+- o `ler-palpites` ainda devolve o endereço inteiro, porque o AAB v15 lê esse campo;
+- o AAB v15 tem o layout antigo;
+- validador e browser por fazer.
+
+Registo: `_logs/UTAC151_*` · `_logs/UTAC151-RELATORIO.md`.
