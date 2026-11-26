@@ -98,7 +98,9 @@ after(async () => { if (vite) await vite.close(); });
 const H = 3_600_000;
 const iso = (ms) => new Date(ms).toISOString();
 const especial = (inicioMs, extra = {}) => ({
-  id: "ESPECIAL-AIRFRYER", tipo: "programado", produto: "Air Fryer",
+  // UTAC149 — `tipo` era "programado" (resto do MC94.1); a especial é RELÂMPAGO desde o MC94.4.1 e em produção a
+  // ESPECIAL-AIRFRYER tem `tipo:"relampago"` (medido no /edicoes). "programado" passou a ser a especial PALPITE.
+  id: "ESPECIAL-AIRFRYER", tipo: "relampago", produto: "Air Fryer",
   inicio_em: iso(inicioMs), termino_em: iso(inicioMs + H / 2),
   status: "agendado", imagem_url: "/artes/edicao-especial-airfryer.jpg", lances: 0, ...extra,
 });

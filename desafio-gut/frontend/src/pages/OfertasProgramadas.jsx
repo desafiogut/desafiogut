@@ -24,7 +24,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { GlassCard, THead, TH, TD } from "@/components/ui";
 // UTAC107e.1 — a etiqueta de estado de cada cartão vem da MESMA fonte única das outras abas.
-import { getEstadoEdicao } from "../utils/edicao.js";
+// UTAC149 — o `getEstadoEdicao` passou a ser chamado através de `estadoEdicaoProgramada` (lib/palpite.js).
 import Toast from "../widgets/toast/Toast.jsx";
 import { useAppContext } from "../context/AppContext.jsx";
 import { usePontos } from "../hooks/usePontos.js";
@@ -37,7 +37,7 @@ import FormularioAcao from "../components/_formAcaoEdicao.jsx";
 // UTAC108h.3 — as regras do palpite mudaram de casa (vivem em `lib/palpite.js`), porque o Início
 // passou a mostrar o vidro «🎫 Programada» com a zona de palpite dentro. Uma só verdade para as
 // duas telas: `estaAberta` / `edicoesProgramadasDe` / `estadoPalpite` / `PILULA`.
-import { estaAberta, edicoesProgramadasDe, estadoPalpite, PILULA } from "../lib/palpite.js";
+import { estaAberta, edicoesProgramadasDe, estadoPalpite, estadoEdicaoProgramada, PILULA } from "../lib/palpite.js";
 // UTAC108e.1 — o MESMO cartão de edição do «Menor Lance Único» (mockup v2, variante A «Família»):
 // só a acção muda (aqui, o palpite).
 import CartaoEdicao, { ACOES } from "../components/CartaoEdicao.jsx";
@@ -120,7 +120,7 @@ export default function OfertasProgramadas() {
   function cartaoEdicao(ed) {
     const palpite = palpiteDe(ed.id);
     const estado = estadoPalpite(ed, palpite);
-    const est = getEstadoEdicao(ed);
+    const est = estadoEdicaoProgramada(ed); // UTAC149 — a especial Programada lê o estado da própria edição
     const pil = PILULA[estado];
     const idCampo = `palpite-${ed.id}`;
     return (
@@ -391,7 +391,7 @@ const tabelaEstilos = {
 
 function TabelaPalpites({ edicao, tabela, isMobile }) {
   const id = edicao?.id ?? null;
-  const est = edicao ? getEstadoEdicao(edicao) : null;
+  const est = edicao ? estadoEdicaoProgramada(edicao) : null; // UTAC149 — o selo da especial = o do cartão
   const fim = edicao?.termino_em ? Date.parse(edicao.termino_em) : NaN;
   const prazo = Number.isNaN(fim) ? "—" : new Date(fim).toLocaleString("pt-BR");
   const linhas = Array.isArray(tabela?.palpites) ? tabela.palpites : [];

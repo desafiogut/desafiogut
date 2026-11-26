@@ -97,6 +97,7 @@ test("E10 · tick BIDIRECCIONAL: especial fechada, por abrir ou com avisosLider:
     { ...metaAberta, inicio_em: "2026-11-26T00:00:00Z" },
     { ...metaAberta, avisosLider: false },
     { ...metaAberta, status: "encerrado" },
+    { ...metaAberta, tipo: "programado" }, // UTAC149 — especial palpite: sem menor lance único, sem líder
   ]) {
     const enviados = [];
     await tick({ agoraMs: agora, store: storeMem(), listar: async () => [{ id: ID }], ler: async () => meta,

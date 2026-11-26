@@ -78,7 +78,9 @@ after(async () => { if (vite) await vite.close(); });
 const H = 3_600_000;
 const iso = (ms) => new Date(ms).toISOString();
 const especial = (inicioMs, extra = {}) => ({
-  id: "ESPECIAL-AIRFRYER", tipo: "programado", produto: "Air Fryer",
+  // UTAC149 — `tipo` era "programado" (resto do MC94.1); a especial é RELÂMPAGO desde o MC94.4.1 e em produção a
+  // ESPECIAL-AIRFRYER tem `tipo:"relampago"` (medido no /edicoes). "programado" passou a ser a especial PALPITE.
+  id: "ESPECIAL-AIRFRYER", tipo: "relampago", produto: "Air Fryer",
   inicio_em: iso(inicioMs), termino_em: iso(inicioMs + H / 2),
   status: "agendado", imagem_url: "/artes/edicao-especial-airfryer.jpg", lances: 0, ...extra,
 });
@@ -125,5 +127,37 @@ describe("UTAC142 · Início — especial aberta com o formulário padrão", () 
   test("B3 · BIDIRECCIONAL: sem especial, o vidro Relâmpago continua com o botão de sempre", () => {
     const html = renderizar({ edicoes: { "R-1": R1 } });
     assert.doesNotMatch(html, /esqueleto-acao-especial/);
+  });
+});
+
+// ── UTAC149 — a especial PROGRAMADA (palpite) no vidro «🎫 Programada», logo abaixo do «⚡ Relâmpago» ──────────
+const palpiteEspecial = (extra = {}) => ({
+  id: "ESPECIAL-PALPITE1", tipo: "programado", produto: "Air Fryer Palpite",
+  inicio_em: iso(Date.now() - 24 * H), termino_em: iso(Date.now() + 13 * 24 * H),
+  status: "aberto", imagem_url: "https://exemplo.invalid/especial-palpite-1.jpg", lances: 0, ...extra,
+});
+
+describe("UTAC149 · Início — especial palpite no layout oficial da Programada", () => {
+  test("P1 · com as duas especiais abertas: a Relâmpago no ⚡ e a palpite no 🎫, por baixo", () => {
+    const html = renderizar({ edicoes: { "R-1": R1, "ESPECIAL-AIRFRYER": aberta(), "ESPECIAL-PALPITE1": palpiteEspecial() } });
+    assert.match(html, /data-slot="edicao-especial"[^>]*data-edicao="ESPECIAL-AIRFRYER"/, "a Relâmpago saiu do slot ⚡");
+    assert.doesNotMatch(html, /data-edicao="ESPECIAL-PALPITE1"/, "a especial palpite entrou no slot Relâmpago");
+    const iRelampago = html.indexOf('data-slot="edicao-especial"');
+    const iPalpite = html.indexOf("Air Fryer Palpite");
+    assert.ok(iPalpite > iRelampago && iRelampago >= 0, "a especial palpite não está por baixo da Relâmpago");
+    assert.ok(html.includes("especial-palpite-1.jpg"), "a arte da especial palpite não foi para o cartão");
+  });
+
+  test("P2 · a faixa lê o estado DA EDIÇÃO (não o «EM BREVE» global) e a acção é o palpite", () => {
+    const html = renderizar({ edicoes: { "R-1": R1, "ESPECIAL-PALPITE1": palpiteEspecial() } });
+    const bloco = html.slice(html.indexOf("Air Fryer Palpite") - 3000);
+    assert.match(bloco, /Palpites até \d{2}\/\d{2} às \d{2}:\d{2}/, "a faixa não mostra o fecho da especial");
+    assert.match(bloco, /SEM PALPITE/, "a pílula do palpite não aparece");
+  });
+
+  test("P3 · só com a especial palpite: o slot Relâmpago NÃO a mostra", () => {
+    const html = renderizar({ edicoes: { "R-1": R1, "ESPECIAL-PALPITE1": palpiteEspecial() } });
+    assert.doesNotMatch(html, /data-slot="edicao-especial"/, "a especial palpite ocupou o slot Relâmpago");
+    assert.ok(html.includes("Air Fryer Palpite"), "a especial palpite não aparece no Início");
   });
 });

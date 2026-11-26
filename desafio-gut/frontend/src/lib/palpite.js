@@ -8,6 +8,12 @@
 //
 // ⚠️ O palpite é BÓNUS — NÃO decide o cartão (requisito crítico da Google Play: jogo de habilidade).
 
+// UTAC149 — a especial Programada (palpite): estado lido da edição, como a especial Relâmpago.
+import { getEstadoEdicao } from "../utils/edicao.js";
+import {
+  ehEspecialProgramada, estadoEspecial, SELO_ESPECIAL, ESTADO_ESPECIAL,
+} from "../components/edicao-especial/_estilo-especial.js";
+
 /** Edição Programada ainda a aceitar palpites (o backend exige `status === "aberto"`). */
 export const estaAberta = (e) => e?.status === "aberto";
 
@@ -17,7 +23,54 @@ export const estaAberta = (e) => e?.status === "aberto";
  */
 export function edicoesProgramadasDe(edicoes) {
   const lista = Object.values(edicoes ?? {}).filter((e) => e?.tipo === "programado" && e?.id);
-  return lista.sort((a, b) => Number(estaAberta(b)) - Number(estaAberta(a)));
+  // UTAC149 — entre as abertas, a ESPECIAL Programada vem primeiro: é ela que o vidro «🎫 Programada» do Início
+  // mostra (logo abaixo do «⚡ Relâmpago») e a 1.ª da aba Ofertas Programadas. Sem especial, a ordem é a de sempre.
+  const peso = (e) => Number(estaAberta(e)) * 2 + Number(ehEspecialProgramada(e));
+  return lista.sort((a, b) => peso(b) - peso(a));
+}
+
+/**
+ * UTAC149 — estado VISUAL de uma edição Programada, na forma do `getEstadoEdicao` (badge/cor/timer/rotuloLongo).
+ *
+ * Uma edição normal segue o `getEstadoEdicao` (fonte única do MC88.43, com a trava `EM_BREVE_MODE`). A ESPECIAL
+ * Programada é a excepção já declarada para a especial Relâmpago (MC94.2/UTAC141): o operador abre-a com data e hora,
+ * por isso o estado lê-se DA EDIÇÃO (`estadoEspecial` + `SELO_ESPECIAL`), nunca da flag global. Sem isto o cartão
+ * dizia «EM BREVE» na faixa e «SEM PALPITE» na pílula, a divergência que o operador já corrigiu no UTAC141.
+ *
+ * Sem relógio de 1 s (a aba Ofertas Programadas não tem tick): a faixa mostra a DATA do fecho em hora de Brasília,
+ * que não envelhece, e não uma contagem que ficaria parada.
+ *
+ * @param {object|null} edicao
+ * @param {number} [agoraMs] relógio do servidor (default: o do aparelho)
+ * @returns {object|null}
+ */
+export function estadoEdicaoProgramada(edicao, agoraMs = Date.now()) {
+  if (!edicao) return null;
+  if (!ehEspecialProgramada(edicao)) return getEstadoEdicao(edicao);
+  const estado = estadoEspecial(edicao, agoraMs);
+  if (!estado) return getEstadoEdicao(edicao); // sem datas legíveis não se inventa um estado
+  const selo = SELO_ESPECIAL[estado];
+  const quando = (iso) => {
+    const ms = Date.parse(iso);
+    const opts = { timeZone: "America/Sao_Paulo", hour12: false };
+    const dia = new Intl.DateTimeFormat("pt-BR", { ...opts, day: "2-digit", month: "2-digit" }).format(ms);
+    const hora = new Intl.DateTimeFormat("pt-BR", { ...opts, hour: "2-digit", minute: "2-digit" }).format(ms);
+    return `${dia} às ${hora}`;
+  };
+  let rotuloLongo = "Edição encerrada";
+  if (estado === ESTADO_ESPECIAL.ACTIVA) rotuloLongo = `Palpites até ${quando(edicao.termino_em)}`;
+  else if (estado !== ESTADO_ESPECIAL.ENCERRADA) rotuloLongo = `Abre ${quando(edicao.inicio_em)}`;
+  return {
+    estado,
+    badge: selo.texto,
+    rotulo: selo.texto,
+    rotuloLongo,
+    timer: null, // null ⇒ o cartão mostra o `rotuloLongo` e a tabela mostra «Prazo:»
+    cor: selo.cor,
+    emBreve: estado === ESTADO_ESPECIAL.AGENDADA || estado === ESTADO_ESPECIAL.A_ABRIR,
+    encerrada: estado === ESTADO_ESPECIAL.ENCERRADA,
+    ativa: estado === ESTADO_ESPECIAL.ACTIVA,
+  };
 }
 
 /**

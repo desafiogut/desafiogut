@@ -61,6 +61,7 @@ export function configDaEspecial(meta) {
 export function escolherEspecialAtual(metas, agoraMs = Date.now()) {
   const candidatas = (Array.isArray(metas) ? metas : [])
     .filter((m) => m && typeof m.id === "string" && EDICAO_ESPECIAL_RE.test(m.id))
+    .filter((m) => m.tipo !== "programado") // UTAC149 — o anúncio é da especial Relâmpago (lances, apuração)
     .filter((m) => m.status !== "encerrado" && m.status !== "apurado")
     .filter((m) => { const f = msDe(m.termino_em); return f != null && agoraMs <= f; })
     .sort((a, b) => msDe(a.termino_em) - msDe(b.termino_em));

@@ -1,0 +1,43 @@
+schema: utac/1
+name: UTAC149
+title: "Edição Especial Programada (palpite) ESPECIAL-PALPITE-1 com o layout existente"
+type: produto
+baseline: a023a5d
+motivo: >-
+  O cliente aprovou uma Edição Especial focada no palpite (Oferta Programada). A arte
+  «EDICAO ESPECIAL PALPITE» está no Desktop. Tem de reutilizar os componentes da especial
+  Relâmpago e aparecer no Início (abaixo da Relâmpago) e em Ofertas Programadas.
+frentes:
+  - id: A
+    nome: Backend/BD — arte no Supabase Storage + registo no Blob edicoes-metadata
+    entrega: [arte em artes-edicoes, scripts/utac149-seed-especial-palpite.mjs, registo no Blob]
+  - id: B
+    nome: Início — cartão abaixo da Relâmpago, sem CSS novo
+    entrega: [src/pages/Dashboard.jsx]
+  - id: C
+    nome: Ofertas Programadas — FormularioAcao + tabela de valores ocultos
+    entrega: [src/pages/OfertasProgramadas.jsx]
+  - id: D
+    nome: Suíte + deploy web (netlify deploy --prod --build)
+    entrega: [suíte verde, deploy]
+autoriza:
+  - editar backend e frontend nos ficheiros das frentes
+  - upload da arte para o Supabase Storage
+  - escrever o registo da edição no Blob edicoes-metadata
+  - correr testes; netlify deploy --prod --build (foreground)
+  - commits com âmbito feat(UTAC149)/fix(UTAC149)
+proibe:
+  - criar componentes visuais, sub-cards ou estilos novos
+  - alterar a lógica da especial Relâmpago já funcional
+  - gerar o AAB v13
+  - git add -A
+dependencias:
+  - datas de início e fim fornecidas pelo operador (ressalva do enunciado)
+  - especial Relâmpago (UTAC138/140/142) a funcionar
+regras_activas: [E, T, G, L, S, A, P, AU, ST, HI]
+regras_extra: []
+stop_conditions_extra: []
+ressalvas:
+  - HI5 — tempo máximo de 1 hora
+  - o operador informa as datas antes da Frente A
+  - nenhum layout novo (memória: só 2 layouts oficiais de edição)

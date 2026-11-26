@@ -63,6 +63,17 @@ export function ehEspecial(id) {
   return typeof id === "string" && ESPECIAL_RE.test(id);
 }
 
+/**
+ * UTAC149 — especial da família PROGRAMADA (palpite), ex.: `ESPECIAL-PALPITE1`. Até aqui «ESPECIAL-*» queria
+ * dizer Relâmpago em todo o lado; uma especial `tipo:"programado"` vive no layout da Programada (vidro
+ * «🎫 Programada» do Início + aba Ofertas Programadas), NUNCA no slot «⚡ Relâmpago».
+ * @param {{id?:string, tipo?:string}|null|undefined} edicao
+ * @returns {boolean}
+ */
+export function ehEspecialProgramada(edicao) {
+  return ehEspecial(edicao?.id) && edicao?.tipo === "programado";
+}
+
 function msDe(iso) {
   if (typeof iso !== "string" || !iso) return null;
   const ms = Date.parse(iso);
@@ -169,7 +180,8 @@ export function escolherEspecial(edicoes, agendadas, agoraMs) {
   const porId = new Map();
   for (const mapa of [edicoes, agendadas]) {
     for (const e of Object.values(mapa || {})) {
-      if (e && ehEspecial(e.id) && estadoEspecial(e, agoraMs) !== null
+      // UTAC149 — a especial Programada (palpite) não entra no slot Relâmpago (Início ⚡ e Menor Lance Único).
+      if (e && ehEspecial(e.id) && !ehEspecialProgramada(e) && estadoEspecial(e, agoraMs) !== null
           && dentroDaRetencao(e, agoraMs)) porId.set(e.id, e);
     }
   }

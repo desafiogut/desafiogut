@@ -138,7 +138,10 @@ export async function tick(agoraMs = Date.now()) {
     // UTAC138 (Frente G) — APURAÇÃO INSTANTÂNEA, antes de tudo o resto: vencedor + Top 10 off-chain,
     // gravados no Blob `edicoes-resultados` para o painel do frontend. Rápida e sem gas. Fail-soft e com
     // import preguiçoso (lição do UTAC136: um import estático novo parte os mocks dos testes deste cron).
-    linha.apuracao = await apurarNoTick(e, agoraMs);
+    // UTAC149 — especial PROGRAMADA (palpite): só se fecha a edição (status «encerrado» trava novos palpites).
+    // Não tem menor lance único: sem apuração Top 10 e sem consolidação on-chain (gas). O palpite apura-se à mão.
+    const programada = e.tipo === "programado";
+    if (!programada) linha.apuracao = await apurarNoTick(e, agoraMs);
     if (e.status === "aberto") {
       try {
         const r = await encerrarEdicao({ edicaoId: e.id, origem: "scheduled" });
@@ -150,7 +153,9 @@ export async function tick(agoraMs = Date.now()) {
         linha.encerrada = false;
       }
     }
-    if (marcas && agoraMs <= msDe(e.termino_em) + MARGEM_CONSOLIDACAO_MS) {
+    if (programada) {
+      linha.consolidacao = "nao_aplicavel";
+    } else if (marcas && agoraMs <= msDe(e.termino_em) + MARGEM_CONSOLIDACAO_MS) {
       linha.consolidacao = "aguarda_margem"; // UTAC138 (R18-138-H): um tick seguinte consolida
     } else if (marcas) {
       try {

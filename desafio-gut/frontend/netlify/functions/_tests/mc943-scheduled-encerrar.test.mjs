@@ -65,7 +65,8 @@ const M = MARGEM_CONSOLIDACAO_MS;
 
 const TERMINO = Date.parse("2026-10-04T23:30:00.000Z");
 const especial = (extra = {}) => ({
-  id: "ESPECIAL-AIRFRYER", tipo: "programado", status: "aberto",
+  // UTAC149 — era "programado" (resto do MC94.1); a especial é Relâmpago e "programado" passou a ser a especial palpite.
+  id: "ESPECIAL-AIRFRYER", tipo: "relampago", status: "aberto",
   inicio_em: "2026-10-04T23:00:00.000Z", termino_em: "2026-10-04T23:30:00.000Z", ...extra,
 });
 
@@ -190,4 +191,25 @@ test("ignora PROG/RELAMP/R-1 e as especiais ainda agendadas", async () => {
 test("o handler exportado é o tick embrulhado no schedule de minuto a minuto", async () => {
   assert.equal(typeof mod.handler, "function");
   assert.equal(mod.CRON, "* * * * *");
+});
+
+// ── UTAC149 — especial PROGRAMADA (palpite): fecha-se (status), mas sem apuração Top 10 nem consolidação on-chain ──
+test("UTAC149 · especial palpite vencida: encerra e NÃO consolida (nem depois da margem)", async () => {
+  estado.edicoes = { "ESPECIAL-PALPITE1": especial({ id: "ESPECIAL-PALPITE1", tipo: "programado" }) };
+  const r1 = await tick(TERMINO + 1_000);
+  const r2 = await tick(TERMINO + M + 120_000);
+  assert.deepEqual(estado.encerradas.map((x) => x.edicaoId), ["ESPECIAL-PALPITE1"], "a especial palpite não foi encerrada");
+  assert.deepEqual(estado.consolidadas, [], "consolidou on-chain uma especial palpite (gas sem menor lance único)");
+  assert.equal(r1[0].consolidacao, "nao_aplicavel");
+  assert.equal(r2[0].consolidacao, "nao_aplicavel");
+  assert.equal(r1[0].apuracao, undefined, "apurou menor lance único numa especial palpite");
+});
+
+test("UTAC149 · com as duas especiais vencidas, a Relâmpago continua a consolidar", async () => {
+  estado.edicoes = {
+    "ESPECIAL-AIRFRYER": especial(),
+    "ESPECIAL-PALPITE1": especial({ id: "ESPECIAL-PALPITE1", tipo: "programado" }),
+  };
+  await tick(TERMINO + M + 1_000);
+  assert.deepEqual(estado.consolidadas, ["ESPECIAL-AIRFRYER"]);
 });

@@ -16,14 +16,15 @@ export function decidirTop10Passe(resp) {
 // UTAC140-SEG4 (validador) — a especial cujo Top 10 completo Meus Ativos pede. NÃO é a do `escolherEspecial`
 // (essa prefere a que ainda não acabou): com a seguinte já gravada (agendada), a regra do Início trocava para ela
 // e a tabela da que acabou desaparecia dentro da janela de 24 h. Aqui: a ENCERRADA mais recente ainda retida.
-import { ehEspecial, estadoEspecial, dentroDaRetencao, ESTADO_ESPECIAL } from "../edicao-especial/_estilo-especial.js";
+import { ehEspecial, ehEspecialProgramada, estadoEspecial, dentroDaRetencao, ESTADO_ESPECIAL } from "../edicao-especial/_estilo-especial.js";
 
 /** PURO — a última especial encerrada dentro da retenção, ou null. */
 export function escolherEspecialTop10(edicoes, agendadas, agoraMs) {
   const porId = new Map();
   for (const mapa of [edicoes, agendadas]) {
     for (const e of Object.values(mapa || {})) {
-      if (e && ehEspecial(e.id) && estadoEspecial(e, agoraMs) === ESTADO_ESPECIAL.ENCERRADA
+      // UTAC149 — o Top 10 é da especial Relâmpago (menor lance único); a especial Programada (palpite) não tem.
+      if (e && ehEspecial(e.id) && !ehEspecialProgramada(e) && estadoEspecial(e, agoraMs) === ESTADO_ESPECIAL.ENCERRADA
           && dentroDaRetencao(e, agoraMs)) porId.set(e.id, e);
     }
   }

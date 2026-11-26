@@ -21,7 +21,9 @@ import { calcularOffset } from "../../../hooks/useEdicoes.js";
 const INICIO  = Date.parse("2026-10-04T23:00:00.000Z");
 const TERMINO = Date.parse("2026-10-04T23:30:00.000Z");
 const AIRFRYER = Object.freeze({
-  id: "ESPECIAL-AIRFRYER", tipo: "programado", produto: "Air Fryer",
+  // UTAC149 — `tipo` era "programado" (resto do MC94.1); a especial é RELÂMPAGO desde o MC94.4.1 e em produção a
+  // ESPECIAL-AIRFRYER tem `tipo:"relampago"` (medido no /edicoes). "programado" passou a ser a especial PALPITE.
+  id: "ESPECIAL-AIRFRYER", tipo: "relampago", produto: "Air Fryer",
   inicio_em: "2026-10-04T23:00:00.000Z", termino_em: "2026-10-04T23:30:00.000Z",
   status: "agendado", imagem_url: "/artes/edicao-especial-airfryer.jpg",
 });

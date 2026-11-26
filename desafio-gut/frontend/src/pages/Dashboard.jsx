@@ -21,7 +21,7 @@ import { usePalpite } from "../hooks/usePalpite.js";
 // UTAC120 (Frente B) — o palpite consome 1 PASSE PROGRAMADO: a zona de palpite do Início segue a MESMA regra da aba.
 import { useInventarioPasses, semPasses } from "../hooks/useInventarioPasses.js";
 import BalaoComprarPasse from "../components/BalaoComprarPasse.jsx";
-import { edicoesProgramadasDe, estadoPalpite, PILULA } from "../lib/palpite.js";
+import { edicoesProgramadasDe, estadoPalpite, estadoEdicaoProgramada, PILULA } from "../lib/palpite.js";
 import { EtiquetaMeuLance } from "../components/EtiquetaEstadoLance.jsx";
 import { GlassCard } from "@/components/ui";
 // MC88.43 — fonte única do estado da edição. Antes o cronómetro obedecia à trava
@@ -30,7 +30,7 @@ import { GlassCard } from "@/components/ui";
 import { getEstadoEdicao } from "../utils/edicao.js";
 // MC94.2 — edição especial (Air Fryer): card próprio com os seus 4 estados.
 import CardEdicaoEspecial from "../components/edicao-especial/CardEdicaoEspecial.jsx";
-import { escolherEspecial, ehEspecial } from "../components/edicao-especial/_estilo-especial.js";
+import { escolherEspecial } from "../components/edicao-especial/_estilo-especial.js";
 import { useT } from "../context/IdiomaContext.jsx";
 
 // UTAC138 — o CardLance lazy da especial saiu: o vidro usa o botão padrão e o lance faz-se na aba Menor Lance Único.
@@ -252,7 +252,10 @@ export default function Dashboard() {
   // escolha da aba Ofertas Programadas: `edicoesProgramadasDe` põe as abertas primeiro).
   // ⚠️ A ESPECIAL fica de fora: ela ocupa o vidro «⚡ Relâmpago» (o lugar da edição ativa, MC94.2)
   // e, sem esta exclusão, apareceria duas vezes no ecrã — medido por um teste que conta o produto.
-  const edicaoProgramada = edicoesProgramadasDe(edicoes).filter((e) => !ehEspecial(e.id))[0] ?? null;
+  // UTAC149 — a exclusão saiu: a especial RELÂMPAGO nunca chega aqui (`edicoesProgramadasDe` só aceita
+  // `tipo:"programado"`) e a especial PROGRAMADA (palpite) é precisamente quem este vidro mostra, logo abaixo do
+  // «⚡ Relâmpago» (`edicoesProgramadasDe` põe-na à frente entre as abertas). Antes: `.filter((e) => !ehEspecial(e.id))`.
+  const edicaoProgramada = edicoesProgramadasDe(edicoes)[0] ?? null;
   /** Regista o palpite da edição programada mostrada (mesma regra da OP: inteiro >= 0). */
   async function palpitar(edicaoId) {
     const valor = Number.parseInt(String(valorPalpite ?? "").trim(), 10);
@@ -261,7 +264,10 @@ export default function Dashboard() {
     // UTAC120 — gastou (ou faltou) 1 Passe Programado: relê-se o inventário em qualquer resposta do servidor.
     if (r?.ok || r?.status) { try { inventario.recarregar?.(); } catch { /* best-effort */ } }
   }
-  const estProgramada = edicaoProgramada ? getEstadoEdicao(edicaoProgramada) : null;
+  // UTAC149 — `estadoEdicaoProgramada`: igual ao `getEstadoEdicao` numa edição normal; na especial lê a edição.
+  const estProgramada = edicaoProgramada
+    ? estadoEdicaoProgramada(edicaoProgramada, Date.now() + (Number.isFinite(offsetRelogioMs) ? offsetRelogioMs : 0))
+    : null;
   const palpiteDoUsuario = edicaoProgramada ? (palpites?.[edicaoProgramada.id] ?? null) : null;
   const estadoPal = edicaoProgramada ? estadoPalpite(edicaoProgramada, palpiteDoUsuario) : null;
 

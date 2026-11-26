@@ -27,7 +27,9 @@ async function ate(c, condicao, comoFalhou) {
 
 const R1 = { id: "R-1", tipo: "relampago", produto: null, termino_em: "2026-09-26T12:00:00.000Z", lances: 0, status: "aberto" };
 const ESPECIAL = {
-  id: "ESPECIAL-AIRFRYER", tipo: "programado", produto: "Air Fryer",
+  // UTAC149 — `tipo` era "programado" (resto do MC94.1); a especial é RELÂMPAGO desde o MC94.4.1 e em produção a
+  // ESPECIAL-AIRFRYER tem `tipo:"relampago"` (medido no /edicoes). "programado" passou a ser a especial PALPITE.
+  id: "ESPECIAL-AIRFRYER", tipo: "relampago", produto: "Air Fryer",
   termino_em: "2026-10-04T23:30:00.000Z", inicio_em: "2026-10-04T23:00:00.000Z",
   lances: 0, status: "agendado", imagem_url: "/artes/edicao-especial-airfryer.jpg",
 };
@@ -43,7 +45,7 @@ describe("MC94.2 · useEdicoes — agendadas e relógio do servidor", () => {
       assert.ok(a, "agendadas foi ignorado");
       assert.equal(a.inicio_em, "2026-10-04T23:00:00.000Z");
       assert.equal(a.imagem_url, "/artes/edicao-especial-airfryer.jpg");
-      assert.equal(a.tipo, "programado");
+      assert.equal(a.tipo, "relampago"); // UTAC149 — o fixture passou a relampago (a especial palpite é a programada)
       assert.equal(r.edicoes["R-1"].inicio_em, null, "edições sem início ficam null");
       assert.match(f.chamadas[0].url, /^\/\.netlify\/functions\/edicoes$/);
     } finally { if (c) await c.desmontar(); f.restaurar(); }

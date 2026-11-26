@@ -64,7 +64,8 @@ export async function tick({
     if (typeof id !== "string" || !EDICAO_ESPECIAL_RE.test(id)) continue;
     try {
       const meta = await ler(id);
-      if (!meta || verificarJanelaLance(meta, agoraMs) || !configDaEspecial(meta).avisosLider) continue;
+      // UTAC149 — a especial Programada (palpite) não tem menor lance único nem líder a avisar.
+      if (!meta || meta.tipo === "programado" || verificarJanelaLance(meta, agoraMs) || !configDaEspecial(meta).avisosLider) continue;
       const anterior = await store.get(id, { type: "json" });
       const { estado, avisos } = await avaliarLider({
         edicaoId: id, lances: await lerLances(id), estadoAnterior: anterior, ehPortador: predicadoPortador(id, { ler: lerInv, contagem }),
