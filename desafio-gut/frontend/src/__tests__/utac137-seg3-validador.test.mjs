@@ -36,7 +36,7 @@ test("SEG3 · todo o docs/*?raw importado por src/ está versionado no git", () 
       importados.add(relative(RAIZ, resolve(dirname(f), m[1])).split("\\").join("/"));
     }
   }
-  assert.ok(importados.has("docs/REGULAMENTO-v7.md"), `RegrasOficiais deixou de importar o v7 (UTAC148): ${[...importados]}`);
+  assert.ok(importados.has("docs/REGULAMENTO-v8.0.md"), `RegrasOficiais deixou de importar o v8.0 (UTAC150): ${[...importados]}`);
   const versionados = new Set(
     execFileSync("git", ["ls-files", "--", ...importados], { cwd: RAIZ, encoding: "utf8" }).split(/\r?\n/).filter(Boolean),
   );

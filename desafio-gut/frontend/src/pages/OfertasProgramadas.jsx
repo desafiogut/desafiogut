@@ -11,7 +11,7 @@
 //      — medido: `public/artes` só tem airfryer/email-banner — por isso o cartão é desenhado em
 //      CSS, para não haver <img> quebrada);
 //   3. histórico de movimentos (compras de Passe, bónus de palpite);
-//   4. PALPITE (bónus +2 pontos) — só quando há edição Programada a decorrer;
+//   4. PALPITE (UTAC150, v8.0: o mais próximo ganha 50 ECOQUILDO; eram +2 pontos) — só quando há edição Programada a decorrer;
 //   5. ⚠️ UTAC110g.1 (R18-110g.1-2 / decisão D-110g-4): o botão «Resgatar cartão» que aqui vivia
 //      SAIU deste ecrã e passou a viver na CARTEIRA (`MinhaCarteira.jsx`). O balão de morada
 //      (`ResgatarCartaoModal`) e o `POST /resgatar-cartao` continuam a existir — só mudaram de
@@ -158,7 +158,7 @@ export default function OfertasProgramadas() {
           )}
           {estado === "mais_proximo" && (
             <p style={{ margin: 0, color: COR.ok, fontWeight: 800, fontSize: "0.88rem" }}>
-              🎯 +2 pontos! Seu palpite de {palpite.valor} lances foi o mais próximo.
+              🎯 +50 ECOQUILDO! Seu palpite de {palpite.valor} lances foi o mais próximo.
             </p>
           )}
           {estado === "perdeu" && (
@@ -240,7 +240,7 @@ export default function OfertasProgramadas() {
           <GlassCard style={{ padding: isMobile ? "1rem" : "1.25rem" }}>
             <h3 style={{ margin: 0, color: COR.gold, fontWeight: 800, fontSize: "0.95rem" }}>🎫 Edições programadas</h3>
             <p style={{ margin: "0.35rem 0 0", color: COR.muted, fontSize: "0.8rem", lineHeight: 1.5 }}>
-              Palpite quantos lances a edição vai ter. O palpite mais próximo ganha +2 pontos — é bônus, não muda o cartão.
+              Palpite quantos lances a edição vai ter. O palpite mais próximo ganha 50 ECOQUILDO — é bônus, não muda o cartão.
             </p>
           </GlassCard>
         </section>

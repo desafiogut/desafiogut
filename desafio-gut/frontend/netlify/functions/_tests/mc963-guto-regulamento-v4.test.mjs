@@ -105,9 +105,9 @@ test("(b2) os valores críticos estão ancorados nos artigos certos", () => {
     // UTAC148 (v7): Art. 5º = 1 Passe por acção; Art. 6º sem Passe não há participação; Art. 7º sem bônus de pontos;
     // Art. 12 em reais; Art. 15 o Passe consome-se no registo; Art. 18 = 50 ECOQUILDOs (eram os valores do v6.1).
     ["5", "R$ 2,00"], ["5", "1 (um) Passe Relâmpago dá direito a 1 (um) lance"], ["6", "Sem Passe disponível não é possível registrar lance nem palpite"],
-    ["7", "1 (um) ponto de fidelidade"], ["8", "a cada 50 pontos de fidelidade"], ["12", "expresso em reais (R$)"],
+    ["7", "1 (um) ponto de fidelidade"], ["8", "a cada 50 pontos de fidelidade"], ["12", "correspondente ao valor em reais (R$)"],
     ["15", "O Passe Relâmpago é consumido no momento do registro do lance"], ["18", "50 (cinquenta) ECOQUILDOs"],
-    ["21", "R$ 0,50"], ["23", "50 (cinquenta) ECOQUILDOs"],
+    ["21", "R$ 0,50"], ["23", "Indique e Ganhe"], // UTAC150 (v8.0): a conversão foi para o § único do Art. 21
   ]) {
     assert.ok(artigo(n), `Art. ${n}º ausente`);
     assert.ok(artigo(n).includes(frag), `Art. ${n}º não contém «${frag}»`);
@@ -122,10 +122,10 @@ test("(c) `_lib/guto-regulamento.mjs` é o documento tal e qual (controlo de vit
   assert.equal(REGULAMENTO_TEXTO, DOC,
     "o módulo que o runtime importa DIVERGIU de " + REGULAMENTO_FONTE +
     " — regenerar (ver cabeçalho do módulo)");
-  assert.equal(REGULAMENTO_VERSAO, "7", "UTAC148: o Regulamento passou a v7 (era 6.1, UTAC138) — o módulo do GUTO acompanha");
+  assert.equal(REGULAMENTO_VERSAO, "8.0", "UTAC150: o Regulamento passou a v8.0 (era 7, UTAC148) — o módulo do GUTO acompanha");
   // e o corpo do documento do GUTO é o texto registado, byte a byte (3.º sítio da invariante)
-  const V7 = readFileSync(resolve(RAIZ, "docs", "REGULAMENTO-v7.md"), "utf8");
-  assert.ok(DOC.endsWith(V7), "docs/GUTO-REGULAMENTO.md deixou de terminar no texto de docs/REGULAMENTO-v7.md");
+  const V7 = readFileSync(resolve(RAIZ, "docs", "REGULAMENTO-v8.0.md"), "utf8");
+  assert.ok(DOC.endsWith(V7), "docs/GUTO-REGULAMENTO.md deixou de terminar no texto de docs/REGULAMENTO-v8.0.md");
 });
 
 test("(c2) o texto que vai no prompt está LIMPO das marcas de formatação (UTAC110c-1b)", () => {
@@ -139,7 +139,7 @@ test("(c2) o texto que vai no prompt está LIMPO das marcas de formatação (UTA
   // UTAC137 (v6): Art. 5º R$ 2,00 · Art. 12. R$ 0,01 · Art. 21. R$ 0,50 (no v5 eram os Arts. 6º/18º/47º).
   assert.match(REGULAMENTO_TEXTO, /valor fixo de R\$ 2,00/, "o Art. 5º tem de trazer o valor legível");
   // UTAC148 (v7): o Art. 12. diz que o lance é em reais (era «1 ponto equivale a R$ 0,01»).
-  assert.match(REGULAMENTO_TEXTO, /expresso em reais \(R\$\)/, "o Art. 12. tem de trazer o valor legível");
+  assert.match(REGULAMENTO_TEXTO, /correspondente ao valor em reais \(R\$\)/, "o Art. 12. tem de trazer o valor legível"); // UTAC150 (v8.0)
   // (só o CORPO — o cabeçalho do documento do GUTO descreve a mudança e diz «sem pontos de lance»)
   assert.doesNotMatch(REGULAMENTO_TEXTO.slice(REGULAMENTO_TEXTO.indexOf("\n---\n")), /pontos de lance|bônus de 100/, "sobrou o modelo de pontos de lance (v6.1) no texto do GUTO");
   assert.match(REGULAMENTO_TEXTO, /1 ECOQUILDO equivalente a R\$ 0,50/, "o Art. 21. tem de trazer o valor legível");
@@ -151,14 +151,14 @@ test("(c2) o texto que vai no prompt está LIMPO das marcas de formatação (UTA
 
 // UTAC137 — (d) e (e) eram do v5.1: 12 capítulos / 72 artigos e a ERRATA DA FONTE do PDF (as marcas `R\$`).
 // O v6 é texto limpo (sem marcas de formatação), 6 capítulos e 30 artigos.
-test("(d) o documento tem 6 capítulos e os 30 artigos (v6.0), sem lacunas", () => {
+test("(d) o documento tem 6 capítulos e os 28 artigos (v8.0), sem lacunas", () => {
   const caps = DOC_UMA.match(/CAPÍTULO [IVX]+/g) || [];
   assert.equal(new Set(caps).size, 6, `capítulos: ${new Set(caps).size}`);
   const arts = new Set([...DOC_UMA.matchAll(/Art\. (\d+)(?:º|\.) /g)].map((m) => Number(m[1])));
   const falta = [];
-  for (let i = 1; i <= 30; i++) if (!arts.has(i)) falta.push(i);
+  for (let i = 1; i <= 28; i++) if (!arts.has(i)) falta.push(i); // UTAC150 (v8.0: 28; eram 30)
   assert.deepEqual(falta, [], `artigos em falta no documento: ${falta.join(", ")}`);
-  assert.ok(!arts.has(31), "o v6 acaba no Art. 30.");
+  assert.ok(!arts.has(29), "o v8.0 acaba no Art. 28.");
 });
 
 test("(e) ZERO marcas de formatação no ficheiro (o v6 não tem o defeito do PDF do v5.1)", () => {

@@ -64,7 +64,7 @@ test("P6 · Regras Oficiais: resumo em Passes, sem login/missão/sequência nem 
 });
 
 test("P7 · Regulamento v7 (UTAC148): Art. 18 = 50 ECOQUILDOs ao vencedor (sem «prêmio» nem produto físico), igual na cópia do GUTO", () => {
-  const reg = ler("../../../../docs/REGULAMENTO-v7.md");
+  const reg = ler("../../../../docs/REGULAMENTO-v8.0.md");
   const guto = ler("../../../../docs/GUTO-REGULAMENTO.md");
   const art = (t) => t.split("\n").find((l) => l.startsWith("Art. 18."));
   assert.match(art(reg), /^Art\. 18\. O vencedor da previsão recebe 50 \(cinquenta\) ECOQUILDOs/);

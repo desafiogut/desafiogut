@@ -97,8 +97,8 @@ test("não aceitar (declaração em falta, false, string, extra, versão errada,
 // UTAC138 (R18-138-G) — o APK v11 envia "3.4" até o AAB v12 sair; o registo aceita-o e guarda a versão DECLARADA.
 // UTAC148 (R18-148-C) — gate 3.6 (Regulamento v7); o legado passa a aceitar 3.4 (v11) e 3.5 (v12.1) até o v13 estar aprovado.
 test("UTAC138/148 · aceite \"3.4\" do APK v11 é registado (legado até ao v13) e fica com termoVersao 3.4", async () => {
-  assert.equal(lib.VERSAO_GATE, "3.6");
-  assert.deepEqual([...lib.VERSOES_GATE_LEGADO], ["3.4", "3.5"]);
+  assert.equal(lib.VERSAO_GATE, "3.7"); // UTAC150
+  assert.deepEqual([...lib.VERSOES_GATE_LEGADO], ["3.4", "3.5", "3.6"]); // UTAC150 (R18-150-B): + a 3.6 do AAB v13 (vc14)
   const res = await post(corpo({ versao: "3.4" }));
   assert.equal(res.status, 201, await res.clone().text());
   assert.equal(registos().length, 1);

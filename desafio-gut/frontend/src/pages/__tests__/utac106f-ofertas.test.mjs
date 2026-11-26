@@ -296,14 +296,15 @@ test("RENDER · PALPITAR envia POST com Bearer e passa a «Já palpitou»", asyn
   } finally { c.dup.restaurar(); }
 });
 
-test("RENDER · palpite JÁ apurado como mais próximo → «Acertou! +2 pontos»", async () => {
+test("RENDER · palpite JÁ apurado como mais próximo → «+50 ECOQUILDO» (UTAC150, v8.0; eram +2 pontos)", async () => {
   const c = await montarEcra(() => ({ status: 200, json: LEITURA({
     palpites: [{ edicaoId: "PROG-7", valor: 118, apurado: true, resultado: "mais_proximo" }],
   }) }));
   try {
     const t = c.texto();
     // UTAC107e.1 — copy do mockup: o backend premeia o MAIS PRÓXIMO, não o exacto («Acertou» seria falso).
-    assert.match(t, /\+2 pontos! Seu palpite de 118 lances foi o mais próximo\./);
+    assert.match(t, /\+50 ECOQUILDO! Seu palpite de 118 lances foi o mais próximo\./);
+    assert.doesNotMatch(t, /\+2 pontos/, "o texto antigo dos +2 pontos voltou");
     assert.match(t, /MAIS PRÓXIMO/);
   } finally { c.dup.restaurar(); }
 });

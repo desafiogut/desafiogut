@@ -165,21 +165,23 @@ REGRA DE LINGUAGEM (obrigatória):
 export const ARTIGOS_V4 = {
   "1":  "operado pela Associação Recreativa dos Nordestinos no Amazonas, nome fantasia Grupo União e Trabalho (GUT)",
   // UTAC148 — âncoras do Regulamento v7 (Arts. 3º, 5º, 6º, 7º, 12, 15 e 18 mudaram).
+  // UTAC150 — Regulamento v8.0: Art. 12 em centavos; a conversão passou ao § único do Art. 21; a indicação é o Art. 23
+  // e o Billing o Art. 24 (eram os Arts. 23/24/25 do v7); o Art. 19 (o perdedor perde o Passe) entra no índice.
   "3":  "A participação nas ofertas — o lance na Oferta Relâmpago e o palpite na Oferta Programada — exige a aquisição prévia do Passe Desafio correspondente.",
   "5":  "1 (um) Passe Relâmpago dá direito a 1 (um) lance na Oferta Relâmpago e 1 (um) Passe Programado dá direito a 1 (um) palpite na Oferta Programada.",
   "6":  "Sem Passe disponível não é possível registrar lance nem palpite.",
   "7":  "O Passe Desafio confere ao usuário o acesso ao assistente virtual de inteligência estratégica GUTO, dados analíticos de mercado e 1 (um) ponto de fidelidade ao sistema",
   "8":  "a cada 50 pontos de fidelidade acumulados, o sistema credita automaticamente 1 Cartão Digital ao perfil do usuário.",
   "11": "A Oferta Relâmpago configura modalidade de e-commerce baseada em habilidade, estratégia e menor valor único de lance",
-  "12": "pagando o valor do seu lance, expresso em reais (R$)",
+  "12": "pagando o valor do seu lance, expresso em centavos na interface do aplicativo e correspondente ao valor em reais (R$)",
   "15": "O Passe Relâmpago é consumido no momento do registro do lance, não sendo devolvido em caso de derrota.",
   "16": "prever o número total exato de lances realizados em um determinado ciclo.",
   "17": "Vence a Oferta Programada apenas 1 (um) palpite",
   "18": "O vencedor da previsão recebe 50 (cinquenta) ECOQUILDOs, creditados no seu perfil no momento da apuração",
+  "19": "perde o Passe Programado utilizado naquela participação, mas mantém integralmente seus pontos de fidelidade",
   "21": "1 ECOQUILDO equivalente a R$ 0,50 (cinquenta centavos)",
-  "23": "A cada 50 (cinquenta) ECOQUILDOs acumulados pelo usuário na plataforma, o sistema efetuará a conversão automática e imediata desse montante em 1 (um) Passe Desafio digital.",
-  "24": "o usuário indicante recebe 2 ECOQUILDOs e o usuário indicado recebe 1 ECOQUILDO",
-  "25": "será processada exclusivamente por meio do sistema oficial de pagamentos da Google Play (Google Billing).",
+  "23": "o usuário indicante recebe 2 ECOQUILDOs e o usuário indicado recebe 1 ECOQUILDO",
+  "24": "será processada exclusivamente por meio do sistema oficial de pagamentos da Google Play (Google Billing).",
 };
 /** UTAC137 — no v6 o rótulo é «Art. 1º» … «Art. 9º» e «Art. 10.» em diante (como está no documento). */
 export const rotuloArtigo = (n) => (Number(n) < 10 ? `Art. ${n}º` : `Art. ${n}.`);
@@ -221,7 +223,7 @@ export const semEscapesDaFonte = (t) =>
 // `_tests/utac137-seg3-guto-modelo.test.mjs`.
 export const REGRA_REGULAMENTO = `
 
-REGULAMENTO OFICIAL (versão 6.1) — COMO USAR:
+REGULAMENTO OFICIAL (versão 8.0) — COMO USAR:
 O texto INTEGRAL do Regulamento Oficial do DesafioGUT segue no fim deste prompt. É a TUA ÚNICA
 FONTE sobre regras, produtos e mecânica — não tens outra e não precisas de outra.
 - Quando responderes sobre regras, CITA o artigo que fundamenta a resposta, com o rótulo do documento:
@@ -231,17 +233,20 @@ FONTE sobre regras, produtos e mecânica — não tens outra e não precisas de 
   (${EMAIL_SUPORTE}) — não inventes regras, valores nem prazos.
 - Responde CURTO: a regra que interessa, o artigo, e a saída. Não despejes capítulos.
 
-MODELO DE HOJE (Regulamento v7 — UTAC148): o download, o cadastro e a navegação são gratuitos, mas participar exige
+MODELO DE HOJE (Regulamento v8.0 — UTAC150): o download, o cadastro e a navegação são gratuitos, mas participar exige
 Passe (Art. 3º). O Passe Desafio custa R$ 2,00 por unidade (pacotes de 1, 3 ou 5) e é o título de participação: 1 Passe
 Relâmpago = 1 lance na Oferta Relâmpago e 1 Passe Programado = 1 palpite na Oferta Programada (Art. 5º). Os Passes ficam
-guardados no perfil até serem usados; sem Passe não há lance nem palpite (Art. 6º). Cada Passe dá ainda acesso ao GUTO, a
-dados analíticos e 1 ponto de fidelidade (Art. 7º); 50 pontos de fidelidade = 1 cartão (Art. 8º). O lance é em reais (R$)
-(Art. 12) e o Passe Relâmpago é consumido no registo do lance, sem devolução em caso de derrota (Art. 15). O vencedor do
-palpite recebe 50 ECOQUILDOs (Art. 18). NÃO existem pontos de lance, nem pontos por login, missões, sequência de acertos ou
+guardados no perfil até serem usados; sem Passe não há lance nem palpite, e o Passe consumido não é devolvido em caso de
+derrota (Art. 6º). Cada Passe dá ainda acesso ao GUTO, a
+dados analíticos e 1 ponto de fidelidade (Art. 7º); 50 pontos de fidelidade = 1 cartão (Art. 8º). O lance é expresso em centavos na
+interface e corresponde ao valor em reais (R$) (Art. 12) e o Passe Relâmpago é consumido no registo do lance, sem devolução em caso de derrota (Art. 15). No palpite prevê-se o número
+total de lances registrados na edição; vence o palpite exato ou o mais próximo, e o empate desempata-se pela ordem de
+registo (Art. 17). O vencedor do palpite recebe 50 ECOQUILDOs (Art. 18), que correspondem a 1 Passe; quem perde, perde o
+Passe Programado usado, mas mantém os pontos de fidelidade, o ECOQUILDO e o GUTO (Art. 19). NÃO existem pontos de lance, nem pontos por login, missões, sequência de acertos ou
 boas-vindas, nem bônus de pontos no Passe — se alguém perguntar, diz que essas regras foram descontinuadas. Nas Edições
 Especiais o vencedor e os 10 menores lances únicos são publicados no app logo no encerramento, durante 24 horas (Art. 7º).
-1 ECOQUILDO = R$ 0,50 e cada 50 ECOQUILDOs convertem-se sozinhos em 1 Passe (Arts. 21. e 23.). Indique e Ganhe: 2 ECOQUILDOs
-para quem indica e 1 para quem é indicado (Art. 24.).
+1 ECOQUILDO = R$ 0,50 e cada 50 ECOQUILDOs convertem-se sozinhos em 1 Passe (Art. 21.). Indique e Ganhe: 2 ECOQUILDOs
+para quem indica e 1 para quem é indicado (Art. 23.).
 Descreve SÓ o que o Regulamento diz: não acrescentes produtos, créditos ou preços que ele não tenha.
 
 ÂNCORAS DE CITAÇÃO (índice curto; o que MANDA é o texto do Regulamento no fim):

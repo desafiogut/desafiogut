@@ -38,7 +38,7 @@ const lerDoc = (nome) => readFileSync(resolve(REPO, "docs", nome), "utf8").repla
 // medidas contra o v6. O v5 continua lido para provar que o parser não o partiu (compatibilidade).
 const MD_V5 = lerDoc("REGULAMENTO-v5.md");
 // UTAC148 — a página publica o v7 (era o v6.1).
-const MD_V6 = lerDoc("REGULAMENTO-v7.md");
+const MD_V6 = lerDoc("REGULAMENTO-v8.0.md"); // UTAC150 (era o v7)
 const MD_GUTO = lerDoc("GUTO-REGULAMENTO.md");
 const CORPO_GUTO = MD_GUTO.slice(MD_GUTO.indexOf("\n---\n\n") + 6);
 /** As linhas do v6 sem a marcação Markdown («# », «## ») — o que a página tem de mostrar. */
@@ -62,15 +62,15 @@ before(async () => {
 after(async () => { if (vite) await vite.close(); });
 
 // ── 1. Fonte única: o documento do repo é o texto que o GUTO lê ─────────────────────────────────
-test("FONTE · o corpo de docs/GUTO-REGULAMENTO.md é docs/REGULAMENTO-v7.md, byte a byte (UTAC148)", () => {
+test("FONTE · o corpo de docs/GUTO-REGULAMENTO.md é docs/REGULAMENTO-v8.0.md, byte a byte (UTAC150)", () => {
   assert.ok(MD_GUTO.includes("\n---\n\n"), "falta o separador cabeçalho/corpo no documento do GUTO");
-  assert.ok(MD_V6.startsWith("# REGULAMENTO OFICIAL DO APLICATIVO DESAFIOGUT (VERSÃO 7)"), "o v7 tem de começar no título");
+  assert.ok(MD_V6.startsWith("# REGULAMENTO OFICIAL DO APLICATIVO DESAFIOGUT (VERSÃO 8.0)"), "o v8.0 tem de começar no título");
   assert.equal(CORPO_GUTO, MD_V6, "o Regulamento publicado divergiu do que o GUTO lê");
 });
 
 test("FONTE · o cabeçalho do documento do GUTO declara a versão 6.0 e a regra de alteração", () => {
   const cab = MD_GUTO.slice(0, MD_GUTO.indexOf("\n---\n\n"));
-  assert.match(cab, /Versão 7/); // UTAC148 (v7): era 6.1
+  assert.match(cab, /Versão 8\.0/); // UTAC150 (v8.0): era 7
   assert.match(cab, /Fonte de verdade para o GUTO\. Não alterar sem actualizar o regulamento oficial\./);
   assert.match(cab, /cópia byte a byte/);
 });
@@ -78,7 +78,7 @@ test("FONTE · o cabeçalho do documento do GUTO declara a versão 6.0 e a regra
 test("FONTE · a página não escreve texto jurídico à mão: importa o .md do v6 em bruto", () => {
   const jsx = readFileSync(resolve(FRONTEND, "src", "pages", "RegrasOficiais.jsx"), "utf8");
   const codigo = jsx.split("\n").filter((l) => !/^\s*\/\//.test(l)).join("\n");
-  assert.match(codigo, /from "\.\.\/\.\.\/\.\.\/\.\.\/docs\/REGULAMENTO-v7.md\?raw"/); // UTAC148
+  assert.match(codigo, /from "\.\.\/\.\.\/\.\.\/\.\.\/docs\/REGULAMENTO-v8\.0\.md\?raw"/); // UTAC150
   assert.doesNotMatch(codigo, /REGULAMENTO-v5\.md/, "a página voltou a importar o v5");
   for (const juridico of ["R$ 2,00", "pontos de fidelidade", "ECOQUILDO", "23.040.066/0001-00", "Comarca de Manaus"]) {
     assert.ok(!codigo.includes(juridico), `texto jurídico escrito à mão na página: «${juridico}»`);
@@ -87,7 +87,7 @@ test("FONTE · a página não escreve texto jurídico à mão: importa o .md do 
 
 // ── 2. Cobertura total: cada linha do documento está na página ─────────────────────────────────
 test("COBERTURA · TODAS as linhas do Regulamento v6 aparecem na página (título, 6 capítulos, 30 artigos)", () => {
-  assert.equal(LINHAS_V6.length, 37, `esperava 37 linhas (1 + 6 + 30), vi ${LINHAS_V6.length}`);
+  assert.equal(LINHAS_V6.length, 40, `esperava 40 linhas (1 + 6 + 28 artigos + 5 § únicos — UTAC150), vi ${LINHAS_V6.length}`);
   const faltam = LINHAS_V6.filter((l) => !texto.includes(l));
   assert.deepEqual(faltam, [], `a página não publica ${faltam.length} linha(s)`);
 });
@@ -119,8 +119,8 @@ test("ACESSIBILIDADE · os alvos de toque da página (sumário e «Voltar») tê
 // ── 3. Estrutura: 6 capítulos, 30 artigos ───────────────────────────────────────────────────────
 test("ESTRUTURA · um <h1> com o título e a versão do v6.0", () => {
   assert.equal((html.match(/<h1[\s>]/g) || []).length, 1);
-  assert.match(html, /<h1[^>]*>REGULAMENTO OFICIAL DO APLICATIVO DESAFIOGUT \(VERSÃO 7\)<\/h1>/);
-  assert.equal(mod.VERSAO_REGULAMENTO, "7"); // UTAC148 (v7): era 6.1
+  assert.match(html, /<h1[^>]*>REGULAMENTO OFICIAL DO APLICATIVO DESAFIOGUT \(VERSÃO 8\.0\)<\/h1>/);
+  assert.equal(mod.VERSAO_REGULAMENTO, "8.0"); // UTAC150 (v8.0): era 7
 });
 
 test("ESTRUTURA · os 6 capítulos em <h2>, pela ordem do documento", () => {
@@ -131,10 +131,10 @@ test("ESTRUTURA · os 6 capítulos em <h2>, pela ordem do documento", () => {
   assert.deepEqual(capsPagina, doMd);
 });
 
-test("ESTRUTURA · os 30 artigos, de 1 a 30, sem lacunas e pela ordem, com o rótulo do documento", () => {
+test("ESTRUTURA · os 28 artigos, de 1 a 28, sem lacunas e pela ordem, com o rótulo do documento (v8.0, UTAC150)", () => {
   const rot = [...html.matchAll(/<strong[^>]*>(Art\. \d+(?:º|\.))<\/strong>/g)].map((m) => m[1]);
-  assert.deepEqual(rot.map((r) => Number(r.match(/\d+/)[0])), Array.from({ length: 30 }, (_, i) => i + 1));
-  assert.deepEqual([rot[0], rot[8], rot[9], rot[29]], ["Art. 1º", "Art. 9º", "Art. 10.", "Art. 30."]);
+  assert.deepEqual(rot.map((r) => Number(r.match(/\d+/)[0])), Array.from({ length: 28 }, (_, i) => i + 1));
+  assert.deepEqual([rot[0], rot[8], rot[9], rot[27]], ["Art. 1º", "Art. 9º", "Art. 10.", "Art. 28."]);
 });
 
 test("ESTRUTURA · sumário com 6 âncoras que existem na página", () => {
@@ -146,10 +146,11 @@ test("ESTRUTURA · sumário com 6 âncoras que existem na página", () => {
 test("PARSER · lê o v6 (uma linha por artigo, títulos «#») e continua a ler o v5 como antes", () => {
   const blocos = mod.REGULAMENTO.capitulos.flatMap((c) => c.blocos);
   const arts = Object.fromEntries(blocos.filter((b) => b.tipo === "artigo").map((b) => [b.rotulo, b]));
-  assert.equal(Object.keys(arts).length, 30);
+  assert.equal(Object.keys(arts).length, 28); // UTAC150 (v8.0)
   assert.equal(arts["Art. 1º"].separador, " ", "o v6 não tem travessão depois do rótulo");
   assert.ok(arts["Art. 10."].texto.startsWith("A Associação reserva-se o direito"));
-  assert.ok(arts["Art. 15."].texto.endsWith("conforme o Art. 19."), "a referência a outro artigo dentro do texto não pode abrir artigo novo");
+  // UTAC150 — o v8.0 aprovado remete o Art. 15 para o «Art. 17.» (o v8 de 23/11 dizia «Art. 19.»; registado para o jurídico).
+  assert.ok(arts["Art. 15."].texto.endsWith("conforme o Art. 17."), "a referência a outro artigo dentro do texto não pode abrir artigo novo");
   assert.equal(blocos.filter((b) => b.tipo === "paragrafo").length, 0);
   assert.equal(mod.REGULAMENTO.rodape, null);
   // compatibilidade: o mesmo parser sobre o v5 dá o que dava (12 capítulos, 72 artigos, rodapé, alíneas)

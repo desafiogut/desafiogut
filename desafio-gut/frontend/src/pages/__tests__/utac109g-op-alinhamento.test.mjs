@@ -91,7 +91,7 @@ test("A1 · o aviso do bónus («é bônus, não muda o cartão») fica logo ABA
     const iAviso = c.h.indexOf("🎫 Edições programadas");
     const iPontos = c.h.indexOf('aria-label="Progresso de pontos"');
     assert.ok(iCartao < iAviso && iAviso < iPontos, "o aviso do bónus não está entre a edição e os pontos");
-    assert.match(c.t, /Palpite quantos lances a edição vai ter\. O palpite mais próximo ganha \+2 pontos — é bônus, não muda o cartão\./);
+    assert.match(c.t, /Palpite quantos lances a edição vai ter\. O palpite mais próximo ganha 50 ECOQUILDO — é bônus, não muda o cartão\./);
   } finally { c.fim(); }
 });
 

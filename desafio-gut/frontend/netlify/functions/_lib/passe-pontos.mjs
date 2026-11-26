@@ -158,7 +158,7 @@ export async function debitarPontos(endereco, quantidade, tipo, ref) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════════════
-// UTAC106f — PALPITE (bónus +2 pontos). ADITIVO: NADA acima desta linha foi alterado.
+// UTAC106f — PALPITE (bónus +2 pontos; ⛔ UTAC150/v8.0: 0 pontos, o prémio são 50 ECOQUILDO). ADITIVO: NADA acima desta linha foi alterado.
 //
 // Regra do operador: o palpite é sobre o Nº TOTAL DE LANCES de uma edição Programada; 1 palpite
 // por endereço e edição; apura-se quando a edição fecha; o MAIS PRÓXIMO do valor real recebe
@@ -166,8 +166,10 @@ export async function debitarPontos(endereco, quantidade, tipo, ref) {
 // cartão** — o cartão é SÓ por pontos de compra (50). Store: `public.palpites` (UTAC106f).
 // ══════════════════════════════════════════════════════════════════════════════════════
 
-/** Bónus por ser o mais próximo do número real de lances. */
-export const PONTOS_POR_PALPITE_CERTO = 2;
+/** Bónus por ser o mais próximo do número real de lances.
+ * ⛔ UTAC150 (R18-150-D, Regulamento v8.0): era 2. O v8.0 só dá o ponto de fidelidade pelo Passe (Art. 7º) e o prémio do
+ * palpite são os 50 ECOQUILDOs (Art. 18) — os +2 pontos saíram. Com 0 o crédito de pontos NÃO corre (ver `apurarPalpite`). */
+export const PONTOS_POR_PALPITE_CERTO = 0;
 
 const TABELA_PALPITES = "palpites";
 const FK_VIOLATION = "23503";
@@ -298,9 +300,11 @@ export async function apurarPalpite(edicaoId, valorReal) {
   }
 
   // Crédito PRIMEIRO, com ref idempotente: se a marcação falhar, repetir o apuramento não paga 2×.
-  const credito = await creditarPontos(
-    vencedor.endereco, PONTOS_POR_PALPITE_CERTO, TIPO_PALPITE, refBonusPalpite(edicaoId),
-  );
+  // UTAC150 (v8.0) — sem pontos de bónus (PONTOS_POR_PALPITE_CERTO = 0) não há crédito de pontos: `criado:false` faz
+  // com que as compensações abaixo não revertam nada. O ECOQUILDO (Art. 18) segue o mesmo caminho de antes.
+  const credito = PONTOS_POR_PALPITE_CERTO > 0
+    ? await creditarPontos(vencedor.endereco, PONTOS_POR_PALPITE_CERTO, TIPO_PALPITE, refBonusPalpite(edicaoId))
+    : { ok: true, criado: false };
   if (!credito.ok) return { ok: false, code: credito.code };
 
   // ── UTAC148 (R18-148-A, Art. 18 v7) — 50 ECOQUILDO ao vencedor, TAMBÉM antes da marcação (mesma doutrina do

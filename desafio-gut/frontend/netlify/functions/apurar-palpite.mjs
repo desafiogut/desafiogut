@@ -1,7 +1,7 @@
 // POST /.netlify/functions/apurar-palpite — UTAC106f. Apuração do palpite (ADMIN).
 //
 // ⚠️ ADMIN-ONLY. Não é público: exige sessão de admin (`_lib/admin-auth.mjs`) — a apuração
-//    decide quem recebe os +2 pontos, logo não pode ser disparada pelo titular.
+//    decide quem recebe os 50 ECOQUILDO (UTAC150, v8.0: eram +2 pontos), logo não pode ser disparada pelo titular.
 //
 // Header: Authorization: Bearer *** (token de ADMIN)   ·   Body: { edicaoId, valorReal }
 //

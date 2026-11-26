@@ -1,6 +1,6 @@
 // POST /.netlify/functions/registar-palpite — UTAC106f. Palpite do Passe Desafio Via B (BÓNUS).
 //
-// ⚠️ O palpite é BÓNUS (+2 pontos se for o mais próximo) — **NÃO decide o cartão**. O cartão é
+// ⚠️ O palpite é BÓNUS (50 ECOQUILDO se for o mais próximo — UTAC150, v8.0; eram +2 pontos) — **NÃO decide o cartão**. O cartão é
 //    SÓ por pontos de COMPRA (50) — requisito crítico da Google Play (jogo de habilidade).
 //
 // Header: Authorization: Bearer ***   ·   Body: { edicaoId, valor }   (idempotencyKey opcional:

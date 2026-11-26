@@ -126,8 +126,9 @@ function semear(enderecos = [A, B]) {
 }
 
 // ── Constante ───────────────────────────────────────────────────────────────────────────────────
-test("PONTOS_POR_PALPITE_CERTO é 2 (valor fixo, não número mágico)", () => {
-  assert.equal(PONTOS_POR_PALPITE_CERTO, 2);
+// UTAC150 (R18-150-D, Regulamento v8.0) — os +2 pontos saíram: o prémio do palpite são só os 50 ECOQUILDOs (Art. 18).
+test("PONTOS_POR_PALPITE_CERTO é 0 no v8.0 (era 2; valor fixo, não número mágico)", () => {
+  assert.equal(PONTOS_POR_PALPITE_CERTO, 0);
 });
 
 // ── registarPalpite ─────────────────────────────────────────────────────────────────────────────
@@ -183,7 +184,8 @@ test("lerPalpites devolve só os do endereço, mais recentes primeiro", async ()
 });
 
 // ── apurarPalpite ───────────────────────────────────────────────────────────────────────────────
-test("apurarPalpite credita +2 pontos SÓ ao mais próximo e marca os restantes «perdeu»", async () => {
+test("apurarPalpite paga SÓ o mais próximo (50 ECOQUILDO, zero pontos — v8.0) e marca os restantes «perdeu»", async () => {
+  ECO.clear();
   semear([A, B, C]);
   await registarPalpite(A, ED, 100);
   await registarPalpite(B, ED, 130);
@@ -191,18 +193,12 @@ test("apurarPalpite credita +2 pontos SÓ ao mais próximo e marca os restantes 
   const r = await apurarPalpite(ED, 128);
   assert.equal(r.ok, true); assert.equal(r.total, 3);
   assert.equal(r.vencedor.endereco, B);
-  assert.equal(r.pontosCreditados, 2);
-
-  assert.equal((await getPontos(B)), 2, "o vencedor recebeu +2");
-  assert.equal((await getPontos(A)), 0, "o 2.º mais próximo NÃO recebe");
-  assert.equal((await getPontos(C)), 0);
-
-  const hist = pontosDe(B).historico;
-  assert.equal(hist.length, 1);
-  assert.equal(hist[0].tipo, "palpite");
-  assert.equal(hist[0].pontos, 2);
-  assert.equal(hist[0].ref, `palpite-certo:${ED}`);
-
+  assert.equal(r.pontosCreditados, 0, "v8.0: o palpite já não dá pontos");
+  assert.equal(r.ecoQuildoCreditado, 50);
+  assert.equal(ECO.get(`eco-palpite-certo:${ED}`)?.endereco, B, "o vencedor recebeu os 50 ECOQUILDO");
+  assert.equal(ECO.size, 1, "só o vencedor recebe");
+  for (const x of [A, B, C]) assert.equal(await getPontos(x), 0, "nenhum ponto de fidelidade pelo palpite (v8.0)");
+  assert.equal(pontosDe(B).historico.length, 0, "nenhum movimento de pontos «palpite»");
   const marcados = dup.db.palpites.map((p) => [p.endereco, p.apurado, p.resultado]);
   assert.deepEqual(marcados, [[A, true, "perdeu"], [B, true, "mais_proximo"], [C, true, "perdeu"]]);
 });
@@ -215,22 +211,22 @@ test("apurarPalpite SEM palpites → vencedor null e NINGUÉM creditado", async 
   assert.equal(await getPontos(A), 0, "sem vencedor, ninguém é creditado");
 });
 
-test("apurarPalpite só apura UMA vez (2.ª corrida não credita de novo)", async () => {
+test("apurarPalpite só apura UMA vez (2.ª corrida não paga de novo)", async () => {
+  ECO.clear();
   semear([A, B]);
   await registarPalpite(A, ED, 100);
   await registarPalpite(B, ED, 200);
   const r1 = await apurarPalpite(ED, 100);
   assert.equal(r1.vencedor.endereco, A);
-  const saldoApos = await getPontos(A);
-
   const r2 = await apurarPalpite(ED, 200); // já apurados ⇒ nada por apurar
   assert.equal(r2.ok, true); assert.equal(r2.total, 0); assert.equal(r2.vencedor, null);
-  assert.equal(await getPontos(A), saldoApos, "re-apurar não pode creditar outra vez");
-  assert.equal(await getPontos(B), 0);
-  assert.equal(pontosDe(A).historico.length, 1, "um só movimento de bónus");
+  assert.equal(ECO.size, 1, "re-apurar não pode pagar outra vez");
+  assert.equal(ECO.get(`eco-palpite-certo:${ED}`)?.endereco, A);
+  assert.equal(await getPontos(A), 0); assert.equal(await getPontos(B), 0);
 });
 
-test("apurarPalpite: EMPATE → ganha o palpite mais antigo (determinístico)", async () => {
+test("apurarPalpite: EMPATE → ganha o palpite mais antigo (determinístico, Art. 17)", async () => {
+  ECO.clear();
   semear([A, B]);
   await registarPalpite(A, ED, 100);
   await registarPalpite(B, ED, 100);
@@ -239,15 +235,16 @@ test("apurarPalpite: EMPATE → ganha o palpite mais antigo (determinístico)", 
   dup.db.palpites.find((p) => p.endereco === B).criado_em = "2026-10-04T11:00:00.000Z";
   const r = await apurarPalpite(ED, 100);
   assert.equal(r.vencedor.endereco, A, "empate → mais antigo");
-  assert.equal(await getPontos(A), 2); assert.equal(await getPontos(B), 0);
+  assert.equal(ECO.get(`eco-palpite-certo:${ED}`)?.endereco, A, "os 50 ECOQUILDO vão para o mais antigo");
 });
 
-test("apurarPalpite credita exactamente +2 (nunca mais), sobre pontos PREEXISTENTES", async () => {
+test("apurarPalpite NÃO mexe nos pontos PREEXISTENTES do vencedor (v8.0: sem +2)", async () => {
+  ECO.clear();
   semear([A]);
   pontosDe(A).pontos = 48;
   await registarPalpite(A, ED, 10);
   await apurarPalpite(ED, 11);
-  assert.equal(await getPontos(A), 50, "48 (compra) + 2 (bónus) = 50 no TOTAL");
+  assert.equal(await getPontos(A), 48, "48 de compra continuam 48: o palpite não soma pontos");
 });
 
 // ── R1 (achado ⚠️ do validador adversarial) — o CARTÃO conta SÓ pontos de COMPRA ────────────────
@@ -265,16 +262,16 @@ test("R1 · pontosDeCompra conta compra/resgate e IGNORA o bónus de palpite", (
   assert.equal(pontosDeCompra({}), 0);
 });
 
-test("R1 REGRESSÃO · 48 de COMPRA + 2 de bónus = 50 NÃO desbloqueia o cartão", async () => {
+test("R1 REGRESSÃO · 48 de COMPRA + o palpite ganho NÃO chegam a 50 (v8.0: o palpite não dá pontos)", async () => {
+  ECO.clear();
   semear([A]);
   pontosDe(A).pontos = 48;
   pontosDe(A).historico = Array.from({ length: 48 }, (_, i) => ({ data: "2026-10-01T00:00:00.000Z", tipo: "compra", pontos: 1, ref: `k${i}` }));
   await registarPalpite(A, ED, 10);
   await apurarPalpite(ED, 10);
-  assert.equal(await getPontos(A), 50, "o TOTAL chega a 50 (48 compra + 2 bónus)");
-  assert.equal(await podeResgatarCartaoComCompra(A), false, "mas o CARTÃO conta só 48 ⇒ NÃO desbloqueia");
-  assert.equal(await podeResgatarCartao(A), true,
-    "a função ANTIGA (total) diria que sim — é exactamente por isso que deixou de decidir o cartão");
+  assert.equal(await getPontos(A), 48, "o TOTAL fica em 48 (UTAC150: eram 48 + 2 = 50)");
+  assert.equal(await podeResgatarCartaoComCompra(A), false, "o CARTÃO conta 48 ⇒ NÃO desbloqueia");
+  assert.equal(await podeResgatarCartao(A), false, "nem a função antiga (total) desbloqueia: já não há bónus a somar");
 });
 
 test("R1 · 50 pontos de COMPRA desbloqueiam o cartão", async () => {
@@ -284,12 +281,13 @@ test("R1 · 50 pontos de COMPRA desbloqueiam o cartão", async () => {
   assert.equal(await podeResgatarCartaoComCompra(A), true);
 });
 
-test("R1 · um bónus de palpite SOZINHO nunca desbloqueia o cartão", async () => {
+test("R1 · um palpite ganho SOZINHO nunca desbloqueia o cartão", async () => {
+  ECO.clear();
   semear([A]);
   await registarPalpite(A, ED, 10);
-  await apurarPalpite(ED, 10); // +2 pontos sem nenhuma compra
-  assert.equal(await getPontos(A), 2);
-  assert.equal(await podeResgatarCartaoComCompra(A), false, "bónus não compra cartão (prestígio)");
+  await apurarPalpite(ED, 10); // v8.0: 50 ECOQUILDO, zero pontos
+  assert.equal(await getPontos(A), 0);
+  assert.equal(await podeResgatarCartaoComCompra(A), false, "o palpite não compra cartão");
 });
 
 test("apurarPalpite é independente por edição (apurar a PROG-7 não toca na PROG-8)", async () => {
@@ -309,6 +307,7 @@ test("apurarPalpite é independente por edição (apurar a PROG-7 não toca na P
 // palpites novos depois de apurada.
 
 test("R2 · edição JÁ APURADA não aceita palpites novos (fecha o pagamento duplo)", async () => {
+  ECO.clear();
   semear([A, B, C]);
   await registarPalpite(A, ED, 100);
   await registarPalpite(B, ED, 500);
@@ -316,7 +315,7 @@ test("R2 · edição JÁ APURADA não aceita palpites novos (fecha o pagamento d
   const r1 = await apurarPalpite(ED, 100);
   assert.equal(r1.ok, true);
   assert.equal(r1.vencedor.endereco, A, "o mais próximo (A) ganha");
-  assert.equal(await getPontos(A), 2);
+  assert.equal(ECO.get(`eco-palpite-certo:${ED}`)?.endereco, A);
 
   // O CENÁRIO DA R2: um palpite novo na MESMA edição já apurada.
   const rC = await registarPalpite(C, ED, 100);
@@ -327,8 +326,8 @@ test("R2 · edição JÁ APURADA não aceita palpites novos (fecha o pagamento d
   const r2 = await apurarPalpite(ED, 100);
   assert.equal(r2.total, 0);
   assert.equal(r2.pontosCreditados, 0);
-  assert.equal(await getPontos(C), 0, "a MESMA edição não pode pagar +2 duas vezes (R2)");
-  assert.equal(await getPontos(A), 2, "o bónus total da edição é UM só (+2)");
+  assert.equal(ECO.size, 1, "a MESMA edição não pode pagar duas vezes (R2)");
+  assert.equal(ECO.get(`eco-palpite-certo:${ED}`)?.endereco, A, "o prémio da edição é UM só");
 });
 
 test("R2 · edicaoApurada() é false antes da apuração e true depois", async () => {
@@ -355,24 +354,26 @@ test("R2 · a recusa é POR EDIÇÃO — uma edição nova continua a aceitar pa
 // apuração volta a pagar +2 a OUTRO endereço ⇒ a MESMA edição paga 4. Fix in-escopo: desfazer o
 // crédito recém-criado com `reverterMovimento()`.
 
-test("B2 · se a MARCAÇÃO falhar, o crédito do bónus é DESFEITO (a edição não pode pagar 4)", async () => {
+test("B2 · se a MARCAÇÃO falhar, o prémio é DESFEITO (a edição não pode pagar 2×)", async () => {
+  ECO.clear(); FALHAR_REVERSAO = false; FALHAR_LASTRO = false;
   semear([A, B]);
   await registarPalpite(A, ED, 100);
   await registarPalpite(B, ED, 500);
 
   FALHAR_MARCACAO = true;                       // a marcação da apuração falha
   const r1 = await apurarPalpite(ED, 100);
+  FALHAR_MARCACAO = false;                      // a marcação volta a funcionar
   assert.equal(r1.ok, false);
   assert.equal(r1.code, "ERRO_DB");
-  assert.equal(await getPontos(A), 0, "o crédito do bónus tem de ser DESFEITO");
+  assert.equal(ECO.size, 0, "o ECOQUILDO do vencedor tem de ser DESFEITO");
   assert.equal(await edicaoApurada(ED), false, "nada ficou marcado");
 
-  FALHAR_MARCACAO = false;                      // a marcação volta a funcionar
   const r2 = await apurarPalpite(ED, 100);
   assert.equal(r2.ok, true);
-  assert.equal(r2.pontosCreditados, 2);
-  assert.equal(await getPontos(A), 2, "a edição paga UMA só vez (+2), nunca 4");
-  assert.equal(await getPontos(B), 0);
+  assert.equal(r2.pontosCreditados, 0);
+  assert.equal(ECO.size, 1, "a edição paga UMA só vez");
+  assert.equal(ECO.get(`eco-palpite-certo:${ED}`)?.endereco, A);
+  assert.equal(await getPontos(A), 0); assert.equal(await getPontos(B), 0);
   assert.equal(await edicaoApurada(ED), true, "agora sim a edição está apurada");
 });
 

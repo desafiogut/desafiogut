@@ -1,7 +1,7 @@
 // src/hooks/usePalpite.js — UTAC106f. Palpite (nº de lances previstos) numa edição Programada.
 //
 // ⚠️ BÓNUS. O palpite NÃO decide o cartão — o cartão é só por pontos de COMPRA (50). Aqui só se
-// registra o palpite; a apuração (+2 pontos ao mais próximo) é do ADMIN, quando a edição fecha.
+// registra o palpite; a apuração (50 ECOQUILDO ao mais próximo — UTAC150, v8.0; eram +2 pontos) é do ADMIN, quando a edição fecha.
 //
 // O palpite existente chega pelo `usePontos` (`palpiteInicial`) — NÃO se faz um 2.º fetch.
 // Guarda de corrida por `useRef` (o estado `loading` é obsoleto dentro do mesmo render).

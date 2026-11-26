@@ -25,7 +25,7 @@ export const TAMANHO_GUTO_GATE = 96;
 // UTAC110h.1 (R18-110h.1-B) — "2.0" (v4) -> "3.0" (v5): quem aceitou o v4 volta a ver o gate.
 // Tem de ser igual a VERSAO_GATE de netlify/functions/_lib/consentimento.mjs (há teste).
 export const CHAVE_CONSENTIMENTO  = "gut_consentimento";
-export const VERSAO_CONSENTIMENTO = "3.6"; // 2026-11-21 (UTAC148): gate no Regulamento v7 (o Passe é o título de participação — 1 Passe Relâmpago = 1 lance, 1 Passe Programado = 1 palpite; sem pontos de lance; vencedor do palpite = 50 ECOQUILDOs), igual ao VERSAO_GATE do backend — todos reaceitam. Anterior, «3.5»: 2026-11-17 (UTAC138): gate no Regulamento v6.1 (bônus de 100 pontos de lance do Passe Relâmpago, Arts. 6º/7º), igual ao VERSAO_GATE do backend — todos reaceitam. Anterior, «3.4»: 2026-11-13 (UTAC137, R18-137-1): gate no Regulamento v6.0, igual ao VERSAO_GATE do backend — todos reaceitam. Anterior, «3.3»: 2026-10-18 (UTAC110m.2): acompanha o VERSAO_GATE do backend — o Regulamento mudou de texto e a frente C reduziu uma promessa (ECOQUILDO fora do app); Art. 39º exige aviso prévio (DEBT-066).
+export const VERSAO_CONSENTIMENTO = "3.7"; // 2026-11-26 (UTAC150): gate no Regulamento v8.0, igual ao VERSAO_GATE do backend — todos reaceitam. Anterior, «3.6»: 2026-11-21 (UTAC148): gate no Regulamento v7 (o Passe é o título de participação — 1 Passe Relâmpago = 1 lance, 1 Passe Programado = 1 palpite; sem pontos de lance; vencedor do palpite = 50 ECOQUILDOs), igual ao VERSAO_GATE do backend — todos reaceitam. Anterior, «3.5»: 2026-11-17 (UTAC138): gate no Regulamento v6.1 (bônus de 100 pontos de lance do Passe Relâmpago, Arts. 6º/7º), igual ao VERSAO_GATE do backend — todos reaceitam. Anterior, «3.4»: 2026-11-13 (UTAC137, R18-137-1): gate no Regulamento v6.0, igual ao VERSAO_GATE do backend — todos reaceitam. Anterior, «3.3»: 2026-10-18 (UTAC110m.2): acompanha o VERSAO_GATE do backend — o Regulamento mudou de texto e a frente C reduziu uma promessa (ECOQUILDO fora do app); Art. 39º exige aviso prévio (DEBT-066).
 
 export default function TermosConsentimento({ onAceitar }) {
   const [lido,       setLido]       = useState(false);
@@ -74,7 +74,7 @@ export default function TermosConsentimento({ onAceitar }) {
           </div>
           <p style={estilos.subtitulo}>
             Leia e aceite o regulamento antes de participar. Vigência: a partir do{" "}
-            <strong style={{ color: "#f5a623" }}>registo no Cartório de Títulos e Documentos</strong> (Art. 30).
+            <strong style={{ color: "#f5a623" }}>registo no Cartório de Títulos e Documentos</strong> (Art. 28).
           </p>
         </div>
 
@@ -86,7 +86,10 @@ export default function TermosConsentimento({ onAceitar }) {
         <details style={estilos.regulamento}>
           <summary style={estilos.botaoExpandir}>📖 Ler o resumo do regulamento</summary>
           <div style={estilos.scrollBox}>
-          <h3 style={estilos.secaoTitulo}>Regulamento Oficial v7 — Resumo</h3>
+          <h3 style={estilos.secaoTitulo}>Regulamento Oficial v8.0 — Resumo</h3>
+
+          {/* UTAC150 — Regulamento v8.0 (docs/REGULAMENTO-v8.0.md): texto LITERAL de cada artigo. Mudaram os Arts. 6º, 17, 18 e 21
+              (com os parágrafos únicos), o Billing passou ao Art. 24 e o antigo Art. 23 (conversão) entrou no § único do Art. 21. */}
 
           {/* UTAC138 — v6.1 (docs/REGULAMENTO-v6.1.md): mudaram os artigos seis e sete (bônus de 100 pontos de lance do Passe
               Relâmpago; apuração instantânea das Edições Especiais). Os restantes parágrafos são iguais no v6.0 e no v6.1.
@@ -111,7 +114,7 @@ export default function TermosConsentimento({ onAceitar }) {
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 6º</strong> — Os Passes adquiridos ficam guardados no perfil do usuário até serem utilizados, sendo cada Passe consumido por uma única participação na modalidade correspondente. Sem Passe disponível não é possível registrar lance nem palpite.
+            <strong style={estilos.artLabel}>Art. 6º</strong> — Os Passes adquiridos ficam guardados no perfil do usuário até serem utilizados, sendo cada Passe consumido por uma única participação na modalidade correspondente. Sem Passe disponível não é possível registrar lance nem palpite. O Passe consumido não é devolvido em caso de derrota, sem prejuízo do disposto no Art. 17.
           </p>
 
           <p style={estilos.artigo}>
@@ -127,28 +130,24 @@ export default function TermosConsentimento({ onAceitar }) {
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 17.</strong> — Vence a Oferta Programada apenas 1 (um) palpite: aquele que registrar o número exato ou ficar mais próximo do número real apurado. Em caso de empate na proximidade, o critério de desempate será a ordem cronológica de registro do palpite no sistema.
+            <strong style={estilos.artLabel}>Art. 17.</strong> — Vence a Oferta Programada apenas 1 (um) palpite: aquele que registrar o número exato ou ficar mais próximo do número real apurado. Em caso de empate na proximidade, o critério de desempate será a ordem cronológica de registro do palpite no sistema. § único. O parâmetro a ser previsto é o número total de lances registrados na edição. Encerrado o ciclo, o sistema contabilizará todos os lances e publicará o número final apurado no aplicativo, permitindo ao participante comparar o seu palpite com o resultado real e verificar a proximidade do acerto.
           </p>
 
-          {/* UTAC148 — Art. 18 do v7 (o vencedor do palpite recebe 50 ECOQUILDOs). */}
+          {/* UTAC148 — Art. 18 do v7 (o vencedor do palpite recebe 50 ECOQUILDOs). UTAC150 — v8.0: remete para o Art. 21 e ganha o § único. */}
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 18.</strong> — O vencedor da previsão recebe 50 (cinquenta) ECOQUILDOs, creditados no seu perfil no momento da apuração, aplicando-se o disposto no Art. 23.
-          </p>
-
-          <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 21.</strong> — O ECOQUILDO é a unidade de valor interno de bonificação da plataforma, possuindo o valor de paridade fixo de 1 ECOQUILDO equivalente a R$ 0,50 (cinquenta centavos), com lastro financeiro garantido pela Associação.
+            <strong style={estilos.artLabel}>Art. 18.</strong> — O vencedor da previsão recebe 50 (cinquenta) ECOQUILDOs, creditados no seu perfil no momento da apuração, aplicando-se o disposto no Art. 21. § único. O crédito de 50 (cinquenta) ECOQUILDOs corresponde, nos termos do Art. 21, à conversão automática e imediata em 1 (um) Passe Desafio digital.
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 23.</strong> — A cada 50 (cinquenta) ECOQUILDOs acumulados pelo usuário na plataforma, o sistema efetuará a conversão automática e imediata desse montante em 1 (um) Passe Desafio digital.
+            <strong style={estilos.artLabel}>Art. 21.</strong> — O ECOQUILDO é a unidade de valor interno de bonificação da plataforma, possuindo o valor de paridade fixo de 1 ECOQUILDO equivalente a R$ 0,50 (cinquenta centavos), com lastro financeiro garantido pela Associação. § único. A cada 50 (cinquenta) ECOQUILDOs acumulados pelo usuário na plataforma, o sistema efetuará a conversão automática e imediata desse montante em 1 (um) Passe Desafio digital.
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 25.</strong> — A aquisição do Passe Desafio (produto estritamente digital) será processada exclusivamente por meio do sistema oficial de pagamentos da Google Play (Google Billing).
+            <strong style={estilos.artLabel}>Art. 24.</strong> — A aquisição do Passe Desafio (produto estritamente digital) será processada exclusivamente por meio do sistema oficial de pagamentos da Google Play (Google Billing).
           </p>
 
           <p style={estilos.artigo}>
-            Regras completas (6 capítulos, 30 artigos) em{" "}
+            Regras completas (6 capítulos, 28 artigos) em{" "}
             <a href="/regras-oficiais" style={estilos.link}>Regras Oficiais</a>.
           </p>
 
@@ -169,7 +168,7 @@ export default function TermosConsentimento({ onAceitar }) {
           <label style={estilos.label}>
             <input type="checkbox" checked={lido} onChange={(e) => setLido(e.target.checked)} style={estilos.checkbox} />
             <span>
-              Li e compreendi o regulamento completo do DesafioGUT (Regulamento Oficial v6.0), disponível em{" "}
+              Li e compreendi o regulamento completo do DesafioGUT (Regulamento Oficial v8.0), disponível em{" "}
               <a href="/regras-oficiais" style={estilos.link}>Regras Oficiais</a>.
             </span>
           </label>
@@ -195,7 +194,7 @@ export default function TermosConsentimento({ onAceitar }) {
               <a href="/privacidade" style={estilos.link}>
                 Política de Privacidade
               </a>{" "}
-              (LGPD/GDPR — Art. 27.).
+              (LGPD/GDPR — Art. 25.).
             </span>
           </label>
         </div>

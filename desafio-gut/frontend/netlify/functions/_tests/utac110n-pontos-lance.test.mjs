@@ -457,7 +457,7 @@ const corpo = (txt) => txt.slice(txt.indexOf("CAPÍTULO I"));
 // Relâmpago +100 pontos de lance (R18-138-D). O G1 fixa o v6.1 e amarra o número à constante do backend.
 // ⛔ UTAC148 — v7: o Passe é o título de participação (Arts. 5º/6º) e o Art. 7º já não dá bônus de pontos de lance.
 test("G1 · (v7) Art. 5º: 1 Passe = 1 lance/palpite; Art. 6º: sem Passe não há participação; Art. 7º: sem bônus de pontos", async () => {
-  for (const f of ["docs/REGULAMENTO-v7.md", "docs/GUTO-REGULAMENTO.md"]) {
+  for (const f of ["docs/REGULAMENTO-v8.0.md", "docs/GUTO-REGULAMENTO.md"]) {
     const doc = await ler(f);
     const art5 = /Art\. 5º ([^\n]+)/.exec(doc)?.[1] ?? "";
     const art6 = /Art\. 6º ([^\n]+)/.exec(doc)?.[1] ?? "";
@@ -470,7 +470,7 @@ test("G1 · (v7) Art. 5º: 1 Passe = 1 lance/palpite; Art. 6º: sem Passe não h
 });
 
 test("G2 · a invariante corpo(v7) == corpo(GUTO) mantém-se byte a byte (UTAC148; era v6.1)", async () => {
-  const v6 = await ler("docs/REGULAMENTO-v7.md");
+  const v6 = await ler("docs/REGULAMENTO-v8.0.md");
   const guto = await ler("docs/GUTO-REGULAMENTO.md");
   assert.ok(v6.length > 6_000, `medição inválida: ${v6.length}`);
   assert.ok(guto.endsWith(v6), "os dois documentos divergiram");
@@ -480,7 +480,7 @@ test("G2 · a invariante corpo(v7) == corpo(GUTO) mantém-se byte a byte (UTAC14
 test("G3 · o módulo do runtime espelha o documento (3.º sítio da invariante)", async () => {
   const guto = await ler("docs/GUTO-REGULAMENTO.md");
   const { REGULAMENTO_TEXTO, REGULAMENTO_VERSAO } = await import("../_lib/guto-regulamento.mjs");
-  assert.equal(REGULAMENTO_VERSAO, "7"); // UTAC148 (era "6.1")
+  assert.equal(REGULAMENTO_VERSAO, "8.0"); // UTAC150 (era "7")
   assert.equal(REGULAMENTO_TEXTO, guto, "o módulo que o runtime importa divergiu do documento — regenerar");
   assert.doesNotMatch(REGULAMENTO_TEXTO, /200 pontos de lance/);
 });

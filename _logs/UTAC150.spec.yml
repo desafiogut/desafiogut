@@ -1,0 +1,39 @@
+schema: utac/1
+name: UTAC150
+title: "AAB versionCode 15 com o Regulamento v8.0 e a Edição Especial Palpite"
+type: publicacao
+baseline: f8e0d71
+motivo: >-
+  O cliente aprovou o Regulamento v8.0 (só existe em PDF no Desktop). É preciso integrá-lo
+  no código, no GUTO e no gate, resolver o DEBT-111 e gerar o AAB versionCode 15 para a Play.
+frentes:
+  - id: A
+    nome: Regulamento v8.0 (docs, RegrasOficiais, GUTO) + gate legal novo
+    entrega: [docs/REGULAMENTO-v8.0.md, RegrasOficiais.jsx, _lib/guto-regulamento.mjs, TermosConsentimento.jsx, _lib/consentimento.mjs]
+  - id: B
+    nome: DEBT-111 — regra dos lances da apuração, textos «+2 pontos», gate legado
+    entrega: [conforme as decisões do operador]
+  - id: C
+    nome: Especial Palpite no Início e em Ofertas Programadas (layout existente)
+    entrega: [verificação]
+  - id: D
+    nome: versionCode 15 / 1.5.0, suíte, build:apk + bundleRelease
+    entrega: [Desktop/DesafioGUT-v15/DesafioGUT-v15.aab]
+autoriza:
+  - editar Regulamento, gate, GUTO, frontend e android/app/build.gradle
+  - correr a suíte e o build do AAB
+proibe:
+  - alterar a lógica da especial Relâmpago
+  - criar layouts ou componentes visuais
+  - deploy no Netlify
+  - git add -A
+dependencias:
+  - Regulamento v8.0 aprovado (Desktop/REGULAMENTO-DesafioGUT-v8.0.pdf)
+  - decisão do operador sobre os lances da apuração do palpite (antes da Frente B)
+regras_activas: [E, T, G, L, S, A, P, AU, ST, HI]
+regras_extra: []
+stop_conditions_extra: []
+ressalvas:
+  - HI5 — tempo máximo de 2 horas
+  - A14 — RAM ≥ 1500 MB antes do build
+  - perguntar a regra dos lances antes da Frente B

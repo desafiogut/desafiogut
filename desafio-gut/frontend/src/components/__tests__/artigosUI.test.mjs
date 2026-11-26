@@ -99,7 +99,7 @@ const V4 = ler("../../docs/REGULAMENTO-v4.md");
 const V5 = ler("../../docs/REGULAMENTO-v5.md");
 // UTAC137 — a UI e o gate passaram a citar o Regulamento **v6.0** (o v5 fica lido só como histórico).
 // UTAC148 — as citações da UI passam ao v7 (era o v6.1).
-const V6 = ler("../../docs/REGULAMENTO-v7.md");
+const V6 = ler("../../docs/REGULAMENTO-v8.0.md");
 /** Linha do artigo N do v6 («Art. 1º …» / «Art. 10. …»), ou null. */
 const artigoV6 = (n) => V6.match(new RegExp("^Art\\. " + n + "(?:º|\\.) .*", "m"));
 /** UTAC137 — palavras-chave por artigo do v6 (cada uma consta do PRÓPRIO artigo — verificado no teste). */
@@ -118,10 +118,12 @@ const EXIGIDO_V6 = {
   "17": ["palpite"],
   "18": ["ECOQUILDO", "palpite", "previsão"],
   "21": ["ECOQUILDO", "R$ 0,50"],
-  "23": ["ECOQUILDOs", "Passe Desafio"],
-  "25": ["Google"],
-  "27": ["LGPD", "DPO"],
-  "30": ["Cartório"],
+  // UTAC150 (v8.0): a conversão 50 → 1 Passe entrou no § único do Art. 21; o Art. 23 é a indicação, o 24 o Billing,
+  // o 25 a LGPD e o 28 a vigência (era 23/24/25/27/30 no v7).
+  "23": ["Indique e Ganhe", "ECOQUILDO"],
+  "24": ["Google"],
+  "25": ["LGPD", "DPO"],
+  "28": ["Cartório"],
 };
 const GATE = "src/components/TermosConsentimento.jsx";
 

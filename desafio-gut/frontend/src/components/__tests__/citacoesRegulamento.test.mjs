@@ -33,17 +33,20 @@ const ler = (p) => readFileSync(resolve(process.cwd(), p), "utf8");
 // guarda passou a verificar contra o v6, com a mesma força: cada bloco do gate tem de ser TEXTO LITERAL do artigo que
 // cita. O v6 escreve «Art. 1º O presente…» e «Art. 10. A…» (uma linha por artigo, sem travessão).
 // UTAC148 — o gate passou ao v7 (era o v6.1).
-const V6 = ler("../../docs/REGULAMENTO-v7.md");
+const V6 = ler("../../docs/REGULAMENTO-v8.0.md");
 const TERMOS = ler("src/components/TermosConsentimento.jsx");
 
 const norm = (s) => s.replace(/\s+/g, " ").trim();
 
-/** Texto do artigo N do v6 (uma linha por artigo). */
+/** Texto do artigo N do v6 (uma linha por artigo). UTAC150 — o v8.0 tem «§ único» na linha seguinte: pertence ao artigo. */
 function artigoV6(n) {
   const re = new RegExp(`^Art\\. ${n}(?:º|\\.) (.*)$`);
-  const linha = V6.split(/\r?\n/).map((l) => l.trim()).find((l) => re.test(l));
-  assert.ok(linha, `o v6 não tem o Art. ${n}`);
-  return norm(linha.match(re)[1]);
+  const linhas = V6.split(/\r?\n/).map((l) => l.trim());
+  const i = linhas.findIndex((l) => re.test(l));
+  assert.ok(i >= 0, `o v6 não tem o Art. ${n}`);
+  let txt = linhas[i].match(re)[1];
+  for (let j = i + 1; j < linhas.length && linhas[j].startsWith("§"); j++) txt += " " + linhas[j];
+  return norm(txt);
 }
 
 /** Texto do bloco do artigo N no gate (tags e expressões JSX fora). */
@@ -66,7 +69,7 @@ test("controlo positivo: o v6 é legível e o leitor de artigos encontra o que d
   assert.match(artigoV6(11), /habilidade, estratégia e menor valor único de lance/);
   // UTAC148 (v7): o Art. 6º diz que sem Passe não há participação (era «o Passe Programado não concede pontos de lance»).
   assert.match(artigoV6(6), /Sem Passe disponível não é possível registrar lance nem palpite/);
-  assert.match(artigoV6(30), /Cartório de Títulos e Documentos/);
+  assert.match(artigoV6(28), /Cartório de Títulos e Documentos/); // UTAC150 (v8.0: era o Art. 30)
   assert.ok(citados().length >= 10, `poucos blocos citados no gate: ${citados().length}`);
 });
 
@@ -92,12 +95,13 @@ test("BIDIRECCIONAL: o mesmo verificador REPROVA os blocos do gate do v5.0 (até
   }
 });
 
-test("o gate só cita artigos que existem no v6 (1..30) e cita os que o resumo exige", () => {
+test("o gate só cita artigos que existem no v8.0 (1..28) e cita os que o resumo exige", () => {
   const c = citados();
-  for (const n of c) assert.ok(n >= 1 && n <= 30, `Art. ${n} não existe no v6`);
+  for (const n of c) assert.ok(n >= 1 && n <= 28, `Art. ${n} não existe no v8.0`);
   // identificação (1º), 18+ (2º), Passe opcional/preço/sem pontos de lance/1 ponto (3º/5º/6º/7º), cartão (8º),
   // habilidade (11.), ECOQUILDO R$ 0,50 e conversão (21./23.).
-  for (const n of [1, 2, 3, 5, 6, 7, 8, 11, 21, 23]) assert.ok(c.includes(n), `o resumo perdeu o Art. ${n}`);
+  // UTAC150 — no v8.0 a conversão vive no § único do Art. 21 (era o Art. 23 do v7).
+  for (const n of [1, 2, 3, 5, 6, 7, 8, 11, 21]) assert.ok(c.includes(n), `o resumo perdeu o Art. ${n}`);
 });
 
 test("vocabulário do gate: v6 presente, modelo antigo ausente (texto inteiro, sem comentários)", () => {
@@ -108,7 +112,7 @@ test("vocabulário do gate: v6 presente, modelo antigo ausente (texto inteiro, s
     assert.doesNotMatch(visivel, re, `o gate voltou a dizer ${re}`);
   for (const re of [/Passe Desafio/, /R\$ 2,00/, /pontos de fidelidade/, /ECOQUILDO/, /menor valor único de lance/,
                     /1 \(um\) Passe Relâmpago dá direito a 1 \(um\) lance/, /50 \(cinquenta\) ECOQUILDOs/,
-                    /R\$ 0,50/, /Regulamento Oficial v7/]) // UTAC148 (eram o Art. 6º/7º do v6.1 e «v6.1»)
+                    /R\$ 0,50/, /Regulamento Oficial v8\.0/]) // UTAC150 (era «v7», UTAC148) (eram o Art. 6º/7º do v6.1 e «v6.1»)
     assert.match(visivel, re, `o gate perdeu ${re}`);
 });
 

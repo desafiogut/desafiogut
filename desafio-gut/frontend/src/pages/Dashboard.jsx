@@ -549,7 +549,7 @@ export default function Dashboard() {
                 <p role="alert" style={{ margin: "0.4rem 0 0", color: "#ff8a8d", fontSize: "0.78rem" }}>{erroPalpite}</p>
               )}
               <p style={{ margin: "0.4rem 0 0", color: COR.muted, fontSize: "0.76rem" }}>
-                O palpite dá +2 pontos de bónus. Não decide o cartão.
+                O palpite mais próximo ganha 50 ECOQUILDO. Não decide o cartão.
               </p>
             </div>
           )}

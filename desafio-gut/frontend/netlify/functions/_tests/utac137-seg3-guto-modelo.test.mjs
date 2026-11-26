@@ -13,7 +13,7 @@ import { REGRA_REGULAMENTO } from "../_lib/guto-perfis.mjs";
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "..");
 // UTAC138 — a prosa passou ao v6.1 (Arts. 6º/7º com o bônus do Passe Relâmpago); a fonte da comparação acompanha.
 // UTAC148 — a prosa passou ao v7; a fonte da comparação acompanha (era o v6.1).
-const V6 = readFileSync(resolve(RAIZ, "docs", "REGULAMENTO-v7.md"), "utf8").replace(/\r\n/g, "\n");
+const V6 = readFileSync(resolve(RAIZ, "docs", "REGULAMENTO-v8.0.md"), "utf8").replace(/\r\n/g, "\n");
 const norm = (s) => s.replace(/\s+/g, " ").trim();
 const artigo = (rot) => norm((V6.split("\n").find((l) => l.startsWith(`${rot} `)) || "").slice(rot.length));
 const ini = REGRA_REGULAMENTO.indexOf("MODELO DE HOJE");
@@ -31,15 +31,18 @@ test("SEG3 · os valores da prosa do GUTO são os do artigo do v6 que cita", () 
   assert.ok(MODELO.includes(`custa ${preco}`), `prosa sem o preço do Art. 5º (${preco})`);
   assert.match(artigo("Art. 7º"), /1 \(um\) ponto de fidelidade/);
   assert.match(MODELO, /1 ponto de fidelidade \(Art\. 7º\)/);
-  assert.match(artigo("Art. 23."), /50 \(cinquenta\) ECOQUILDOs/);
-  assert.match(MODELO, /cada 50 ECOQUILDOs convertem-se sozinhos em 1 Passe/);
+  // UTAC150 (v8.0) — a conversão passou ao § único do Art. 21 (era o Art. 23 do v7).
+  assert.match(V6, /^§ único\. A cada 50 \(cinquenta\) ECOQUILDOs acumulados/m);
+  assert.match(MODELO, /cada 50 ECOQUILDOs convertem-se sozinhos em 1 Passe \(Art\. 21\.\)/);
+  assert.match(artigo("Art. 23."), /Indique e Ganhe/);
+  assert.match(MODELO, /para quem indica e 1 para quem é indicado \(Art\. 23\.\)/);
   // ⛔ UTAC147 (R18-147-H, decisão do operador): a prosa passa ao modelo de Passes diretos ANTES do Regulamento (cujo
   // corpo ainda descreve pontos de lance — dívida para o jurídico). Eram aqui: «O palpite não exige Passe.», o bônus de
   // 100 do Passe Relâmpago (Art. 7º) e «o Passe Programado não dá pontos de lance» (Art. 6º).
   // ⛔ UTAC148 — o Regulamento v7 já descreve o modelo de Passes: a cláusula «vale o MODELO DE HOJE» saiu e a prosa
   // cita os artigos do v7 (Arts. 3º, 5º, 6º, 12, 15 e 18).
   assert.match(MODELO, /1 Passe\s+Relâmpago = 1 lance na Oferta Relâmpago e 1 Passe Programado = 1 palpite na Oferta Programada \(Art\. 5º\)/);
-  assert.match(MODELO, /sem Passe não há lance nem palpite \(Art\. 6º\)/);
+  assert.match(MODELO, /sem Passe não há lance nem palpite, e o Passe consumido não é devolvido em caso de\s+derrota \(Art\. 6º\)/); // UTAC150 (v8.0)
   assert.match(artigo("Art. 18."), /50 \(cinquenta\) ECOQUILDOs/);
   assert.match(MODELO, /O vencedor do\s+palpite recebe 50 ECOQUILDOs \(Art\. 18\)/);
   assert.doesNotMatch(MODELO, /bônus de 100|O palpite não\s+exige Passe|vale o MODELO DE HOJE/);

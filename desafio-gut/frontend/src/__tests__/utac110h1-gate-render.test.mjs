@@ -70,7 +70,7 @@ test("controlo positivo: o gate renderiza com 4 caixas, desmarcadas, e o botão 
   assert.equal(g.caixas().length, 4, "esperava 4 caixas de aceite");
   assert.ok(g.caixas().every((c) => c.props.checked === false), "uma caixa nasceu marcada");
   assert.equal(g.botao().props.disabled, true, "o botão nasceu ligado");
-  assert.match(g.html(), /Regulamento Oficial v6\.0/); // UTAC137: era v5.0
+  assert.match(g.html(), /Regulamento Oficial v8\.0/); // UTAC150: era v6.0 (a caixa ficara esquecida no v7); UTAC137: era v5.0
 });
 
 test("as 4 caixas marcadas ligam o botão; aceitar grava a versão do termo com as 4 declarações", async () => {
@@ -89,7 +89,7 @@ test("as 4 caixas marcadas ligam o botão; aceitar grava a versão do termo com 
   // UTAC137 (R18-137-1): 3.3 → 3.4 com o Regulamento v6.0.
   // UTAC138: 3.4 → 3.5 com o Regulamento v6.1.
   // UTAC148: 3.5 → 3.6 com o Regulamento v7.
-  assert.equal(salvo.versao, "3.6", "controlo: a versão vigente hoje é a do Regulamento v7 (UTAC148)");
+  assert.equal(salvo.versao, "3.7", "controlo: a versão vigente hoje é a do Regulamento v8.0 (UTAC150)");
   assert.deepEqual(salvo.aceitos, { lido: true, maiores: true, termos: true, privacidade: true });
 });
 
