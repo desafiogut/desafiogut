@@ -146,3 +146,17 @@ test("E14 · contagem ilegível também é indeterminado (não cai para «não p
   const p = predicadoPortador(ID, { contagem, ler: async () => ({ ok: true, passesRelampago: 0, passesProgramado: 0 }) });
   await assert.rejects(p(C), /portador_indeterminado/);
 });
+
+// UTAC149-val (SEG4 ℹ️) — o caso «tipo programado» do E10 era VÁCUO: sem `lerInv`, o líder não tem Passe e nunca seria
+// avisado (E12), com ou sem a guarda. Aqui o líder TEM Passe; a única razão para não avisar é a edição ser de palpite.
+test("E10b · especial Programada (palpite) com líder portador → nada; controlo: a mesma Relâmpago avisa", async () => {
+  const correr = async (meta) => {
+    const enviados = [];
+    await tick({ agoraMs: agora, store: storeMem(), listar: async () => [{ id: ID }], ler: async () => meta,
+      lerLances: async () => [lance(A, 4)], notificar: async (e, n) => { enviados.push([e, n.edicaoId]); },
+      lerInv: async () => ({ ok: true, passesRelampago: 1, passesProgramado: 1 }), contagem: null });
+    return enviados;
+  };
+  assert.ok((await correr(metaAberta)).length > 0, "controlo: a especial Relâmpago com líder portador tem de avisar");
+  assert.deepEqual(await correr({ ...metaAberta, tipo: "programado" }), []);
+});
