@@ -193,3 +193,25 @@ test("controlo: R-1 sem metadata continua a passar (compat intacta)", async () =
   assert.equal((await resp.json()).modo, "relampago");
   assert.equal(chamadasConsumoCredito, 1);
 });
+
+// UTAC149-val (SEG4 ⚠️2) — a especial PROGRAMADA (palpite) não recebe lances: sem a guarda, um POST directo seguia o
+// caminho legado do PROG-N (senha on-chain + gas do compromisso da coordenação + ranking ao vivo da especial).
+test("UTAC149-val · especial Programada (palpite) dentro da janela: 409 edicao_so_palpite, nada consumido, sem gas", async () => {
+  zerar();
+  const agora = Date.now();
+  mockEdicao = { id: "ESPECIAL-PALPITE1", tipo: "programado", status: "aberto",
+    inicio_em: iso(agora - 60_000), termino_em: iso(agora + 60_000) };
+  const resp = await handler(pedido("ESPECIAL-PALPITE1"));
+  assert.equal(resp.status, 409);
+  assert.equal((await resp.json()).error.code, "edicao_so_palpite");
+  nadaConsumido();
+});
+
+test("UTAC149-val · controlo: PROG-N programado continua no caminho da senha (zero diff)", async () => {
+  zerar();
+  mockEdicao = { id: "PROG-1", tipo: "programado", status: "aberto" };
+  const resp = await handler(pedido("PROG-1"));
+  assert.equal(resp.status, 201);
+  assert.equal((await resp.json()).modo, "programado");
+  assert.equal(chamadasSaldoOnChain, 1);
+});

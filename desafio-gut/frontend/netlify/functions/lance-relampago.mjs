@@ -206,6 +206,13 @@ export default async (req) => {
   }
 
   const ehProgramado = tipoEdicao === "programado";
+  // UTAC149-val (SEG4 ⚠️2) — a ESPECIAL Programada (ex.: ESPECIAL-PALPITE1) só recebe PALPITES. Sem esta guarda, um
+  // POST directo seguia o caminho legado do PROG-N: gastava 1 senha on-chain do utilizador, a coordenação pagava o gas
+  // do `comprometerLanceOnchain`, o lance entrava no ranking ao vivo da especial e mexia na contagem de lances da
+  // edição sobre a qual se palpita. Recusa ANTES de qualquer pagamento. As especiais Relâmpago e os PROG-N: intocados.
+  if (ehProgramado && EDICAO_ESPECIAL_RE.test(edicaoId)) {
+    return jsonError(409, "edicao_so_palpite", `a edição ${edicaoId} é de palpite: não recebe lances`);
+  }
   const lanceId = randomUUID();
   let passeConsumido = false;  // UTAC147 — true quando o inventário já pagou 1 Passe Relâmpago por este lance
   let chaveTrava = null;       // UTAC147 — trava `trava:<idempotencyKey>` no Blob lance-idem (mesma chave ⇒ 1 só Passe)
