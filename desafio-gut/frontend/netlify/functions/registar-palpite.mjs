@@ -22,6 +22,7 @@ import { respostaPreflight } from "./_lib/cors.mjs";
 import { sistemaPausado, lerEstadoSistema } from "./_lib/system-state.mjs";
 import { buscarEdicao } from "./_lib/edicoes-core.mjs";
 import { registarPalpite } from "./_lib/passe-pontos.mjs";
+import { EDICAO_ESPECIAL_RE, verificarJanelaLance } from "./_lib/edicao-janela.mjs"; // UTAC149-val — janela da especial
 // UTAC136 — Regulamento v6.0: o palpite era GRATUITO (bónus de engajamento).
 // ⛔ UTAC147 (decisão do operador, 2026-11-21 — modelo de Passes diretos): **1 Passe Programado = 1 palpite**.
 // Volta o consumo do inventário (o padrão do UTAC120): consome antes de registar e DEVOLVE quando o registo
@@ -79,6 +80,14 @@ export default async (req) => {
   }
   if (edicao.status !== "aberto") {
     return jsonError(409, "edicao_nao_aberta", `a edição está "${edicao.status}" — o palpite só abre enquanto decorre`);
+  }
+  // UTAC149-val (SEG4 ⚠️1) — a ESPECIAL Programada (ex.: ESPECIAL-PALPITE1) tem janela própria inicio_em..termino_em
+  // («Palpites até 09/12 às 23:59», R18-149-A). O `status` só passa a «encerrado» pelo cron
+  // `scheduled-encerrar-especial`, que em produção não lê o Blob (scheduled sem contexto de Blobs, MC88.31): a
+  // ESPECIAL-AIRFRYER continua «aberto» 53 dias depois do fim. Sem esta guarda, um palpite entrava DEPOIS do fecho
+  // anunciado. Mesma regra (e mesma fronteira: o último ms ainda aceita) da guarda de lances. PROG-N: inalteradas.
+  if (EDICAO_ESPECIAL_RE.test(edicaoId) && verificarJanelaLance(edicao)) {
+    return jsonError(409, "edicao_nao_aberta", "o palpite desta edição especial está fora do prazo");
   }
 
   // UTAC147 — paga-se com 1 Passe Programado (atómico no Postgres: só desconta com stock ⇒ nunca negativo).
