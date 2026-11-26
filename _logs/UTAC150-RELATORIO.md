@@ -23,7 +23,7 @@ O backend em produção ainda é o do UTAC149, porque este UTAC proibia o deploy
 - a apuração ainda paga +2 pontos;
 - as Regras Oficiais do site estão no v7.
 
-**É preciso fazer o deploy do commit `c117082` antes de o vc15 chegar aos utilizadores.**
+**É preciso fazer o deploy do commit `715b0c5` antes de o vc15 chegar aos utilizadores.**
 
 ## Pendências
 - DEBT-113: deploy.
