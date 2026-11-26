@@ -1,0 +1,17 @@
+schema: utac/1
+name: UTAC150.2
+title: "Retomada e fecho do UTAC150: estado do git, gate 3.7 em produção, handoff do AAB vc15"
+type: publicacao
+baseline: 8a73c24
+motivo: >-
+  O UTAC150.1 foi interrompido pelo limite de uso depois do deploy e do AAB vc15. Falta o fecho formal:
+  verificar o estado, tentar validar o aceite 3.7 no servidor (DEBT-115(e)) e entregar ao Ruan.
+frentes:
+  - {id: A, nome: git status + log + integridade do AAB (sha256/md5), entrega: [_logs/UTAC150.2-RELATORIO.md]}
+  - {id: B, nome: gate 3.7 em produção (sonda com sessão real ou passos manuais), entrega: [_logs/UTAC150.2_sonda-gate-3.7.mjs]}
+  - {id: C, nome: relatório + mensagem ao Ruan + DEBT-114/115 + commit, entrega: [Desktop/DesafioGUT-v15/MENSAGEM-RUAN-AAB-v15.txt]}
+autoriza: [leitura de produção, sonda sem efeito com token falso, commit dos ficheiros do UTAC]
+proibe: [código de negócio, novo AAB, deploy, git add -A, ler conteúdo pessoal do consent-log]
+dependencias: [AAB vc15 em Desktop/DesafioGUT-v15, deploy 6b082d0e]
+regras_activas: [G, P, S, L, HI]
+ressalvas: [HI5 30 min, A14 sem build (RAM não medida para build)]
