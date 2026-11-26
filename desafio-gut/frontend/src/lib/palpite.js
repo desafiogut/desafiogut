@@ -79,9 +79,13 @@ export function estadoEdicaoProgramada(edicao, agoraMs = Date.now()) {
  * (`apurar-palpite`, `mais_proximo`/`perdeu`) — «Acertou!» seria falso (achado E-2 do validador
  * do 107a-front).
  */
-export function estadoPalpite(edicao, palpite) {
+export function estadoPalpite(edicao, palpite, agoraMs = Date.now()) {
   if (palpite?.apurado === true) return palpite.resultado === "mais_proximo" ? "mais_proximo" : "perdeu";
   if (palpite) return "com_palpite";
+  // UTAC149-val (SEG4 ⚠️3) — a ESPECIAL Programada fecha pelo RELÓGIO (o servidor recusa fora da janela,
+  // `registar-palpite`), mesmo com o `status` ainda «aberto» (o cron que o muda não lê o Blob em produção). Sem isto o
+  // cartão dizia «🔴 Encerrada»/«Edição encerrada» e, ao lado, «SEM PALPITE» com o formulário activo. PROG-N: inalteradas.
+  if (ehEspecialProgramada(edicao) && estadoEspecial(edicao, agoraMs) === ESTADO_ESPECIAL.ENCERRADA) return "encerrada";
   if (estaAberta(edicao)) return "sem_palpite";
   // Achado do validador: `agendado` ainda não abriu — dizer «encerrada» seria falso.
   return edicao?.status === "agendado" ? "abre_em_breve" : "encerrada";

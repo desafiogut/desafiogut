@@ -269,7 +269,10 @@ export default function Dashboard() {
     ? estadoEdicaoProgramada(edicaoProgramada, Date.now() + (Number.isFinite(offsetRelogioMs) ? offsetRelogioMs : 0))
     : null;
   const palpiteDoUsuario = edicaoProgramada ? (palpites?.[edicaoProgramada.id] ?? null) : null;
-  const estadoPal = edicaoProgramada ? estadoPalpite(edicaoProgramada, palpiteDoUsuario) : null;
+  // UTAC149-val — o mesmo relógio do servidor do `estProgramada` (a especial Programada fecha pela hora).
+  const estadoPal = edicaoProgramada
+    ? estadoPalpite(edicaoProgramada, palpiteDoUsuario, Date.now() + (Number.isFinite(offsetRelogioMs) ? offsetRelogioMs : 0))
+    : null;
 
   // MC45 — edição ativa (objeto) para o banner clicável. Fallback defensivo
   // garante sempre um id navegável mesmo antes de o mapa hidratar.

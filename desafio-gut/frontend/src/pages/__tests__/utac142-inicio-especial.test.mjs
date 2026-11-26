@@ -161,3 +161,16 @@ describe("UTAC149 · Início — especial palpite no layout oficial da Programad
     assert.ok(html.includes("Air Fryer Palpite"), "a especial palpite não aparece no Início");
   });
 });
+
+// UTAC149-val (SEG4 ⚠️3) — depois do fim, com o status ainda «aberto» (o cron não lê o Blob em produção), o Início não
+// pode oferecer o palpite que o servidor já recusa, nem dizer «SEM PALPITE» ao lado de «Edição encerrada».
+describe("UTAC149-val · Início — especial palpite depois do fim, status ainda «aberto»", () => {
+  test("P4 · sem zona de palpite e pílula «ENCERRADA»", () => {
+    const fechou = palpiteEspecial({ inicio_em: iso(Date.now() - 14 * 24 * H), termino_em: iso(Date.now() - H) });
+    const html = renderizar({ edicoes: { "R-1": R1, "ESPECIAL-PALPITE1": fechou } });
+    assert.ok(html.includes("Air Fryer Palpite"), "a especial palpite saiu do Início");
+    assert.doesNotMatch(html, /data-testid="palpite-zona"/, "o formulário do palpite continua activo depois do fim");
+    assert.doesNotMatch(html, /SEM PALPITE/);
+    assert.match(html, /ENCERRADA/);
+  });
+});

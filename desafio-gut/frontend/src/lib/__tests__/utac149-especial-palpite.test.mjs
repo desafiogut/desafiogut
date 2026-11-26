@@ -1,7 +1,7 @@
 // UTAC149 — a especial PROGRAMADA (palpite): regras puras. Datas LITERAIS (lição do UTAC138: nunca o relógio real).
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { edicoesProgramadasDe, estadoEdicaoProgramada } from "../palpite.js";
+import { edicoesProgramadasDe, estadoEdicaoProgramada, estadoPalpite } from "../palpite.js";
 import { escolherEspecial, ehEspecialProgramada } from "../../components/edicao-especial/_estilo-especial.js";
 import { escolherEspecialTop10 } from "../../components/meus-ativos/_top10-passe.js";
 import { getEstadoEdicao } from "../../utils/edicao.js";
@@ -80,5 +80,27 @@ describe("UTAC149 · estadoEdicaoProgramada", () => {
   test("especial sem datas legíveis: cai no getEstadoEdicao (não inventa estado)", () => {
     const sem = { ...PALPITE, inicio_em: null };
     assert.deepEqual(estadoEdicaoProgramada(sem, AGORA), getEstadoEdicao(sem));
+  });
+});
+
+// UTAC149-val (SEG4 ⚠️3) — o cron que passa o status a «encerrado» não lê o Blob em produção: depois do fim, a especial
+// continua «aberto». O estado do palpite (pílula + formulário) tem de dizer o mesmo que o selo e a faixa.
+describe("UTAC149-val · estadoPalpite da especial Programada segue o relógio", () => {
+  test("depois do termino_em, com status ainda «aberto»: «encerrada» (como o selo 🔴 e a faixa)", () => {
+    assert.equal(estadoPalpite(PALPITE, null, DEPOIS_PALPITE), "encerrada");
+    assert.equal(estadoEdicaoProgramada(PALPITE, DEPOIS_PALPITE).encerrada, true);
+  });
+  test("dentro da janela: «sem_palpite»; com palpite feito: «com_palpite» mesmo depois do fim", () => {
+    assert.equal(estadoPalpite(PALPITE, null, AGORA), "sem_palpite");
+    assert.equal(estadoPalpite(PALPITE, { valor: 7 }, DEPOIS_PALPITE), "com_palpite");
+  });
+  test("último ms do termino_em ainda aceita (mesma fronteira do servidor); +1 ms fecha", () => {
+    const fim = Date.parse(PALPITE.termino_em);
+    assert.equal(estadoPalpite(PALPITE, null, fim), "sem_palpite");
+    assert.equal(estadoPalpite(PALPITE, null, fim + 1), "encerrada");
+  });
+  test("Programada normal com termino_em no passado e status «aberto»: inalterada («sem_palpite»)", () => {
+    const velha = { ...PROG, inicio_em: "2025-12-01T00:00:00.000Z", termino_em: "2026-01-01T00:00:00.000Z" };
+    assert.equal(estadoPalpite(velha, null, AGORA), "sem_palpite");
   });
 });
