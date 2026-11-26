@@ -117,7 +117,7 @@ export const PROPORCOES_TEXTO = Object.freeze([
     titulo: "ECOQUILDO",
     linhas: Object.freeze([
       `1 ECOQUILDO vale ${VALOR_ECOQUILDO_TEXTO} (Art. 21).`,
-      `A cada ${PROPORCOES.ecoPorConversao} ECOQUILDOs, o sistema converte-os automaticamente em 1 Passe Desafio (Art. 23).`,
+      `A cada ${PROPORCOES.ecoPorConversao} ECOQUILDOs, o sistema converte-os automaticamente em 1 Passe Desafio (Art. 21).`, // UTAC150-val: v8.0 — a conversão é o § único do Art. 21 (era o Art. 23 do v7; o 23 é agora o Indique e Ganhe)
     ]),
   }),
 ]);

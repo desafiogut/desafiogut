@@ -67,11 +67,14 @@ test("SEG3 · o usePalpite usa mensagemErroPalpite com o código do servidor (n�
 
 // 3. A Carteira, sem Passes, dizia «compre abaixo para dar lances e palpites» — no v6 o Passe é opcional
 //    (Art. 3º), os pontos de lance são gratuitos (Art. 6º) e o palpite não exige Passe.
-test("SEG3 · a Carteira sem Passes não diz que o Passe é preciso para lances ou palpites", () => {
+test("SEG3 → UTAC150-val · a Carteira sem Passes diz a regra do v8.0 (Arts. 3º e 6º: sem Passe não há lance nem palpite)", () => {
   const cart = readFileSync(resolve(SRC, "pages", "MinhaCarteira.jsx"), "utf8");
   const codigo = cart.split("\n").filter((l) => !/^\s*(\/\/|\{\/\*|\*)/.test(l)).join("\n");
   const bloco = codigo.slice(codigo.indexOf("data-sem-passes"), codigo.indexOf("data-sem-passes") + 400);
   assert.ok(bloco.length > 100, "o aviso data-sem-passes desapareceu");
   assert.doesNotMatch(bloco, /compre[^<]{0,40}para dar (lances|palpites)/i);
-  assert.match(bloco, /O Passe é opcional \(Art\. 3º\)/);
+  // UTAC150-val — no v7/v8.0 o Passe deixou de ser opcional (Arts. 3º/6º; o servidor exige-o: consumirPasse). Esta guarda
+  // fixava «O Passe é opcional (Art. 3º)», regra do v6 que ficou fossilizada; agora exige o oposto.
+  assert.doesNotMatch(bloco, /opcional|não precisam/i);
+  assert.match(bloco, /Sem Passe disponível não é possível registrar lance nem palpite \(Arts\. 3º e 6º\)/);
 });

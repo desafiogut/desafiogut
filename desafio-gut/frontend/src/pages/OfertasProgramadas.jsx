@@ -56,7 +56,8 @@ const COR = {
 const CARTAO_NOME = "Cartão da Família Quildo";
 const CARTAO_DESCRICAO =
   "Cartão colecionável físico, com a arte da Família Quildo. Acumule 50 pontos para trocar por ele. "
-  + "O palpite dá pontos EXTRA, mas o cartão é conquistado só com os pontos das suas compras.";
+  // UTAC150-val (v8.0, Art. 18): era «O palpite dá pontos EXTRA, mas …» — o palpite já não dá pontos (R18-150-D).
+  + "O palpite mais próximo ganha 50 ECOQUILDO; o cartão é conquistado só com os pontos das suas compras.";
 
 // UTAC108h.3 — `estaAberta`, `edicoesProgramadasDe`, `estadoPalpite` e `PILULA` saíram daqui para
 // `lib/palpite.js` (fonte única, partilhada com o vidro «🎫 Programada» do Início). Nenhum
