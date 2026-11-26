@@ -1,0 +1,17 @@
+schema: utac/1
+name: UTAC150.1
+title: "Push + deploy do backend v8.0, validador adversarial e link do AAB vc15"
+type: publicacao
+baseline: ed76f5a
+motivo: >-
+  O AAB vc15 (v8.0, gate 3.7) estava à frente do backend em produção (DEBT-113). Publicar,
+  validar adversarialmente e entregar o link + SHA-256 ao Ruan.
+frentes:
+  - {id: A, nome: push + netlify deploy --prod --build + verificação (gate 3.7, GUTO v8.0), entrega: [deploy]}
+  - {id: B, nome: validador adversarial (subagente, worktree próprio), entrega: [_logs/UTAC150_SEG4_VALIDADOR.md]}
+  - {id: C, nome: link GoFile + SHA-256 do AAB, entrega: [link]}
+autoriza: [push para origin/main, deploy Netlify, validador adversarial, links de partilha]
+proibe: [lógica das especiais, layouts novos, texto do Regulamento v8.0, git add -A]
+dependencias: [AAB vc15 em Desktop/DesafioGUT-v15]
+regras_activas: [E, T, G, L, S, A, P, AU, ST, HI]
+ressalvas: [HI5 1 hora, A14 RAM ≥ 1500 MB antes do deploy, DEBT-114 não bloqueia]
