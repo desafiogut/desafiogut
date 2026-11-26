@@ -43,6 +43,24 @@ function nomeOuEndereco(lance, enderecoAbrev) {
   return formatarNomeExibicao(enderecoAbrev, lance.nomeExibicao);
 }
 
+// UTAC151 (R18-151-B, decisão do operador) — a MESMA tabela serve a especial Programada (palpites): «uma só tabela»,
+// sem componente próprio. Só mudam os rótulos, a validação/formato do valor (nº de lances, aceita 0), a ordem (a do
+// servidor: no palpite vence o MAIS PRÓXIMO, ordenar por valor não diz nada) e a leitura do resultado on-chain (o
+// palpite não tem `resultados()` no contrato). A omissão é `lance` = exactamente o comportamento anterior.
+export const VARIANTES_TABELA = Object.freeze({
+  lance: Object.freeze({
+    titulo: "Lances", vazio: "Nenhum lance registrado ainda.", dica: "Seja o primeiro a lançar.",
+    coluna: "Valor (R$)", colunaOculta: "Valor 🔒",
+    valor: sanitizeLance, formatar: (v) => `R$ ${(v / 100).toFixed(2)}`, ordenar: ordenarLances, resultadoOficial: true,
+  }),
+  palpite: Object.freeze({
+    titulo: "Palpites", vazio: "Ainda não há palpites.", dica: null,
+    coluna: "Palpite", colunaOculta: "Palpite 🔒",
+    valor: (v) => (Number.isInteger(v) && v >= 0 && v <= 1000000 ? v : null), formatar: (v) => `${v} lances`,
+    ordenar: (l) => [...l], resultadoOficial: false,
+  }),
+});
+
 export default function TabelaLances({
   lances = [], idEdicao, prazoTimestamp, encerrado: encerradoProp, selo,
   // UTAC141 (achado ⚠️2 do 2.º validador) — a tabela AO VIVO da especial nunca revela valores (as linhas
@@ -50,7 +68,9 @@ export default function TabelaLances({
   // passar o `termino_em` o cabeçalho mudava para «Valor (R$)» sobre células 🔒 e a legenda do cadeado
   // desaparecia — o `encerrado` da R-1 significa «os valores já são públicos», o da especial não.
   ocultosPermanentes = false,
+  variante = "lance", // UTAC151 — "lance" (omissão, Relâmpago) | "palpite" (especial Programada)
 }) {
+  const v = VARIANTES_TABELA[variante] ?? VARIANTES_TABELA.lance;
   const isMobile = useIsMobile();
   const edicaoSanitizada = sanitizeString(idEdicao ?? "");
   const agora = Date.now() / 1000;
@@ -72,7 +92,7 @@ export default function TabelaLances({
 
   // MC39.20 (Onda 5, item 4) — memoiza a ordenação/apuração: evita re-sort a cada
   // re-render do pai (ex.: tick do timer) quando `lances` não mudou. Resultado idêntico.
-  const lancesOrdenados = useMemo(() => ordenarLances(lances), [lances]);
+  const lancesOrdenados = useMemo(() => v.ordenar(lances), [lances, v]);
 
   // ── UTAC000.9 (DEBT-008) — O 🏆 DA TABELA É O VENCEDOR OFICIAL QUANDO EXISTE ──────────
   // Aqui o apuramento local («o 1.º único da lista») é, na prática, «o menor único que este
@@ -81,7 +101,7 @@ export default function TabelaLances({
   // ao vencedor publicado (endereço + valor). Sem resultado oficial mantém-se o apuramento
   // local: exactamente o comportamento anterior. Linhas blindadas (`oculto`, valor null) nunca
   // casam — durante o leilão a mainnet continua sem 🏆, como já estava (GATE 18).
-  const resultadoOficial = useResultadoOficial(idEdicao);
+  const resultadoOficial = useResultadoOficial(v.resultadoOficial ? idEdicao : null); // UTAC151 — o palpite não lê on-chain
   const idxVencedor = useMemo(() => {
     if (resultadoOficial) {
       return lancesOrdenados.findIndex((l) =>
@@ -133,8 +153,8 @@ export default function TabelaLances({
         gap: isMobile ? "0.4rem" : "0.5rem",
       }}>
         <h3 style={{ ...estilos.titulo, fontSize: isMobile ? "0.95rem" : "1.05rem" }}>
-          📋 Lances — Edição{" "}
-          <span style={{ color: "#f5a623" }}>{edicaoSanitizada}</span>{/* UTAC108e.1: dourado único (era #fbbf24) */}
+          📋 {v.titulo}{edicaoSanitizada ? <>{" — Edição "}
+          <span style={{ color: "#f5a623" }}>{edicaoSanitizada}</span></> : null}{/* UTAC108e.1: dourado único (era #fbbf24) · UTAC151: sem id (OP sem edição) só «📋 Palpites» */}
         </h3>
         <div style={{
           display: "flex", gap: "0.6rem", alignItems: "center",
@@ -170,20 +190,20 @@ export default function TabelaLances({
           display: "flex", flexDirection: "column", gap: "0.4rem", alignItems: "center",
         }}>
           <span style={{ fontSize: "1.6rem", opacity: 0.45 }}>📭</span>
-          <span style={{ fontSize: isMobile ? "0.85rem" : "0.9rem" }}>Nenhum lance registrado ainda.</span>
-          <span style={{ fontSize: "0.78rem", color: "#6b7db8" }}>Seja o primeiro a lançar.</span>
+          <span style={{ fontSize: isMobile ? "0.85rem" : "0.9rem" }}>{v.vazio}</span>
+          {v.dica && <span style={{ fontSize: "0.78rem", color: "#6b7db8" }}>{v.dica}</span>}
         </div>
       ) : isMobile ? (
-        <MobileList lancesOrdenados={lancesOrdenados} idxVencedor={idxVencedor} encerrado={divulgar} />
+        <MobileList lancesOrdenados={lancesOrdenados} idxVencedor={idxVencedor} encerrado={divulgar} v={v} />
       ) : (
-        <DesktopTable lancesOrdenados={lancesOrdenados} idxVencedor={idxVencedor} encerrado={divulgar} />
+        <DesktopTable lancesOrdenados={lancesOrdenados} idxVencedor={idxVencedor} encerrado={divulgar} v={v} />
       )}
 
     </div>
   );
 }
 
-function MobileList({ lancesOrdenados, idxVencedor, encerrado }) {
+function MobileList({ lancesOrdenados, idxVencedor, encerrado, v = VARIANTES_TABELA.lance }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
       <AnimatePresence initial={false}>
@@ -192,14 +212,14 @@ function MobileList({ lancesOrdenados, idxVencedor, encerrado }) {
           const oculto = lance.oculto === true;
           const linhaEnd = enderecoDaLinha(lance); // UTAC140
           const enderecoSanitizado = linhaEnd?.chave ?? null;
-          const valorSanitizado = oculto ? null : sanitizeLance(lance.valor);
+          const valorSanitizado = oculto ? null : v.valor(lance.valor);
           if (!enderecoSanitizado || (!oculto && valorSanitizado === null)) return null;
 
           const isVencedor = !oculto && i === idxVencedor;
           const itemKey    = oculto ? `${enderecoSanitizado}-${i}` : `${enderecoSanitizado}-${valorSanitizado}`;
           const enderecoAbrev = linhaEnd.abrev;
           const nome       = nomeOuEndereco(lance, enderecoAbrev);
-          const valorFormatado = oculto ? "🔒" : `R$ ${(valorSanitizado / 100).toFixed(2)}`;
+          const valorFormatado = oculto ? "🔒" : v.formatar(valorSanitizado);
 
           return (
             <motion.div
@@ -262,7 +282,7 @@ function MobileList({ lancesOrdenados, idxVencedor, encerrado }) {
   );
 }
 
-function DesktopTable({ lancesOrdenados, idxVencedor, encerrado }) {
+function DesktopTable({ lancesOrdenados, idxVencedor, encerrado, v = VARIANTES_TABELA.lance }) {
   return (
     <div className="w-full overflow-x-auto rounded-2xl">
       <table className="w-full border-collapse text-sm">
@@ -270,7 +290,7 @@ function DesktopTable({ lancesOrdenados, idxVencedor, encerrado }) {
           <tr>
             <TH>#</TH>
             <TH>Participante</TH>
-            <TH>{encerrado ? "Valor (R$)" : "Valor 🔒"}</TH>
+            <TH>{encerrado ? v.coluna : v.colunaOculta}</TH>
           </tr>
         </THead>
         <AnimatePresence initial={false}>
@@ -280,14 +300,14 @@ function DesktopTable({ lancesOrdenados, idxVencedor, encerrado }) {
               const oculto = lance.oculto === true;
               const linhaEnd = enderecoDaLinha(lance); // UTAC140
           const enderecoSanitizado = linhaEnd?.chave ?? null;
-              const valorSanitizado = oculto ? null : sanitizeLance(lance.valor);
+              const valorSanitizado = oculto ? null : v.valor(lance.valor);
               if (!enderecoSanitizado || (!oculto && valorSanitizado === null)) return null;
 
               const isVencedor = !oculto && i === idxVencedor;
               const itemKey    = oculto ? `${enderecoSanitizado}-${i}` : `${enderecoSanitizado}-${valorSanitizado}`;
               const enderecoAbrev = linhaEnd.abrev;
               const nome       = nomeOuEndereco(lance, enderecoAbrev);
-              const valorFormatado = oculto ? "🔒" : `R$ ${(valorSanitizado / 100).toFixed(2)}`;
+              const valorFormatado = oculto ? "🔒" : v.formatar(valorSanitizado);
 
               return (
                 <motion.tr

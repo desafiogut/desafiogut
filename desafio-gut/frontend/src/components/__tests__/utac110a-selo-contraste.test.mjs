@@ -157,8 +157,11 @@ test("A4 · o selo do Mercado usa a MESMA cor de texto do selo da OP (replicaç�
     return bloco.match(/color:\s*"(#[0-9a-fA-F]{3,8})"/)?.[1]?.toLowerCase();
   };
   const mlc = corDoSelo(ler("components/TabelaLances.jsx"), "statusBadge");
-  const op = corDoSelo(ler("pages/OfertasProgramadas.jsx"), "badge");
-  assert.equal(mlc, op, `Mercado=${mlc} · OP=${op} — os dois selos divergiram`);
+  // UTAC151 (R18-151-B) — a OP deixou de ter selo próprio: desenha a MESMA `TabelaLances` (variante «palpite»), logo a
+  // paridade passou a ser por construção. Guarda: a OP não volta a ter um `badge` seu e usa a TabelaLances.
+  const fonteOp = ler("pages/OfertasProgramadas.jsx");
+  assert.doesNotMatch(fonteOp, /\bbadge:\s*\{/, "a OP voltou a ter um selo próprio");
+  assert.match(fonteOp, /<TabelaLances\s+variante="palpite"/);
   assert.notEqual(mlc, BRANCO_ANTIGO, "a paridade foi feita ao contrário (ambos brancos)");
   assert.equal(mlc, "#0a0f1a", "a cor replicada não é o navy do app");
 });

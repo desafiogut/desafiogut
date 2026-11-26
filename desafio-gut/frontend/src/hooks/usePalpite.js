@@ -14,6 +14,16 @@ import { apiGet, apiPost } from "../lib/api.js";
 import { useAppContext } from "../context/AppContext.jsx";
 import { mensagemErroPalpite } from "../lib/palpite.js";
 
+// UTAC151 (R18-151-A) — identity token do Privy, para o servidor pôr «PrimeiroNome I.» na tabela de palpites (o mesmo
+// nome verificado do lance da Relâmpago, UTAC146 — `CardLance`). Import DINÂMICO e só no clique: o SDK já está no
+// bundle do app (main.jsx), e os testes de render das páginas não o carregam. Best-effort: sem token → palpite sem nome.
+async function identityTokenPrivy() {
+  try {
+    const { getIdentityToken } = await import("@privy-io/react-auth");
+    return (await getIdentityToken?.()) || null;
+  } catch { return null; }
+}
+
 export function usePalpite(edicaoId, palpiteInicial = null) {
   const { address, authToken } = useAppContext();
 
@@ -40,7 +50,9 @@ export function usePalpite(edicaoId, palpiteInicial = null) {
     setLoading(true);
     setErro("");
     try {
-      const { ok, status, data } = await apiPost("registar-palpite", { edicaoId: alvo, valor }, { token: authToken });
+      const identityToken = await identityTokenPrivy();
+      const { ok, status, data } = await apiPost("registar-palpite",
+        { edicaoId: alvo, valor, ...(identityToken ? { identityToken } : {}) }, { token: authToken });
       if (ok) {
         const p = data?.palpite ?? { edicaoId: alvo, valor };
         setPalpite(p);

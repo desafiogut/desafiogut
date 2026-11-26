@@ -30,7 +30,9 @@ const FRONTEND = resolve(AQUI, "..", "..", "..");
 const REPO = resolve(FRONTEND, "..", "..");
 const STUBS_106C = resolve(AQUI, "..", "..", "__tests__", "_stubs-106c");
 
-const ALIASES = [{ find: /^react-router-dom$/, replacement: `${STUBS_106C}/rr.jsx` }];
+const ALIASES = [
+  // UTAC151 — a OP passou a desenhar a `TabelaLances` (sanitize.js → DOMPurify, cujo UMD não sobrevive ao SSR do Vite).
+  { find: /^dompurify$/, replacement: resolve(AQUI, "../../components/__tests__/_stubs/dompurify.js") },{ find: /^react-router-dom$/, replacement: `${STUBS_106C}/rr.jsx` }];
 
 const lerDoc = (nome) => readFileSync(resolve(REPO, "docs", nome), "utf8").replace(/\r\n/g, "\n");
 // ⚠️ UTAC137 — a página publica o Regulamento **v6.0** (`docs/REGULAMENTO-v6.1.md`, o texto registado no RTD). As guardas

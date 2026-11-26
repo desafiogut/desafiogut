@@ -20,6 +20,8 @@ const STUBS_106E = resolve(AQUI, "..", "__tests__", "_stubs-106e");
 const STUB_CONTEXTO = resolve(AQUI, "_stubs", "AppContext.jsx");
 
 const ALIASES = [
+  // UTAC151 — a OP passou a desenhar a `TabelaLances` (sanitize.js → DOMPurify, cujo UMD não sobrevive ao SSR do Vite).
+  { find: /^dompurify$/, replacement: resolve(AQUI, "../../components/__tests__/_stubs/dompurify.js") },
   // O ecrã e os hooks usam FORMAS DIFERENTES da mesma specifier (a relativa depende de quem importa):
   // `src/pages/*` → `../context/…` e `../hooks/…`; `src/hooks/usePontos.js` → `../context/…` e `./useTrocarPorSenhas.js`.
   { find: /^\.\.\/context\/AppContext\.jsx$/, replacement: STUB_CONTEXTO },
@@ -290,8 +292,13 @@ test("RENDER · PALPITAR envia POST com Bearer e passa a «Já palpitou»", asyn
     assert.ok(post, "não houve POST para registar-palpite");
     assert.equal(post.headers.Authorization, "Bearer AUTHCTX-106f");
     assert.match(corpoPost, /"edicaoId":"PROG-7"/, "o palpite tem de ir para a edição do CARTÃO");
+    // UTAC151 (R18-151-C) — o «Seu palpite» saiu do cartão para ENTRE o cartão e a tabela; «Resultado no fim» saiu.
     assert.match(c.texto(), /Seu palpite: 120 lances/);
-    assert.match(c.texto(), /Resultado no fim da edição\./);
+    assert.doesNotMatch(c.texto(), /Resultado no fim da edição/);
+    const h = c.html();
+    const iMeu = h.indexOf('data-testid="op-meu-palpite"');
+    assert.ok(iMeu > h.indexOf('data-testid="op-edicoes-scroll"') && iMeu < h.indexOf('data-testid="op-tabela-fim"'),
+      "o «Seu palpite» tem de ficar entre o cartão e a tabela");
     assert.equal(c.input(), undefined, "depois de palpitar o campo desaparece (não se muda o palpite)");
   } finally { c.dup.restaurar(); }
 });
@@ -389,7 +396,8 @@ test("UTAC107e.1 · palpitar no 2.º cartão regista na edição DESSE cartão",
     assert.match(corpo, /"edicaoId":"PROG-8"/);
     assert.match(corpo, /"valor":7/);
     const h = c.html();
-    assert.match(h, /data-estado-palpite="com_palpite"[\s\S]*?Seu palpite: 7 lances/, "o 2.º cartão não passou a «com palpite»");
+    // UTAC151 (R18-151-C) — o valor já não é escrito dentro do cartão; o estado do 2.º cartão é que muda.
+    assert.equal((h.match(/data-estado-palpite="com_palpite"/g) || []).length, 1, "o 2.º cartão não passou a «com palpite»");
     assert.equal(c.formularios().length, 1, "o 1.º cartão devia continuar com o campo");
   } finally { c.dup.restaurar(); }
 });
@@ -416,20 +424,23 @@ test("UTAC107e.1 · edição encerrada sem palpite: «Edição encerrada», sem 
   } finally { c.dup.restaurar(); }
 });
 
-test("UTAC107e.1 · tabela «Palpites — Edição <id>» é o ÚLTIMO bloco, vidro padrão, 3 colunas, vazia", async () => {
+// UTAC151 (R18-151-B) — era «é o ÚLTIMO bloco» (UTAC107e.1/109g). Agora a tabela é a `TabelaLances` (variante «palpite»)
+// LOGO ABAIXO do cartão da edição, como a «📋 Lances» do MLC: antes do aviso do bónus, dos pontos e das Regras.
+test("UTAC151 · tabela «Palpites — Edição <id>» logo ABAIXO do cartão (TabelaLances), vidro padrão, vazia", async () => {
   const c = await montarEcra();
   try {
     const h = c.html();
     const i = h.indexOf('data-testid="op-tabela-fim"');
     assert.ok(i > 0, "a tabela não existe");
-    const resto = h.slice(i);
-    assert.doesNotMatch(resto.slice(resto.indexOf("</section>")), /<section|<header|<article/, "há blocos depois da tabela");
-    assert.match(h.slice(h.lastIndexOf("<section", i), i + 300), /class="gut-glass-standard"/, "a tabela não usa o vidro padrão");
-    // UTAC109g (B1) — o padrão da «📋 Lances — Edição R-1»: título com 📋, selo do estado e, VAZIA,
-    // o 📭 sem tabela (como o molde). As 3 colunas com linhas provam-se no utac107e2/utac109g.
+    assert.ok(i > h.indexOf('data-testid="op-edicoes-scroll"'), "a tabela tem de vir depois do cartão");
+    for (const depois of ['aria-label="Progresso de pontos"', "🎫 Edições programadas", "Regras Oficiais do programa"]) {
+      const j = h.indexOf(depois);
+      assert.ok(j < 0 || j > i, `«${depois}» aparece antes da tabela`);
+    }
+    const resto = h.slice(i, h.indexOf("</section>", i));
+    assert.match(resto, /class="gut-glass-standard"/, "a tabela não usa o vidro padrão");
     assert.match(c.texto(), /📋 Palpites — Edição PROG-7/);
-    assert.match(resto, /data-testid="op-tabela-estado"/);
-    assert.doesNotMatch(resto.slice(0, resto.indexOf("</section>")), /<table/, "vazia não desenha tabela");
+    assert.doesNotMatch(resto, /<table/, "vazia não desenha tabela");
     assert.match(c.texto(), /📭 Ainda não há palpites\./);
   } finally { c.dup.restaurar(); }
 });
@@ -509,7 +520,7 @@ test("UTAC108e.1 · Regra 2: sem edição a tabela «Palpites» continua no fim 
     assert.ok(i > 0, "sem edição a tabela desapareceu");
     assert.match(h.slice(i), /class="gut-glass-standard"/);
     assert.match(semTags(h.slice(i)), /Palpites/);
-    assert.ok(i > h.indexOf('data-testid="cartao-edicao"'), "a tabela tem de vir depois do cartão (último vidro)");
+    assert.ok(i > h.indexOf('data-testid="cartao-edicao"'), "a tabela tem de vir depois do cartão (UTAC151: logo abaixo dele)");
   } finally { c.dup.restaurar(); }
 });
 

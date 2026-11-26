@@ -553,11 +553,9 @@ export default function Dashboard() {
               </p>
             </div>
           )}
-          {edicaoProgramada && estadoPal === "com_palpite" && (
-            <p data-testid="palpite-feito" style={{ margin: 0, color: "#3ddc84", fontWeight: 700, fontSize: "0.86rem" }}>
-              Seu palpite: {palpiteDoUsuario?.valor} lances
-            </p>
-          )}
+          {/* UTAC151 (R18-151-C) — «Seu palpite: N lances» saiu de DENTRO do cartão (era `data-testid="palpite-feito"`).
+              Com palpite feito, a pílula «COM PALPITE» avisa; o valor aparece na aba Ofertas Programadas, entre o cartão
+              e a tabela de palpites. */}
           {edicaoProgramada && estadoPal === "abre_em_breve" && (
             <p style={{ margin: 0, color: COR.muted, fontSize: "0.82rem" }}>O palpite abre quando a edição começar.</p>
           )}

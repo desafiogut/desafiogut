@@ -18,6 +18,8 @@ const STUBS_106C = resolve(SRC, "__tests__", "_stubs-106c");
 const STUBS_106E = resolve(AQUI, "..", "__tests__", "_stubs-106e");
 const STUB_CONTEXTO = resolve(AQUI, "_stubs", "AppContext.jsx");
 const ALIASES = [
+  // UTAC151 — a OP passou a desenhar a `TabelaLances` (sanitize.js → DOMPurify, cujo UMD não sobrevive ao SSR do Vite).
+  { find: /^dompurify$/, replacement: resolve(AQUI, "../../components/__tests__/_stubs/dompurify.js") },
   { find: /^\.\.\/context\/AppContext\.jsx$/, replacement: STUB_CONTEXTO },
   { find: /^\.\.\/\.\.\/context\/AppContext\.jsx$/, replacement: STUB_CONTEXTO },
   { find: /^\.\/useTrocarPorSenhas\.js$/, replacement: `${STUBS_106E}/useTrocarPorSenhas.js` },
@@ -62,7 +64,8 @@ async function render({ edicoes = PROG, palpites = { ok: true, revelado: false, 
   const h = renderToStaticMarkup(React.createElement(React.Fragment, null, ctrl.resultado()));
   return { h, t: semTags(h), fim: () => { ctrl.desmontar(); dup.restaurar(); definirMobile(false); } };
 }
-const tabelaDe = (h) => h.slice(h.indexOf('data-testid="op-tabela-fim"'));
+// UTAC151 — a tabela (TabelaLances, variante «palpite») subiu para logo abaixo do cartão: fatia-se só a SUA secção.
+const tabelaDe = (h) => { const i = h.indexOf('data-testid="op-tabela-fim"'); return h.slice(i, h.indexOf("</section>", i)); };
 
 // ═══ A — ESTRUTURA ════════════════════════════════════════════════════════════════════════════════
 for (const [nome, opts] of [["com edição", {}], ["sem edição (vazio)", { edicoes: {} }], ["pontos a carregar", { pendente: true }]]) {
@@ -148,7 +151,8 @@ test("SEG3 · MC88.43 na tabela nova: com EM BREVE não há «Prazo: <data>»; c
 
 test("SEG3 · selo de estado da tabela com texto navy (AA ≥ 4,5:1 nas 4 cores de estado); grelha com alignContent start", async () => {
   const c = await render();
-  try { assert.match(tabelaDe(c.h), /data-testid="op-tabela-estado" style="[^"]*color:#0a0f1a/); } finally { c.fim(); }
+  // UTAC151 — o selo é o `statusBadge` da TabelaLances (navy desde o UTAC110a), já não um selo próprio da OP.
+  try { assert.match(tabelaDe(c.h), /<span style="[^"]*color:#0a0f1a[^"]*">🕒 Em breve<\/span>/); } finally { c.fim(); }
   assert.match(codigo("pages/OfertasProgramadas.jsx"), /<main style=\{\{[\s\S]{0,600}alignContent: "start"/);
 });
 
@@ -158,12 +162,13 @@ test("B1 · desktop: título 📋 Orbitron + id a dourado + selo + «🔒 valore
   const c = await render({ palpites: DOIS });
   try {
     const tab = tabelaDe(c.h);
-    assert.match(tab, /^[^>]*class="gut-glass-standard"/);
-    assert.match(tab, /<h3 data-testid="op-tabela-titulo"[^>]*Orbitron[^>]*>📋 Palpites — Edição <span style="color:#f5a623">PROG-7<\/span><\/h3>/);
-    assert.match(tab, /data-testid="op-tabela-estado"/);
+    assert.match(tab, /class="gut-glass-standard"/);
+    assert.match(tab, /<h3[^>]*Orbitron[^>]*>📋 Palpites — Edição <span style="color:#f5a623">PROG-7<\/span><\/h3>/);
+    assert.match(tab, />🕒 Em breve<\/span>/, "sem o selo do estado");
     assert.match(semTags(tab), /🔒 valores ocultos até o fim/);
     assert.deepEqual([...tab.matchAll(/<th[^>]*>([^<]*)<\/th>/g)].map((m) => m[1]), ["#", "Participante", "Palpite 🔒"]);
-    assert.equal((tab.match(/<tr[^>]*data-palpite-linha/g) || []).length, 2);
+    const corpo = tab.split("<tbody")[1] ?? "";
+    assert.equal((corpo.match(/<tr[ >]/g) || []).length, 2);
   } finally { c.fim(); }
 });
 
@@ -171,10 +176,9 @@ test("B1 · telemóvel: lista de cartões (como a MobileList do MLC), sem tabela
   const c = await render({ palpites: DOIS, mobile: true });
   try {
     const tab = tabelaDe(c.h);
-    assert.match(tab, /data-testid="op-tabela-lista"/);
+    // UTAC151 — a MobileList da TabelaLances (formato do endereço curto dela: «0xAbC1...4567»).
     assert.doesNotMatch(tab, /<table/);
-    assert.equal((tab.match(/<div[^>]*data-palpite-linha/g) || []).length, 2);
-    assert.match(semTags(tab), /1 0xAbC1…4567 🔒 2 0xBbB0…9999 🔒/);
+    assert.match(semTags(tab), /1 0xAbC1(\.\.\.|…)4567 🔒 2 0xBbB0(\.\.\.|…)9999 🔒/i);
   } finally { c.fim(); }
 });
 
@@ -189,7 +193,6 @@ test("B1 · revelado: «Palpite» sem cadeado e sem o aviso; vazio: 📭 sem tab
   const v = await render();
   try {
     const tab = tabelaDe(v.h);
-    assert.match(tab, /data-testid="op-tabela-vazia"/);
     assert.doesNotMatch(tab, /<table/);
     assert.match(semTags(tab), /📭 Ainda não há palpites\./);
   } finally { v.fim(); }

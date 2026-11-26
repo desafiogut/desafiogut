@@ -1,0 +1,8 @@
+M1 body.nomeExibicao aceite → RED ['ℹ fail 1']
+   restaurado md5 6ccfbbd2
+M2 nome completo gravado → RED ['ℹ fail 2']
+   restaurado md5 6ccfbbd2
+M3 OP perde o nome → RED ['ℹ fail 1']
+   restaurado md5 b70e33b7
+M4 palpite em R$ → RED ['ℹ fail 1']
+   restaurado md5 a2d80c23

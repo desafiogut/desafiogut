@@ -31,7 +31,8 @@ before(async () => {
     ...opcoesServidorTeste(),
     server: { middlewareMode: true }, appType: "custom", logLevel: "error",
     optimizeDeps: { noDiscovery: true },
-    resolve: { alias: [...ALIASES] },
+    // UTAC151 — a OP desenha a `TabelaLances` (sanitize.js → DOMPurify, cujo UMD não sobrevive ao SSR do Vite).
+    resolve: { alias: [{ find: /^dompurify$/, replacement: caminho(AQUI, "_stubs/dompurify.js") }, ...ALIASES] },
   });
   ({ React, renderToStaticMarkup } = await vite.ssrLoadModule("/src/__tests__/_ponte-ssr.mjs"));
   const m = await vite.ssrLoadModule("/src/components/CartaoEdicao.jsx");

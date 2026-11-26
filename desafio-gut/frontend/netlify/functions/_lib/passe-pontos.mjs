@@ -224,7 +224,8 @@ export async function edicaoApurada(edicaoId) {
 export async function listarPalpitesDaEdicao(edicaoId) {
   if (!edicaoValida(edicaoId)) return [];
   const { data, error } = await getSupabase().from(TABELA_PALPITES)
-    .select("endereco,valor,criado_em").eq("edicao_id", edicaoId).order("criado_em", { ascending: true });
+    .select("endereco,valor,criado_em,nome_exibicao") // UTAC151 — + nome reduzido («PrimeiroNome I.» ou null)
+    .eq("edicao_id", edicaoId).order("criado_em", { ascending: true });
   if (error) throw new Error(`[passe-pontos] listarPalpitesDaEdicao falhou: ${error.code ?? error.message}`);
   return Array.isArray(data) ? data : [];
 }
@@ -241,7 +242,8 @@ export async function listarPalpitesDaEdicao(edicaoId) {
  * palpites novos depois de apurada**: sem palpite novo, a 2.ª apuração não encontra nada por apurar.
  * @returns {Promise<{ok:true,criado:boolean,palpite:object}|{ok:false,code:string}>}
  */
-export async function registarPalpite(endereco, edicaoId, valor) {
+// UTAC151 (R18-151-A) — `nomeExibicao` = «PrimeiroNome I.» já reduzido e verificado por quem chama (ou null).
+export async function registarPalpite(endereco, edicaoId, valor, { nomeExibicao = null } = {}) {
   const e = normalizar(endereco);
   if (!enderecoValido(e)) return { ok: false, code: "ENDERECO_INVALIDO" };
   if (!edicaoValida(edicaoId)) return { ok: false, code: "EDICAO_INVALIDA" };
@@ -254,7 +256,8 @@ export async function registarPalpite(endereco, edicaoId, valor) {
   if (jaApurada) return { ok: false, code: "EDICAO_APURADA" };
 
   const { data, error } = await getSupabase().from(TABELA_PALPITES)
-    .insert({ endereco: e, edicao_id: edicaoId, valor }).select("*").maybeSingle();
+    .insert({ endereco: e, edicao_id: edicaoId, valor, ...(nomeExibicao ? { nome_exibicao: nomeExibicao } : {}) })
+    .select("*").maybeSingle();
   if (error) {
     if (error.code === UNIQUE_VIOLATION) {
       const existente = await lerPalpite(e, edicaoId);

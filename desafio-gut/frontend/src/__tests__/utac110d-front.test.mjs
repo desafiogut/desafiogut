@@ -28,6 +28,8 @@ const STUBS_PAG = resolve(SRC, "pages", "__tests__", "_stubs");
 const STUBS_106E = resolve(SRC, "pages", "__tests__", "_stubs-106e");
 
 const ALIASES = [
+  // UTAC151 — a OP passou a desenhar a `TabelaLances` (sanitize.js → DOMPurify, cujo UMD não sobrevive ao SSR do Vite).
+  { find: /^dompurify$/, replacement: resolve(AQUI, "../components/__tests__/_stubs/dompurify.js") },
   { find: /^\.\.\/context\/AppContext\.jsx$/, replacement: `${STUBS_PAG}/AppContext.jsx` },
   { find: /^\.\.\/\.\.\/context\/AppContext\.jsx$/, replacement: `${STUBS_PAG}/AppContext.jsx` },
   { find: /^\.\/useTrocarPorSenhas\.js$/, replacement: `${STUBS_110D}/useTrocarPorSenhas.js` },

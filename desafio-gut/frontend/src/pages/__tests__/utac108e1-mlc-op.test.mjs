@@ -256,10 +256,11 @@ describe("UTAC108e.1 · coerência MLC ↔ OP (a mesma família)", () => {
     assert.match(tabelaMlc, /class="gut-glass-standard"/);
     assert.equal((tabelaMlc.match(/<th\b/g) || []).length, 3);
     const op = codigo(ler("pages/OfertasProgramadas.jsx"));
-    assert.match(op, /data-testid="op-tabela-fim"[\s\S]{0,200}className="gut-glass-standard"/);
-    assert.equal((op.match(/<TH>/g) || []).length, 3);
-    // UTAC109g (B1) — a tabela vive no componente local `TabelaPalpites`, desenhado SEMPRE (com ou sem edição).
-    assert.match(op, /\{!loading && !erro && \(\s*<TabelaPalpites edicao=\{edicaoTabela\}/, "a tabela da OP voltou a depender de haver edição");
+    // UTAC151 (R18-151-B) — a OP usa a MESMA `TabelaLances` (variante «palpite»): mesmo vidro e 3 colunas por construção.
+    assert.match(op, /data-testid="op-tabela-fim">\s*<TabelaLances\s+variante="palpite"/);
+    assert.doesNotMatch(op, /function TabelaPalpites|<TH>/, "voltou a haver uma tabela própria na OP");
+    // desenhada SEMPRE (com ou sem edição) — não depende de `edicaoTabela`.
+    assert.match(op, /\{!loading && !erro && \(\(\) => \{/, "a tabela da OP voltou a depender de haver edição");
   });
 });
 

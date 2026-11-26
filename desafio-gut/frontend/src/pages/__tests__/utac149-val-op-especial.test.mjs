@@ -14,6 +14,8 @@ const STUBS_106C = resolve(SRC, "__tests__", "_stubs-106c");
 const STUBS_106E = resolve(AQUI, "..", "__tests__", "_stubs-106e");
 const STUB_CONTEXTO = resolve(AQUI, "_stubs", "AppContext.jsx");
 const ALIASES = [
+  // UTAC151 — a OP passou a desenhar a `TabelaLances` (sanitize.js → DOMPurify, cujo UMD não sobrevive ao SSR do Vite).
+  { find: /^dompurify$/, replacement: resolve(AQUI, "../../components/__tests__/_stubs/dompurify.js") },
   { find: /^\.\.\/context\/AppContext\.jsx$/, replacement: STUB_CONTEXTO },
   { find: /^\.\.\/\.\.\/context\/AppContext\.jsx$/, replacement: STUB_CONTEXTO },
   { find: /^\.\/useTrocarPorSenhas\.js$/, replacement: `${STUBS_106E}/useTrocarPorSenhas.js` },
@@ -58,7 +60,8 @@ async function render({ edicoes = PROG, palpites = { ok: true, revelado: false, 
   const h = renderToStaticMarkup(React.createElement(React.Fragment, null, ctrl.resultado()));
   return { h, t: semTags(h), fim: () => { ctrl.desmontar(); dup.restaurar(); definirMobile(false); } };
 }
-const tabelaDe = (h) => h.slice(h.indexOf('data-testid="op-tabela-fim"'));
+// UTAC151 — a tabela (TabelaLances, variante «palpite») subiu para logo abaixo do cartão: fatia-se só a SUA secção.
+const tabelaDe = (h) => { const i = h.indexOf('data-testid="op-tabela-fim"'); return h.slice(i, h.indexOf("</section>", i)); };
 
 
 const iso = (ms) => new Date(ms).toISOString();
@@ -72,8 +75,8 @@ test("OP-E1 · com EM BREVE ligado, a especial Programada lê o estado DA EDIÇ�
   const v = await render({ edicoes: especial() });
   try {
     assert.match(v.t, /Palpites até \d{2}\/\d{2} às \d{2}:\d{2}/, "a faixa do cartão não mostra o fecho da especial");
-    assert.match(tabelaDe(v.h), /data-testid="op-tabela-estado"[^>]*>🟢 Aberta</, "o selo da tabela não é o da edição");
-    assert.doesNotMatch(tabelaDe(v.h), /data-testid="op-tabela-estado"[^>]*>🕒 Em breve</);
+    assert.match(tabelaDe(v.h), />🟢 Aberta<\/span>/, "o selo da tabela não é o da edição"); // UTAC151: selo da TabelaLances
+    assert.doesNotMatch(tabelaDe(v.h), />🕒 Em breve<\/span>/);
   } finally { v.fim(); }
 });
 
@@ -81,7 +84,7 @@ test("OP-E2 · controlo: uma PROG-N com EM BREVE continua «Em breve» (zero dif
   definirEmBreve(true);
   const v = await render();
   try {
-    assert.match(tabelaDe(v.h), /data-testid="op-tabela-estado"[^>]*>🕒 Em breve</);
+    assert.match(tabelaDe(v.h), />🕒 Em breve<\/span>/);
   } finally { v.fim(); }
 });
 
@@ -89,7 +92,7 @@ test("OP-E3 · depois do fim com status ainda «aberto»: selo 🔴 Encerrada e 
   definirEmBreve(true);
   const v = await render({ edicoes: especial({ inicio_em: iso(Date.now() - 14 * DIA), termino_em: iso(Date.now() - 60_000) }) });
   try {
-    assert.match(tabelaDe(v.h), /data-testid="op-tabela-estado"[^>]*>🔴 Encerrada</);
+    assert.match(tabelaDe(v.h), />🔴 Encerrada<\/span>/);
     assert.doesNotMatch(v.h, /id="palpite-ESPECIAL-PALPITE1"/, "o formulário continua activo depois do fim");
   } finally { v.fim(); }
 });

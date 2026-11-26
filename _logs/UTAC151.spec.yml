@@ -1,0 +1,18 @@
+schema: utac/1
+name: UTAC151
+title: "Especial Programada: tabela de palpites por baixo do cartão (padrão da Relâmpago), textos soltos fora do cartão, nomes"
+type: produto
+baseline: 85d1cd6
+motivo: >-
+  A tabela de palpites da ESPECIAL-PALPITE1 está fora do padrão da Relâmpago: na aba OP é o último vidro da
+  página (não fica por baixo do cartão), o cartão tem textos soltos («Seu palpite: N lances», «Resultado no
+  fim da edição.») e a tabela mostra endereços em vez de «PrimeiroNome I.».
+frentes:
+  - {id: A, nome: tabela de palpites logo abaixo do cartão com a TabelaLances; textos soltos fora do cartão, entrega: [src/pages/OfertasProgramadas.jsx, src/pages/Dashboard.jsx]}
+  - {id: B, nome: nomes «PrimeiroNome I.» (formatarNomeExibicao) na tabela de palpites, entrega: [conforme decisão R18-151]}
+  - {id: C, nome: suíte + netlify deploy --prod --build, entrega: [deploy]}
+autoriza: [frontend da OP/Início e componentes associados, suíte, deploy Netlify]
+proibe: [componente de tabela novo, backend, Edição Especial Relâmpago, git add -A, AAB]
+dependencias: [ESPECIAL-PALPITE1 aberta, conta de teste com 1 palpite]
+regras_activas: [E, T, G, L, S, A, P, AU, ST, HI]
+ressalvas: [HI5 1 hora, A14 só deploy web, R18 antes do SEG0 (veredicto AJUSTAR)]

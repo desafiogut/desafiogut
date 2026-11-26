@@ -62,7 +62,7 @@ export default async (req) => {
 
   const revelado = apurada || !STATUS_EM_CURSO.has(edicao.status);
   const palpites = linhas.map((p) => (revelado
-    ? { endereco: p.endereco, valor: p.valor, data: p.criado_em }
-    : { endereco: p.endereco, data: p.criado_em }));
+    ? { endereco: p.endereco, valor: p.valor, data: p.criado_em, nomeExibicao: p.nome_exibicao ?? null }
+    : { endereco: p.endereco, data: p.criado_em, nomeExibicao: p.nome_exibicao ?? null })); // UTAC151 — «PrimeiroNome I.» ou null
   return jsonResponse({ ok: true, edicaoId, revelado, palpites });
 };

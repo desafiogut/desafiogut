@@ -110,7 +110,8 @@ test("C3 — edição ABERTA: lista quem participou SEM o valor", async () => {
   assert.equal(r.body.revelado, false);
   assert.equal(r.body.palpites.length, 2, "só os palpites desta edição");
   for (const p of r.body.palpites) {
-    assert.deepEqual(Object.keys(p).sort(), ["data", "endereco"]);
+    // UTAC151 (R18-151-A) — + `nomeExibicao` («PrimeiroNome I.» ou null); o valor continua fora.
+    assert.deepEqual(Object.keys(p).sort(), ["data", "endereco", "nomeExibicao"]);
   }
   assert.doesNotMatch(JSON.stringify(r.body), /"valor"/, "nenhum valor no corpo durante a edição");
   assert.deepEqual(r.body.palpites.map((p) => p.endereco), [A, B], "mais antigos primeiro");

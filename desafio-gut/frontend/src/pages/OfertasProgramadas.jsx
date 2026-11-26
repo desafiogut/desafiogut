@@ -22,7 +22,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useIsMobile } from "../hooks/useIsMobile.js";
-import { GlassCard, THead, TH, TD } from "@/components/ui";
+import { GlassCard } from "@/components/ui"; // UTAC151 — THead/TH/TD saíram com a TabelaPalpites
 // UTAC107e.1 — a etiqueta de estado de cada cartão vem da MESMA fonte única das outras abas.
 // UTAC149 — o `getEstadoEdicao` passou a ser chamado através de `estadoEdicaoProgramada` (lib/palpite.js).
 import Toast from "../widgets/toast/Toast.jsx";
@@ -44,9 +44,10 @@ import CartaoEdicao, { ACOES } from "../components/CartaoEdicao.jsx";
 // UTAC109g (R18-A) — o MESMO cabeçalho do «Menor Lance Único»: as duas abas espelhadas no topo, com a
 // edição à mesma altura (2.º vidro). Componente partilhado, reutilizado tal como está.
 import GlassHeader from "../components/glass/GlassHeader.jsx";
+// UTAC151 (R18-151-B) — a tabela de palpites é a `TabelaLances` oficial (variante «palpite»), logo ABAIXO do cartão,
+// como a dos lances da Relâmpago no MLC. A `TabelaPalpites` local (cópia do UTAC109g) saiu.
+import TabelaLances from "../components/TabelaLances.jsx";
 
-// UTAC107e.2 — endereço curto na tabela de palpites (0x1234…abcd); nunca rebenta com lixo.
-const curto = (e) => (typeof e === "string" && e.length > 12 ? `${e.slice(0, 6)}…${e.slice(-4)}` : "—");
 
 const COR = {
   gold: "#f5a623", primary: "#ff6b35", text: "#e8f0fe", muted: "#6b7db8",
@@ -83,6 +84,14 @@ export default function OfertasProgramadas() {
   const edicaoTabela = programadas[0] ?? null;
   // UTAC107e.2 (Frente C) — dados da tabela: `ler-palpites`; o valor só chega depois do fecho.
   const tabelaPalpites = usePalpitesDaEdicao(edicaoTabela?.id ?? null);
+  // UTAC151 — as linhas no formato da `TabelaLances`: durante a edição `oculto` (🔒, valor null); com «PrimeiroNome I.»
+  // quando o servidor o tem (UTAC151, R18-151-A), senão o endereço encurtado. A ordem é a do servidor (chegada).
+  const linhasPalpites = useMemo(() => (Array.isArray(tabelaPalpites?.palpites) ? tabelaPalpites.palpites : [])
+    // Revelado mas com valor que não é inteiro (servidor errado) ⇒ continua 🔒, sem coerção (contrato do UTAC107e.2 C3).
+    .map((p) => (tabelaPalpites?.revelado && Number.isInteger(p?.valor)
+      ? { endereco: p?.endereco, valor: p?.valor, nomeExibicao: p?.nomeExibicao ?? null }
+      : { endereco: p?.endereco, valor: null, oculto: true, nomeExibicao: p?.nomeExibicao ?? null })),
+  [tabelaPalpites]);
   // Um só hook para todos os cartões: o `registar` recebe a edição do cartão tocado (UTAC107e.1).
   const { registar, loading: aPalpitar, erro: erroPalpite } = usePalpite(null);
   // Palpites registados nesta sessão (antes de o `ler-pontos` os devolver) e o rascunho de cada cartão.
@@ -151,12 +160,9 @@ export default function OfertasProgramadas() {
               tipo="number" min="0" step="1"
             />
           )}
-          {estado === "com_palpite" && (
-            <div>
-              <p style={{ margin: 0, color: COR.ok, fontWeight: 700, fontSize: "0.86rem" }}>Seu palpite: {palpite.valor} lances</p>
-              <p style={{ margin: "0.3rem 0 0", color: COR.muted, fontSize: "0.78rem" }}>Resultado no fim da edição.</p>
-            </div>
-          )}
+          {/* UTAC151 (R18-151-C) — «Seu palpite: N lances» + «Resultado no fim da edição.» viviam AQUI, dentro do cartão.
+              O «Seu palpite» passou para ENTRE o cartão e a tabela (como o LanceStatusBadge do MLC); o «Resultado no fim»
+              saiu. Com palpite feito o cartão fica só com a pílula «COM PALPITE». */}
           {estado === "mais_proximo" && (
             <p style={{ margin: 0, color: COR.ok, fontWeight: 800, fontSize: "0.88rem" }}>
               🎯 +50 ECOQUILDO! Seu palpite de {palpite.valor} lances foi o mais próximo.
@@ -236,6 +242,31 @@ export default function OfertasProgramadas() {
               {programadas.map(cartaoEdicao)}
             </div>
           )}
+          {/* UTAC151 (R18-151-C) — o próprio palpite ENTRE o cartão e a tabela (padrão do MLC: cartão → estado do lance → tabela). */}
+          {edicaoTabela && estadoPalpite(edicaoTabela, palpiteDe(edicaoTabela.id)) === "com_palpite" && (
+            <p data-testid="op-meu-palpite" style={{ margin: 0, textAlign: "center", color: COR.ok, fontWeight: 700, fontSize: "0.86rem" }}>
+              Seu palpite: {palpiteDe(edicaoTabela.id)?.valor} lances
+            </p>
+          )}
+          {/* UTAC151 (R18-151-B) — «📋 Palpites — Edição <id>» = a `TabelaLances` oficial, logo ABAIXO do cartão (era o
+              último vidro da página, depois dos pontos, do cartão Quildo e das Regras). */}
+          {/* Sem edição a tabela FICA, vazia (UTAC108e.1, Regra 2: como a do MLC). */}
+          {!loading && !erro && (() => {
+            const est = edicaoTabela ? estadoEdicaoProgramada(edicaoTabela) : null; // o selo da tabela = o do cartão (UTAC149)
+            const fim = edicaoTabela?.termino_em ? Date.parse(edicaoTabela.termino_em) : NaN;
+            return (
+              <section data-testid="op-tabela-fim">
+                <TabelaLances
+                  variante="palpite"
+                  lances={linhasPalpites}
+                  idEdicao={edicaoTabela?.id ?? ""}
+                  prazoTimestamp={Number.isNaN(fim) ? undefined : Math.floor(fim / 1000)}
+                  encerrado={tabelaPalpites?.revelado === true}
+                  selo={est ? { texto: est.badge, cor: est.cor } : undefined}
+                />
+              </section>
+            );
+          })()}
           {/* UTAC109g (R18-B) — o aviso do bónus (Google Play: o palpite NÃO muda o cartão) passou para logo
               ABAIXO da edição; o texto não mudou. */}
           <GlassCard style={{ padding: isMobile ? "1rem" : "1.25rem" }}>
@@ -352,13 +383,7 @@ export default function OfertasProgramadas() {
           </Link>
         </GlassCard>
 
-        {/* 6 — TABELA «📋 Palpites — Edição <id>» (último vidro). UTAC109g (B1): o MESMO padrão da
-            «📋 Lances — Edição R-1» do MLC (`TabelaLances.jsx`) — título Orbitron com o id a dourado, selo do
-            estado, «🔒 valores ocultos até o fim», vazio com 📭, lista de cartões no telemóvel e tabela no
-            desktop. Dados do `ler-palpites` (UTAC107e.2): durante a edição o valor não vem (🔒). */}
-        {!loading && !erro && (
-          <TabelaPalpites edicao={edicaoTabela} tabela={tabelaPalpites} isMobile={isMobile} />
-        )}
+        {/* 6 — UTAC151: a TABELA «📋 Palpites» subiu para logo abaixo do cartão da edição (ver a secção 2). */}
       </main>
       {toast && (
         <Toast id={1} variant={toast.variant} message={toast.message} onDismiss={() => setToast(null)} />
@@ -376,99 +401,5 @@ export default function OfertasProgramadas() {
   );
 }
 
-// ── UTAC109g (B1) — «📋 Palpites — Edição <id>», moldada DIRECTAMENTE na «📋 Lances — Edição R-1» do MLC
-// (`components/TabelaLances.jsx`, que é do MLC e não se toca): mesmo vidro, mesmo título (Orbitron, id a
-// dourado), mesmo selo de estado (fonte única `getEstadoEdicao`), mesmo «Prazo», mesmo «🔒 valores ocultos
-// até o fim», mesmo vazio (📭) e o mesmo par telemóvel/desktop (lista de cartões / tabela de 3 colunas).
-// Diferenças declaradas: a ordem é a do servidor (no palpite vence o MAIS PRÓXIMO — ordenar por valor não
-// diz nada) e o vazio tem 1 linha (a 2.ª linha do molde é copy de lance; não se inventa a do palpite).
-const tabelaEstilos = {
-  titulo: { margin: 0, fontWeight: 800, letterSpacing: "0.04em", fontFamily: "'Orbitron', sans-serif", color: COR.gold },
-  // ⚠️ achado do validador (SEG3): o branco do molde dá 2,54–3,76:1 sobre as cores de estado (< AA). Aqui o
-  // texto é o navy do app (#0a0f1a, o mesmo do botão dourado): 6,76 (EM BREVE) · 7,55 (ATIVA) · 5,09
-  // (ENCERRADA) · 4,79 (INDISPONÍVEL). O selo da `TabelaLances` (MLC) fica como está — fora do escopo.
-  badge: { padding: "0.22rem 0.75rem", borderRadius: "20px", fontSize: "0.7rem", fontWeight: 700, color: "#0a0f1a" },
-};
-
-function TabelaPalpites({ edicao, tabela, isMobile }) {
-  const id = edicao?.id ?? null;
-  const est = edicao ? estadoEdicaoProgramada(edicao) : null; // UTAC149 — o selo da especial = o do cartão
-  const fim = edicao?.termino_em ? Date.parse(edicao.termino_em) : NaN;
-  const prazo = Number.isNaN(fim) ? "—" : new Date(fim).toLocaleString("pt-BR");
-  const linhas = Array.isArray(tabela?.palpites) ? tabela.palpites : [];
-  const valorDe = (p) => (tabela?.revelado && Number.isInteger(p?.valor) ? `${p.valor} lances` : "🔒");
-  return (
-    <section data-testid="op-tabela-fim" aria-label={id ? `Palpites — Edição ${id}` : "Palpites"}
-      className="gut-glass-standard" style={{ color: COR.text, padding: isMobile ? "1rem" : "1.5rem" }}>
-      <div style={{
-        display: "flex", justifyContent: "space-between", flexWrap: "wrap",
-        marginBottom: isMobile ? "0.75rem" : "1rem",
-        flexDirection: isMobile ? "column" : "row",
-        alignItems: isMobile ? "stretch" : "center",
-        gap: isMobile ? "0.4rem" : "0.5rem",
-      }}>
-        <h3 data-testid="op-tabela-titulo" style={{ ...tabelaEstilos.titulo, fontSize: isMobile ? "0.95rem" : "1.05rem" }}>
-          📋 Palpites{id ? <>{" — Edição "}<span style={{ color: COR.gold }}>{id}</span></> : null}
-        </h3>
-        {est && (
-          <div style={{ display: "flex", gap: "0.6rem", alignItems: "center", justifyContent: isMobile ? "space-between" : "flex-end", flexWrap: "wrap" }}>
-            {est.timer == null && (
-              <span style={{ fontSize: isMobile ? "0.7rem" : "0.78rem", color: COR.muted }}>Prazo: {prazo}</span>
-            )}
-            <span data-testid="op-tabela-estado" style={{ ...tabelaEstilos.badge, background: est.cor }}>{est.badge}</span>
-            {!tabela?.revelado && linhas.length > 0 && (
-              <span style={{ fontSize: isMobile ? "0.68rem" : "0.74rem", color: COR.muted, fontStyle: "italic" }}>
-                🔒 valores ocultos até o fim
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-
-      {linhas.length === 0 ? (
-        <div data-testid="op-tabela-vazia" style={{ color: COR.muted, textAlign: "center", padding: "2rem 1rem", display: "flex", flexDirection: "column", gap: "0.4rem", alignItems: "center" }}>
-          <span aria-hidden="true" style={{ fontSize: "1.6rem", opacity: 0.45 }}>📭</span>
-          <span style={{ fontSize: isMobile ? "0.85rem" : "0.9rem" }}>Ainda não há palpites.</span>
-        </div>
-      ) : isMobile ? (
-        <div data-testid="op-tabela-lista" style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-          {linhas.map((p, i) => (
-            <div key={`${p?.endereco}-${i}`} data-palpite-linha style={{
-              background: "rgba(10,16,42,0.55)", border: "1px solid rgba(245,166,35,0.14)", borderRadius: "12px",
-              padding: "0.75rem 0.85rem", display: "grid", gridTemplateColumns: "auto 1fr auto", alignItems: "center", columnGap: "0.75rem",
-            }}>
-              <div style={{
-                width: "32px", height: "32px", borderRadius: "50%", background: "rgba(245,166,35,0.12)",
-                border: "1px solid rgba(245,166,35,0.25)", color: COR.gold, display: "flex", alignItems: "center",
-                justifyContent: "center", fontWeight: 900, fontSize: "0.85rem", flexShrink: 0,
-              }}>{i + 1}</div>
-              <div style={{ minWidth: 0, fontSize: "0.82rem", color: COR.text, fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{curto(p?.endereco)}</div>
-              <div style={{ fontWeight: 900, fontSize: "0.9rem", fontFamily: "monospace", whiteSpace: "nowrap", textAlign: "right", color: tabela?.revelado ? COR.gold : COR.muted }}>{valorDe(p)}</div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="w-full overflow-x-auto rounded-2xl">
-          <table className="w-full border-collapse text-sm">
-            <THead>
-              <tr>
-                <TH>#</TH>
-                <TH>Participante</TH>
-                <TH>{tabela?.revelado ? "Palpite" : "Palpite 🔒"}</TH>
-              </tr>
-            </THead>
-            <tbody>
-              {linhas.map((p, i) => (
-                <tr key={`${p?.endereco}-${i}`} data-palpite-linha style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                  <TD>{i + 1}</TD>
-                  <TD style={{ fontFamily: "monospace" }}>{curto(p?.endereco)}</TD>
-                  <TD style={{ fontWeight: 700, color: tabela?.revelado ? COR.text : COR.muted }}>{valorDe(p)}</TD>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </section>
-  );
-}
+// UTAC151 (R18-151-B) — aqui vivia a `TabelaPalpites` (UTAC109g, cópia da `TabelaLances` moldada à mão). Saiu: os palpites
+// usam a `TabelaLances` oficial com `variante="palpite"` (uma só tabela; os nomes «PrimeiroNome I.» vêm de lá).

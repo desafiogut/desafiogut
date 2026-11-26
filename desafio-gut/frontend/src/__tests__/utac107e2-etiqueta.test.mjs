@@ -19,6 +19,8 @@ const STUBS_106E = resolve(SRC, "pages", "__tests__", "_stubs-106e");
 const STUB_CONTEXTO = resolve(SRC, "pages", "__tests__", "_stubs", "AppContext.jsx");
 
 const ALIASES = [
+  // UTAC151 — a OP passou a desenhar a `TabelaLances` (sanitize.js → DOMPurify, cujo UMD não sobrevive ao SSR do Vite).
+  { find: /^dompurify$/, replacement: resolve(AQUI, "../components/__tests__/_stubs/dompurify.js") },
   { find: /^\.\.\/context\/AppContext\.jsx$/, replacement: STUB_CONTEXTO },
   { find: /^\.\.\/\.\.\/context\/AppContext\.jsx$/, replacement: STUB_CONTEXTO },
   { find: /^\.\/useTrocarPorSenhas\.js$/, replacement: `${STUBS_106E}/useTrocarPorSenhas.js` },
@@ -201,7 +203,9 @@ async function montarOP(respostaPalpites) {
   const ctrl = montar(OfertasProgramadas, []);
   await ctrl.assentar();
   const h = html(ctrl.resultado());
-  const tabela = h.slice(h.indexOf('data-testid="op-tabela-fim"'));
+  // UTAC151 — a tabela subiu para logo abaixo do cartão (já não é o último bloco): fatia-se só a SUA secção.
+  const i = h.indexOf('data-testid="op-tabela-fim"');
+  const tabela = h.slice(i, h.indexOf("</section>", i));
   return { ctrl, dup, tabela };
 }
 
@@ -220,16 +224,27 @@ test("C2 — durante a edição: linhas com quem participou e o valor 🔒", asy
   const c = await montarOP({ ok: true, revelado: false, palpites: [
     { endereco: A, data: "2026-10-06T10:00:01.000Z" }, { endereco: B, data: "2026-10-06T10:00:02.000Z" }] });
   try {
-    assert.equal((c.tabela.match(/data-palpite-linha/g) || []).length, 2);
-    const t = semTags(c.tabela);
-    assert.match(t, /0xAbC1…4567/);
-    // UTAC109g (B1) — 🔒 por linha (o cabeçalho ganhou «🔒 valores ocultos até o fim», como o MLC).
-    const linhas = [...c.tabela.matchAll(/<(?:tr|div)[^>]*data-palpite-linha[^>]*>([\s\S]*?)<\/(?:tr)>|data-palpite-linha[^>]*>([\s\S]*?)(?=<div[^>]*data-palpite-linha|<\/section>)/g)];
+    // UTAC151 (R18-151-B) — a tabela é a `TabelaLances` (variante «palpite»): linhas = as <tr> do <tbody>; sem nome
+    // do servidor fica o endereço encurtado (formato da TabelaLances, «0xAbC1...4567»).
+    const linhas = [...(c.tabela.split("<tbody")[1] ?? "").matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/g)];
     assert.equal(linhas.length, 2);
-    for (const l of linhas) assert.equal(((l[1] ?? l[2]).match(/🔒/g) || []).length, 1);
+    const t = semTags(c.tabela);
+    assert.match(t, /0xAbC1(\.\.\.|…)4567/i);
+    for (const l of linhas) assert.equal((l[1].match(/🔒/g) || []).length, 1);
     assert.match(t, /🔒 valores ocultos até o fim/);
     assert.doesNotMatch(t, /\d+ lances/);
     assert.doesNotMatch(t, /Ainda não há palpites/);
+  } finally { c.ctrl.desmontar(); c.dup.restaurar(); }
+});
+
+test("C2b · UTAC151 — com «nomeExibicao» do servidor a linha mostra «PrimeiroNome I.», nunca o endereço", async () => {
+  const c = await montarOP({ ok: true, revelado: false, palpites: [
+    { endereco: A, data: "2026-10-06T10:00:01.000Z", nomeExibicao: "Ramon S." }, { endereco: B, data: "2026-10-06T10:00:02.000Z", nomeExibicao: null }] });
+  try {
+    const t = semTags(c.tabela);
+    assert.match(t, /Ramon S\./);
+    assert.doesNotMatch(t, /0xAbC1(\.\.\.|…)4567/i, "com nome não se mostra o endereço");
+    assert.equal((t.match(/0x[0-9a-f]{4}(\.\.\.|…)[0-9a-f]{4}/gi) || []).length, 1, "sem nome fica o endereço curto");
   } finally { c.ctrl.desmontar(); c.dup.restaurar(); }
 });
 

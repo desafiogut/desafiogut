@@ -28,6 +28,10 @@ import { EDICAO_ESPECIAL_RE, verificarJanelaLance } from "./_lib/edicao-janela.m
 // Volta o consumo do inventário (o padrão do UTAC120): consome antes de registar e DEVOLVE quando o registo
 // falha ou é idempotente (já tinha palpitado) — o efeito líquido é sempre 1 Passe por palpite registado.
 import { consumirPasse, devolverPasse } from "./_lib/passes-inventario.mjs";
+// UTAC151 (R18-151-A) — «PrimeiroNome I.» na tabela de palpites: o MESMO nome verificado do lance da Relâmpago
+// (identity token do Privy, UTAC146), reduzido na origem (UTAC142.2). Opcional e fail-closed: sem token válido → null.
+import { verificarIdentidadePrivy } from "./_lib/privy-identidade.mjs";
+import { formatarNome } from "./_lib/nome-exibicao.mjs";
 
 async function titular(req) {
   const h = req.headers.get("authorization") || "";
@@ -107,7 +111,14 @@ export default async (req) => {
   };
 
   let r;
-  try { r = await registarPalpite(t.endereco, edicaoId, valor); }
+  // UTAC151 — o nome só entra se o identity token do Privy listar ESTA carteira (a do user-session). Qualquer
+  // `nomeExibicao` no body é ignorado (forjável). Verifica-se depois do Passe: uma falha aqui nunca bloqueia o palpite.
+  const identidade = typeof body?.identityToken === "string"
+    ? await verificarIdentidadePrivy(body.identityToken, t.endereco).catch(() => null)
+    : null;
+  const nomeExibicao = formatarNome(identidade?.nome) ?? null;
+
+  try { r = await registarPalpite(t.endereco, edicaoId, valor, { nomeExibicao }); }
   catch { await devolver(); return jsonError(503, "store_indisponivel", "não foi possível registar o palpite"); }
 
   if (!r.ok || !r.criado) await devolver();
