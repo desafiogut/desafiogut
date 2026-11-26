@@ -1,6 +1,6 @@
 # UTAC149 — Edição Especial Programada (palpite) — RELATÓRIO (2026-11-26, Opus 5.5)
 
-**Estado: PUBLICADO** — commit `e86c865` (local, **sem push**), deploy `6b07f8cb` (bundle `index-BZIsVHZE.js`).
+**Estado: PUBLICADO** — commits `e86c865`+`c003716` com **push** para main (`a023a5d..c003716`, pedido do operador), deploy `6b07f8cb` (bundle `index-BZIsVHZE.js`).
 
 ## Checklist
 - [x] Arte no Supabase: `artes-edicoes/especial-palpite-1.jpg` (200, sha256 = o ficheiro do Desktop).
@@ -22,3 +22,6 @@ Guardas de `tipo` para a especial palpite não entrar no circuito Relâmpago: sl
 
 ## Pendências
 DEBT-110 (validador adversarial por correr) · DEBT-111 (nome do produto, apuração manual e que lances contam, texto «+2 pontos», gate «v6.0», APK). Para desfazer: `node scripts/utac149-seed-especial-palpite.mjs --reverter`.
+
+## SEG4 — validador adversarial (2026-11-26)
+**APROVADO COM RESSALVAS** (`_logs/UTAC149_SEG4_VALIDADOR.md`). O validador corrigiu 3 ⚠️ no worktree dele, cada um com teste e mutante: palpite aceite depois de 09/12 (o cron não fecha a edição em produção), lance aceite na especial palpite pelo `lance-relampago`, e cartão «Encerrada» com o formulário activo. Também fechou lacunas de teste. Integração por cherry-pick (`0952ae5..db68c49`), suíte em main **1369/1421 · 1535/1624 VERDE**, deploy **`6b080a6c`** (bundle `index-C9FRH1jW.js`), com push. Pendentes: DEBT-111 (inclui a ⚠️4: que lances conta a apuração) e DEBT-112 (cron das especiais cego em produção, anterior a este UTAC).
