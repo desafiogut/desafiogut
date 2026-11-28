@@ -115,3 +115,19 @@ test("CABECALHOS_CORS expõe o que o cliente precisa de ler e permite timing", (
   // Nunca `*`: estas functions movimentam dinheiro (PIX) e senhas.
   assert.notEqual(CABECALHOS_CORS["access-control-allow-origin"], "*");
 });
+
+// UTAC153 (SEG4 ℹ️5) — o 429 também tem de levar a origem do iOS (o rate-limiter usa `cabecalhosCors()`).
+// Fica no fim do ficheiro: reutiliza o módulo já carregado com o mock do cache (`?mc8816`).
+test("UTAC153 · 429 de um pedido do iOS leva Access-Control-Allow-Origin: capacitor://localhost", () =>
+  new Promise((ok, falha) => setImmediate(() => (async () => {
+    const { aplicarRateLimit } = await import("../_lib/rate-limiter.mjs?mc8816");
+    const req = new Request("https://x/y", {
+      method: "POST",
+      headers: { "x-nf-client-connection-ip": "203.0.113.8", origin: "capacitor://localhost" },
+    });
+    assert.equal(respostaPreflight(req), null); // 1.ª linha das functions: regista a origem
+    const resp = await aplicarRateLimit(req, "confirmar-pagamento", 25);
+    assert.equal(resp?.status, 429);
+    assert.equal(resp.headers.get("access-control-allow-origin"), "capacitor://localhost");
+    assert.equal(resp.headers.get("vary"), "Origin");
+  })().then(ok, falha))));

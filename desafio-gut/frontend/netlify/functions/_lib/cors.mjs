@@ -55,11 +55,14 @@ export function registarOrigemDoPedido(req) {
 /**
  * Cabeçalhos CORS aplicados a TODAS as respostas das functions.
  *
- * Constante (não reflete a origem do pedido) de propósito: `jsonResponse()` não
- * recebe a `Request`, e mudar a assinatura obrigaria a tocar nos 41 call-sites.
- * Como só existe uma origem cross-origin legítima — a do APK — refletir não
- * traria nada. No site web, que é same-origin, estes cabeçalhos são simplesmente
- * ignorados pelo browser: zero impacto no comportamento atual.
+ * Este objecto é o valor POR OMISSÃO (origem do APK). Até ao UTAC153 era aplicado tal e qual a todas as
+ * respostas, porque só havia uma origem cross-origin legítima. Com o iOS (`capacitor://localhost`) passou
+ * a haver três, e `Access-Control-Allow-Origin` só aceita uma: as respostas usam agora `cabecalhosCors()`,
+ * que reflecte a origem do pedido quando está em `ORIGENS_NATIVAS_PERMITIDAS` (ver acima). No site web,
+ * que é same-origin, estes cabeçalhos são ignorados pelo browser.
+ * ⚠️ O contexto é preenchido por `enterWith` em `respostaPreflight(req)`, que TEM de ser a 1.ª instrução
+ * do handler: uma resposta montada antes dela poderia levar a origem de um pedido anterior no mesmo
+ * processo (SEG4 ℹ️1 do UTAC153). Há um teste de fonte que o exige.
  *
  * `authorization` em allow-headers é indispensável — as functions autenticam por
  * JWT do Privy (Bearer), e é esse cabeçalho que torna o preflight obrigatório.

@@ -117,6 +117,27 @@ test("UTAC153 · pedidos CONCORRENTES de origens diferentes não se misturam (co
     [IOS, "https://localhost", IONIC, "https://localhost", "https://localhost"]);
 });
 
+// ── SEG4 ℹ️1: `respostaPreflight(req)` tem de ser a 1.ª INSTRUÇÃO do handler ──────────────────────
+// O contexto é preenchido por `enterWith`: uma resposta montada antes do preflight levaria a origem do
+// pedido anterior no mesmo processo (medido pelo validador). Lê-se a fonte sem comentários.
+const semComentarios = (s) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+test("UTAC153 · em todas as functions do app, respostaPreflight(req) é a 1.ª instrução do handler", () => {
+  const falhas = [];
+  for (const f of readdirSync(FUNCS).filter((x) => x.endsWith(".mjs"))) {
+    const s = semComentarios(readFileSync(resolve(FUNCS, f), "utf8"));
+    if (!s.includes("respostaPreflight(")) continue;
+    // 3 formas medidas: `export default async (req) => {`, `async function handler(req…) {` e o corpo-expressão
+    // `export default async (req) => respostaPreflight(req) ?? …`.
+    const m = s.match(/export default async \((\w+)[^)]*\) =>\s*\{|async function handler\((\w+)[^)]*\)\s*\{|export default async \((\w+)[^)]*\) =>\s*/);
+    if (!m) { falhas.push(`${f}: handler não reconhecido`); continue; }
+    const req = m[1] || m[2] || m[3];
+    const resto = s.slice(m.index + m[0].length).trimStart();
+    const ok = new RegExp(String.raw`^(const \w+ = |return |)respostaPreflight\(${req}\)`).test(resto);
+    if (!ok) falhas.push(`${f}: 1.ª instrução = «${resto.slice(0, 60).replace(/\s+/g, " ")}»`);
+  }
+  assert.deepEqual(falhas, []);
+});
+
 // ── as functions REAIS do app ────────────────────────────────────────────────────────────────────
 const ficheirosApp = readdirSync(FUNCS)
   .filter((f) => f.endsWith(".mjs") && readFileSync(resolve(FUNCS, f), "utf8").includes("respostaPreflight("));
