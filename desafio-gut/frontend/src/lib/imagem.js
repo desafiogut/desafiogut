@@ -12,8 +12,11 @@
 // `https://localhost/.netlify/functions/img-proxy?…`, recebia o index.html do fallback de SPA e ficava em
 // branco. O `fetch` já era reescrito por `instalarReescritaApi()`, mas um `<img>` não passa pelo fetch.
 // `apiUrl()` (a mesma base das chamadas à API) torna absolutos SÓ os caminhos `/.netlify/functions/*` e SÓ
-// no nativo; na web devolve-os intactos (same-origin, o CSP `img-src 'self'` continua a valer). Assets
-// locais (`/assets/…`, `/icons/…`) não começam por `/.netlify/functions/` e ficam como estavam.
+// no nativo; na web devolve-os intactos (relativos: servem a produção, os deploy previews e o `vite dev`
+// por igual — um absoluto apontaria sempre à produção). Assets locais (`/assets/…`, `/icons/…`, `/artes/…`)
+// não começam por `/.netlify/functions/` e ficam como estavam: no nativo são servidos pelo próprio WebView,
+// e apontá-los à produção nem funcionaria (o `Cross-Origin-Resource-Policy: same-origin` do netlify.toml
+// aplica-se aos estáticos, não às functions — SEG4 UTAC154 ℹ️2).
 import { apiUrl } from "./apiOrigin.js";
 
 export function imagemProdutoSrc(p) {
