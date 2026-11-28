@@ -1,0 +1,35 @@
+schema: utac/1
+name: UTAC153
+title: "Desbloqueio de CORS para o iOS (DEBT-117): capacitor://localhost e ionic://localhost"
+type: produto
+baseline: a80a4b0
+motivo: >-
+  O app iOS (Capacitor 8.4.2) chama as Netlify Functions da origem capacitor://localhost; o backend
+  devolve sempre Access-Control-Allow-Origin: https://localhost (origem única do APK) e o WKWebView
+  descarta todas as respostas. Sem isto, nada da API funciona no iOS.
+frentes:
+  - id: A
+    nome: CORS aceita as origens nativas do iOS sem mexer no Android/Web
+    entrega: [netlify/functions/_lib/cors.mjs, os 4 sítios que aplicam CABECALHOS_CORS]
+  - id: B
+    nome: Teste de preflight (OPTIONS) de capacitor://localhost
+    entrega: [netlify/functions/_tests/utac153-cors-ios.test.mjs]
+autoriza:
+  - editar a configuração de CORS e as funções do backend (netlify/functions)
+  - correr testes locais do backend
+  - commit local (sem push)
+  - despachar validador adversarial
+proibe:
+  - git add -A
+  - alterar lógica de negócio (pontos, lances, palpites)
+  - deploy em produção (Netlify) sem autorização
+  - push
+dependencias:
+  - UTAC152 (pasta ios, DEBT-117 registada)
+regras_activas: [E, T, G, L, S, A, P, AU, ST, HI]
+regras_extra: []
+stop_conditions_extra: []
+ressalvas:
+  - "Access-Control-Allow-Origin aceita UM só valor: «acrescentar à lista» obriga a reflectir a origem do pedido"
+  - Nunca «*» (as functions movimentam dinheiro)
+  - Validador adversarial obrigatório

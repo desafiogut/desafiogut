@@ -1,0 +1,13 @@
+baseline fail = 0
+M1 reflecte qualquer origem: fail=6 -> RED (morde) | restauro md5 IDENTICO
+M2 comparação sem caixa (toLowerCase): fail=1 -> RED (morde) | restauro md5 IDENTICO
+M3 preflight não regista a origem: fail=5 -> RED (morde) | restauro md5 IDENTICO
+M4 cabecalhosCors ignora o contexto: fail=5 -> RED (morde) | restauro md5 IDENTICO
+M5 jsonCacheavel volta à constante: fail=1 -> RED (morde) | restauro md5 IDENTICO
+M6 jsonResponse volta à constante: fail=2 -> RED (morde) | restauro md5 IDENTICO
+M7 contexto global em vez de por pedido: fail=1 -> RED (morde) | restauro md5 IDENTICO
+M8 iOS sai da lista: fail=8 -> RED (morde) | restauro md5 IDENTICO
+mortos 8/8
+baseline 0
+M9 resposta antes do preflight (admin-config): fail=1 -> RED | md5 IDENTICO
+M10 429 volta à constante: fail=1 -> RED | md5 IDENTICO
