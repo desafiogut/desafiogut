@@ -128,6 +128,8 @@ export default function MinhaCarteira() {
     };
   }, []);
   const depositoPix = !APK_BUILD && !IOS_BUILD && pixPermitido(plataformaNativa);
+  // UTAC152 (SEG4 ⚠️3) — no iOS o balão do Passe não cita a Google Play nem o saldo: compra indisponível.
+  const compraIndisponivelIOS = IOS_BUILD || plataformaNativa === "ios";
   // UTAC112 — pacote escolhido no balão do Passe (1, 3, 5, 10); volta a 1 ao reabrir o balão.
   const [qtdPasse, setQtdPasse] = useState(1);
   // UTAC106c — balão de confirmação do Passe Desafio. UTAC106e — o balão passou a COMPRAR
@@ -735,7 +737,8 @@ export default function MinhaCarteira() {
         onComprar={escolherPasse}
         quantidade={qtdPasse}
         onQuantidade={setQtdPasse}
-        quantidadeNaLoja={!depositoPix}
+        quantidadeNaLoja={!depositoPix && !compraIndisponivelIOS}
+        compraIndisponivel={compraIndisponivelIOS}
       />
 
       {/* UTAC106e — TOAST do repo (`widgets/toast/Toast.jsx`; posiciona-se sozinho, auto-dismiss 4 s). */}

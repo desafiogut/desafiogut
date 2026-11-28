@@ -51,20 +51,40 @@ test("UTAC152 · iosNativo() é fail-closed: ponte que rebenta ⇒ false (nunca 
 });
 
 // ── 2. build ─────────────────────────────────────────────────────────────────────────────────────
-test("UTAC152 · build:ios injecta VITE_IS_IOS_APP=true ANTES do netlify build e corre o guarda --ios antes do cap sync", () => {
+// SEG4 ⚠️2 — a 1.ª versão usava `set X=…&&` (só cmd.exe; no Mac a flag não chegava). Agora é um script Node.
+test("UTAC152 · build:ios = scripts/build-ios.mjs: flag no env, sem a do Android, build → guarda --ios → cap sync → Package.swift", () => {
   const s = JSON.parse(ler("package.json")).scripts;
-  const b = s["build:ios"];
-  assert.ok(b, "falta o script build:ios");
-  const iFlag = b.indexOf("VITE_IS_IOS_APP=true");
-  const iBuild = b.indexOf("netlify build --context production");
-  const iGuarda = b.indexOf("validar:dist:ios");
-  const iSync = b.indexOf("npx cap sync ios");
-  assert.ok(iFlag >= 0 && iBuild > iFlag, "a flag tem de vir antes do netlify build");
-  assert.ok(iGuarda > iBuild && iSync > iGuarda, "o guarda tem de correr entre o build e o cap sync");
-  assert.doesNotMatch(b, /VITE_IS_ANDROID_APP/, "o build do iOS não pode levar a flag do Android");
+  assert.equal(s["build:ios"], "node scripts/build-ios.mjs");
   assert.equal(s["validar:dist:ios"], "node scripts/validar-dist-rede.mjs --ios");
   assert.equal(s["validar:dist"], "node scripts/validar-dist-rede.mjs", "o guarda do APK não muda");
   assert.doesNotMatch(s["build:apk"], /VITE_IS_IOS_APP/, "o build do APK não pode levar a flag do iOS");
+  const b = ler("scripts/build-ios.mjs").replace(/^\s*\/\/.*$/gm, ""); // só código (o comentário cita o `set` antigo)
+  assert.doesNotMatch(b, /\bset VITE_/, "nada de `set X=` (só funciona no cmd.exe)");
+  assert.match(b, /VITE_IS_IOS_APP: "true"/);
+  assert.match(b, /delete env\.VITE_IS_ANDROID_APP;/);
+  const iBuild = b.indexOf('correr("netlify build --context production"');
+  const iGuarda = b.indexOf('correr("node scripts/validar-dist-rede.mjs --ios"');
+  const iSync = b.indexOf('correr("npx cap sync ios"');
+  const iNorm = b.indexOf("normalizarFicheiro(resolve(FRONT");
+  assert.ok(iBuild > 0 && iGuarda > iBuild && iSync > iGuarda && iNorm > iSync, "ordem: build → guarda → cap sync → normalizar");
+  assert.match(b, /process\.exit\(r\.status \|\| 1\)/, "um passo que falha tem de parar o build");
+});
+
+// SEG4 ⚠️1 — no Windows o `cap sync ios` escreve «\» nos caminhos do Package.swift e o SPM não compila.
+test("UTAC152 · normalizarCaminhosSwift troca «\\» por «/» só dentro de path: \"…\" e é idempotente", async () => {
+  const { normalizarCaminhosSwift } = await import("../../scripts/normalizar-package-swift.mjs");
+  const antes = '.package(url: "https://github.com/x/y.git", exact: "8.4.2"),\n.package(name: "CapacitorApp", path: "..\\..\\..\\node_modules\\@capacitor\\app"),\n// comentário com \\ fica';
+  const depois = normalizarCaminhosSwift(antes);
+  assert.match(depois, /path: "\.\.\/\.\.\/\.\.\/node_modules\/@capacitor\/app"/);
+  assert.ok(depois.includes("// comentário com \\ fica"), "fora de path: nada muda");
+  assert.equal(normalizarCaminhosSwift(depois), depois, "idempotente");
+});
+
+test("UTAC152 · o Package.swift versionado não tem «\\» em nenhum path (o Xcode consegue resolver o SPM)", () => {
+  const p = ler("ios/App/CapApp-SPM/Package.swift");
+  const caminhos = [...p.matchAll(/path:\s*"([^"]*)"/g)].map((m) => m[1]);
+  assert.ok(caminhos.length >= 2, "esperava os caminhos dos plugins");
+  for (const c of caminhos) assert.ok(!c.includes("\\"), `caminho com barra invertida: ${c}`);
 });
 
 test("UTAC152 · nenhum .env* do frontend define VITE_IS_IOS_APP (o site mantém o PIX)", () => {

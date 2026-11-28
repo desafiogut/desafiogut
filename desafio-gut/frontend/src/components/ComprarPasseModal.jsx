@@ -28,12 +28,15 @@ const ORDEM = [TIPOS_PASSE.relampago, TIPOS_PASSE.programado];
 export default function ComprarPasseModal({
   aberto, onComprar, onCancelar, emCurso = null, erro = "", pontosCartao = null,
   quantidade = 1, onQuantidade, quantidadeNaLoja = false,
+  // UTAC152 (SEG4 ⚠️3) — iOS: sem IAP não há compra. Nem «Google Play», nem «debitados do seu saldo»;
+  // os botões ficam desactivados com um aviso neutro (DEBT-119).
+  compraIndisponivel = false,
 }) {
   const ocupado = emCurso != null;
   // UTAC112 — pacote escolhido (1, 3, 5, 10), CONTROLADO por quem abre o balão. No APK (`quantidadeNaLoja`)
   // a Google não aceita quantidade imposta pela app: o seletor some e explica-se que a quantidade se escolhe
   // no ecrã da Google (R18-112-A). Valor fora dos pacotes → 1 (sem coerção).
-  const q = quantidadeNaLoja || !QUANTIDADES_PASSE.includes(quantidade) ? 1 : quantidade;
+  const q = quantidadeNaLoja || compraIndisponivel || !QUANTIDADES_PASSE.includes(quantidade) ? 1 : quantidade;
   // Durante a compra não se fecha: nem por ESC/backdrop, nem pelo botão Cancelar.
   const fechar = ocupado ? () => {} : onCancelar;
 
@@ -47,13 +50,17 @@ export default function ComprarPasseModal({
       </h2>
       <p style={{ margin: "0 0 0.9rem", color: COR.muted, fontSize: "0.85rem", lineHeight: 1.5 }}>
         Cada Passe custa <strong style={{ color: COR.gold }}>{PRECO_PASSE}</strong>
-        {quantidadeNaLoja ? "." : ", debitados do seu saldo."}
-        {!quantidadeNaLoja && q > 1 && (
+        {quantidadeNaLoja || compraIndisponivel ? "." : ", debitados do seu saldo."}
+        {!quantidadeNaLoja && !compraIndisponivel && q > 1 && (
           <> Total: <strong data-total-passes="" style={{ color: COR.gold }}>{q} × {PRECO_PASSE} = {precoTotal(q)}</strong>.</>
         )}
       </p>
 
-      {quantidadeNaLoja ? (
+      {compraIndisponivel ? (
+        <p data-compra-indisponivel="" role="status" style={{ margin: "0 0 0.9rem", color: COR.muted, fontSize: "0.82rem", lineHeight: 1.5 }}>
+          A compra do Passe Desafio ainda não está disponível no app para iOS.
+        </p>
+      ) : quantidadeNaLoja ? (
         <p data-quantidade-na-loja="" style={{ margin: "0 0 0.9rem", color: COR.muted, fontSize: "0.82rem", lineHeight: 1.5 }}>
           Quer mais de um? Se a Google Play oferecer a opção, escolha a quantidade na tela de pagamento dela.
         </p>
@@ -109,14 +116,14 @@ export default function ComprarPasseModal({
               <button
                 type="button"
                 onClick={() => onComprar?.(p.tipo, q)}
-                disabled={ocupado}
+                disabled={ocupado || compraIndisponivel}
                 aria-busy={esteEmCurso ? "true" : undefined}
                 style={{
                   width: "100%", minHeight: "48px", padding: "0.6rem 1rem", borderRadius: "12px",
                   background: "rgba(245,166,35,0.14)", border: "1px solid rgba(245,166,35,0.4)",
                   color: COR.gold, fontWeight: 800, fontSize: "0.85rem",
-                  cursor: ocupado ? (esteEmCurso ? "wait" : "not-allowed") : "pointer",
-                  opacity: ocupado && !esteEmCurso ? 0.5 : 1,
+                  cursor: ocupado ? (esteEmCurso ? "wait" : "not-allowed") : compraIndisponivel ? "not-allowed" : "pointer",
+                  opacity: (ocupado && !esteEmCurso) || compraIndisponivel ? 0.5 : 1,
                   display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "0.45rem",
                 }}
               >

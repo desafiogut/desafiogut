@@ -544,12 +544,12 @@ function MercadoConformidadeIOS({ isMobile }) {
           margin: "1rem 0 0.5rem",
           fontSize: isMobile ? "1.25rem" : "1.5rem",
           fontWeight: 800, color: COR.text, letterSpacing: "0.01em",
-        }}>Edições em breve no app</h2>
+        }}>Menor Lance Único em breve no app</h2>
         <p style={{
           margin: 0, color: COR.muted,
           fontSize: isMobile ? "0.9rem" : "0.95rem", lineHeight: 1.6,
         }}>
-          Esta versão do app ainda não inclui as edições. Por aqui, continue explorando a loja e os produtos.
+          Esta versão do app ainda não inclui as edições do Menor Lance Único. Por aqui, continue explorando a loja e os produtos.
         </p>
       </GlassCard>
     </div>

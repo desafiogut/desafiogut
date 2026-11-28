@@ -439,7 +439,8 @@ test("UTAC112 · CABLAGEM · o clique passa (tipo, quantidade) e a Carteira guar
   assert.match(M, /onClick=\{\(\) => onComprar\?\.\(p\.tipo, q\)\}/);
   assert.match(M, /onClick=\{\(\) => onQuantidade\?\.\(n\)\}/);
   const C = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "../MinhaCarteira.jsx"), "utf8");
-  assert.match(C, /quantidade=\{qtdPasse\}\s+onQuantidade=\{setQtdPasse\}\s+quantidadeNaLoja=\{!depositoPix\}/);
+  // UTAC152 (SEG4 ⚠️3) — no iOS o balão não diz «Google Play»: quantidadeNaLoja também exige não-iOS.
+  assert.match(C, /quantidade=\{qtdPasse\}\s+onQuantidade=\{setQtdPasse\}\s+quantidadeNaLoja=\{!depositoPix && !compraIndisponivelIOS\}\s+compraIndisponivel=\{compraIndisponivelIOS\}/);
   assert.match(C, /setQtdPasse\(1\); setPasseAberto\(true\)/, "reabrir o balão volta a 1");
 });
 
@@ -449,4 +450,25 @@ test("UTAC112 · CARTEIRA (achado 2 do validador) · o aviso 402 e o toast de su
   assert.match(C, /const falta = quantidade > 1 \? `Saldo insuficiente para \$\{quantidade\} passes \(\$\{precoTotal\(quantidade\)\}\)\.` : "Saldo insuficiente\.";/);
   assert.match(C, /message: n > 1 \? `\$\{n\} passes comprados` : \(passeDoTipo\(tipo\)\?\.sucesso \?\? "Passe comprado"\)/);
   assert.match(C, /const n = Number\.isSafeInteger\(r\.quantidade\) \? r\.quantidade : quantidade;/, "o toast usa a quantidade confirmada pelo servidor");
+});
+
+// UTAC152 (SEG4 ⚠️3) — no iOS o balão não pode citar a Google Play nem o saldo R$ (PIX), e não há compra.
+test("UTAC152 · RENDER · compraIndisponivel (iOS): aviso neutro, sem «Google Play»/«saldo», Comprar desactivados", () => {
+  const h = renderToStaticMarkup(React.createElement(ComprarPasseModal, {
+    aberto: true, compraIndisponivel: true, quantidadeNaLoja: false, quantidade: 3, onComprar: () => {}, onCancelar: () => {},
+  }));
+  const t = semTags(h);
+  assert.match(h, /data-compra-indisponivel=""/, "faltou o aviso de compra indisponível");
+  assert.ok(t.includes("A compra do Passe Desafio ainda não está disponível no app para iOS."), t);
+  assert.doesNotMatch(t, /Google Play|debitados do seu saldo|PIX/i, `o balão do iOS cita a loja do Google ou o saldo: «${t}»`);
+  assert.doesNotMatch(h, /data-quantidade-passes=""/, "o seletor de quantidade não faz sentido sem compra");
+  assert.equal((h.match(/disabled=""/g) || []).length, 2, "os 2 botões «Comprar» têm de estar desactivados (o Cancelar não)");
+});
+
+test("UTAC152 · RENDER · sem compraIndisponivel o balão fica como antes (PWA: seletor + saldo; APK: Google Play)", () => {
+  const pwa = semTags(renderToStaticMarkup(React.createElement(ComprarPasseModal, { aberto: true, onComprar: () => {}, onCancelar: () => {} })));
+  assert.ok(pwa.includes("debitados do seu saldo"), pwa);
+  const apk = semTags(renderToStaticMarkup(React.createElement(ComprarPasseModal, { aberto: true, quantidadeNaLoja: true, onComprar: () => {}, onCancelar: () => {} })));
+  assert.ok(apk.includes("Google Play"), apk);
+  assert.doesNotMatch(pwa + apk, /ainda não está disponível no app para iOS/);
 });

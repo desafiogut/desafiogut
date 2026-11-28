@@ -23,6 +23,8 @@ export default function BalaoComprarPasse({ aberto, onFechar, onComprado }) {
   // UTAC152 — o mesmo corte para o iOS: build (VITE_IS_IOS_APP, só no `build:ios`) + runtime (pixPermitido("ios") = false).
   const depositoPix = import.meta.env.VITE_IS_ANDROID_APP !== "true" && import.meta.env.VITE_IS_IOS_APP !== "true"
     && pixPermitido(detectarPlataformaNativa());
+  // UTAC152 (SEG4 ⚠️3) — no iOS o balão não fala da Google Play nem do saldo: compra indisponível.
+  const compraIndisponivel = import.meta.env.VITE_IS_IOS_APP === "true" || detectarPlataformaNativa() === "ios";
 
   function fechar() {
     setErro("");
@@ -59,7 +61,8 @@ export default function BalaoComprarPasse({ aberto, onFechar, onComprado }) {
       onComprar={escolher}
       quantidade={quantidade}
       onQuantidade={setQuantidade}
-      quantidadeNaLoja={!depositoPix}
+      quantidadeNaLoja={!depositoPix && !compraIndisponivel}
+      compraIndisponivel={compraIndisponivel}
     />
   );
   // O `Modal` não usa portal e é `fixed`: dentro de um vidro (`backdrop-filter` cria contentor) ficaria
