@@ -1,0 +1,3 @@
+frontend: VERMELHO 3 falha(s)
+VEREDITO: VERMELHO
+EXIT=1

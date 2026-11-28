@@ -1,0 +1,5 @@
+baseline fail = 0
+M9 modal ignora compraIndisponivel no aviso: fail=1 -> RED (morde) | restauro md5 IDENTICO
+M10 normalizador nao troca barras: fail=1 -> RED (morde) | restauro md5 IDENTICO
+M11 Carteira volta a quantidadeNaLoja={!depositoPix}: fail=1 -> RED (morde) | restauro md5 IDENTICO
+mortos 3/3

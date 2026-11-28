@@ -1,0 +1,10 @@
+baseline fail = 1
+M1 pixPermitido volta a deixar o iOS: fail=3 -> RED (morde) | restauro md5 IDENTICO
+M2 hook de compra sem o ramo iOS: fail=3 -> RED (morde) | restauro md5 IDENTICO
+M3 SemSaldoBanner sem runtime: fail=2 -> RED (morde) | restauro md5 IDENTICO
+M4 Mercado sem a vista iOS: fail=2 -> RED (morde) | restauro md5 IDENTICO
+M5 guarda --ios não verifica strings: fail=15 -> RED (morde) | restauro md5 IDENTICO
+M6 guarda --ios aceita o dist do APK: fail=2 -> RED (morde) | restauro md5 IDENTICO
+M7 iosNativo sempre false: fail=3 -> RED (morde) | restauro md5 IDENTICO
+M8 PagarProduto sem o ramo iOS: fail=2 -> RED (morde) | restauro md5 IDENTICO
+mortos 8/8

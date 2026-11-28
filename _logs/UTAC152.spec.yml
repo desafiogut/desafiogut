@@ -1,0 +1,40 @@
+schema: utac/1
+name: UTAC152
+title: "Preparação iOS (Capacitor): pasta ios, Sign in with Apple, PIX fora do iOS, vocabulário"
+type: produto
+baseline: 100159b
+motivo: >-
+  Conta Apple Developer aprovada; o Mac em nuvem (Scaleway) vem a seguir. Deixar o projeto pronto
+  para não gastar horas de Mac: plataforma iOS criada e sincronizada, código conforme as regras da
+  Apple (login e pagamentos) e o que falta no Privy documentado.
+frentes:
+  - id: A
+    nome: Capacitor iOS
+    entrega: [desafio-gut/frontend/ios/ (npx cap add ios + npx cap sync ios)]
+  - id: B
+    nome: Sign in with Apple (relatório)
+    entrega: [_logs/UTAC152_FRENTE-B_SIGN-IN-WITH-APPLE.md]
+  - id: C
+    nome: PIX, boleto e site externo escondidos no iOS
+    entrega: [src/lib/google-play-billing.js, consumidores do corte do APK, testes]
+  - id: D
+    nome: Vocabulário (sorte/aposta/azar)
+    entrega: [varredura da UI + relatório]
+autoriza:
+  - editar ficheiros do frontend (React/Capacitor) e criar a pasta ios
+  - correr comandos de build web (netlify build --context production, sem deploy)
+  - despachar validador adversarial
+proibe:
+  - git add -A
+  - instalar dependências nativas / CocoaPods (sem Mac local)
+  - alterar a lógica de pagamento do Android ou do PWA
+  - alterar o backend (netlify/functions)
+  - deploy / push
+dependencias:
+  - conta Apple Developer aprovada (enunciado)
+regras_activas: [E, T, G, L, S, A, P, AU, ST, HI]
+regras_extra: []
+stop_conditions_extra: []
+ressalvas:
+  - O CORS do backend aceita só https://localhost; o iOS serve de capacitor://localhost (bloqueio fora do âmbito)
+  - Validador adversarial obrigatório
