@@ -1,0 +1,33 @@
+schema: utac/1
+name: UTAC154
+title: "Deploy do CORS do iOS (UTAC153) + imagens do img-proxy absolutas no nativo (DEBT-121)"
+type: publicacao
+baseline: 23db996
+motivo: >-
+  O CORS do iOS (UTAC153) só vale publicado; e o <img> do img-proxy usa caminho relativo, que nos
+  WebViews nativos se resolve no próprio telemóvel (imagens em branco no TestFlight/APK).
+frentes:
+  - id: A
+    nome: push dos 7 commits + deploy de produção + prova de CORS em produção
+    entrega: [git push, netlify deploy --prod --build, _logs/UTAC154_SEG-A_PRODUCAO.md]
+  - id: B
+    nome: img-proxy absoluto no nativo (apiUrl), assets locais intactos
+    entrega: [src/lib/imagem.js, teste]
+  - id: C
+    nome: suíte frontend + commit local (sem push) + relatório
+    entrega: [_logs/UTAC154-RELATORIO.md]
+autoriza:
+  - git push dos 7 commits do UTAC152/153 e deploy de produção (Frente A)
+  - editar componentes/helpers do frontend (Frente B)
+  - correr testes de backend e frontend
+proibe:
+  - git add -A
+  - alterar lógica de negócio (pontos, lances, palpites, regulamento)
+  - alterar o backend na Frente B
+  - push dos commits da Frente B
+dependencias:
+  - UTAC153 (44a90b4, c471bde)
+regras_activas: [E, T, G, L, S, A, P, AU, ST, HI]
+ressalvas:
+  - "Os 7 commits têm [skip netlify]: o push não dispara o auto-deploy; o deploy é o manual"
+  - "O deploy constrói a árvore de trabalho: leva o package-lock alheio (não commitado); o npm install --legacy-peer-deps do build produz esse mesmo estado"

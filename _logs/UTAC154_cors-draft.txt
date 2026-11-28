@@ -1,0 +1,14 @@
+✓ recursos-app  capacitor://localhost  OPTIONS 204 ACAO=capacitor://localhost | GET 200 ACAO=capacitor://localhost vary=Origin, Accept-Encoding cache=no-store age=0
+✓ recursos-app  ionic://localhost      OPTIONS 204 ACAO=ionic://localhost | GET 200 ACAO=ionic://localhost vary=Origin, Accept-Encoding cache=no-store age=1
+✓ recursos-app  https://localhost      OPTIONS 204 ACAO=https://localhost | GET 200 ACAO=https://localhost vary=Origin, Accept-Encoding cache=no-store age=0
+✓ recursos-app  https://evil.example   OPTIONS 204 ACAO=https://localhost | GET 200 ACAO=https://localhost vary=Origin, Accept-Encoding cache=no-store age=0
+✓ edicoes       capacitor://localhost  OPTIONS 204 ACAO=capacitor://localhost | GET 200 ACAO=capacitor://localhost vary=Origin, Accept-Encoding cache=no-store age=1
+✓ edicoes       ionic://localhost      OPTIONS 204 ACAO=ionic://localhost | GET 200 ACAO=ionic://localhost vary=Origin, Accept-Encoding cache=no-store age=0
+✓ edicoes       https://localhost      OPTIONS 204 ACAO=https://localhost | GET 200 ACAO=https://localhost vary=Origin, Accept-Encoding cache=no-store age=1
+✓ edicoes       https://evil.example   OPTIONS 204 ACAO=https://localhost | GET 200 ACAO=https://localhost vary=Origin, Accept-Encoding cache=no-store age=0
+TODOS OK
+https://localhost      200 ACAO=https://localhost cache=public,max-age=60,stale-while-revalidate=300 age=4 cache-status="Netlify Durable"; fwd=bypass, "Netlify Edge"; fwd=miss; fwd-status=200; stored
+https://localhost      200 ACAO=https://localhost cache=public,max-age=60,stale-while-revalidate=300 age=0 cache-status="Netlify Durable"; fwd=bypass, "Netlify Edge"; fwd=miss; fwd-status=200; stored
+capacitor://localhost  200 ACAO=capacitor://localhost cache=public,max-age=60,stale-while-revalidate=300 age=0 cache-status="Netlify Durable"; fwd=bypass, "Netlify Edge"; fwd=miss; fwd-status=200; stored
+capacitor://localhost  200 ACAO=capacitor://localhost cache=public,max-age=60,stale-while-revalidate=300 age=1 cache-status="Netlify Durable"; fwd=bypass, "Netlify Edge"; fwd=miss; fwd-status=200; stored
+https://localhost      200 ACAO=https://localhost cache=public,max-age=60,stale-while-revalidate=300 age=5 cache-status="Netlify Edge"; hit; ttl=58

@@ -1,0 +1,9 @@
+{
+  "site_id": "be1cc8bb-682b-4667-a341-c8db1f4ab2b5",
+  "site_name": "silly-stardust-ca71bc",
+  "deploy_id": "6b0a5bc7a0653503c8eb689a",
+  "deploy_url": "https://6b0a5bc7a0653503c8eb689a--silly-stardust-ca71bc.netlify.app",
+  "logs": "https://app.netlify.com/projects/silly-stardust-ca71bc/deploys/6b0a5bc7a0653503c8eb689a",
+  "function_logs": "https://app.netlify.com/projects/silly-stardust-ca71bc/logs/functions?scope=deploy:6b0a5bc7a0653503c8eb689a",
+  "edge_function_logs": "https://app.netlify.com/projects/silly-stardust-ca71bc/logs/edge-functions?scope=deployid:6b0a5bc7a0653503c8eb689a"
+}
