@@ -115,7 +115,7 @@ mock.module("../_lib/ledger-lance.mjs", {
 mock.module("../_lib/cors.mjs", {
   namedExports: {
     respostaPreflight: () => null,
-    CABECALHOS_CORS: { "access-control-allow-origin": "*" },
+    CABECALHOS_CORS: { "access-control-allow-origin": "*" }, cabecalhosCors: () => ({ "access-control-allow-origin": "*" }) /* UTAC153 */,
   },
 });
 

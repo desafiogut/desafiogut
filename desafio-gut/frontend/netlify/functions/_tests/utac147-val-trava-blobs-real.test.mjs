@@ -76,7 +76,7 @@ mock.module("../_lib/data-store.mjs", { namedExports: { addLance: async (e, r) =
 mock.module("../_lib/contract.mjs", { namedExports: { comprometerLanceOnchain: async () => ({}), lerSaldoSenhas: async () => 0 } });
 mock.module("../_lib/edicoes-core.mjs", { namedExports: { buscarEdicao: async () => ({ id: "R-VAL", tipo: "relampago" }) } });
 mock.module("../_lib/saldoRs.mjs", { namedExports: { debitarSaldoRs: async () => ({ ok: false, code: "nao_usado" }) } });
-mock.module("../_lib/cors.mjs", { namedExports: { respostaPreflight: () => null, CABECALHOS_CORS: {} } });
+mock.module("../_lib/cors.mjs", { namedExports: { respostaPreflight: () => null, CABECALHOS_CORS: {}, cabecalhosCors: () => ({}) /* UTAC153 */ } });
 
 let handler;
 before(async () => {

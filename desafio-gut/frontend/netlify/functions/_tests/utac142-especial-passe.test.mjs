@@ -97,7 +97,7 @@ mock.module("../_lib/ledger-lance.mjs", { namedExports: {
   PONTOS_LANCE_BONUS_PASSE_RELAMPAGO: 100,
 } });
 mock.module("../_lib/cors.mjs", { namedExports: {
-  respostaPreflight: () => null, CABECALHOS_CORS: { "access-control-allow-origin": "*" } } });
+  respostaPreflight: () => null, CABECALHOS_CORS: { "access-control-allow-origin": "*" }, cabecalhosCors: () => ({ "access-control-allow-origin": "*" }) /* UTAC153 */ } });
 
 let handler;
 before(async () => {

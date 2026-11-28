@@ -3,7 +3,7 @@
 
 // MC88.12 — cabeçalhos CORS do APK, injetados por jsonResponse(). Sem
 // dependências (só constantes), mantendo a promessa da linha acima.
-import { CABECALHOS_CORS } from "./cors.mjs";
+import { cabecalhosCors } from "./cors.mjs"; // UTAC153 — origem do pedido
 
 const ADDRESS_RE = /^0x[a-fA-F0-9]{40}$/;
 const EMAIL_RE   = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -112,7 +112,7 @@ export function jsonResponse(body, status = 200, extraHeaders = {}) {
       // devolvem JSON passam todas por este helper; assim nenhuma fica de fora
       // e nenhuma precisa de ser editada. No site web (same-origin) é inócuo.
       // O preflight OPTIONS NÃO passa por aqui — ver respostaPreflight().
-      ...CABECALHOS_CORS,
+      ...cabecalhosCors(),
       ...extraHeaders,
     },
   });

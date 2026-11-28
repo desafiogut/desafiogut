@@ -104,7 +104,7 @@ mock.module("../_lib/ledger-lance.mjs", { namedExports: {
   lerLedgerLance: async () => ({ creditos: 0, pontos: mockPontos, historico: [] }),
   PONTOS_LANCE_BONUS_PASSE_RELAMPAGO: 100,
 } });
-mock.module("../_lib/cors.mjs", { namedExports: { respostaPreflight: () => null, CABECALHOS_CORS: { "access-control-allow-origin": "*" } } });
+mock.module("../_lib/cors.mjs", { namedExports: { respostaPreflight: () => null, CABECALHOS_CORS: { "access-control-allow-origin": "*" }, cabecalhosCors: () => ({ "access-control-allow-origin": "*" }) /* UTAC153 */ } });
 
 let handler;
 before(async () => { process.env.NETWORK_STAGE = "mainnet"; handler = (await import("../lance-relampago.mjs")).default; });

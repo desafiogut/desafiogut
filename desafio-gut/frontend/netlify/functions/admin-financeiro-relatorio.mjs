@@ -9,7 +9,7 @@ import { autenticarAdmin } from "./_lib/admin-auth.mjs";
 import { adminPode } from "./_lib/admin-niveis.mjs";
 import { getSupabaseReadOnly } from "./_lib/supabase-client.mjs";
 import { registrarAcao, confirmarAcao } from "./_lib/admin-log.mjs";
-import { respostaPreflight } from "./_lib/cors.mjs";
+import { respostaPreflight, cabecalhosCors } from "./_lib/cors.mjs";
 
 export default async (req) => {
   const pf = respostaPreflight(req); if (pf) return pf;
@@ -73,7 +73,8 @@ export default async (req) => {
       headers: {
         "content-type": "text/csv; charset=utf-8",
         "content-disposition": `attachment; filename="desafiogut-financeiro-${new Date().toISOString().slice(0, 10)}.csv"`,
-        ...require("./_lib/cors.mjs").CABECALHOS_CORS,
+        // UTAC153 (HI) — era `require(...)` num módulo ESM: ReferenceError no export do CSV (pré-existente).
+        ...cabecalhosCors(),
       },
     });
   } catch (err) {

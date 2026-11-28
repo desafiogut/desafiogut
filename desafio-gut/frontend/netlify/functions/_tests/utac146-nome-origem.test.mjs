@@ -51,7 +51,7 @@ mock.module("../_lib/ledger-lance.mjs", { namedExports: {
   consumirPontosLance: async () => ({ ok: true, criado: true, pontos: 99 }), reverterMovimentoLance: async () => ({ ok: true }),
   creditarPontosLance: async () => ({ ok: true }), lerLedgerLance: async () => ({ pontos: 99 }), PONTOS_LANCE_BONUS_PASSE_RELAMPAGO: 100,
 } });
-mock.module("../_lib/cors.mjs", { namedExports: { respostaPreflight: () => null, CABECALHOS_CORS: { "access-control-allow-origin": "*" } } });
+mock.module("../_lib/cors.mjs", { namedExports: { respostaPreflight: () => null, CABECALHOS_CORS: { "access-control-allow-origin": "*" }, cabecalhosCors: () => ({ "access-control-allow-origin": "*" }) /* UTAC153 */ } });
 const PRIVY_REAL = await import("../_lib/privy-identidade.mjs").catch(() => ({}));
 mock.module("../_lib/privy-identidade.mjs", { namedExports: {
   ...PRIVY_REAL,

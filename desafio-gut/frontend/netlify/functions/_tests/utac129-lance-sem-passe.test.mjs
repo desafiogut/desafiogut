@@ -61,7 +61,7 @@ mock.module("../_lib/ledger-lance.mjs", { namedExports: {
   PONTOS_LANCE_BONUS_PASSE_RELAMPAGO: 100, // UTAC138-SEG4 — a mensagem do 400 lê-o (Art. 7º v6.1)
 } });
 mock.module("../_lib/cors.mjs", { namedExports: {
-  respostaPreflight: () => null, CABECALHOS_CORS: { "access-control-allow-origin": "*" } } });
+  respostaPreflight: () => null, CABECALHOS_CORS: { "access-control-allow-origin": "*" }, cabecalhosCors: () => ({ "access-control-allow-origin": "*" }) /* UTAC153 */ } });
 
 let handler;
 let diaManaus;

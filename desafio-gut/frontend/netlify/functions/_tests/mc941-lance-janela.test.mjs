@@ -70,7 +70,7 @@ mock.module("../_lib/ledger-lance.mjs", {
   },
 });
 mock.module("../_lib/cors.mjs", {
-  namedExports: { respostaPreflight: () => null, CABECALHOS_CORS: { "access-control-allow-origin": "*" } },
+  namedExports: { respostaPreflight: () => null, CABECALHOS_CORS: { "access-control-allow-origin": "*" }, cabecalhosCors: () => ({ "access-control-allow-origin": "*" }) /* UTAC153 */ },
 });
 
 let handler, seed;

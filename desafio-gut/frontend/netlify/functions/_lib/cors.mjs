@@ -21,6 +21,37 @@
  */
 export const ORIGEM_APK = "https://localhost";
 
+// ── UTAC153 (DEBT-117) — origens nativas do iOS ──────────────────────────────────────────────────
+// O WKWebView do Capacitor serve a app de `capacitor://localhost` (o `iosScheme` não pode ser https);
+// `ionic://localhost` é o esquema dos WebViews Ionic/Cordova. `Access-Control-Allow-Origin` aceita UM
+// só valor, por isso deixou de ser constante: REFLECTE-SE a origem do pedido quando ela está nesta
+// lista FECHADA (nunca `*`, nunca uma origem arbitrária); fora dela fica `ORIGEM_APK`, o valor de
+// sempre — o Android e o site (same-origin) não mudam.
+import { AsyncLocalStorage } from "node:async_hooks";
+
+export const ORIGENS_NATIVAS_PERMITIDAS = Object.freeze([
+  ORIGEM_APK,               // Android (Capacitor, androidScheme https)
+  "capacitor://localhost",  // iOS (Capacitor)
+  "ionic://localhost",      // iOS (WebView Ionic/Cordova)
+]);
+
+/** Origem a devolver: a do pedido se for uma das permitidas (comparação EXACTA); senão `ORIGEM_APK`. */
+export function origemCorsPermitida(origem) {
+  return typeof origem === "string" && ORIGENS_NATIVAS_PERMITIDAS.includes(origem) ? origem : ORIGEM_APK;
+}
+
+// Contexto POR PEDIDO (não variável global): duas invocações concorrentes no mesmo processo
+// (`netlify dev`, testes com Promise.all) não se misturam. Preenchido por `respostaPreflight(req)`,
+// que é a 1.ª linha das functions chamadas pelo app.
+const contextoCors = new AsyncLocalStorage();
+
+/** Regista a origem do pedido para os cabeçalhos das respostas deste pedido. */
+export function registarOrigemDoPedido(req) {
+  let origem = null;
+  try { origem = req?.headers?.get?.("origin") ?? null; } catch { origem = null; }
+  contextoCors.enterWith({ origem });
+}
+
 /**
  * Cabeçalhos CORS aplicados a TODAS as respostas das functions.
  *
@@ -42,6 +73,8 @@ export const ORIGEM_APK = "https://localhost";
  * functions davam `TypeError: Failed to fetch` no APK, não só o PIX (MC88.13).
  * São cabeçalhos de tracing, sem valor de autenticação — não alargam a superfície.
  */
+// UTAC153 — `CABECALHOS_CORS` fica como o valor por omissão (origem do APK), igual ao de antes; as respostas
+// passam a usar `cabecalhosCors()`, que troca SÓ as duas linhas de origem.
 export const CABECALHOS_CORS = Object.freeze({
   "access-control-allow-origin": ORIGEM_APK,
   "access-control-allow-headers": "content-type, authorization, x-visitor-id, x-device-tracked, sentry-trace, baggage",
@@ -64,6 +97,23 @@ export const CABECALHOS_CORS = Object.freeze({
 });
 
 /**
+ * UTAC153 — cabeçalhos CORS para ESTE pedido. Sem argumento usa a origem registada por
+ * `respostaPreflight(req)`; sem contexto (scheduled, chamadas fora de pedido) devolve `CABECALHOS_CORS`.
+ * O `vary: Origin` (já presente) entra na chave de cache do CDN da Netlify, por isso uma resposta
+ * cacheada para o Android não é servida ao iOS.
+ * @param {string|null} [origem] — origem explícita (ex.: `req.headers.get("origin")`).
+ */
+export function cabecalhosCors(origem = contextoCors.getStore()?.origem) {
+  const permitida = origemCorsPermitida(origem);
+  if (permitida === ORIGEM_APK) return CABECALHOS_CORS;
+  return Object.freeze({
+    ...CABECALHOS_CORS,
+    "access-control-allow-origin": permitida,
+    "timing-allow-origin": permitida,
+  });
+}
+
+/**
  * Responde ao preflight do browser. Devolve uma `Response` 204 quando o método é
  * OPTIONS; `null` caso contrário — nesse caso o handler segue o curso normal.
  *
@@ -77,6 +127,8 @@ export const CABECALHOS_CORS = Object.freeze({
  *       …
  */
 export function respostaPreflight(req) {
+  // UTAC153 — regista a origem em TODOS os métodos (o pedido real também precisa da origem certa).
+  registarOrigemDoPedido(req);
   if (req?.method !== "OPTIONS") return null;
-  return new Response(null, { status: 204, headers: CABECALHOS_CORS });
+  return new Response(null, { status: 204, headers: cabecalhosCors() });
 }

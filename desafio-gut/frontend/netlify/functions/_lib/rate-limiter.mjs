@@ -17,7 +17,7 @@ import { captureSecurityAlert } from "./sentry-server.mjs";
 // (origem https://localhost) o browser DESCARTAVA a resposta e o fetch estourava
 // com `TypeError: Failed to fetch`: a app nunca via o 429 nem o `Retry-After`,
 // portanto não podia fazer backoff — o estrangulamento parecia falha de rede.
-import { CABECALHOS_CORS } from "./cors.mjs";
+import { cabecalhosCors } from "./cors.mjs"; // UTAC153 — origem do pedido
 // MC39.19 (Onda 3, item 19) — contador de rate-limit em Redis (Upstash) quando
 // configurado; fallback transparente ao Netlify Blobs (zero regressão).
 import { cacheConfigurado, cacheIncr } from "./cache.mjs";
@@ -84,7 +84,7 @@ export async function aplicarRateLimit(req, endpoint, limite) {
         headers: {
           // MC88.16 (P0) — CORS primeiro; as chaves abaixo não colidem com as do
           // CORS, e sem isto o APK não consegue LER o 429 nem o retry-after.
-          ...CABECALHOS_CORS,
+          ...cabecalhosCors(),
           "content-type":         "application/json; charset=utf-8",
           "cache-control":        "no-store",
           "retry-after":          String(retryAfterSeg),

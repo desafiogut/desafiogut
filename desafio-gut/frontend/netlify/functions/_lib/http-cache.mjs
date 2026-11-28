@@ -13,7 +13,7 @@ import { createHash } from "node:crypto";
 // access-control-allow-origin, logo a listagem por categoria falhava no APK
 // exactamente como o PIX falhava no MC88.13. O 304 precisa igualmente dos
 // cabeçalhos: uma revalidação sem CORS é descartada como qualquer outra.
-import { CABECALHOS_CORS } from "./cors.mjs";
+import { cabecalhosCors } from "./cors.mjs"; // UTAC153 — origem do pedido
 
 /** ETag forte derivado do corpo (sha1 base64url, curto). */
 export function computeETag(body) {
@@ -32,7 +32,7 @@ export function jsonCacheavel(req, body, { maxAge = 60, swr = 300 } = {}) {
   const payload = JSON.stringify(body);
   const etag = computeETag(payload);
   const headers = {
-    ...CABECALHOS_CORS,
+    ...cabecalhosCors(req?.headers?.get?.("origin") ?? undefined),
     "content-type": "application/json; charset=utf-8",
     "etag": etag,
     "cache-control": `public, max-age=${maxAge}, stale-while-revalidate=${swr}`,
