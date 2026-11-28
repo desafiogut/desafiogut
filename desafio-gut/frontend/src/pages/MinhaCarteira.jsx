@@ -29,6 +29,8 @@ import ResgatarCartaoModal, { CARTAO_ID } from "../components/ResgatarCartaoModa
 // uma constante e o minificador apaga os blocos de Saldo R$/PIX do bundle do APK — as strings deixam
 // de existir no AAB, em vez de só ficarem escondidas. A detecção em runtime (UTAC116) fica como 2.ª camada.
 const APK_BUILD = import.meta.env.VITE_IS_ANDROID_APP === "true";
+// UTAC152 (R18-152-B) — o mesmo corte para o iOS: VITE_IS_IOS_APP só existe no `build:ios`.
+const IOS_BUILD = import.meta.env.VITE_IS_IOS_APP === "true";
 const VALOR_POR_SENHA_BRL = 2;
 // UTAC106c — Passe Desafio: R$ 2,00 (NORTE Via B). Aqui vive só o PREÇO e o balão de
 // confirmação; a compra (débito/crédito/gravação) é do UTAC106e — este ecrã não toca em lógica.
@@ -125,7 +127,7 @@ export default function MinhaCarteira() {
       if (temDocumento) document.removeEventListener("visibilitychange", reavaliar);
     };
   }, []);
-  const depositoPix = !APK_BUILD && pixPermitido(plataformaNativa);
+  const depositoPix = !APK_BUILD && !IOS_BUILD && pixPermitido(plataformaNativa);
   // UTAC112 — pacote escolhido no balão do Passe (1, 3, 5, 10); volta a 1 ao reabrir o balão.
   const [qtdPasse, setQtdPasse] = useState(1);
   // UTAC106c — balão de confirmação do Passe Desafio. UTAC106e — o balão passou a COMPRAR

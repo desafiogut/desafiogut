@@ -34,12 +34,15 @@ import { useInventarioPasses } from "../hooks/useInventarioPasses.js";
 // (`estadoCreditosLance`/`rotuloCreditos` de `lib/passes.js`) deixou de ser usado aqui; fica como legado.
 // UTAC147 — SUPERADO: o estado do botão passou a ser por PASSES (`estadoPassesLance`, `lib/passes.js`).
 import { estadoPassesLance, rotuloPassesRelampago } from "../lib/passes.js";
+import { iosNativo } from "../lib/google-play-billing.js"; // UTAC152 — 2.ª camada (runtime)
 // UTAC141 (SKILL utac-edicoes) — a acção embutida é o formulário CANÓNICO da edição (o mesmo do palpite).
 import FormularioAcao, { ESTILO_ACAO } from "./_formAcaoEdicao.jsx";
 
 // UTAC132.1 (DEBT-088) — corte em TEMPO DE BUILD, a mesma flag do UTAC132 (só o `build:apk` a define).
 // No APK não há saldo R$ nem PIX: o minificador apaga a frase de recarga e o guarda recusa-a no AAB.
 const APK_BUILD = import.meta.env.VITE_IS_ANDROID_APP === "true";
+// UTAC152 (R18-152-B) — o mesmo corte para o iOS: VITE_IS_IOS_APP só existe no `build:ios`.
+const IOS_BUILD = import.meta.env.VITE_IS_IOS_APP === "true";
 // UTAC120 (Frente B) — o lance Relâmpago consome 1 PASSE RELÂMPAGO do inventário (backend UTAC120);
 // sem Passe, o botão passa a ser o atalho de compra (o MESMO balão da Carteira).
 // UTAC129 (Frente C, R18-129-3) — saíram o inventário e o balão de compra do CardLance: o lance já não
@@ -305,7 +308,7 @@ export default function CardLance({
           const msgMap = {
             // UTAC132.1 — no APK a chave fica com mensagem neutra: sem ela caía no `message` do servidor,
             // que também fala em R$ (`saldoRs.mjs:178`).
-            saldo_insuficiente:       APK_BUILD ? "Saldo insuficiente para este lance." : "Saldo R$ insuficiente. Recarregue via PIX.",
+            saldo_insuficiente:       (APK_BUILD || IOS_BUILD || iosNativo()) ? "Saldo insuficiente para este lance." : "Saldo R$ insuficiente. Recarregue via PIX.",
             params_invalidos:         "Parâmetros inválidos.",
             debito_falhou:            "Falha ao debitar saldo. Tente novamente.",
             token_expirado:           "Sessão expirada — nova autenticação necessária na próxima tentativa.",

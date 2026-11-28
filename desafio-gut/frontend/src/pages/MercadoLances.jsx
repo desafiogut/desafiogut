@@ -26,6 +26,7 @@ import { useRankingEspecial } from "../hooks/useRankingEspecial.js"; // UTAC140 
 import { EM_BREVE_MODE } from "../lib/leilaoLock.js";
 import { getEstadoEdicao } from "../utils/edicao.js";
 import { ORIGEM_PRODUCAO } from "../lib/apiOrigin.js"; // UTAC129
+import { iosNativo } from "../lib/google-play-billing.js"; // UTAC152
 
 // MC99 — `CATEGORIAS_POR_TIPO` + `buscarClienteDoLeilaoAtivo` viveram aqui para
 // alimentar o banner do cliente (REQ-01). Com o banner removido desta tela, o
@@ -524,7 +525,39 @@ export default function MercadoLances() {
 const PWA_URL = ORIGEM_PRODUCAO;
 const PWA_HOST = PWA_URL.replace("https://", "");
 
+// UTAC152 (R18-152-B) — no iOS a vista de conformidade NÃO cita nem liga ao site: a Apple (3.1.1/3.1.3)
+// recusa chamadas para comprar fora do app. Textos do executor. Build (`build:ios`) + runtime.
+function MercadoConformidadeIOS({ isMobile }) {
+  return (
+    <div data-conformidade-ios style={{
+      minHeight: "100%",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      padding: isMobile ? "1.5rem 1rem" : "3rem 2rem",
+    }}>
+      <GlassCard style={{
+        maxWidth: "520px", width: "100%",
+        padding: isMobile ? "1.75rem 1.5rem" : "2.5rem 2.25rem",
+        textAlign: "center",
+      }}>
+        <div style={{ fontSize: isMobile ? "2.5rem" : "3rem", lineHeight: 1 }} aria-hidden="true">🛍️</div>
+        <h2 style={{
+          margin: "1rem 0 0.5rem",
+          fontSize: isMobile ? "1.25rem" : "1.5rem",
+          fontWeight: 800, color: COR.text, letterSpacing: "0.01em",
+        }}>Edições em breve no app</h2>
+        <p style={{
+          margin: 0, color: COR.muted,
+          fontSize: isMobile ? "0.9rem" : "0.95rem", lineHeight: 1.6,
+        }}>
+          Esta versão do app ainda não inclui as edições. Por aqui, continue explorando a loja e os produtos.
+        </p>
+      </GlassCard>
+    </div>
+  );
+}
+
 function MercadoConformidade({ isMobile }) {
+  if (import.meta.env.VITE_IS_IOS_APP === "true" || iosNativo()) return <MercadoConformidadeIOS isMobile={isMobile} />;
   return (
     <div style={{
       minHeight: "100%",

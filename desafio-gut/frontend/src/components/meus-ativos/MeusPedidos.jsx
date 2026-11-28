@@ -8,6 +8,7 @@ import { usePagarProduto } from "../../hooks/usePagarProduto.js";
 import { timelineDoRastreio } from "../../lib/rastreio.js";
 import { COR, caixa, tituloSecao, legenda, reais } from "./_estilo.js";
 import TimelineRastreio from "./TimelineRastreio.jsx";
+import { iosNativo } from "../../lib/google-play-billing.js"; // UTAC152
 
 /**
  * Meus pedidos — MC-ECOMMERCE-01a.
@@ -159,7 +160,32 @@ export function CartaoPedido({ pedido, authToken, endereco, isMobile, aoGravar }
  * UTAC111 — cartão do VENCEDOR: paga o produto por PIX no valor do seu lance. O PIX cai na conta da
  * Associação (Mercado Pago). O valor e o comprador são verificados no servidor; aqui só se mostra.
  */
-export function PagarProduto({ pedido, authToken, isMobile, aoPagar }) {
+export function PagarProduto(props) {
+  // UTAC152 (R18-152-B) — no iOS sem PIX nem menção a ele. Componente separado para que o hook do PIX
+  // não seja chamado de forma condicional e para que o `build:ios` o apague do bundle.
+  if (import.meta.env.VITE_IS_IOS_APP === "true" || iosNativo()) return <PagarProdutoIndisponivelIOS {...props} />;
+  return <PagarProdutoPix {...props} />;
+}
+
+/** UTAC152 — cartão do vencedor no iOS: o valor fica à vista, o pagamento não (texto do executor). */
+function PagarProdutoIndisponivelIOS({ pedido, isMobile }) {
+  return (
+    <div data-pagar-produto data-ios style={{ marginTop: "0.6rem", padding: isMobile ? "0.7rem" : "0.8rem", borderRadius: "10px",
+      border: `1px solid rgba(245,166,35,0.35)`, background: "rgba(245,166,35,0.06)" }}>
+      <p style={{ margin: 0, fontSize: "0.88rem", color: COR.text, fontWeight: 700 }}>
+        Parabéns! Você venceu o Menor Lance Único.
+      </p>
+      <p style={{ margin: "0.35rem 0 0", fontSize: "0.82rem", color: COR.text }}>
+        Valor do produto: <strong style={{ color: COR.primary }}>{reais(pedido.valorPagoCentavos)}</strong>
+      </p>
+      <p role="status" style={{ margin: "0.45rem 0 0", fontSize: "0.8rem", color: COR.muted }}>
+        O pagamento deste pedido ainda não está disponível no app para iOS.
+      </p>
+    </div>
+  );
+}
+
+function PagarProdutoPix({ pedido, authToken, isMobile, aoPagar }) {
   const { estado, pix, erro, pagar } = usePagarProduto({ produtoId: pedido.produtoId, authToken, aoPagar });
   const [copiado, setCopiado] = useState(false);
   async function copiar() {

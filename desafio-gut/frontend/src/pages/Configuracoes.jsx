@@ -7,9 +7,12 @@ import { GlassCard } from "@/components/ui";
 import { Button } from "@/components/ui";
 import BotaoLoginPrincipal from "../components/BotaoLoginPrincipal.jsx";
 import ExcluirContaModal from "../components/ExcluirContaModal.jsx";
+import { iosNativo } from "../lib/google-play-billing.js"; // UTAC152 — 2.ª camada (runtime)
 
 // UTAC132.2 (DEBT-088) — corte em tempo de build (flag só do `build:apk`): no APK não há depósito PIX.
 const APK_BUILD = import.meta.env.VITE_IS_ANDROID_APP === "true";
+// UTAC152 (R18-152-B) — o mesmo corte para o iOS: VITE_IS_IOS_APP só existe no `build:ios`.
+const IOS_BUILD = import.meta.env.VITE_IS_IOS_APP === "true";
 // MC25.3 — SliderOpacidade removido. Vidro fixo (.gut-glass-standard).
 
 const COR = {
@@ -168,7 +171,7 @@ export default function Configuracoes() {
             { label: t("config.notifLances"),      value: notifLances,   setter: setNotifLances   },
             { label: t("config.notifVencedor"),       value: notifVencedor, setter: setNotifVencedor },
             // UTAC132.2 — sem o interruptor de PIX no APK (a chave também não existe no bundle dele).
-            ...(APK_BUILD ? [] : [{ label: t("config.notifPix"), value: notifPix, setter: setNotifPix }]),
+            ...((APK_BUILD || IOS_BUILD || iosNativo()) ? [] : [{ label: t("config.notifPix"), value: notifPix, setter: setNotifPix }]),
           ].map(({ label, value, setter }) => (
             <div key={label} style={{
               display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.75rem",

@@ -39,7 +39,7 @@ import { apiPost } from "../lib/api.js";
 import { gerarIdempotencyKey } from "../utils/idempotency.js";
 import { passeDoTipo, inteiroNaoNegativo, QUANTIDADES_PASSE } from "../lib/passes.js";
 import { useRecursosApp } from "./useRecursosApp.js";
-import { billingDisponivel, iniciarCompra, confirmarCompra, androidNativo } from "../lib/google-play-billing.js";
+import { billingDisponivel, iniciarCompra, confirmarCompra, androidNativo, iosNativo } from "../lib/google-play-billing.js";
 import { ORIGEM_PRODUCAO } from "../lib/apiOrigin.js"; // UTAC129
 
 // Mensagens por código HTTP dos endpoints (`_lib/comprar-passe-tipado.mjs`): nunca em silêncio.
@@ -70,9 +70,14 @@ const MSG_BILLING = {
 // a vista de conformidade do Mercado já usa (`MercadoLances.jsx`, `PWA_URL`).
 // UTAC129 (Frente C) — `desafiogut.com` não responde (UTAC124: curl → 000); passa à origem de produção.
 const PWA_PASSE = ORIGEM_PRODUCAO;
-const MSG_PIX_NO_APK =
+// UTAC152 (R18-152-B) — no `build:ios` esta frase (que cita o site) nem entra no bundle.
+const IOS_BUILD = import.meta.env.VITE_IS_IOS_APP === "true";
+const MSG_PIX_NO_APK = IOS_BUILD ? "" :
   "O Passe Desafio nesta app é comprado pela Google Play, não com saldo. " +
   `Se a loja não abrir, compre em ${PWA_PASSE.replace("https://", "")}, no seu navegador.`;
+
+// UTAC152 — texto do executor (neutro: sem PIX, sem site, sem preço fora da loja).
+const MSG_COMPRA_IOS = "A compra do Passe Desafio ainda não está disponível no app para iOS.";
 
 export function useComprarPasse() {
   const { address, authToken, refetchSaldoRs } = useAppContext();
@@ -162,6 +167,15 @@ export function useComprarPasse() {
       if (androidNativo()) {
         setErro(MSG_PIX_NO_APK);
         return { ok: false, code: "pix_indisponivel_no_apk", message: MSG_PIX_NO_APK };
+      }
+
+      // ── UTAC152 (R18-152-B): no iOS o Passe NÃO se compra nesta versão ────────────────────────
+      // Não há In-App Purchase implementado (DEBT-060) e a Apple proíbe vender conteúdo digital por
+      // outro meio ou apontar para ele (3.1.1). Erro claro, SEM citar PIX nem o site; nenhuma chamada
+      // ao endpoint. Aceite pelo operador: o TestFlight valida compilação e interface.
+      if (IOS_BUILD || iosNativo()) {
+        setErro(MSG_COMPRA_IOS);
+        return { ok: false, code: "compra_indisponivel_no_ios", message: MSG_COMPRA_IOS };
       }
 
       // ── PIX / saldo R$ (fluxo ORIGINAL — inalterado) ───────────────────────────────────────────

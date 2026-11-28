@@ -9,6 +9,8 @@
     "preview": "vite preview",
     "build:rag": "node ../../scripts/build-rag-index.mjs",
     "validar:dist": "node scripts/validar-dist-rede.mjs",
+    "validar:dist:ios": "node scripts/validar-dist-rede.mjs --ios",
+    "build:ios": "cd ../.. && set VITE_IS_IOS_APP=true&& netlify build --context production && cd desafio-gut/frontend && npm run validar:dist:ios && npx cap sync ios",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives",
     "build:apk": "cd ../.. && set VITE_IS_ANDROID_APP=true&& netlify build --context production && cd desafio-gut/frontend && npm run validar:dist && npx cap sync android",
     "test": "node ../../scripts/mc966-suite-harness.mjs ambos"

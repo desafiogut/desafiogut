@@ -102,7 +102,8 @@ test("UTAC132 · nenhum .env* do frontend define VITE_IS_ANDROID_APP (o site man
 test("UTAC132 · Carteira: APK_BUILD vem da flag e corta depositoPix; o modal de depósito só monta com depositoPix", () => {
   const f = ler("src/pages/MinhaCarteira.jsx");
   assert.match(f, /const APK_BUILD = import\.meta\.env\.VITE_IS_ANDROID_APP === "true";/);
-  assert.match(f, /const depositoPix = !APK_BUILD && pixPermitido\(plataformaNativa\);/);
+  // UTAC152 — a expressão ganhou o corte do iOS (R18-152-B); o do Android fica igual.
+  assert.match(f, /const depositoPix = !APK_BUILD && !IOS_BUILD && pixPermitido\(plataformaNativa\);/);
   assert.match(f, /\{depositoPix && <ComprarFichasModal\b/);
   // O modal não pode voltar a ser montado sem condição (o seu «Depositar PIX» voltaria ao bundle do APK).
   assert.equal((f.match(/<ComprarFichasModal\b/g) || []).length, 1);
@@ -110,13 +111,15 @@ test("UTAC132 · Carteira: APK_BUILD vem da flag e corta depositoPix; o modal de
 
 test("UTAC132 · balão do Passe: depositoPix também corta pela flag", () => {
   const f = ler("src/components/BalaoComprarPasse.jsx");
-  assert.match(f, /const depositoPix = import\.meta\.env\.VITE_IS_ANDROID_APP !== "true" && pixPermitido\(detectarPlataformaNativa\(\)\);/);
+  // UTAC152 — a expressão ganhou o corte do iOS (R18-152-B); o do Android fica igual.
+  assert.match(f, /const depositoPix = import\.meta\.env\.VITE_IS_ANDROID_APP !== "true" && import\.meta\.env\.VITE_IS_IOS_APP !== "true"\s+&& pixPermitido\(detectarPlataformaNativa\(\)\);/);
 });
 
 test("UTAC132.1 · CardLance: a frase de recarga por PIX só existe fora do APK (corte pela flag)", () => {
   const f = ler("src/components/CardLance.jsx");
   assert.match(f, /const APK_BUILD = import\.meta\.env\.VITE_IS_ANDROID_APP === "true";/);
-  assert.match(f, /saldo_insuficiente:\s*APK_BUILD \? "Saldo insuficiente para este lance\." : "Saldo R\$ insuficiente\. Recarregue via PIX\.",/);
+  // UTAC152 — a expressão ganhou o corte do iOS (R18-152-B); o do Android fica igual.
+  assert.match(f, /saldo_insuficiente:\s*\(APK_BUILD \|\| IOS_BUILD \|\| iosNativo\(\)\) \? "Saldo insuficiente para este lance\." : "Saldo R\$ insuficiente\. Recarregue via PIX\.",/);
   // A mensagem do APK não pode falar em R$ nem em PIX.
   assert.doesNotMatch("Saldo insuficiente para este lance.", /R\$|PIX/);
   assert.equal((f.match(/Recarregue via PIX/g) || []).length, 1, "a frase não pode aparecer fora do ramo do site");
@@ -133,10 +136,12 @@ test("UTAC132.2 · Carteira: erro de leitura do saldo R$ e toast «Carregar agor
 test("UTAC132.2 · Configurações: interruptor e chave de PIX cortados pela flag", () => {
   const c = ler("src/pages/Configuracoes.jsx");
   assert.match(c, /const APK_BUILD = import\.meta\.env\.VITE_IS_ANDROID_APP === "true";/);
-  assert.match(c, /\.\.\.\(APK_BUILD \? \[\] : \[\{ label: t\("config\.notifPix"\)/);
+  // UTAC152 — a expressão ganhou o corte do iOS (R18-152-B); o do Android fica igual.
+  assert.match(c, /\.\.\.\(\(APK_BUILD \|\| IOS_BUILD \|\| iosNativo\(\)\) \? \[\] : \[\{ label: t\("config\.notifPix"\)/);
   assert.equal((c.match(/config\.notifPix/g) || []).length, 1, "notifPix usado fora do corte");
   const pt = ler("src/i18n/pt.js");
-  assert.match(pt, /\.\.\.\(import\.meta\.env\.VITE_IS_ANDROID_APP === "true" \? \{\} : \{ "config\.notifPix": "Confirmação de depósito PIX" \}\),/);
+  // UTAC152 — a expressão ganhou o corte do iOS (R18-152-B); o do Android fica igual.
+  assert.match(pt, /\.\.\.\(\(import\.meta\.env\.VITE_IS_ANDROID_APP === "true" \|\| import\.meta\.env\.VITE_IS_IOS_APP === "true"\)\s+\? \{\} : \{ "config\.notifPix": "Confirmação de depósito PIX" \}\),/);
   assert.equal((pt.match(/Confirmação de depósito PIX/g) || []).length, 1, "a frase aparece fora do corte no pt.js");
 });
 

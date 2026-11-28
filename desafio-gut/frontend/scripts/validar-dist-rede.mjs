@@ -19,6 +19,7 @@
 // funcionar na próxima migração de contrato, sem virar mentira.
 //
 // Uso:  node scripts/validar-dist-rede.mjs [caminho-do-dist]
+//       node scripts/validar-dist-rede.mjs --ios [caminho]  → UTAC152: bundle do iOS (`build:ios`)
 //       GUT_PERMITIR_TESTNET=1  → aceita um bundle de testnet (build deliberado)
 //
 // Saída: 0 = coerente · 1 = incoerente (falha o build)
@@ -28,7 +29,11 @@ import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
-const DIST = resolve(process.argv[2] || join(AQUI, "..", "dist"));
+// UTAC152 — `--ios` troca só o passo 5 (corte de PIX/site): flag VITE_IS_IOS_APP e a lista do iOS.
+// Sem `--ios` o comportamento é o do APK, igual ao de antes (o Gradle passa só o caminho).
+const ARGS = process.argv.slice(2);
+const ALVO_IOS = ARGS.includes("--ios");
+const DIST = resolve(ARGS.find((a) => !a.startsWith("--")) || join(AQUI, "..", "dist"));
 
 // Endereço do contrato abandonado (MC56/MC59.15). Nunca deve ser o contrato ativo
 // de um bundle de produção. Este SIM é hardcoded, de propósito: é uma lista negra.
@@ -168,18 +173,46 @@ const proibidasEncontradas = STRINGS_PROIBIDAS_APK
   .filter((x) => x.n > 0);
 console.log(`VITE_IS_ANDROID_APP      : ${flagApk ?? "(AUSENTE)"}`);
 console.log(`strings PIX/Saldo no APK : ${proibidasEncontradas.length ? proibidasEncontradas.map((x) => `«${x.s}» em ${x.n}`).join(", ") : "nenhuma"}`);
-if (flagApk !== "true") {
+if (!ALVO_IOS && flagApk !== "true") {
   erros.push("VITE_IS_ANDROID_APP ausente/diferente de \"true\": o corte de PIX/Saldo em tempo de build não foi aplicado (usar `npm run build:apk`).");
 }
-if (proibidasEncontradas.length) {
+if (!ALVO_IOS && proibidasEncontradas.length) {
   erros.push(`strings proibidas no APK: ${proibidasEncontradas.map((x) => `«${x.s}»`).join(", ")} — PIX/Saldo R$ não pode ir no AAB (política de Pagamentos da Play).`);
 }
 
+// 5-iOS. UTAC152 (R18-152-B) — bundle do iOS: exige VITE_IS_IOS_APP=true (só o `build:ios` a injecta)
+//    e recusa as frases de PIX/recarga e as que mandam para o site (Apple 3.1.1/3.1.3). A flag do
+//    Android num bundle do iOS também é erro: seria um dist do APK copiado para o Xcode.
+const STRINGS_PROIBIDAS_IOS = [
+  ...STRINGS_PROIBIDAS_APK,
+  "Carregar PIX", "Pagar Produto via PIX", "PIX copia e cola", "Copiar código PIX", "Deposite via PIX",
+  "Edições na versão Web", "Abrir versão Web", "no seu navegador",
+];
+if (ALVO_IOS) {
+  const flagIos = lerEnvInlined(conteudos, "VITE_IS_IOS_APP");
+  const proibidasIos = STRINGS_PROIBIDAS_IOS
+    .map((s) => ({ s, n: conteudos.filter((c) => c.includes(s)).length }))
+    .filter((x) => x.n > 0);
+  console.log(`VITE_IS_IOS_APP          : ${flagIos ?? "(AUSENTE)"}`);
+  console.log(`strings PIX/site no iOS  : ${proibidasIos.length ? proibidasIos.map((x) => `«${x.s}» em ${x.n}`).join(", ") : "nenhuma"}`);
+  if (flagIos !== "true") {
+    erros.push("VITE_IS_IOS_APP ausente/diferente de \"true\": o corte de PIX/site em tempo de build não foi aplicado (usar `npm run build:ios`).");
+  }
+  if (flagApk === "true") {
+    erros.push("VITE_IS_ANDROID_APP=true num bundle do iOS: é o dist do APK (correr `npm run build:ios`).");
+  }
+  if (proibidasIos.length) {
+    erros.push(`strings proibidas no iOS: ${proibidasIos.map((x) => `«${x.s}»`).join(", ")} — PIX/site não podem ir no binário da Apple.`);
+  }
+}
+
 if (erros.length) {
-  console.error("✖ BUNDLE REJEITADO — não sincronizar para o APK nem publicar:\n");
+  console.error(`✖ BUNDLE REJEITADO — não sincronizar para o ${ALVO_IOS ? "iOS" : "APK"} nem publicar:\n`);
   erros.forEach((e, i) => console.error(`  ${i + 1}. ${e}`));
   console.error("\n  Build correcto de produção:");
-  console.error("    netlify build   (injecta o env do contexto)  →  npx cap sync android  →  gradlew");
+  console.error(ALVO_IOS
+    ? "    npm run build:ios   (netlify build com VITE_IS_IOS_APP=true  →  npx cap sync ios)"
+    : "    netlify build   (injecta o env do contexto)  →  npx cap sync android  →  gradlew");
   console.error("  Para um build de testnet deliberado: GUT_PERMITIR_TESTNET=1\n");
   process.exit(1);
 }

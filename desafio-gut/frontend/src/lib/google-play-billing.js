@@ -136,11 +136,23 @@ export function detectarPlataformaNativa(win) {
 
 /**
  * O PIX genérico pode aparecer nesta plataforma?
- * iOS fica de FORA de propósito (não há Billing iOS implementado — bloquear o PIX lá partiria um
- * fluxo que funciona). Android: NUNCA (produto digital na Play).
+ * Android: NUNCA (produto digital na Play).
+ * UTAC152 (R18-152-B): iOS também NUNCA. As regras da Apple (3.1.1) proíbem vender conteúdo digital
+ * fora do In-App Purchase e qualquer chamada para outro meio de pagamento. Não há IAP iOS
+ * implementado, logo no iOS o Passe fica sem compra (DEBT-060, aceite pelo operador).
+ * (Antes do UTAC152 o iOS ficava de fora de propósito: UTAC110i.2.)
  */
 export function pixPermitido(plataforma) {
-  return plataforma !== "android";
+  return plataforma !== "android" && plataforma !== "ios";
+}
+
+/** UTAC152 — `true` só no wrapper nativo iOS (ponte do Capacitor; a web não a forja). Fail-closed. */
+export function iosNativo() {
+  try {
+    return detectarPlataformaNativa() === "ios";
+  } catch {
+    return false;
+  }
 }
 
 /** Compatibilidade: `true` só quando a plataforma nativa é Android. */

@@ -18,7 +18,8 @@ test("a condição é a ponte nativa (UTAC116: pixPermitido) e NUNCA ?plataforma
   // O contrato passou a `pixPermitido(plataformaNativa)`, com a plataforma reavaliada no mount.
   assert.match(fonte, /import\s*\{[^}]*pixPermitido[^}]*\}\s*from\s*"\.\.\/lib\/google-play-billing\.js"/);
   // UTAC132 — o corte de build (APK_BUILD) vem antes; a ponte nativa continua a ser a 2.ª camada.
-  assert.match(fonte, /const depositoPix = !APK_BUILD && pixPermitido\(plataformaNativa\);/);
+  // UTAC152 — + o corte de build do iOS (IOS_BUILD); o do Android fica igual.
+  assert.match(fonte, /const depositoPix = !APK_BUILD && !IOS_BUILD && pixPermitido\(plataformaNativa\);/);
   // O que continua PROIBIDO: decidir pelo parâmetro sobreponível `?plataforma=`.
   assert.doesNotMatch(fonte, /\?plataforma=/);
   assert.doesNotMatch(fonte, /depositoPix\s*=\s*[^;]*(===?\s*["']android["']|plataforma\s*===)/);

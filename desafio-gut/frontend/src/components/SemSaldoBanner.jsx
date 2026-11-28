@@ -10,6 +10,7 @@
 import { useNavigate } from "react-router-dom";
 import { GlassCard } from "@/components/ui";
 import { COR } from "./glass/glassTokens.js";
+import { iosNativo } from "../lib/google-play-billing.js"; // UTAC152
 
 /** Decide se o aviso aparece. Pura — sem coerção: só o número 0 conta como «sem saldo». */
 export function mostrarAvisoSemSaldo({ isConnected, saldoRsCentavos, saldoRsStatus, tipoProvavel, modalidade }) {
@@ -25,6 +26,9 @@ export function mostrarAvisoSemSaldo({ isConnected, saldoRsCentavos, saldoRsStat
 
 export default function SemSaldoBanner() {
   const navigate = useNavigate();
+  // UTAC152 (R18-152-B) — no iOS não há recarga por PIX (Apple 3.1.1): o aviso nem se desenha.
+  // Build (`build:ios`) apaga o JSX abaixo do bundle; runtime cobre um dist sem a flag.
+  if (import.meta.env.VITE_IS_IOS_APP === "true" || iosNativo()) return null;
   return (
     <GlassCard role="status" data-testid="sem-saldo" style={{
       padding: "0.9rem 1rem",

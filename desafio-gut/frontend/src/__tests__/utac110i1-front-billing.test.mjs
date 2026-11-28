@@ -149,13 +149,19 @@ test("(b) PWA com a flag ligada no Blob ⇒ PIX (o browser nunca tem loja) e ZER
   assert.equal(refetchChamadas, 1, "o PIX mexe no saldo R$ e o ecrã tem de o reler");
 });
 
-test("(b) iOS com a flag ligada ⇒ PIX (a loja do Google não existe em iOS)", async () => {
+// ⚠️ CONTRATO ANTERIOR (UTAC110i.1), INVERTIDO pelo UTAC152 (R18-152-B) e mantido à vista: o teste
+//   chamava-se «(b) iOS com a flag ligada ⇒ PIX (a loja do Google não existe em iOS)» e exigia
+//   `assert.match(dup.chamadas[0].url, URL_PIX_RELAMPAGO)`. No iOS o PIX deixou de ser caminho de compra
+//   (Apple 3.1.1); sem IAP, a compra fica indisponível (DEBT-060, aceite pelo operador).
+test("(b) UTAC152 · iOS com a flag ligada ⇒ SEM compra: nem PIX nem loja Google, mensagem sem PIX nem site", async () => {
   reiniciarDuploCapacitor({ plataforma: "ios", nativo: true, pluginDisponivel: true });
   definirRecursos({ isPagamentoNativoAtivo: true, plataforma: "ios" });
-  const { dup } = await comprar(() => ({ status: 201, json: { ok: true, pontosFidelidade: 10 } }));
-  assert.equal(dup.chamadas.length, 1);
-  assert.match(dup.chamadas[0].url, URL_PIX_RELAMPAGO);
-  assert.equal(REGISTO.order.length, 0);
+  const { r, dup } = await comprar(() => ({ status: 201, json: { ok: true, pontosFidelidade: 10 } }));
+  assert.equal(r.ok, false);
+  assert.equal(r.code, "compra_indisponivel_no_ios");
+  assert.doesNotMatch(r.message, /pix|netlify\.app|navegador|site/i, "a mensagem do iOS não pode apontar para fora do app");
+  assert.equal(dup.chamadas.filter((c) => /comprar-passe/.test(c.url)).length, 0, "o iOS foi ao endpoint PIX");
+  assert.equal(REGISTO.order.length, 0, "o iOS foi à loja do Google");
 });
 
 test("(b) Android nativo mas SEM o plugin nativo ⇒ SEM compra (o APK não vende por PIX) — UTAC110i.2/C", async () => {

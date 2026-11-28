@@ -60,10 +60,14 @@ test("vite dev (http://localhost:5173) NÃO é tratado como APK", () => {
   assert.equal(detectarPlataformaNativa(dev), "web");
 });
 
-test("iOS nativo mantém o PIX (não há Billing iOS implementado)", () => {
+// ⚠️ CONTRATO ANTERIOR (UTAC110i.2/UTAC116), INVERTIDO pelo UTAC152 (R18-152-B) e mantido à vista:
+//   o teste chamava-se «iOS nativo mantém o PIX (não há Billing iOS implementado)» e exigia
+//   `pixPermitido("ios") === true`. O operador decidiu esconder o PIX no iOS (Apple 3.1.1), aceitando
+//   que o iOS fique sem compra de Passe até haver IAP (DEBT-060).
+test("UTAC152 · iOS nativo NÃO tem PIX (Apple 3.1.1); detecção continua 'ios'", () => {
   const ios = janelaWeb({ Capacitor: { isNativePlatform: () => true, getPlatform: () => "ios" } });
   assert.equal(detectarPlataformaNativa(ios), "ios");
-  assert.equal(pixPermitido("ios"), true);
+  assert.equal(pixPermitido("ios"), false);
 });
 
 test("ambiente sem window não rebenta e cai em 'web'", () => {
